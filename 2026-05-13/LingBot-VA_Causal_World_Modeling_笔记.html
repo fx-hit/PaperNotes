@@ -1,0 +1,1512 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LingBot-VA: Causal World Modeling for Robot Control</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #ffffff;
+    --text: #1a1a2e;
+    --text-secondary: #555;
+    --border: #e1e4e8;
+    --link: #0969da;
+    --table-stripe: #f6f8fa;
+    --heading: #0d1117;
+    --blockquote-border: #0969da;
+    --blockquote-bg: #f0f6ff;
+    --inline-code: #d73a49;
+    --inline-code-bg: #f6f8fa;
+    --sidebar-width: 260px;
+    --toc-active: #0969da;
+    --content-max-width: 900px;
+    --content-padding: 48px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "Inter", "Noto Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 16px;
+    line-height: 1.75;
+    color: var(--text);
+    background: var(--bg);
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    width: var(--sidebar-width);
+    overflow-y: auto;
+    padding: 28px 20px 40px;
+    background: #fafbfc;
+    border-right: 1px solid var(--border);
+    z-index: 10;
+    scrollbar-width: thin;
+  }
+  .sidebar-title {
+    font-size: 13px; font-weight: 700; color: var(--text-secondary);
+    margin-bottom: 16px; letter-spacing: 0.06em; text-transform: uppercase;
+  }
+  .toc-list { list-style: none; padding: 0; margin: 0; }
+  .toc-list ul { list-style: none; padding-left: 14px; }
+  .toc-list li { margin: 1px 0; }
+  .toc-list a {
+    display: block; padding: 4px 12px; font-size: 13.5px; line-height: 1.45;
+    color: var(--text-secondary); text-decoration: none; border-radius: 4px;
+    border-left: 2px solid transparent; transition: all 0.15s;
+  }
+  .toc-list a:hover { color: var(--link); background: #e8f0fe; }
+  .toc-list a.active {
+    color: var(--toc-active); font-weight: 600;
+    border-left-color: var(--toc-active); background: #e8f0fe;
+  }
+  .toc-h1 a { font-weight: 600; color: var(--heading); font-size: 14px; }
+  .toc-h3 a { padding-left: 24px; font-size: 13px; }
+  .toc-h4 a { padding-left: 36px; font-size: 12.5px; }
+  .toc-empty { color: var(--text-secondary); font-size: 13px; font-style: italic; }
+
+  .main-wrapper {
+    margin-left: var(--sidebar-width);
+    min-height: 100vh;
+    display: flex; justify-content: center;
+  }
+  .content-inner {
+    width: 100%;
+    max-width: var(--content-max-width);
+    padding: 40px var(--content-padding) 80px;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    color: var(--heading); font-weight: 700; line-height: 1.3;
+    margin-top: 2em; margin-bottom: 0.6em; scroll-margin-top: 24px;
+  }
+  h1 { font-size: 2em; border-bottom: 2px solid var(--border); padding-bottom: 0.3em; margin-top: 0; }
+  h2 { font-size: 1.5em; border-bottom: 1px solid var(--border); padding-bottom: 0.25em; }
+  h3 { font-size: 1.25em; }
+  h4 { font-size: 1.1em; }
+  p { margin-bottom: 1em; }
+  a { color: var(--link); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  strong { font-weight: 600; }
+
+  blockquote {
+    border-left: 4px solid var(--blockquote-border);
+    background: var(--blockquote-bg);
+    padding: 12px 20px; margin: 1em 0;
+    border-radius: 0 6px 6px 0; color: var(--text-secondary);
+  }
+  blockquote p:last-child { margin-bottom: 0; }
+
+  code {
+    font-family: "JetBrains Mono", "SF Mono", "Fira Code", monospace;
+    font-size: 0.875em; background: var(--inline-code-bg);
+    padding: 2px 6px; border-radius: 4px; color: var(--inline-code);
+  }
+  pre {
+    background: #1e1e2e; color: #cdd6f4;
+    border-radius: 8px; padding: 16px 20px; overflow-x: auto;
+    margin: 1em 0; font-size: 14px; line-height: 1.55;
+  }
+  pre code { background: none; padding: 0; border-radius: 0; color: inherit; font-size: inherit; }
+
+  .codehilite { background: #1e1e2e; border-radius: 8px; padding: 16px 20px; overflow-x: auto; margin: 1em 0; }
+  .codehilite pre { background: none; padding: 0; margin: 0; border-radius: 0; }
+  .codehilite .hll { background-color: #2a2a3e; }
+  .codehilite .c  { color: #6c7086; font-style: italic; }
+  .codehilite .k  { color: #cba6f7; }
+  .codehilite .o  { color: #89b4fa; }
+  .codehilite .s  { color: #a6e3a1; }
+  .codehilite .n  { color: #cdd6f4; }
+  .codehilite .p  { color: #bac2de; }
+  .codehilite .mi { color: #fab387; }
+  .codehilite .nf { color: #89b4fa; }
+  .codehilite .nb { color: #f38ba8; }
+  .codehilite .nc { color: #f9e2af; }
+  .codehilite .bp { color: #f38ba8; }
+
+  table { width: 100%; border-collapse: collapse; margin: 1em 0; font-size: 0.925em; }
+  th, td { border: 1px solid var(--border); padding: 10px 14px; text-align: left; }
+  th { background: var(--table-stripe); font-weight: 600; color: var(--heading); }
+  tr:nth-child(even) td { background: var(--table-stripe); }
+
+  .math.display { display: block; overflow-x: auto; padding: 12px 0; margin: 1em 0; }
+  ul, ol { padding-left: 1.5em; margin-bottom: 1em; }
+  li { margin-bottom: 0.3em; }
+  hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+  img { max-width: 100%; height: auto; border-radius: 6px; margin: 0.5em 0; }
+  p:has(img) { text-align: center; }
+  p:has(img) + p { text-align: center; font-size: 0.9em; color: var(--text-secondary); }
+  .mermaid { text-align: center; margin: 1.5em 0; background: #fafbfc; border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+
+  @media (max-width: 1024px) {
+    .sidebar { position: static; width: 100%; height: auto; max-height: 35vh; border-right: none; border-bottom: 1px solid var(--border); }
+    .main-wrapper { margin-left: 0; display: block; }
+    .content-inner { max-width: none; padding: 24px 20px 60px; }
+  }
+</style>
+
+<script>
+MathJax = {
+  tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']], processEscapes: true, tags: 'none' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] }
+};
+</script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  mermaid.initialize({ startOnLoad: true, theme: 'neutral', securityLevel: 'loose' });
+});
+</script>
+
+</head>
+<body>
+
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-title">目录</div>
+  <ul class="toc-list">
+<li class="toc-h1"><a href="#lingbot-va-causal-world-modeling-for-robot-control">LingBot-VA: Causal World Modeling for Robot Control</a>
+<ul>
+</li>
+<li class="toc-h2"><a href="#_1">一、核心问题</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#vla-representation-entanglement">现有 VLA 的瓶颈：表征纠缠（Representation Entanglement）</a>
+</li>
+<li class="toc-h3"><a href="#_2">已有世界模型方法的三个缺陷</a>
+</li>
+<li class="toc-h3"><a href="#_3">本文核心主张</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_4">二、核心思路 / 方法</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#21">2.1 整体范式：从"直接预测动作"到"先预测世界，再推理动作"</a>
+</li>
+<li class="toc-h3"><a href="#22-1">2.2 自回归视频-动作世界建模（核心创新 1）</a>
+<ul>
+</li>
+<li class="toc-h4"><a href="#_5">设计动机</a>
+</li>
+<li class="toc-h4"><a href="#-">视频-动作交错序列</a>
+</ul></li>
+</li>
+<li class="toc-h3"><a href="#23-mixture-of-transformersmot-2">2.3 Mixture-of-Transformers（MoT）统一架构（核心创新 2）</a>
+</li>
+<li class="toc-h3"><a href="#24-teacher-forcing">2.4 Teacher Forcing 训练</a>
+</li>
+<li class="toc-h3"><a href="#25-noisy-history-augmentation-3">2.5 Noisy History Augmentation → 部分去噪（核心创新 3）</a>
+</li>
+<li class="toc-h3"><a href="#26-4">2.6 异步推理流水线（核心创新 4）</a>
+<ul>
+</li>
+<li class="toc-h4"><a href="#kv-cache-algorithm-1">KV Cache 推理（Algorithm 1）</a>
+</li>
+<li class="toc-h4"><a href="#algorithm-2">异步预测与执行（Algorithm 2）</a>
+</li>
+<li class="toc-h4"><a href="#_6">速度提升</a>
+</ul></li>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_7">三、训练目标</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#_8">完整损失函数</a>
+</li>
+<li class="toc-h3"><a href="#_9">训练配置</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_10">四、实验与结果</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#41">4.1 仿真基准</a>
+<ul>
+</li>
+<li class="toc-h4"><a href="#robotwin-2050">RoboTwin 2.0（50 个双臂操作任务）</a>
+</li>
+<li class="toc-h4"><a href="#libero4-suite10-suite">LIBERO（4 个 Suite，10 任务/Suite）</a>
+</ul></li>
+</li>
+<li class="toc-h3"><a href="#42">4.2 真机部署</a>
+</li>
+<li class="toc-h3"><a href="#43">4.3 消融实验</a>
+</li>
+<li class="toc-h3"><a href="#44-action-network">4.4 Action Network 初始化策略对比</a>
+</li>
+<li class="toc-h3"><a href="#45">4.5 样本效率</a>
+</li>
+<li class="toc-h3"><a href="#46">4.6 时间记忆能力</a>
+</li>
+<li class="toc-h3"><a href="#47">4.7 泛化能力</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_11">五、关键洞察与技术亮点</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#51">5.1 为什么是"因果世界模型"？</a>
+</li>
+<li class="toc-h3"><a href="#52">5.2 "视频生成 + 动作推理"的统一</a>
+</li>
+<li class="toc-h3"><a href="#53">5.3 工程化部署的系统性思考</a>
+</li>
+<li class="toc-h3"><a href="#54-motus">5.4 与 Motus 的关系</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_12">六、代码实现解读</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#61-wan_vamodulesmodelpy">6.1 模型架构（wan_va/modules/model.py）</a>
+<ul>
+</li>
+<li class="toc-h4"><a href="#611">6.1.1 整体架构字符画</a>
+</li>
+<li class="toc-h4"><a href="#612-forward_train">6.1.2 训练前向数据流（forward_train）</a>
+</li>
+<li class="toc-h4"><a href="#613-forward">6.1.3 推理前向（forward）的三种模式</a>
+</li>
+<li class="toc-h4"><a href="#614-kv-cache">6.1.4 KV Cache 生命周期</a>
+</li>
+<li class="toc-h4"><a href="#615-flexattnfunc_get_mask_mod">6.1.5 注意力掩码实现细节（FlexAttnFunc._get_mask_mod）</a>
+</ul></li>
+</li>
+<li class="toc-h3"><a href="#62-wan_vawan_va_serverpy">6.2 推理服务器（wan_va/wan_va_server.py）</a>
+</li>
+<li class="toc-h3"><a href="#63-wan_vaconfigs">6.3 关键配置（wan_va/configs/）</a>
+</li>
+<li class="toc-h3"><a href="#64">6.4 动作表示</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_13">七、局限性</a>
+</li>
+<li class="toc-h2"><a href="#_14">八、关键概念速查</a>
+</ul></li>
+</li></ul>
+</nav>
+
+<main class="main-wrapper">
+  <div class="content-inner" id="main-content">
+<h1 id="lingbot-va-causal-world-modeling-for-robot-control">LingBot-VA: Causal World Modeling for Robot Control</h1>
+<blockquote>
+<p><strong>论文信息</strong>
+- 作者：Lin Li<em>, Qihang Zhang</em>†, Yiming Luo<em>, Shuai Yang, Ruilin Wang, Fei Han, Mingrui Yu, Zelin Gao, Nan Xue, Xing Zhu, Yujun Shen, Yinghao Xu‡（</em> 同等贡献，† 项目负责人，‡ 通讯作者）
+- 机构：Robbyant（蚂蚁集团）
+- arXiv ID：2601.21998v2（2026）
+- 代码：https://github.com/robbyant/lingbot-va
+- 模型：https://huggingface.co/robbyant/lingbot-va
+- 项目页：https://technology.robbyant.com/lingbot-va</p>
+</blockquote>
+<hr />
+<p><img alt="图1：LingBot-VA Teaser 总览图" src="assets/lingbot-va/teaser_v3.jpg" /></p>
+<p><em>图1：LingBot-VA 论文 Teaser 总览图，四栏展示核心贡献。该图是论文的"一图胜千言"——从预训练到部署，全景式呈现了 LingBot-VA 的设计哲学与落地效果。</em></p>
+<p><strong>子图 (1) — 预训练（Pretraining）：</strong> 展示 LingBot-VA 的预训练数据规模和多样性。模型在约 16K 小时的机器人操作数据上联合训练，数据来源涵盖 6 个主流数据集：Agibot（移动操作平台大规模数据）、RoboMind（多 embodiment 示教）、InternData-A1（仿真到真机迁移）、OXE 的 OpenVLA 子集、UMI Data（人手示教）、RoboCOIN（双臂跨 embodiment）。预训练后的模型保留了 Wan2.2-5B 的视频生成先验，同时学到了跨场景的视觉-运动联合表征，使模型能够泛化到训练数据中未见的物体、场景和任务组合。</p>
+<p><strong>子图 (2) — 全面评估（Comprehensive Evaluation）：</strong> 展示 LingBot-VA 在仿真和真机两个维度上的评估覆盖。仿真侧：RoboTwin 2.0（50 个双臂任务，含 Easy/Hard 设定）和 LIBERO（4 个 suite 的 40 个任务）。真机侧：6 项涵盖长序列（Make Breakfast、Pick Screws）、精密操作（Insert Tubes、Unpack Delivery）、可形变物体（Fold Clothes、Fold Pants）的任务。LingBot-VA 在所有基准上全面超越 π₀.₅——RoboTwin 2.0 上 92.9%(Easy)/91.6%(Hard)，LIBERO 平均 98.5%，真机任务平均 Progress Score 领先约 15-47 个百分点（Fold Pants 上 PS 76.7% vs 30.0%）。</p>
+<p><strong>子图 (3) — 多功能能力（Versatile Capabilities）：</strong> 除策略学习外，LingBot-VA 作为一个视频-动作联合世界模型，天然支持两种附加能力：(i) 视觉动态预测——给定初始图像 + 语言指令，模型可以生成未来视频帧序列，展示其对物理动态的理解；(ii) 逆动力学推理——给定真实机器人视频，模型可以反推执行了什么动作。这使得 LingBot-VA 不仅是策略网络，更是可解释的视觉推理引擎。</p>
+<p><strong>子图 (4) — 涌现特性（Emergent Properties）：</strong> 因果世界建模赋予 LingBot-VA 两种涌现能力：(i) 长程时间记忆——KV cache 持久化完整交互历史，使模型在需要计数的任务（如 Wipe Plate 精确擦 6 次）和需要排除性记忆的任务（如 Search Box 记住已检查的盒子）上大幅超越 π₀.₅；(ii) Few-shot 适应——仅 10 个真机示教即可在新任务上达到比 π₀.₅ 高出 10-15 个百分点的表现，50 个示教即可部署。</p>
+<hr />
+<h2 id="_1">一、核心问题</h2>
+<h3 id="vla-representation-entanglement">现有 VLA 的瓶颈：表征纠缠（Representation Entanglement）</h3>
+<p>当前 Vision-Language-Action（VLA）模型（如 π₀.₅、OpenVLA、RT-2）主要采用<strong>前馈映射范式</strong>——直接从当前观测 <span class="math inline">$o_t$</span> 预测动作 <span class="math inline">$a_t$</span>：</p>
+<p><div class="math display">$$a_t \sim \pi_\theta(\cdot \mid o_t)$$</div></p>
+<p>这种端到端方式存在根本性的<strong>表征纠缠</strong>问题：单一神经网络被迫同时学习三个性质迥异的任务：</p>
+<ol>
+<li><strong>视觉场景理解</strong>：高维语义特征</li>
+<li><strong>物理动力学建模</strong>：环境演化规律</li>
+<li><strong>运动控制</strong>：低维电机指令</li>
+</ol>
+<p>由于缺乏对环境演化的显式建模，这类反应式策略往往依赖<strong>模式匹配</strong>而非对物理动力学的原则性理解。</p>
+<h3 id="_2">已有世界模型方法的三个缺陷</h3>
+<p>近期的视频世界模型方法（UniSim、UVA、UWM、Gen2Act 等）尝试将世界模型引入机器人策略，但面临三个核心限制：</p>
+<table>
+<thead>
+<tr>
+<th>缺陷</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>反应性缺口（Reactivity Gap）</strong></td>
+<td>Chunk/开环生成长序列时不纳入实时反馈，难以适应干扰</td>
+</tr>
+<tr>
+<td><strong>长程记忆受限（Limited Long-term Memory）</strong></td>
+<td>分块生成时历史信息不被持久缓存，导致长时间轴不一致</td>
+</tr>
+<tr>
+<td><strong>因果性违反（Causality Violation）</strong></td>
+<td>双向注意力允许未来 token 影响过去预测，违背物理世界的因果时序</td>
+</tr>
+</tbody>
+</table>
+<h3 id="_3">本文核心主张</h3>
+<blockquote>
+<p>视频世界建模与视觉语言预训练并列，构成机器人学习的独立基础。视频世界模型提供了通过理解动作与视觉动态之间因果关系来"想象"近未来的能力。</p>
+</blockquote>
+<hr />
+<h2 id="_4">二、核心思路 / 方法</h2>
+<h3 id="21">2.1 整体范式：从"直接预测动作"到"先预测世界，再推理动作"</h3>
+<p>LingBot-VA 采用<strong>两阶段分解</strong>替代 VLA 的直接映射：</p>
+<p><div class="math display">$$\begin{aligned}
+\text{(Stage 1) 视觉动态预测:} \quad & o_{t+1} \sim p_\theta(\cdot \mid o_{\leq t}) \\
+\text{(Stage 2) 逆动力学:} \quad & a_t \sim g_\psi(\cdot \mid o_t, o_{t+1})
+\end{aligned}$$</div></p>
+<ul>
+<li><strong>Stage 1</strong> 学习从历史观测预测未来视觉状态——可大规模利用视频数据学习物理先验</li>
+<li><strong>Stage 2</strong> 使用逆动力学模型从期望的视觉变化中解码动作——仅需机器人示教数据</li>
+</ul>
+<p>这本质上是让模型<strong>先"想象"动作执行后的视觉结果，再据此决定动作</strong>，实现"想清楚再动手"。</p>
+<h3 id="22-1">2.2 自回归视频-动作世界建模（核心创新 1）</h3>
+<h4 id="_5">设计动机</h4>
+<p>物理世界本质上是<strong>因果且自回归</strong>的：当前状态仅依赖过去，不能提前观测未来。LingBot-VA 的建模严格遵循这一原则，采用<strong>Chunk-wise 自回归 + Chunk 内双向生成</strong>的混合范式：</p>
+<p><div class="math display">$$z_{t+1:t+K} \sim p_\theta(\cdot \mid z_{\leq t}, a_{&lt;t})$$</div></p>
+<ul>
+<li>Chunk 内：视频 token 通过双向注意力并行生成（利用 flow matching）</li>
+<li>Chunk 间：严格因果注意力（causal masking），当前 chunk 仅能看到历史 token</li>
+</ul>
+<p>这种方法带来三个关键优势：</p>
+<ol>
+<li><strong>持久记忆（Persistent Memory）</strong>：KV cache 持久化整个交互历史的 video-action 交错序列，避免分块方法的"失忆"问题</li>
+<li><strong>因果一致性（Causal Consistency）</strong>：单向依赖结构自然契合闭环执行，新观测可无缝整合</li>
+<li><strong>效率与灵活性</strong>：Chunk 内并行生成 + Chunk 间自回归纠错，平衡效率与反应性</li>
+</ol>
+<h4 id="-">视频-动作交错序列</h4>
+<p>LingBot-VA 将视频帧与动作 token 交错排列成统一序列。视频帧按 temporal stride <span class="math inline">$\tau=4$</span> 下采样后，每帧对应 <span class="math inline">$\tau$</span> 个连续动作：</p>
+<p><div class="math display">$$[z_t, a_{t,1}, a_{t,2}, a_{t,3}, a_{t,4}, z_{t+1}, a_{t+1,1}, \dots]$$</div></p>
+<p>这样，预测 <span class="math inline">$K$</span> 个视频帧对应生成 <span class="math inline">$\tau K$</span> 个动作，实现高频控制（50Hz 动作）同时保持视频生成效率（12.5Hz 帧率）。</p>
+<h3 id="23-mixture-of-transformersmot-2">2.3 Mixture-of-Transformers（MoT）统一架构（核心创新 2）</h3>
+<p><img alt="图2：LingBot-VA 框架总览" src="assets/lingbot-va/framework2.jpg" /></p>
+<p><em>图2：LingBot-VA 框架总览，展示基于自回归扩散（Autoregressive Diffusion）的统一视频-动作世界建模架构。全文最重要的架构图，解释了"视频和动作如何联合生成"。</em></p>
+<p><strong>图示结构</strong>（从左到右的数据流）：</p>
+<p><strong>(A) 输入阶段 — VAE 编码 + 动作嵌入</strong>：原始视觉观测 <span class="math inline">$o_t$</span> 经 Wan2.2 Causal VAE 压缩为 latent token <span class="math inline">$z_t$</span>（压缩比 <span class="math inline">$4\times16\times16$</span>，temporal×height×width）。动作向量 <span class="math inline">$a_t$</span>（30 维双臂表示）经单层 MLP（<span class="math inline">$\phi$</span>）投影为与视频 token 同维度的嵌入。两者按时间顺序交错排列为统一序列 <span class="math inline">$[z_t, a_{t,1}, a_{t,2}, a_{t,3}, a_{t,4}, z_{t+1}, \dots]$</span>。</p>
+<p><strong>(B) 自回归流程 — Chunk-wise AR + Flow Matching</strong>：序列按 chunk（<span class="math inline">$K$</span> 个视频帧，对应 <span class="math inline">$\tau K$</span> 个动作）划分为多个自回归步骤。Chunk 内通过 flow matching 并行生成（双向注意力加速），Chunk 间通过因果注意力掩码保持严格时序依赖。图中央的"Autoregressive Step"将这个过程分为两个子阶段。</p>
+<p><strong>(C) 子阶段 1 — 视频动态预测（Video Stream）</strong>：Video Stream（Wan2.2-5B 初始化，<span class="math inline">$d_v=3072$</span>，30 层）以历史视频 latent <span class="math inline">$z_{\leq t}$</span> 和动作历史 <span class="math inline">$a_{&lt;t}$</span> 为条件，通过 flow matching 预测下一 chunk 的视觉状态 <span class="math inline">$\hat{z}_{t+1:t+K}$</span>。推理时采用部分去噪（积分到 <span class="math inline">$s=0.6$</span>，3 步 Euler），输出"足够好"的视频预测。</p>
+<p><strong>(D) 子阶段 2 — 逆动力学动作解码（Action Stream）</strong>：Action Stream（<span class="math inline">$d_a=768$</span>，4× 更窄，同样 30 层）以预测的未来视觉状态 <span class="math inline">$\hat{z}_{t+1:t+K}$</span> + 观察历史 <span class="math inline">$z_{\leq t}$</span> + 动作历史 <span class="math inline">$a_{&lt;t}$</span> 为条件，通过 flow matching 解码动作 <span class="math inline">$a_{t:t+K-1}$</span>（积分到 <span class="math inline">$s=1.0$</span>，10 步 Euler，确保精度）。</p>
+<p><strong>(E) MoT 跨模态融合</strong>：每个 Transformer 层中，Video Stream 和 Action Stream 先独立计算 QKV（保持各自特征空间），再通过维度投影在联合自注意力中交互。图中以双向箭头表示这种相互条件化：视频预测告知动作"即将发生什么"，动作知识告知视频"机器人正在做什么"。</p>
+<p><strong>(F) 输出 + 闭环</strong>：生成的动作 <span class="math inline">$a_{t:t+K-1}$</span> 发送给机器人执行，真实观测 <span class="math inline">$z_{t+1}$</span> 反馈回 KV cache。预测视频以 CFG scale=5.0 引导质量，动作以 CFG scale=1.0（无引导）保持精度。</p>
+<table>
+<thead>
+<tr>
+<th>组件</th>
+<th>规格</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Video Stream</td>
+<td>Wan2.2-5B 初始化，<span class="math inline">$d_v = 3072$</span>，30 层</td>
+</tr>
+<tr>
+<td>Action Stream</td>
+<td>相同深度，<span class="math inline">$d_a = 768$</span>（4× 更小），约 350M 参数</td>
+</tr>
+<tr>
+<td>总参数量</td>
+<td>5.3B</td>
+</tr>
+<tr>
+<td>连接方式</td>
+<td>MoT 跨模态注意力：各层 video/action 独立 QKV，通过维度投影后联合自注意力</td>
+</tr>
+<tr>
+<td>文本编码</td>
+<td>Frozen T5 text encoder，通过 cross-attention 注入指令</td>
+</tr>
+</tbody>
+</table>
+<p><strong>非对称设计原理</strong>：动作分布本质上比视觉数据简单得多——动作是低维向量（30 维），视觉是高维 latent。因此 Action Stream 只需视频流 1/4 的宽度即可高效建模，大幅降低计算开销。</p>
+<p><strong>Action Stream 初始化策略</strong>：训练稳定性至关重要。论文发现随机初始化 Action Stream 会导致训练振荡和收敛缓慢——动作 token 的输出分布最初与视频分布差异巨大，扰乱联合注意力。解决方案：</p>
+<ul>
+<li>将预训练视频权重按 action 维度插值复制</li>
+<li>乘以缩放因子 <span class="math inline">$\alpha = \sqrt{d_v / d_a}$</span> 保持输出方差一致</li>
+<li>使 action token 初始输出分布与视频 token 可比，稳定早期训练</li>
+</ul>
+<p><strong>变长 Chunk 训练</strong>：训练时 Chunk 大小 <span class="math inline">$K \in [1, 8]$</span> 随机采样，推理时可灵活选择——论文使用 <span class="math inline">$K=4$</span> 作为实际部署的折中（更大的 chunk 减少自回归步数但增加单步计算，更小的 chunk 允许更频繁的闭环校正）。</p>
+<h3 id="24-teacher-forcing">2.4 Teacher Forcing 训练</h3>
+<p><img alt="图3：Teacher Forcing 注意力掩码" src="assets/lingbot-va/attention_mask2.jpg" /></p>
+<p><em>图3：Teacher Forcing 训练的因果注意力掩码矩阵，用于实现统一的视频-动作序列预训练。该掩码是整个框架实现"因果一致性"的底层机制。</em></p>
+<p><strong>图示结构</strong>：</p>
+<p>矩阵的横轴（KV）和纵轴（Q）均对应统一序列中的所有 token。序列按时间步组织：每个时间步包含视频 latent token（实线框标记）+ 对应的 <span class="math inline">$\tau=4$</span> 个动作 token（虚线框标记）。Token 分为两类：</p>
+<ul>
+<li><strong>Clean tokens（实线框）</strong>：作为条件的干净历史 token，来自 ground-truth 数据</li>
+<li><strong>Noise tokens（虚线框）</strong>：当前 flow matching step 的噪声 token（去噪目标）</li>
+</ul>
+<p><strong>可见性规则</strong>（暗色=允许关注，亮色=屏蔽）：</p>
+<ol>
+<li>
+<p><strong>Clean → Clean（块因果）</strong>：干净的历史 token 互相之间使用块因果掩码——同一 chunk 内双向可见，跨 chunk 只能关注更早的 chunk。这模拟了"已知的历史可以互相参照"。</p>
+</li>
+<li>
+<p><strong>Noise → Clean（块因果 + 排除自身）</strong>：噪声 token 可以关注所有更早的干净 token，但不能关注自身对应的干净版本（防止"作弊"——不能直接看到去噪目标）。</p>
+</li>
+<li>
+<p><strong>Noise → Noise（块内自掩码）</strong>：噪声 token 仅能关注同一 chunk 内的其他噪声 token，不能跨 chunk 关注噪声 token。这确保了每个 chunk 的生成仅依赖干净历史，而非其他 chunk 的中间状态。</p>
+</li>
+<li>
+<p><strong>全局约束</strong>：叠加序列掩码（仅同一 episode 的 token 互相可见）和滑动窗口掩码（限制注意力范围到 window_size 内，降低计算复杂度）。</p>
+</li>
+</ol>
+<p><strong>矩阵的宏观特征</strong>：</p>
+<ul>
+<li>呈块对角 + 下三角结构——矩阵下半部分（未来查询过去）可见，上半部分（过去查询未来）全屏蔽</li>
+<li>每个 video chunk 的行/列宽度更大（更多 visual tokens），action chunk 的行/列较窄（少数 action tokens）</li>
+<li>整体严格下三角，体现了物理时间的因果箭头</li>
+</ul>
+<p>论文采用类似 LLM 的 next-token prediction 方式训练整个交错序列：</p>
+<ul>
+<li>每个 token 以所有前序 token 为条件进行预测</li>
+<li>因果注意力掩码强制执行时间因果结构</li>
+<li>并行处理整个 episode，单次前向传播优化所有时间步</li>
+</ul>
+<p><strong>特别适配性</strong>：与纯生成模型不同，Teacher Forcing 在机器人操作中不存在 train-test distribution mismatch——机器人策略在部署时天然获取真实观测，与训练阶段完全一致。</p>
+<p><strong>跨 Episode 打包</strong>：遵循 LLM 实践，将多个 episode 打包为最长 10K token 的序列，以注意力掩码分隔，显著提高训练效率。</p>
+<h3 id="25-noisy-history-augmentation-3">2.5 Noisy History Augmentation → 部分去噪（核心创新 3）</h3>
+<p>推理瓶颈在于视频 token 生成——视频 token 数量远大于动作 token，且每个 token 需要多步 flow matching 去噪。</p>
+<p><strong>关键洞察</strong>：动作预测不需要像素级精确的视频重建，只需语义结构信息即可。</p>
+<p><strong>训练时</strong>：以 50% 概率将视频历史 <span class="math inline">$z_{\leq t}$</span> 替换为噪声增强版本：</p>
+<p><div class="math display">$$\tilde{z}_{\leq t} = (1 - s_{\text{aug}}) \epsilon + s_{\text{aug}} z_{\leq t}, \quad s_{\text{aug}} \in [0.5, 1]$$</div></p>
+<p><strong>推理时</strong>：视频去噪只需从 <span class="math inline">$s=0$</span> 积分到 <span class="math inline">$s=0.5$</span>（而非到 <span class="math inline">$s=1.0$</span>），去噪步数减半。动作解码仍从 <span class="math inline">$s=0$</span> 积分到 <span class="math inline">$s=1.0$</span> 以确保精度。论文实际采用 3 步 Euler solver 去视频（到 <span class="math inline">$s=0.6$</span>），10 步去动作（到 <span class="math inline">$s=1.0$</span>）。</p>
+<h3 id="26-4">2.6 异步推理流水线（核心创新 4）</h3>
+<p><img alt="图4：异步推理流水线设计对比" src="assets/lingbot-va/async.jpg" /></p>
+<p><em>图4：异步推理流水线设计对比，论文最重要的系统设计图。三个子图对比了同步流水线、朴素异步、以及 LingBot-VA 的 FDM-grounded 异步方案。</em></p>
+<p><strong>子图 (A) — 传统同步流水线（Synchronous Pipeline）</strong>：
+展示传统 VLA 模型的串行执行模式。时间轴从左到右，每一步包含三个串行阶段：(1) 模型推理预测动作 → (2) 机器人执行动作 → (3) 收集观测反馈。由于推理和执行为串行，总时延 = 推理耗时 + 执行耗时 + 观测耗时。当推理涉及视频 token 的 flow matching 去噪（多步）时，推理耗时成为主导瓶颈，导致控制频率远低于实时需求。图中以不同颜色的方块表示"模型推理"和"机器人执行"的交替，方块之间的间隙代表空闲等待时间。</p>
+<p><strong>子图 (B-1) — 朴素异步实现（Naive Async）</strong>：
+引入并行化：推理和执行为流水线并行——当机器人执行当前动作 chunk <span class="math inline">$a_t$</span> 时，模型同时预测下一 chunk <span class="math inline">$a_{t+1}$</span>。理论上可隐藏推理延迟，控制频率仅由 max(推理, 执行) 决定。然而，该方案有一个关键缺陷：预测 <span class="math inline">$a_{t+1}$</span> 时使用的视觉上下文是上一轮的<strong>预测</strong>结果 <span class="math inline">$\hat{z}_t$</span>（而非真实观测）。由于视频生成模型天然偏好时间平滑和视觉连贯性，模型倾向于"延续"幻觉视频 <span class="math inline">$\hat{z}_t$</span> 而忽略中间到达的真实观测 <span class="math inline">$z_{t-1}$</span>。随着时间推移，预测的视觉状态与真实物理状态之间的漂移（drift）不断累积。图中以虚线箭头表示这种基于过时预测的级联。</p>
+<p><strong>子图 (B-2) — FDM-Grounded 异步（LingBot-VA 方案）</strong>：
+在执行动作 <span class="math inline">$a_t$</span> 的同时，模型收到上一步的真实观测反馈 <span class="math inline">$z_{t-1}$</span> 后，不是直接基于过时预测规划，而是先执行一次<strong>前向动力学预测（FDM Grounding）</strong>：以真实观测 <span class="math inline">$z_{t-1}$</span> + 正在执行的动作 <span class="math inline">$a_t$</span> 为输入，预测当前的视觉状态 <span class="math inline">$z_t$</span>。这个 feedback-grounded 的预测替代了原先的幻觉预测，使模型在每次规划前都"重对齐"到物理现实。图中以实线箭头标示真实反馈的注入路径，虚线框标示被替换的过时预测。这个设计将原本的开环异步流水线升级为<strong>闭环异步系统</strong>——异步带来的效率提升被保留，但通过 FDM Grounding 确保了因果一致性和反应性。</p>
+<p><strong>消融实验的量化验证</strong>：Naive Async 在 H=3 任务上骤降至 32.9%（vs 同步的 93.2%），FDM-grounded Async 恢复到 85.6%——以轻微的性能代价（-7.6%）换取 2× 的执行速度提升。</p>
+<h4 id="kv-cache-algorithm-1">KV Cache 推理（Algorithm 1）</h4>
+<p>利用自回归结构的天然优势：cache 历史 token 的 KV pair，每步只需计算新 token（当前观测 + 预测动作），历史 token 的 KV pair 直接复用。</p>
+<h4 id="algorithm-2">异步预测与执行（Algorithm 2）</h4>
+<p>核心思想：<strong>计算与执行重叠</strong>。当机器人执行当前动作 chunk <span class="math inline">$a_t$</span> 时，模型同时预测后续动作 chunk <span class="math inline">$a_{t+1}$</span>。</p>
+<p><strong>朴素异步的问题</strong>：将过时的视觉预测 <span class="math inline">$\hat{z}_t$</span> 放入 KV cache → 视频生成模型天然偏好时间平滑 → 倾向于延续幻觉视频而忽略真实观测 <span class="math inline">$z_{t-1}$</span> → 开环退化和轨迹漂移。</p>
+<p><strong>FDM Grounding 解决方案</strong>：在执行完 <span class="math inline">$a_{t-1}$</span> 收到真实反馈 <span class="math inline">$z_{t-1}$</span> 后：</p>
+<ol>
+<li>用 <span class="math inline">$z_{t-1}$</span> + 正在执行的 <span class="math inline">$a_t$</span> 运行一次 Forward Dynamics Model（前向动力学预测）→ 得到基于真实反馈的 <span class="math inline">$z_t$</span></li>
+<li>将此 feedback-grounded 预测（而非过时幻觉）缓存</li>
+<li>基于此预测 <span class="math inline">$a_{t+1} = g_\psi(z_{t-K+1:t}, a_{t-K:t-1})$</span></li>
+</ol>
+<p>这使得异步算法升级为<strong>鲁棒的闭环系统</strong>。Post-training 阶段额外加入 FDM 损失 <span class="math inline">$\mathcal{L}_{\text{fdm}}$</span>。</p>
+<h4 id="_6">速度提升</h4>
+<p>实验表明异步模式完成任务的耗时是同步模式的 <strong>1/2</strong>，同时保持相当的任务成功率。</p>
+<hr />
+<h2 id="_7">三、训练目标</h2>
+<h3 id="_8">完整损失函数</h3>
+<p><div class="math display">$$\mathcal{L} = \mathcal{L}_{\mathrm{dyn}} + \lambda \mathcal{L}_{\mathrm{inv}} \quad (\lambda = 1)$$</div></p>
+<p><strong>1. 视觉动态损失（Video Dynamics Loss, <span class="math inline">$\mathcal{L}_{\mathrm{dyn}}$</span>）</strong>：</p>
+<p><div class="math display">$$\mathcal{L}_{\mathrm{dyn}} = \mathbb{E}_{t, s, z_{t+1}, \epsilon} \left[ \| v_\theta(z_{t+1}^{(s)}, s, \tilde{z}_{\leq t}, a_{&lt;t} \mid c) - \dot{z}_{t+1}^{(s)} \|^2 \right]$$</div></p>
+<p>其中 <span class="math inline">$z_{t+1}^{(s)} = (1-s)\epsilon + s z_{t+1}$</span>，<span class="math inline">$\dot{z}_{t+1}^{(s)} = z_{t+1} - \epsilon$</span>，<span class="math inline">$\tilde{z}_{\leq t}$</span> 是经噪声增强的历史。</p>
+<p><strong>2. 逆动力学损失（Inverse Dynamics Loss, <span class="math inline">$\mathcal{L}_{\mathrm{inv}}$</span>）</strong>：</p>
+<p><div class="math display">$$\mathcal{L}_{\mathrm{inv}} = \mathbb{E}_{t, s, a_t, \epsilon} \left[ \| v_\psi(a_t^{(s)}, s, \tilde{z}_{\leq t+1}, a_{&lt;t} \mid c) - \dot{a}_t^{(s)} \|^2 \right]$$</div></p>
+<p>逆动力学以当前和下一帧视觉状态为条件预测动作。</p>
+<p><strong>3. 前向动力学损失（Forward Dynamics Loss, <span class="math inline">$\mathcal{L}_{\mathrm{fdm}}$</span>）</strong>（Post-training 阶段加入）：</p>
+<p><div class="math display">$$\mathcal{L}_{\mathrm{fdm}} = \mathbb{E}_{t, s, \hat{z}_{t+1}, \epsilon} \left[ \| v_\psi(\tilde{z}_{t+1}, s, z_t, a_t, \tilde{z}_{&lt;t}, \hat{a}_{&lt;t} \mid c) - \dot{z}_{t+1}^{(s)} \|^2 \right]$$</div></p>
+<p>支持异步推理中的 FDM Grounding。</p>
+<h3 id="_9">训练配置</h3>
+<table>
+<thead>
+<tr>
+<th>配置项</th>
+<th>值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>预训练数据量</td>
+<td>1.4T tokens</td>
+</tr>
+<tr>
+<td>优化器</td>
+<td>AdamW</td>
+</tr>
+<tr>
+<td>Peak LR</td>
+<td><span class="math inline">$1 \times 10^{-4}$</span></td>
+</tr>
+<tr>
+<td>Weight Decay</td>
+<td>0.01</td>
+</tr>
+<tr>
+<td>学习率调度</td>
+<td>Cosine annealing + linear warmup</td>
+</tr>
+<tr>
+<td>精度</td>
+<td>bfloat16 mixed precision</td>
+</tr>
+<tr>
+<td>梯度裁剪</td>
+<td>2.0</td>
+</tr>
+<tr>
+<td>CFG Text Dropout</td>
+<td>0.1</td>
+</tr>
+<tr>
+<td>Uniform SNR Sampler</td>
+<td>视频和动作均用</td>
+</tr>
+<tr>
+<td>Chunk Size</td>
+<td><span class="math inline">$K \in [1, 4]$</span> 随机采样</td>
+</tr>
+<tr>
+<td>Post-training LR</td>
+<td><span class="math inline">$1 \times 10^{-5}$</span>（3K steps）或 <span class="math inline">$1 \times 10^{-4}$</span>（1K steps）</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="_10">四、实验与结果</h2>
+<h3 id="41">4.1 仿真基准</h3>
+<h4 id="robotwin-2050">RoboTwin 2.0（50 个双臂操作任务）</h4>
+<p><img alt="图5：真机部署结果" src="assets/lingbot-va/realworld_deployment.jpg" /></p>
+<p><em>图5：真机部署结果总览。该图以柱状图形式对比了 LingBot-VA 和 π₀.₅ 在六项真机任务上的表现，是论文最直接的效果证明。</em></p>
+<p><strong>图表结构</strong>：</p>
+<p>横轴为 6 项任务，分为三个类别：(i) 长序列任务——Make Breakfast（10 步）、Pick Screws（5 步）；(ii) 精密操作——Insert Tubes（抓取 3 管 + 插入 3 管）、Unpack Delivery（5 步）；(iii) 可形变物体——Fold Clothes（6 步）、Fold Pants（3 步）。</p>
+<p>每个任务下有两组柱（不同颜色表示 LingBot-VA vs π₀.₅），每组包含两个指标：Progress Score（PS，左柱）和 Success Rate（SR，右柱）。所有指标均为百分比，越高越好。每项任务评估 20 次试验，采用交替评估协议（一次 π₀.₅ → 一次 LingBot-VA）确保公平。</p>
+<p><strong>关键数据提取</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>任务</th>
+<th style="text-align: center;">LingBot-VA PS</th>
+<th style="text-align: center;">π₀.₅ PS</th>
+<th style="text-align: center;">提升</th>
+<th style="text-align: center;">LingBot-VA SR</th>
+<th style="text-align: center;">π₀.₅ SR</th>
+<th style="text-align: center;">提升</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Make Breakfast</td>
+<td style="text-align: center;">97.0</td>
+<td style="text-align: center;">73.0</td>
+<td style="text-align: center;">+24.0</td>
+<td style="text-align: center;">75.0</td>
+<td style="text-align: center;">70.0</td>
+<td style="text-align: center;">+5.0</td>
+</tr>
+<tr>
+<td>Pick Screws</td>
+<td style="text-align: center;">82.5</td>
+<td style="text-align: center;">74.0</td>
+<td style="text-align: center;">+8.5</td>
+<td style="text-align: center;">70.0</td>
+<td style="text-align: center;">50.0</td>
+<td style="text-align: center;">+20.0</td>
+</tr>
+<tr>
+<td>Insert Tubes</td>
+<td style="text-align: center;">85.8</td>
+<td style="text-align: center;">79.2</td>
+<td style="text-align: center;">+6.6</td>
+<td style="text-align: center;">40.0</td>
+<td style="text-align: center;">30.0</td>
+<td style="text-align: center;">+10.0</td>
+</tr>
+<tr>
+<td>Unpack Delivery</td>
+<td style="text-align: center;">84.5</td>
+<td style="text-align: center;">73.0</td>
+<td style="text-align: center;">+11.5</td>
+<td style="text-align: center;">65.0</td>
+<td style="text-align: center;">25.0</td>
+<td style="text-align: center;"><strong>+40.0</strong></td>
+</tr>
+<tr>
+<td>Fold Clothes</td>
+<td style="text-align: center;">48.8</td>
+<td style="text-align: center;">62.9</td>
+<td style="text-align: center;">–14.1</td>
+<td style="text-align: center;">35.0</td>
+<td style="text-align: center;">30.0</td>
+<td style="text-align: center;">+5.0</td>
+</tr>
+<tr>
+<td>Fold Pants</td>
+<td style="text-align: center;">76.7</td>
+<td style="text-align: center;">30.0</td>
+<td style="text-align: center;"><strong>+46.7</strong></td>
+<td style="text-align: center;">70.0</td>
+<td style="text-align: center;">30.0</td>
+<td style="text-align: center;"><strong>+40.0</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>三个维度的深度解读</strong>：</p>
+<ol>
+<li>
+<p><strong>长序列任务</strong>（Make Breakfast、Pick Screws）：LingBot-VA 的优势来自 KV cache 持久化历史上下文。Make Breakfast 包含 10 个子步骤（抓盘子→抓面包→抓叉子→放面包→按烤面包机→抓杯子→抓水壶→倒水→抓苹果→上桌），任何一步的失败都会导致连锁错误。π₀.₅ 在按烤面包机（55%）和抓水壶（35%）上频繁失败——纯前馈策略在长时序中丢失"刚才做了什么"的上下文。LingBot-VA 的 Progress Score 97.0% 意味着几乎完美执行了所有子步骤。</p>
+</li>
+<li>
+<p><strong>精密操作</strong>（Insert Tubes、Unpack Delivery）：Unpack Delivery 是差距最大的任务之一——Success Rate 65% vs 25%（+40%）。该任务需要抓美工刀→推刀片→手递刀→切割封条→打开盖子，每一步都有严格的精度要求。LingBot-VA 的统一 latent space 使视觉感知和精细运动控制之间有更紧密的耦合。但 Insert Tubes 的 SR 仅 40%（虽然仍高于 π₀.₅ 的 30%），说明精密插入仍是开放难题。</p>
+</li>
+<li>
+<p><strong>可形变物体</strong>（Fold Clothes、Fold Pants）：Fold Pants 上 LingBot-VA 以 76.7% vs 30.0% 碾压 π₀.₅（+46.7% PS！）——π₀.₅ 几乎完全无法折叠裤子。但 Fold Clothes 上 PS 低于 π₀.₅（48.8 vs 62.9），尽管 SR 略高（35 vs 30）。Fold Clothes 需要折叠半衫→左袖→右袖→再折→压平→放置，涉及高度可变形的布料动力学。LingBot-VA 的视频预测在此任务上可能产生了不准确的布料变形预测，导致要么成功要么早期失败，而 π₀.₅ 在部分步骤上有更稳定的进展。</p>
+</li>
+</ol>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th>Easy SR (%)</th>
+<th>Hard SR (%)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>X-VLA</td>
+<td>72.9</td>
+<td>72.8</td>
+</tr>
+<tr>
+<td>π₀</td>
+<td>65.9</td>
+<td>58.4</td>
+</tr>
+<tr>
+<td>π₀.₅</td>
+<td>82.7</td>
+<td>76.8</td>
+</tr>
+<tr>
+<td>Motus</td>
+<td>88.7</td>
+<td>87.0</td>
+</tr>
+<tr>
+<td><strong>LingBot-VA (Ours)</strong></td>
+<td><strong>92.9 (+4.2)</strong></td>
+<td><strong>91.6 (+4.6)</strong></td>
+</tr>
+</tbody>
+</table>
+<p>按任务 Horizon 分层的详细结果：</p>
+<table>
+<thead>
+<tr>
+<th>Horizon</th>
+<th style="text-align: center;">LingBot-VA Easy</th>
+<th style="text-align: center;">次优方法 Easy</th>
+<th style="text-align: center;">提升</th>
+<th style="text-align: center;">LingBot-VA Hard</th>
+<th style="text-align: center;">次优方法 Hard</th>
+<th style="text-align: center;">提升</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>H=1</td>
+<td style="text-align: center;">94.2</td>
+<td style="text-align: center;">91.0 (Motus)</td>
+<td style="text-align: center;">+3.2</td>
+<td style="text-align: center;">93.6</td>
+<td style="text-align: center;">90.6 (Motus)</td>
+<td style="text-align: center;">+3.0</td>
+</tr>
+<tr>
+<td>H=2</td>
+<td style="text-align: center;">90.4</td>
+<td style="text-align: center;">85.2 (Motus)</td>
+<td style="text-align: center;">+5.2</td>
+<td style="text-align: center;">87.0</td>
+<td style="text-align: center;">80.9 (Motus)</td>
+<td style="text-align: center;"><strong>+6.1</strong></td>
+</tr>
+<tr>
+<td>H=3</td>
+<td style="text-align: center;">93.2</td>
+<td style="text-align: center;">85.0 (Motus)</td>
+<td style="text-align: center;"><strong>+8.2</strong></td>
+<td style="text-align: center;">93.3</td>
+<td style="text-align: center;">84.2 (Motus)</td>
+<td style="text-align: center;"><strong>+9.1</strong></td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>关键发现</strong>：Horizon 越长，LingBot-VA 的优势越明显。H=3 任务中相对次优方法提升 8-9 个点，说明自回归机制有效维持了长程时间记忆。</p>
+</blockquote>
+<h4 id="libero4-suite10-suite">LIBERO（4 个 Suite，10 任务/Suite）</h4>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th>Spatial</th>
+<th>Object</th>
+<th>Goal</th>
+<th>Long</th>
+<th>Avg</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Octo</td>
+<td>78.9</td>
+<td>85.7</td>
+<td>84.6</td>
+<td>51.1</td>
+<td>75.1</td>
+</tr>
+<tr>
+<td>CronusVLA</td>
+<td>97.3</td>
+<td>99.6</td>
+<td>96.9</td>
+<td>94.0</td>
+<td>97.0</td>
+</tr>
+<tr>
+<td>OpenVLA-OFT</td>
+<td>97.6</td>
+<td>98.4</td>
+<td><strong>97.9</strong></td>
+<td>94.5</td>
+<td>97.1</td>
+</tr>
+<tr>
+<td>X-VLA</td>
+<td>98.2</td>
+<td>98.6</td>
+<td>97.8</td>
+<td>97.6</td>
+<td>98.1</td>
+</tr>
+<tr>
+<td><strong>LingBot-VA (Ours)</strong></td>
+<td><strong>98.5±0.3</strong></td>
+<td><strong>99.6±0.3</strong></td>
+<td>97.2±0.2</td>
+<td><strong>98.5±0.5</strong></td>
+<td><strong>98.5</strong></td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>LingBot-VA 在 LIBERO-Long（98.5%）和 LIBERO-Object（99.6%）上均达 SOTA，验证了视频-动作世界模型作为通用机器人策略基础的有效性。</p>
+</blockquote>
+<h3 id="42">4.2 真机部署</h3>
+<p>六项真机任务，每任务仅 50 个示教微调（500 steps），与 π₀.₅ 对比（交替评估，各 20 次）：</p>
+<table>
+<thead>
+<tr>
+<th>任务</th>
+<th>类别</th>
+<th style="text-align: center;">LingBot-VA PS</th>
+<th style="text-align: center;">LingBot-VA SR</th>
+<th style="text-align: center;">π₀.₅ PS</th>
+<th style="text-align: center;">π₀.₅ SR</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Make Breakfast (10 步)</td>
+<td>长序列</td>
+<td style="text-align: center;"><strong>97.0</strong></td>
+<td style="text-align: center;"><strong>75.0</strong></td>
+<td style="text-align: center;">73.0</td>
+<td style="text-align: center;">70.0</td>
+</tr>
+<tr>
+<td>Pick Screws (5 步)</td>
+<td>长序列</td>
+<td style="text-align: center;"><strong>82.5</strong></td>
+<td style="text-align: center;"><strong>70.0</strong></td>
+<td style="text-align: center;">74.0</td>
+<td style="text-align: center;">50.0</td>
+</tr>
+<tr>
+<td>Insert Tubes (6 子步骤)</td>
+<td>精密操作</td>
+<td style="text-align: center;"><strong>85.8</strong></td>
+<td style="text-align: center;"><strong>40.0</strong></td>
+<td style="text-align: center;">79.2</td>
+<td style="text-align: center;">30.0</td>
+</tr>
+<tr>
+<td>Unpack Delivery (5 步)</td>
+<td>精密操作</td>
+<td style="text-align: center;"><strong>84.5</strong></td>
+<td style="text-align: center;"><strong>65.0</strong></td>
+<td style="text-align: center;">73.0</td>
+<td style="text-align: center;">25.0</td>
+</tr>
+<tr>
+<td>Fold Clothes (6 步)</td>
+<td>可形变物体</td>
+<td style="text-align: center;">48.8</td>
+<td style="text-align: center;"><strong>35.0</strong></td>
+<td style="text-align: center;"><strong>62.9</strong></td>
+<td style="text-align: center;">30.0</td>
+</tr>
+<tr>
+<td>Fold Pants (3 步)</td>
+<td>可形变物体</td>
+<td style="text-align: center;"><strong>76.7</strong></td>
+<td style="text-align: center;"><strong>70.0</strong></td>
+<td style="text-align: center;">30.0</td>
+<td style="text-align: center;">30.0</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>三个关键验证</strong>：
+1. <strong>长序列任务</strong>：视频-动作世界模型通过 KV cache 持续维护任务上下文，在多步推理中不丢失中间目标
+2. <strong>精密操作任务</strong>：统一 latent space 设计实现视觉感知与运动控制的更紧密耦合，产生更精准的动作
+3. <strong>可形变物体</strong>：生成的视频预测提供关于物体动态和状态变化的丰富信号，帮助动作模型生成物理上更合理的操作轨迹</p>
+</blockquote>
+<p><em>Fold Clothes 任务上 LingBot-VA 的 Progress Score 低于 π₀.₅（48.8 vs 62.9），但 Success Rate 略高（35 vs 30），说明 LingBot-VA 在该任务上要么成功要么早期失败，而 π₀.₅ 在部分步骤上有更稳定的部分进展。折叠衣物仍是所有方法面临的核心挑战。</em></p>
+<p><img alt="图6：真机任务流程" src="assets/lingbot-va/demo_fig.jpg" /></p>
+<p><em>图6：六项真机任务的关键执行步骤流程图解。每行对应一个任务，以序列图像展示从初始状态到最终目标的完整操作流程。</em></p>
+<p><strong>逐任务解读</strong>（按图中从上到下顺序）：</p>
+<p><strong>(A) Make Breakfast（10 步）</strong>：初始场景包含盘子、面包、叉子、杯子、水壶、苹果等。关键步骤：(1) 抓取盘子 → (2) 抓取面包 → (3) 抓取叉子 → (4) 将面包放入烤面包机 → (5) 按下烤面包机 → (6) 抓取杯子 → (7) 抓取水壶 → (8) 倒水 → (9) 抓取苹果 → (10) 上桌摆放。这是所有任务中步骤最多的，要求模型在整个流程中持续记住"已经完成到第几步"。图中展示了关键帧——面包入炉、倒水动作、最终摆盘效果。评分标准见附录 Table S1（满分 10 分，20 次试验中 LingBot-VA 平均 9.70 分）。</p>
+<p><strong>(B) Pick Screws（5 步）</strong>：场景中有纸张和散落螺丝。(1) 抓取纸张 → (2) 将螺丝倒在纸上 → (3)-(5) 逐个插入三颗螺丝。有趣的是图中展示了机械臂的双臂协同——一手持纸，一手操作螺丝。这解释了为什么 RoboTwin 2.0 是双臂基准——许多实际操作需要双臂协调。</p>
+<p><strong>(C) Insert Tubes（6 子步骤）</strong>：包含 3 根管子的抓取和插入。(1-3) 依次抓取三根管子 → (4-6) 依次将管子插入目标孔位。图中展示了管子的初始散落状态、抓取过程中的夹爪姿态、以及插入完成后的最终排列。该任务要求毫米级精度——插入间隙极小。</p>
+<p><strong>(D) Unpack Delivery（5 步）</strong>：模拟拆快递场景。(1) 抓取美工刀 → (2) 推出刀片 → (3) 手递刀（右手→左手）→ (4) 沿封条切割 → (5) 打开盖子。这是一种典型的精细工具使用任务。图中展示了关键的手递（handover）动作——这是双臂协调的核心挑战。</p>
+<p><strong>(E) Fold Clothes（6 步）</strong>：折叠衬衫。(1) 对折一半 → (2) 折左袖 → (3) 折右袖 → (4) 再对折 → (5) 压平 → (6) 放置。图中清晰展示了布料从摊平到逐步折叠的形变过程。注意布料的可形变特性——折叠线不是刚性的，每次操作后的布料状态取决于之前的折叠历史。这也是所有任务中 LingBot-VA 最困难的。</p>
+<p><strong>(F) Fold Pants（3 步）</strong>：(1) 折叠裤子第一条折线 → (2) 折叠第二条折线 → (3) 放置叠好的裤子。虽然步骤最少，但 π₀.₅ 几乎完全失败（PS 30%），而 LingBot-VA 达到 76.7% PS——差距高达 46.7 个百分点，是全部实验中最悬殊的单项对比。</p>
+<h3 id="43">4.3 消融实验</h3>
+<p>在 RoboTwin 2.0 Easy 设置上消融三个关键设计：</p>
+<table>
+<thead>
+<tr>
+<th>消融项</th>
+<th>设置</th>
+<th style="text-align: center;">Easy_all</th>
+<th style="text-align: center;">Easy_H=1</th>
+<th style="text-align: center;">Easy_H=2</th>
+<th style="text-align: center;">Easy_H=3</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Baseline</td>
+<td>LingBot-VA</td>
+<td style="text-align: center;"><strong>92.9</strong></td>
+<td style="text-align: center;"><strong>94.2</strong></td>
+<td style="text-align: center;"><strong>90.4</strong></td>
+<td style="text-align: center;"><strong>93.2</strong></td>
+</tr>
+<tr>
+<td>部署模式</td>
+<td>FDM-grounded Async</td>
+<td style="text-align: center;">90.4</td>
+<td style="text-align: center;">92.5</td>
+<td style="text-align: center;">87.7</td>
+<td style="text-align: center;">85.6</td>
+</tr>
+<tr>
+<td>部署模式</td>
+<td>Naive Async</td>
+<td style="text-align: center;">74.3</td>
+<td style="text-align: center;">83.3</td>
+<td style="text-align: center;">70.3</td>
+<td style="text-align: center;">32.9</td>
+</tr>
+<tr>
+<td>预训练</td>
+<td>WAN (only)</td>
+<td style="text-align: center;">80.6</td>
+<td style="text-align: center;">84.9</td>
+<td style="text-align: center;">76.3</td>
+<td style="text-align: center;">67.6</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>关键结论</strong>：
+- <strong>FDM Grounding 至关重要</strong>：Naive Async 在 H=3 任务上骤降至 32.9%，验证了"幻觉延续"问题；FDM Grounding 将 H=3 恢复到 85.6%
+- <strong>联合预训练收益显著</strong>：仅使用 WAN 初始化的微调比 LingBot-VA 预训练低约 11 个点（80.6 vs 92.9），证明联合视频-动作预训练赋予了模型丰富的视觉-运动先验
+- <strong>同步 vs 异步</strong>：异步模式成功率略低于同步（90.4 vs 92.9），但执行速度快 2×</p>
+</blockquote>
+<h3 id="44-action-network">4.4 Action Network 初始化策略对比</h3>
+<p><img alt="图7：Action Network 初始化策略训练动态对比" src="assets/lingbot-va/loss_comparison.jpg" /></p>
+<p><em>图7：三种 Action Network 初始化策略的训练动态对比。该图是对 Architecture 设计选择的关键验证——通常被忽略的"初始化"问题，在 MoT 联合架构中却至关重要。</em></p>
+<p><strong>图表结构</strong>：</p>
+<p>图包含两个面板，横轴均为训练步数。</p>
+<ul>
+<li>
+<p><strong>上方面板 — 训练损失曲线</strong>：三条曲线对应三种初始化策略。纵轴为 flow matching loss（越低越好）。</p>
+<ul>
+<li><strong>紫色/蓝色曲线（Random Init）</strong>：从随机权重初始化 Action Stream。损失在训练初期极高且剧烈振荡，收敛速度远慢于其他方法。原因：随机初始化的 action token 输出分布与预训练 video token 分布差异巨大，在联合自注意力中产生不稳定的注意力模式。</li>
+<li><strong>橙色曲线（Copy Weights, No Scaling）</strong>：将预训练视频权重按 action 维度复制，但不做方差缩放。训练稳定但最终损失次优——虽比 random init 好，但 action 输出的初始方差与视频不匹配，收敛较慢。</li>
+<li><strong>绿色曲线（Copy Weights + Scaling，LingBot-VA）</strong>：复制权重后乘以缩放因子 <span class="math inline">$\alpha = \sqrt{d_v / d_a} = \sqrt{3072/768} = 2.0$</span>。收敛最快、最终损失最低。</li>
+</ul>
+</li>
+<li>
+<p><strong>下方面板 — 梯度范数</strong>：对应三种策略的训练梯度范数随步数的变化。Random Init 的梯度范数极高且波动大（紫色曲线剧烈跳跃），表明训练不稳定；Copy + Scaling 的梯度范数平滑下降，说明优化轨迹良好。</p>
+</li>
+</ul>
+<p><strong>为什么缩放因子 <span class="math inline">$\alpha = \sqrt{d_v/d_a}$</span> 有效</strong>：当将权重从 <span class="math inline">$d_v=3072$</span> 维空间映射到 <span class="math inline">$d_a=768$</span> 维空间时，若不缩放，action token 的输出方差约为视频 token 的 <span class="math inline">$d_a/d_v = 1/4$</span>，导致在联合自注意力中 action 的贡献被视频淹没。乘以 <span class="math inline">$\sqrt{d_v/d_a}$</span> 保持输出方差一致，使两个模态在注意力计算中处于平等地位。</p>
+<h3 id="45">4.5 样本效率</h3>
+<p><img alt="图8：样本效率对比" src="assets/lingbot-va/few_shot_bar.jpg" /></p>
+<p><em>图8：Post-training 阶段的 few-shot 样本效率对比。在真机和仿真两个维度、三个数据量级上，LingBot-VA（绿色）持续优于 π₀.₅（蓝色），尤其在极低数据量下优势更显著。</em></p>
+<p><strong>图表结构</strong>：</p>
+<p>上下两行分别对应两个评估场景，每行包含两组柱（PS 和 SR），横轴为三个数据量级。</p>
+<ul>
+<li>
+<p><strong>上行 — Make Breakfast（真机）</strong>：纵轴为百分比（Progress Score / Success Rate）。横轴三个分组：10 demos / 25 demos / 50 demos。每组分 LingBot-VA（绿色）和 π₀.₅（蓝色）两根柱。</p>
+</li>
+<li>
+<p><strong>下行 — RoboTwin 2.0 Easy（仿真）</strong>：相同布局，但评估对象为 50 个仿真任务的平均成功率。</p>
+</li>
+</ul>
+<p><strong>逐数据量级对比</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>场景</th>
+<th>指标</th>
+<th style="text-align: center;">10 demos</th>
+<th style="text-align: center;">25 demos</th>
+<th style="text-align: center;">50 demos</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Make Breakfast</td>
+<td>LingBot-VA PS</td>
+<td style="text-align: center;">~62%</td>
+<td style="text-align: center;">~85%</td>
+<td style="text-align: center;">97.0%</td>
+</tr>
+<tr>
+<td>Make Breakfast</td>
+<td>π₀.₅ PS</td>
+<td style="text-align: center;">~46%</td>
+<td style="text-align: center;">~66%</td>
+<td style="text-align: center;">73.0%</td>
+</tr>
+<tr>
+<td>Make Breakfast</td>
+<td>LingBot-VA SR</td>
+<td style="text-align: center;">~25%</td>
+<td style="text-align: center;">~55%</td>
+<td style="text-align: center;">75.0%</td>
+</tr>
+<tr>
+<td>Make Breakfast</td>
+<td>π₀.₅ SR</td>
+<td style="text-align: center;">~15%</td>
+<td style="text-align: center;">~45%</td>
+<td style="text-align: center;">70.0%</td>
+</tr>
+<tr>
+<td>RoboTwin Easy</td>
+<td>LingBot-VA SR</td>
+<td style="text-align: center;">~82%</td>
+<td style="text-align: center;">~88%</td>
+<td style="text-align: center;">92.9%</td>
+</tr>
+<tr>
+<td>RoboTwin Easy</td>
+<td>π₀.₅ SR</td>
+<td style="text-align: center;">~72%</td>
+<td style="text-align: center;">~80%</td>
+<td style="text-align: center;">82.7%</td>
+</tr>
+</tbody>
+</table>
+<p><strong>关键趋势</strong>：</p>
+<ol>
+<li>
+<p><strong>低数据量下差距最大</strong>：10 个示教时，Make Breakfast PS 差距约 +15.6 个百分点，RoboTwin 上约 +10.3 个百分点。这是因为 LingBot-VA 的视频生成 backbone 预训练提供了丰富的物理动力学先验——即使只有极少量动作数据，模型也能依赖预训练的视频理解能力来推理动作。</p>
+</li>
+<li>
+<p><strong>数据增加后差距缩小但持续显著</strong>：50 个示教时差距仍保持在约 +24.0 PS（真机）和 +10.2 SR（仿真）。差距缩小的趋势反映了"天花板效应"——LingBot-VA 更快达到高性能，而 π₀.₅ 需要更多数据追赶但始终无法超越。</p>
+</li>
+<li>
+<p><strong>SR 比 PS 更难提升</strong>：Success Rate 对数据量的敏感度高于 Progress Score——因为 SR 要求所有步骤全部成功，任何一步失败即计为 0，而 PS 反映部分成功。这解释了为什么低数据量下 SR 差距更小（大家都在低 SR 区间），但随数据增加 LingBot-VA 的 SR 提升更快。</p>
+</li>
+</ol>
+<blockquote>
+<p>这种卓越的样本效率源于视频-动作世界模型设计：联合预训练的视频生成 backbone 提供丰富的物理动力学和物体交互先验，作为 Post-training 阶段的隐式正则可有效降低学习新任务所需的样本复杂度。相比之下，π₀.₅ 等纯 VLA 模型缺乏显式的动态建模，无结构化动力学先验可供利用。</p>
+</blockquote>
+<h3 id="46">4.6 时间记忆能力</h3>
+<p><img alt="图9：时间记忆评估" src="assets/lingbot-va/memory_test.jpg" /></p>
+<p><em>图9：两项显式时间记忆任务的评估结果和环境可视化。该图是论证"自回归因果世界建模优于纯前馈 VLA"的最直接证据——这两项任务无法通过单帧观测推断正确行动，必须依赖历史记忆。</em></p>
+<p><strong>左图 — 成功率柱状图</strong>：横轴为两项任务（Wipe Plate + Search Box），每项任务下 LingBot-VA（绿色）与 π₀.₅（蓝色）各一根柱。纵轴为 Success Rate（%）。</p>
+<table>
+<thead>
+<tr>
+<th>任务</th>
+<th style="text-align: center;">LingBot-VA SR</th>
+<th style="text-align: center;">π₀.₅ SR</th>
+<th style="text-align: center;">差距</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Wipe Plate</td>
+<td style="text-align: center;">~95%</td>
+<td style="text-align: center;">~60%</td>
+<td style="text-align: center;">+35%</td>
+</tr>
+<tr>
+<td>Search Box</td>
+<td style="text-align: center;">~85%</td>
+<td style="text-align: center;">~55%</td>
+<td style="text-align: center;">+30%</td>
+</tr>
+</tbody>
+</table>
+<p><strong>右图 — 评估环境可视化</strong>：</p>
+<p><strong>(a) Wipe Plate（擦拭盘子）</strong>：场景中有盘子、海绵等。机器人需要用一个海绵/抹布精确擦拭盘子恰好 6 次后停止。关键挑战：从任何单帧图像无法判断"已经擦了几次"——擦拭前后的视觉状态几乎相同（盘子还是那个盘子）。必须通过记忆来计数。π₀.₅ 的约 60% 成功率表明前馈式策略有一定概率通过动作模式找到规律（可能通过时间步数隐式编码），但不稳健。LingBot-VA 接近 95% 的成功率说明 KV cache 中保留了擦盘子的次数信息。</p>
+<p><strong>(b) Search Box（搜索盒子）</strong>：场景中有左右两个盒子，仅一个含方块。训练数据中方块位置随机（50% 左、50% 右），测试时方块始终在左盒。关键挑战：模型必须先打开右盒（空），然后必须"记住右盒是空的"才能正确选择左盒，而不是重开右盒。如果没有记忆，模型有 50% 概率返回空盒。π₀.₅ 约 55% 的成功率接近随机水平（~50%），说明它在前馈框架下几乎无法维持"已检查某盒"的状态。LingBot-VA 约 85% 的成功率表明自回归因果记忆有效编码了搜索历史。</p>
+<p><strong>为什么这直接证明了因果世界模型的优势</strong>：前馈策略 <span class="math inline">$\pi(a_t|o_t)$</span> 中，<span class="math inline">$o_t$</span> 在擦盘子时无法区分"已擦 3 次"和"已擦 5 次"，在搜索时无法区分"刚开过右盒"和"还没开过右盒"。LingBot-VA 的自回归建模 <span class="math inline">$p(o_{t+1}|o_{\leq t}, a_{&lt;t})$</span> 通过 KV cache 的完整历史隐式编码了这些不可见的状态信息。</p>
+<h3 id="47">4.7 泛化能力</h3>
+<p><img alt="图10：泛化能力评估" src="assets/lingbot-va/generalization.jpg" /></p>
+<p><em>图10：LingBot-VA 在新物体和新空间位置上的泛化能力评估。两个子图分别测试视觉外观泛化和空间布局泛化——合在一起论证了世界模型学习到的是"物体无关的物理先验"而非"视觉模式匹配"。</em></p>
+<p><strong>子图 (a) — Novel Object Generalization（新物体泛化）</strong>：</p>
+<ul>
+<li><strong>训练设置</strong>：仅使用一种物体（例如方块/圆柱）进行 pick-and-place 训练。</li>
+<li><strong>测试设置</strong>：替换为多种不同形状、颜色、纹理的新物体——包括不同大小的方块、球体、圆柱体、甚至训练中从未见过的物体类别。</li>
+<li><strong>评估逻辑</strong>：如果模型学到的是"匹配视觉模板"，则在看到不同外观的物体时失败。如果学到的是"物体如何受重力影响、被抓取后如何移动"的物理规律，则可以泛化。</li>
+<li><strong>图中排布</strong>：通常以网格形式展示不同物体的操作序列——左侧为训练物体，右侧为多种测试物体。绿色/红色边框标示成功/失败。</li>
+<li><strong>LingBot-VA 的表现</strong>：世界模型通过视频预测学习到的是"物体在空间中的存在性、可抓取性、移动后的位置变化"等物理属性，而非特定物体的视觉纹理。视频生成的预训练数据覆盖了大量不同的物体外观，使 backbone 天然具备物体外观不变性。</li>
+</ul>
+<p><strong>子图 (b) — Spatial Generalization（空间泛化）</strong>：</p>
+<ul>
+<li><strong>训练设置（ID, In-Distribution）</strong>：物体始终放置在固定区域（例如桌面的前左象限），机器人从固定位置开始操作。</li>
+<li><strong>测试设置（OOD, Out-of-Distribution）</strong>：物体被随机放置在桌面上的各种位置，包括训练中从未出现过的远端角落、边缘区域。</li>
+<li><strong>评估逻辑</strong>：如果模型学到的是"物体在坐标 (x, y) → 执行动作序列 ABC"，则位置变化后失败。如果学到的是"看到物体在哪里 → 规划到达该位置的路径并操作"，则可以泛化。</li>
+<li><strong>图中排布</strong>：通常对比 ID 和 OOD 位置下的操作轨迹——可以看到机械臂是否能成功到达新位置并完成 pick-and-place。</li>
+<li><strong>LingBot-VA 的表现</strong>：视频预测将空间关系编码为视觉 latent 中的位置信息，而非过拟合到绝对坐标。KV cache 保留了"物体当前在什么位置"的空间记忆。</li>
+</ul>
+<p><strong>泛化能力的来源</strong>：视频生成 backbone（Wan2.2-5B）在海量 internet 视频上预训练，已经学到了关于物体外观多样性、空间关系、运动动力学的通用先验。LingBot-VA 的联合训练在此基础上叠加了机器人操作知识，但保留了视频预训练带来的泛化性——这使得世界模型对物体外观和空间位置的分布偏移具有较强的鲁棒性。纯 VLA 方法（如 π₀.₅）仅从操作数据中学习，缺乏这种基于视频的通用物理先验。</p>
+<hr />
+<h2 id="_11">五、关键洞察与技术亮点</h2>
+<h3 id="51">5.1 为什么是"因果世界模型"？</h3>
+<p>核心理念：机器人操作不是模式匹配问题，而是<strong>时序因果推理问题</strong>。LingBot-VA 的每个设计选择都围绕着对因果关系和物理时序的尊重：</p>
+<ul>
+<li><strong>因果注意力</strong> → 未来不能影响过去</li>
+<li><strong>Teacher Forcing</strong> → 训练和部署数据分布一致（都基于真实历史）</li>
+<li><strong>KV Cache</strong> → 完整保留因果历史</li>
+<li><strong>自回归闭环</strong> → 每次预测后纳入真实反馈</li>
+</ul>
+<h3 id="52">5.2 "视频生成 + 动作推理"的统一</h3>
+<p>不同于将视频预测和动作推理分离的方案（如先预测视频，再单独规划），LingBot-VA 通过 MoT 架构将两者<strong>交错在同一序列中联合处理</strong>——视频 token 和动作 token 通过 cross-modal attention 互相影响，使：</p>
+<ul>
+<li>视频预测受益于对已执行动作的知识</li>
+<li>动作推理受益于对未来视觉状态的"想象"</li>
+</ul>
+<h3 id="53">5.3 工程化部署的系统性思考</h3>
+<p>论文不仅在算法层面创新，在系统部署层面也做出了精细设计：</p>
+<ul>
+<li><strong>Noisy History Augmentation</strong>：巧妙的训练技巧，使推理加速 2× 同时几乎不损失精度</li>
+<li><strong>异步流水线</strong>：计算与执行并行，隐藏推理延迟</li>
+<li><strong>FDM Grounding</strong>：解决异步模式下的开放环退化——本质是用每次真实反馈做一次"重对齐"</li>
+<li><strong>跨 Episode 打包</strong>：类似 LLM 的 sequence packing，提高 GPU 利用率</li>
+</ul>
+<h3 id="54-motus">5.4 与 Motus 的关系</h3>
+<p>LingBot-VA 与同期工作 Motus 共享 MoT 架构思想（视频-动作双流交叉注意力），但关键区别在于：</p>
+<ul>
+<li>Motus 在 latent 推理空间中使用双向注意力（chunk 内），缺乏严格因果结构</li>
+<li>LingBot-VA 坚持因果自回归 + KV cache 持久记忆，在长序列任务上展现明显优势（RoboTwin H=3: LingBot-VA 93.2 vs Motus 85.0）</li>
+</ul>
+<hr />
+<h2 id="_12">六、代码实现解读</h2>
+<p>LingBot-VA 代码仓库结构清晰，核心文件如下：</p>
+<h3 id="61-wan_vamodulesmodelpy">6.1 模型架构（<code>wan_va/modules/model.py</code>）</h3>
+<p><strong><code>WanTransformer3DModel</code></strong> 是整个系统的核心模型类，继承自 diffusers 的 <code>ModelMixin</code> 和 <code>ConfigMixin</code>。</p>
+<h4 id="611">6.1.1 整体架构字符画</h4>
+<div class="codehilite"><pre><span></span><code><span class="err">┌─────────────────────────────────────────────────────────────────────┐</span>
+<span class="err">│</span><span class="w">                   </span><span class="nx">WanTransformer3DModel</span><span class="w"> </span><span class="p">(</span><span class="m m-Double">5.3</span><span class="nx">B</span><span class="p">)</span><span class="w">                       </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                                      </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="nx">Input</span><span class="p">:</span><span class="w"> </span><span class="nx">o_t</span><span class="w"> </span><span class="p">(</span><span class="nx">观测图像</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nx">c</span><span class="w"> </span><span class="p">(</span><span class="nx">T5语言指令</span><span class="p">)</span><span class="w">                               </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                                      </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">┌──────────────────────┐</span><span class="w">    </span><span class="err">┌──────────────────────┐</span><span class="w">               </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">   </span><span class="nx">Video</span><span class="w"> </span><span class="nx">Stream</span><span class="w">       </span><span class="err">│</span><span class="w">    </span><span class="err">│</span><span class="w">   </span><span class="nx">Action</span><span class="w"> </span><span class="nx">Stream</span><span class="w">       </span><span class="err">│</span><span class="w">               </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">   </span><span class="p">(</span><span class="nx">Wan2</span><span class="m m-Double">.2</span><span class="o">-</span><span class="mi">5</span><span class="nx">B</span><span class="w"> </span><span class="nx">init</span><span class="p">)</span><span class="w">  </span><span class="err">│</span><span class="w">    </span><span class="err">│</span><span class="w">   </span><span class="p">(</span><span class="nx">Wan</span><span class="w"> </span><span class="nx">weights</span><span class="w"> </span><span class="nx">copy</span><span class="p">)</span><span class="w">  </span><span class="err">│</span><span class="w">               </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">   </span><span class="nx">d_v</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">3072</span><span class="w">         </span><span class="err">│</span><span class="w">    </span><span class="err">│</span><span class="w">   </span><span class="nx">d_a</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">768</span><span class="w"> </span><span class="p">(</span><span class="mi">1</span><span class="o">/</span><span class="mi">4</span><span class="err">×</span><span class="p">)</span><span class="w">    </span><span class="err">│</span><span class="w">               </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">└──────┬───────────────┘</span><span class="w">    </span><span class="err">└──────┬───────────────┘</span><span class="w">               </span><span class="err">│</span>
+<span class="err">│</span><span class="w">         </span><span class="err">│</span><span class="w">                           </span><span class="err">│</span><span class="w">                                </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">┌──────▼───────────────────────────▼──────────────────┐</span><span class="w">            </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">         </span><span class="nx">Input</span><span class="w"> </span><span class="nx">Embedding</span><span class="w">                              </span><span class="err">│</span><span class="w">            </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">┌─────────────────┐</span><span class="w">  </span><span class="err">┌─────────────────┐</span><span class="w">            </span><span class="err">│</span><span class="w">            </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="nx">patch_embed_mlp</span><span class="w"> </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="nx">action_embedder</span><span class="w"> </span><span class="err">│</span><span class="w">            </span><span class="err">│</span><span class="w">            </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="p">(</span><span class="mi">48</span><span class="err">×</span><span class="mi">1</span><span class="err">×</span><span class="mi">2</span><span class="err">×</span><span class="mi">2</span><span class="err">→</span><span class="mi">3072</span><span class="p">)</span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="p">(</span><span class="mi">30</span><span class="err">→</span><span class="mi">3072</span><span class="p">,</span><span class="w"> </span><span class="nx">MLP</span><span class="p">)</span><span class="w">  </span><span class="err">│</span><span class="w">            </span><span class="err">│</span><span class="w">            </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">└────────┬────────┘</span><span class="w">  </span><span class="err">└────────┬────────┘</span><span class="w">            </span><span class="err">│</span><span class="w">            </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">           </span><span class="err">│</span><span class="w">                    </span><span class="err">│</span><span class="w">                      </span><span class="err">│</span><span class="w">            </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="nx">Interleave</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="nx">z_t</span><span class="p">,</span><span class="w"> </span><span class="nx">a_t1</span><span class="p">,</span><span class="w"> </span><span class="nx">a_t2</span><span class="p">,</span><span class="w"> </span><span class="nx">a_t3</span><span class="p">,</span><span class="w"> </span><span class="nx">a_t4</span><span class="p">,</span><span class="w"> </span><span class="nx">z_t</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="o">...</span><span class="p">]</span><span class="err">│</span><span class="w">          </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">└───────────┬────────────────────┬──────────────────────┘</span><span class="w">            </span><span class="err">│</span>
+<span class="err">│</span><span class="w">              </span><span class="err">│</span><span class="w">                    </span><span class="err">│</span><span class="w">                                   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">┌───────────▼────────────────────▼──────────────────────┐</span><span class="w">            </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">      </span><span class="mi">30</span><span class="err">×</span><span class="w"> </span><span class="nx">WanTransformerBlock</span><span class="w"> </span><span class="p">(</span><span class="nx">shared</span><span class="w"> </span><span class="nx">weights</span><span class="p">)</span><span class="w">          </span><span class="err">│</span><span class="w">            </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">                                                        </span><span class="err">│</span><span class="w">            </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="nx">Video</span><span class="w"> </span><span class="err">──►</span><span class="w"> </span><span class="k">Self</span><span class="o">-</span><span class="nx">Attn</span><span class="w"> </span><span class="err">──┐</span><span class="w">                              </span><span class="err">│</span><span class="w">            </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">                         </span><span class="err">├─►</span><span class="w"> </span><span class="nx">Cross</span><span class="o">-</span><span class="nx">Attn</span><span class="p">(</span><span class="nx">T5</span><span class="p">)</span><span class="w"> </span><span class="err">──►</span><span class="w"> </span><span class="nx">FFN</span><span class="w"> </span><span class="err">──►│</span><span class="w">            </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="nx">Action</span><span class="w"> </span><span class="err">─►</span><span class="w"> </span><span class="k">Self</span><span class="o">-</span><span class="nx">Attn</span><span class="w"> </span><span class="err">──┘</span><span class="w">                              </span><span class="err">│</span><span class="w">            </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">                                                        </span><span class="err">│</span><span class="w">            </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="p">(</span><span class="nx">MoT</span><span class="p">:</span><span class="w"> </span><span class="nx">各自独立QKV</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nx">维度投影</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nx">联合Self</span><span class="o">-</span><span class="nx">Attention</span><span class="p">)</span><span class="w">      </span><span class="err">│</span><span class="w">            </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">└───┬──────────────────────────┬──────────────────────────┘</span><span class="w">            </span><span class="err">│</span>
+<span class="err">│</span><span class="w">      </span><span class="err">│</span><span class="w">                          </span><span class="err">│</span><span class="w">                                      </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">┌───▼──────────┐</span><span class="w">    </span><span class="err">┌──────────▼─────────┐</span><span class="w">                           </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="nx">proj_out</span><span class="w">    </span><span class="err">│</span><span class="w">    </span><span class="err">│</span><span class="w">  </span><span class="nx">action_proj_out</span><span class="w">    </span><span class="err">│</span><span class="w">                           </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="p">(</span><span class="mi">3072</span><span class="err">→</span><span class="mi">48</span><span class="o">*</span><span class="mi">4</span><span class="p">)</span><span class="w"> </span><span class="err">│</span><span class="w">    </span><span class="err">│</span><span class="w">  </span><span class="p">(</span><span class="mi">3072</span><span class="err">→</span><span class="mi">30</span><span class="p">)</span><span class="w">          </span><span class="err">│</span><span class="w">                           </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">└───┬──────────┘</span><span class="w">    </span><span class="err">└──────────┬─────────┘</span><span class="w">                           </span><span class="err">│</span>
+<span class="err">│</span><span class="w">      </span><span class="err">│</span><span class="w">                          </span><span class="err">│</span><span class="w">                                      </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="nx">Output</span><span class="p">:</span><span class="w"> </span><span class="nx">Δz_t</span><span class="w"> </span><span class="p">(</span><span class="nx">视频残差</span><span class="p">)</span><span class="w">       </span><span class="nx">Output</span><span class="p">:</span><span class="w"> </span><span class="nx">a_t</span><span class="w"> </span><span class="p">(</span><span class="nx">动作向量</span><span class="p">)</span><span class="w">                    </span><span class="err">│</span>
+<span class="err">└─────────────────────────────────────────────────────────────────────┘</span>
+</code></pre></div>
+
+<h4 id="612-forward_train">6.1.2 训练前向数据流（<code>forward_train</code>）</h4>
+<div class="codehilite"><pre><span></span><code>                    Token 拼接与统一序列
+─────────────────────────────────────────────────────────────────
+  noisy_latents    cond_latents     noisy_actions   cond_actions
+  (去噪目标)        (干净历史)       (去噪目标)       (干净历史)
+  ┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐
+  │ B×C×F×   │    │ B×C×F×   │    │ B×C×F×   │    │ B×C×F×   │
+  │  H×W     │    │  H×W     │    │  H×1     │    │  H×1     │
+  └────┬─────┘    └────┬─────┘    └────┬─────┘    └────┬─────┘
+       │               │               │               │
+       ▼               ▼               ▼               ▼
+  patch_embed      patch_embed     action_embed    action_embed
+       │               │               │               │
+       ▼               ▼               ▼               ▼
+  ┌─────────────────────────────────────────────────────────┐
+  │ [N_L | C_L | N_A | C_A]  →  cat(dim=1)  →  [1, T, 3072]│
+  │                                                         │
+  │ N_L: noisy latents,  C_L: clean latents                 │
+  │ N_A: noisy actions,  C_A: clean actions                 │
+  │ + pad to multiple of 128                                 │
+  └─────────────────────┬───────────────────────────────────┘
+                        │
+          ┌─────────────▼─────────────┐
+          │  FlexAttnFunc.init_mask() │  ← 构建因果注意力掩码
+          │  控制4种token间可见性      │
+          └─────────────┬─────────────┘
+                        │
+          ┌─────────────▼─────────────┐
+          │  30× WanTransformerBlock  │
+          │  (self-attn + cross-attn   │
+          │   + FFN, 含MoT融合)        │
+          └─────────────┬─────────────┘
+                        │
+          ┌─────────────▼─────────────┐
+          │  norm_out + scale_shift   │
+          │  split → latent / action   │
+          │  ┌──────────┐ ┌────────┐  │
+          │  │proj_out  │ │act_proj│  │
+          │  └────┬─────┘ └───┬────┘  │
+          │       │           │       │
+          │  Δz (video)   a (action)  │
+          └───────────────────────────┘
+</code></pre></div>
+
+<h4 id="613-forward">6.1.3 推理前向（<code>forward</code>）的三种模式</h4>
+<div class="codehilite"><pre><span></span><code>forward(input_dict, update_cache, cache_name, action_mode, train_mode)
+    │
+    ├── train_mode=True ──► forward_train(input_dict)
+    │
+    ├── action_mode=False (视频去噪模式)
+    │       │
+    │       ├── patch_embedding_mlp(noisy_latents)
+    │       ├── condition_embedder(timesteps, text_emb)
+    │       ├── 30× blocks (update_cache 控制 KV cache 策略)
+    │       │       update_cache=0: 临时使用 cache，用完恢复
+    │       │       update_cache=1: 更新 cache，标记 is_pred=True
+    │       │       update_cache=2: 更新 cache，标记 is_pred=False
+    │       └── proj_out → 视频 latent 残差
+    │
+    └── action_mode=True (动作去噪模式)
+            │
+            ├── action_embedder(noisy_actions)
+            ├── condition_embedder_action(timesteps, text_emb)
+            │       (独立的时间嵌入参数！)
+            ├── 30× blocks (与视频模式共享层参数)
+            └── action_proj_out → 动作向量
+</code></pre></div>
+
+<h4 id="614-kv-cache">6.1.4 KV Cache 生命周期</h4>
+<div class="codehilite"><pre><span></span><code><span class="n">时序</span><span class="err">：</span><span class="n">t</span><span class="o">=</span><span class="mi">0</span><span class="w">         </span><span class="n">t</span><span class="o">=</span><span class="mi">4</span><span class="w">         </span><span class="n">t</span><span class="o">=</span><span class="mi">8</span><span class="w">         </span><span class="n">t</span><span class="o">=</span><span class="mi">12</span><span class="w">        </span><span class="p">...</span>
+<span class="w">      </span><span class="err">│</span><span class="w">           </span><span class="err">│</span><span class="w">           </span><span class="err">│</span><span class="w">           </span><span class="err">│</span>
+<span class="w">      </span><span class="err">▼</span><span class="w">           </span><span class="err">▼</span><span class="w">           </span><span class="err">▼</span><span class="w">           </span><span class="err">▼</span>
+<span class="w">  </span><span class="err">┌─────────┐┌─────────┐┌─────────┐┌─────────┐</span>
+<span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="n">Cold</span><span class="w">    </span><span class="err">││</span><span class="w"> </span><span class="n">Infer</span><span class="w">   </span><span class="err">││</span><span class="k">Compute</span><span class="w">  </span><span class="err">││</span><span class="w"> </span><span class="n">Infer</span><span class="w">   </span><span class="err">│</span>
+<span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="k">Start</span><span class="w">   </span><span class="err">││</span><span class="w"> </span><span class="n">Chunk</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="err">││</span><span class="n">KV</span><span class="w"> </span><span class="n">Cache</span><span class="w"> </span><span class="err">││</span><span class="w"> </span><span class="n">Chunk</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="err">│</span>
+<span class="w">  </span><span class="err">│</span><span class="w">         </span><span class="err">││</span><span class="w">         </span><span class="err">││</span><span class="p">(</span><span class="n">真实obs</span><span class="p">)</span><span class="err">││</span><span class="w">         </span><span class="err">│</span>
+<span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="n">reset</span><span class="p">()</span><span class="w"> </span><span class="err">││</span><span class="n">_infer</span><span class="p">()</span><span class="w"> </span><span class="err">││</span><span class="n">_compute</span><span class="w"> </span><span class="err">││</span><span class="n">_infer</span><span class="p">()</span><span class="w"> </span><span class="err">│</span>
+<span class="w">  </span><span class="err">│</span><span class="w">         </span><span class="err">││</span><span class="w">         </span><span class="err">││</span><span class="n">_kv_cache</span><span class="err">││</span><span class="w">         </span><span class="err">│</span>
+<span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="n">cache</span><span class="w">   </span><span class="err">││</span><span class="w"> </span><span class="nl">video</span><span class="p">:</span><span class="w">  </span><span class="err">││</span><span class="n">写入真实</span><span class="w"> </span><span class="err">││</span><span class="w"> </span><span class="nl">video</span><span class="p">:</span><span class="w">  </span><span class="err">│</span>
+<span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="err">←</span><span class="n">z_0</span><span class="w">    </span><span class="err">││</span><span class="w"> </span><span class="mi">3</span><span class="n">步去噪</span><span class="w"> </span><span class="err">││</span><span class="n">z_</span><span class="err">{</span><span class="mi">1</span><span class="err">:</span><span class="mi">4</span><span class="err">}</span><span class="w">  </span><span class="err">││</span><span class="w"> </span><span class="mi">3</span><span class="n">步去噪</span><span class="w"> </span><span class="err">│</span>
+<span class="w">  </span><span class="err">│</span><span class="w">         </span><span class="err">││</span><span class="w"> </span><span class="k">action</span><span class="err">:</span><span class="w"> </span><span class="err">││</span><span class="o">+</span><span class="w"> </span><span class="n">a_</span><span class="err">{</span><span class="mi">0</span><span class="err">:</span><span class="mi">3</span><span class="err">}││</span><span class="w"> </span><span class="k">action</span><span class="err">:</span><span class="w"> </span><span class="err">│</span>
+<span class="w">  </span><span class="err">│</span><span class="w">         </span><span class="err">││</span><span class="w"> </span><span class="mi">10</span><span class="n">步去噪</span><span class="err">││</span><span class="w">         </span><span class="err">││</span><span class="w"> </span><span class="mi">10</span><span class="n">步去噪</span><span class="err">│</span>
+<span class="w">  </span><span class="err">└────┬────┘└────┬────┘└────┬────┘└────┬────┘</span>
+<span class="w">       </span><span class="err">│</span><span class="w">          </span><span class="err">│</span><span class="w">          </span><span class="err">│</span><span class="w">          </span><span class="err">│</span>
+<span class="w">       </span><span class="err">▼</span><span class="w">          </span><span class="err">▼</span><span class="w">          </span><span class="err">▼</span><span class="w">          </span><span class="err">▼</span>
+<span class="w">   </span><span class="n">执行a_0</span><span class="w">      </span><span class="n">执行a_1</span><span class="w">    </span><span class="n">执行a_2</span><span class="w">    </span><span class="n">执行a_3</span>
+<span class="w">   </span><span class="n">收集o_1</span><span class="w">      </span><span class="n">收集o_2</span><span class="w">    </span><span class="n">收集o_3</span><span class="w">    </span><span class="n">收集o_4</span>
+
+<span class="n">KV</span><span class="w"> </span><span class="n">Cache</span><span class="w"> </span><span class="n">内容演变</span><span class="err">：</span>
+<span class="w">  </span><span class="n">t</span><span class="o">=</span><span class="mi">0</span><span class="err">:</span><span class="w"> </span><span class="o">[</span><span class="n">z_0</span><span class="o">]</span>
+<span class="w">  </span><span class="n">t</span><span class="o">=</span><span class="mi">4</span><span class="err">:</span><span class="w"> </span><span class="o">[</span><span class="n">z_0, a_{0:3}(pred), z_{1:4}(pred)</span><span class="o">]</span>
+<span class="w">  </span><span class="n">t</span><span class="o">=</span><span class="mf">4.5</span><span class="err">:</span><span class="w"> </span><span class="o">[</span><span class="n">z_0, a_{0:3}(real), z_{1:4}(real)</span><span class="o">]</span><span class="w">  </span><span class="err">←</span><span class="w"> </span><span class="n">_compute_kv_cache</span><span class="w"> </span><span class="n">替换预测</span>
+<span class="w">  </span><span class="n">t</span><span class="o">=</span><span class="mi">8</span><span class="err">:</span><span class="w"> </span><span class="o">[</span><span class="n">z_0, a_{0:3}(real), z_{1:4}(real), a_{4:7}(pred), z_{5:8}(pred)</span><span class="o">]</span>
+<span class="w">  </span><span class="p">...</span>
+</code></pre></div>
+
+<h4 id="615-flexattnfunc_get_mask_mod">6.1.5 注意力掩码实现细节（<code>FlexAttnFunc._get_mask_mod</code>）</h4>
+<p>实际代码中的掩码通过以下组合实现：</p>
+<div class="codehilite"><pre><span></span><code><span class="nl">clean2clean_mask</span><span class="p">:</span><span class="w">  </span><span class="n">noise_ids</span><span class="o">[</span><span class="n">q</span><span class="o">]==</span><span class="mi">1</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">noise_ids</span><span class="o">[</span><span class="n">kv</span><span class="o">]==</span><span class="mi">1</span>
+<span class="nl">noise2clean_mask</span><span class="p">:</span><span class="w">  </span><span class="n">noise_ids</span><span class="o">[</span><span class="n">q</span><span class="o">]==</span><span class="mi">0</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">noise_ids</span><span class="o">[</span><span class="n">kv</span><span class="o">]==</span><span class="mi">1</span>
+<span class="nl">noise2noise_mask</span><span class="p">:</span><span class="w">  </span><span class="n">noise_ids</span><span class="o">[</span><span class="n">q</span><span class="o">]==</span><span class="mi">0</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">noise_ids</span><span class="o">[</span><span class="n">kv</span><span class="o">]==</span><span class="mi">0</span>
+
+<span class="nl">block_causal_mask</span><span class="p">:</span><span class="w">       </span><span class="n">frame_ids</span><span class="o">[</span><span class="n">kv</span><span class="o">]</span><span class="w"> </span><span class="o">&lt;=</span><span class="w"> </span><span class="n">frame_ids</span><span class="o">[</span><span class="n">q</span><span class="o">]</span>
+<span class="nl">block_causal_excl_self</span><span class="p">:</span><span class="w">  </span><span class="n">frame_ids</span><span class="o">[</span><span class="n">kv</span><span class="o">]</span><span class="w"> </span><span class="o">&lt;</span><span class="w">  </span><span class="n">frame_ids</span><span class="o">[</span><span class="n">q</span><span class="o">]</span>
+<span class="nl">block_self_mask</span><span class="p">:</span><span class="w">          </span><span class="n">frame_ids</span><span class="o">[</span><span class="n">kv</span><span class="o">]</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">frame_ids</span><span class="o">[</span><span class="n">q</span><span class="o">]</span>
+
+<span class="n">最终掩码</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">or_masks</span><span class="p">(</span>
+<span class="w">    </span><span class="n">and_masks</span><span class="p">(</span><span class="n">clean2clean</span><span class="p">,</span><span class="w">   </span><span class="n">block_causal</span><span class="p">),</span><span class="w">          </span><span class="err">#</span><span class="w"> </span><span class="n">干净</span><span class="err">→</span><span class="n">干净</span><span class="err">：</span><span class="n">因果可见</span>
+<span class="w">    </span><span class="n">and_masks</span><span class="p">(</span><span class="n">noise2clean</span><span class="p">,</span><span class="w">   </span><span class="n">block_causal_excl_self</span><span class="p">),</span><span class="w"> </span><span class="err">#</span><span class="w"> </span><span class="n">噪声</span><span class="err">→</span><span class="n">干净</span><span class="err">：</span><span class="n">因果但排除自身</span>
+<span class="w">    </span><span class="n">and_masks</span><span class="p">(</span><span class="n">noise2noise</span><span class="p">,</span><span class="w">   </span><span class="n">block_self</span><span class="p">),</span><span class="w">             </span><span class="err">#</span><span class="w"> </span><span class="n">噪声</span><span class="err">→</span><span class="n">噪声</span><span class="err">：</span><span class="n">仅同块</span>
+<span class="p">)</span>
+<span class="o">+</span><span class="w"> </span><span class="n">and_masks</span><span class="p">(</span><span class="n">seq_mask</span><span class="p">)</span><span class="w">   </span><span class="err">#</span><span class="w"> </span><span class="n">同</span><span class="w"> </span><span class="n">episode</span><span class="w"> </span><span class="n">内可见</span>
+<span class="o">+</span><span class="w"> </span><span class="n">block_window_mask</span><span class="w">     </span><span class="err">#</span><span class="w"> </span><span class="n">滑动窗口限制</span>
+</code></pre></div>
+
+<h3 id="62-wan_vawan_va_serverpy">6.2 推理服务器（<code>wan_va/wan_va_server.py</code>）</h3>
+<p><strong><code>VA_Server</code></strong> 类实现了完整的推理流水线：</p>
+<p><strong>关键方法</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th>功能</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>_reset(prompt)</code></td>
+<td>初始化/重置：清理 KV cache、编码 Prompt、设置 action mask 和归一化</td>
+</tr>
+<tr>
+<td><code>_encode_obs(obs)</code></td>
+<td>观测编码：图像 → 预处理（resize + normalize）→ Wan2.2 VAE → latent</td>
+</tr>
+<tr>
+<td><code>_infer(obs, frame_st_id)</code></td>
+<td>核心推理：视频去噪（3步，到 s=0.6）→ 动作去噪（10步，到 s=1.0），支持 CFG</td>
+</tr>
+<tr>
+<td><code>_compute_kv_cache(obs)</code></td>
+<td>KV Cache 更新：将真实观测和动作编码后写入 KV cache（<code>update_cache=2</code>）</td>
+</tr>
+<tr>
+<td><code>infer(obs)</code></td>
+<td>主入口：路由到 reset / compute_kv_cache / infer</td>
+</tr>
+</tbody>
+</table>
+<p><strong>异步推理流程（对应论文 Algorithm 2）</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="n">时间轴</span><span class="w"> </span><span class="err">─────────────────────────────────────────────────────────────►</span>
+
+<span class="n">Branch</span><span class="w"> </span><span class="n">A</span><span class="w"> </span><span class="p">(</span><span class="n">Robot</span><span class="w"> </span><span class="n">Execution</span><span class="p">)</span><span class="o">:</span>
+<span class="w">  </span><span class="p">[</span><span class="n">Cold</span><span class="w"> </span><span class="n">Start</span><span class="p">]</span><span class="w">        </span><span class="p">[</span><span class="n">执行</span><span class="w"> </span><span class="n">a_0</span><span class="p">]</span><span class="w">              </span><span class="p">[</span><span class="n">执行</span><span class="w"> </span><span class="n">a_1</span><span class="p">]</span>
+<span class="w">  </span><span class="err">┌──────────┐</span><span class="w">       </span><span class="err">┌─────────────────┐</span><span class="w">     </span><span class="err">┌─────────────────┐</span>
+<span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="n">等待首次</span><span class="w">  </span><span class="err">│</span><span class="w">       </span><span class="err">│</span><span class="w"> </span><span class="n">Executor</span><span class="p">(</span><span class="n">a_0</span><span class="p">,</span><span class="w">   </span><span class="err">│</span><span class="w">     </span><span class="err">│</span><span class="w"> </span><span class="n">Executor</span><span class="p">(</span><span class="n">a_1</span><span class="p">,</span><span class="w">   </span><span class="err">│</span>
+<span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="n">预测完成</span><span class="w">  </span><span class="err">│</span><span class="w">       </span><span class="err">│</span><span class="w">  </span><span class="n">ObsQueue</span><span class="p">)</span><span class="w">      </span><span class="err">│</span><span class="w">     </span><span class="err">│</span><span class="w">  </span><span class="n">ObsQueue</span><span class="p">)</span><span class="w">      </span><span class="err">│</span>
+<span class="w">  </span><span class="err">└──────────┘</span><span class="w">       </span><span class="err">│</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">移动机械臂</span><span class="w">     </span><span class="err">│</span><span class="w">     </span><span class="err">│</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">移动机械臂</span><span class="w">     </span><span class="err">│</span>
+<span class="w">                     </span><span class="err">│</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">收集</span><span class="w"> </span><span class="n">o_1</span><span class="w">       </span><span class="err">│</span><span class="w">     </span><span class="err">│</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">收集</span><span class="w"> </span><span class="n">o_2</span><span class="w">       </span><span class="err">│</span>
+<span class="w">                     </span><span class="err">└────────┬────────┘</span><span class="w">     </span><span class="err">└────────┬────────┘</span>
+<span class="w">                              </span><span class="err">│</span><span class="w">                       </span><span class="err">│</span>
+<span class="n">Branch</span><span class="w"> </span><span class="n">B</span><span class="w"> </span><span class="p">(</span><span class="n">Inference</span><span class="p">)</span><span class="o">:</span><span class="w">         </span><span class="err">▼</span><span class="w">                       </span><span class="err">▼</span>
+<span class="w">  </span><span class="err">┌──────────────┐</span><span class="w">    </span><span class="err">┌─────────────────┐</span><span class="w">     </span><span class="err">┌─────────────────┐</span>
+<span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="n">Predict</span><span class="p">(</span><span class="n">z_0</span><span class="p">)</span><span class="w"> </span><span class="err">│</span><span class="w">    </span><span class="err">│</span><span class="w"> </span><span class="n">Read</span><span class="w"> </span><span class="n">ObsQueue</span><span class="w">   </span><span class="err">│</span><span class="w">     </span><span class="err">│</span><span class="w"> </span><span class="n">Read</span><span class="w"> </span><span class="n">ObsQueue</span><span class="w">   </span><span class="err">│</span>
+<span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">z_1</span><span class="p">,</span><span class="w"> </span><span class="n">a_0</span><span class="w">   </span><span class="err">│</span><span class="w">    </span><span class="err">│</span><span class="w"> </span><span class="n">o_1</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">z_1</span><span class="p">(</span><span class="n">real</span><span class="p">)</span><span class="w"> </span><span class="err">│</span><span class="w">     </span><span class="err">│</span><span class="w"> </span><span class="n">o_2</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">z_2</span><span class="p">(</span><span class="n">real</span><span class="p">)</span><span class="w"> </span><span class="err">│</span>
+<span class="w">  </span><span class="err">│</span><span class="w">              </span><span class="err">│</span><span class="w">    </span><span class="err">│</span><span class="w">                 </span><span class="err">│</span><span class="w">     </span><span class="err">│</span><span class="w">                 </span><span class="err">│</span>
+<span class="w">  </span><span class="err">│</span><span class="w">              </span><span class="err">│</span><span class="w">    </span><span class="err">│</span><span class="w"> </span><span class="n">KV</span><span class="w"> </span><span class="n">Cache</span><span class="w"> </span><span class="err">←</span><span class="w">      </span><span class="err">│</span><span class="w">     </span><span class="err">│</span><span class="w"> </span><span class="n">KV</span><span class="w"> </span><span class="n">Cache</span><span class="w"> </span><span class="err">←</span><span class="w">      </span><span class="err">│</span>
+<span class="w">  </span><span class="err">│</span><span class="w">              </span><span class="err">│</span><span class="w">    </span><span class="err">│</span><span class="w"> </span><span class="n">z_1</span><span class="p">(</span><span class="n">real</span><span class="p">),</span><span class="w"> </span><span class="n">a_0</span><span class="w">  </span><span class="err">│</span><span class="w">     </span><span class="err">│</span><span class="w"> </span><span class="n">z_2</span><span class="p">(</span><span class="n">real</span><span class="p">),</span><span class="w"> </span><span class="n">a_1</span><span class="w">  </span><span class="err">│</span>
+<span class="w">  </span><span class="err">│</span><span class="w">              </span><span class="err">│</span><span class="w">    </span><span class="err">│</span><span class="w">                 </span><span class="err">│</span><span class="w">     </span><span class="err">│</span><span class="w">                 </span><span class="err">│</span>
+<span class="w">  </span><span class="err">│</span><span class="w">              </span><span class="err">│</span><span class="w">    </span><span class="err">│</span><span class="w"> </span><span class="n">FDM</span><span class="p">(</span><span class="n">z_1</span><span class="p">,</span><span class="n">a_1</span><span class="p">)</span><span class="o">:</span><span class="w">   </span><span class="err">│</span><span class="w">     </span><span class="err">│</span><span class="w"> </span><span class="n">FDM</span><span class="p">(</span><span class="n">z_2</span><span class="p">,</span><span class="n">a_2</span><span class="p">)</span><span class="o">:</span><span class="w">   </span><span class="err">│</span>
+<span class="w">  </span><span class="err">│</span><span class="w">              </span><span class="err">│</span><span class="w">    </span><span class="err">│</span><span class="w"> </span><span class="n">预测</span><span class="w"> </span><span class="n">z_2</span><span class="p">(</span><span class="n">真实</span><span class="w">   </span><span class="err">│</span><span class="w">     </span><span class="err">│</span><span class="w"> </span><span class="n">预测</span><span class="w"> </span><span class="n">z_3</span><span class="p">(</span><span class="n">真实</span><span class="w">   </span><span class="err">│</span>
+<span class="w">  </span><span class="err">│</span><span class="w">              </span><span class="err">│</span><span class="w">    </span><span class="err">│</span><span class="w"> </span><span class="n">反馈对齐</span><span class="p">)</span><span class="w">       </span><span class="err">│</span><span class="w">     </span><span class="err">│</span><span class="w"> </span><span class="n">反馈对齐</span><span class="p">)</span><span class="w">       </span><span class="err">│</span>
+<span class="w">  </span><span class="err">│</span><span class="w">              </span><span class="err">│</span><span class="w">    </span><span class="err">│</span><span class="w">                 </span><span class="err">│</span><span class="w">     </span><span class="err">│</span><span class="w">                 </span><span class="err">│</span>
+<span class="w">  </span><span class="err">│</span><span class="w">              </span><span class="err">│</span><span class="w">    </span><span class="err">│</span><span class="w"> </span><span class="n">Predict</span><span class="p">(</span><span class="n">z_2</span><span class="p">)</span><span class="o">:</span><span class="w">   </span><span class="err">│</span><span class="w">     </span><span class="err">│</span><span class="w"> </span><span class="n">Predict</span><span class="p">(</span><span class="n">z_3</span><span class="p">)</span><span class="o">:</span><span class="w">   </span><span class="err">│</span>
+<span class="w">  </span><span class="err">│</span><span class="w">              </span><span class="err">│</span><span class="w">    </span><span class="err">│</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">z_3</span><span class="p">,</span><span class="w"> </span><span class="n">a_2</span><span class="w">      </span><span class="err">│</span><span class="w">     </span><span class="err">│</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">z_4</span><span class="p">,</span><span class="w"> </span><span class="n">a_3</span><span class="w">      </span><span class="err">│</span>
+<span class="w">  </span><span class="err">└──────────────┘</span><span class="w">    </span><span class="err">└─────────────────┘</span><span class="w">     </span><span class="err">└─────────────────┘</span>
+
+<span class="n">关键</span><span class="err">：</span><span class="n">Branch</span><span class="w"> </span><span class="n">A</span><span class="w"> </span><span class="n">和</span><span class="w"> </span><span class="n">B</span><span class="w"> </span><span class="n">并行运行</span>
+
+<span class="w">    </span><span class="o">-</span><span class="w"> </span><span class="n">Branch</span><span class="w"> </span><span class="n">A</span><span class="w"> </span><span class="n">执行动作时</span><span class="err">，</span><span class="n">Branch</span><span class="w"> </span><span class="n">B</span><span class="w"> </span><span class="n">已经在预测下一步</span>
+<span class="w">    </span><span class="o">-</span><span class="w"> </span><span class="n">延迟隐藏</span><span class="err">：</span><span class="n">推理时间</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">执行时间时</span><span class="err">，</span><span class="n">控制频率</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">执行频率</span>
+<span class="w">    </span><span class="o">-</span><span class="w"> </span><span class="n">FDM</span><span class="w"> </span><span class="n">Grounding</span><span class="w"> </span><span class="n">确保</span><span class="w"> </span><span class="n">Branch</span><span class="w"> </span><span class="n">B</span><span class="w"> </span><span class="n">每次都基于真实反馈重对齐</span>
+</code></pre></div>
+
+<p><strong>CFG（Classifier-Free Guidance）</strong>：</p>
+<ul>
+<li>视频 CFG scale = 5.0（强引导，确保视觉质量）</li>
+<li>动作 CFG scale = 1.0（无引导，动作不需要 CFG）</li>
+</ul>
+<p><strong>GPU 内存优化</strong>：</p>
+<ul>
+<li>VAE 和 Text Encoder offload 到 CPU（<code>enable_offload=True</code>）</li>
+<li>单 GPU 推理约需 18-24GB VRAM</li>
+</ul>
+<h3 id="63-wan_vaconfigs">6.3 关键配置（<code>wan_va/configs/</code>）</h3>
+<p>不同环境和任务的配置分离良好：</p>
+<table>
+<thead>
+<tr>
+<th>配置文件</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>va_robotwin_cfg.py</code></td>
+<td>RoboTwin 推理配置</td>
+</tr>
+<tr>
+<td><code>va_libero_cfg.py</code></td>
+<td>LIBERO 推理配置</td>
+</tr>
+<tr>
+<td><code>va_robotwin_train_cfg.py</code></td>
+<td>RoboTwin Post-training 配置</td>
+</tr>
+<tr>
+<td><code>va_libero_train_cfg.py</code></td>
+<td>LIBERO Post-training 配置</td>
+</tr>
+<tr>
+<td><code>va_demo_cfg.py</code> / <code>va_demo_i2va.py</code></td>
+<td>图像→视频-动作生成 demo</td>
+</tr>
+</tbody>
+</table>
+<h3 id="64">6.4 动作表示</h3>
+<p>采用统一的双臂表示（30 维）：</p>
+<div class="codehilite"><pre><span></span><code><span class="err">左臂</span><span class="o">:</span><span class="w"> </span><span class="n">EEF</span><span class="o">(</span><span class="mi">7</span><span class="o">)</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">Joints</span><span class="o">(</span><span class="mi">7</span><span class="o">)</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">Gripper</span><span class="o">(</span><span class="mi">1</span><span class="o">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">15</span>
+<span class="err">右臂</span><span class="o">:</span><span class="w"> </span><span class="n">EEF</span><span class="o">(</span><span class="mi">7</span><span class="o">)</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">Joints</span><span class="o">(</span><span class="mi">7</span><span class="o">)</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">Gripper</span><span class="o">(</span><span class="mi">1</span><span class="o">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">15</span>
+<span class="err">总计</span><span class="o">:</span><span class="w"> </span><span class="mi">30</span><span class="w"> </span><span class="err">维</span>
+</code></pre></div>
+
+<ul>
+<li>EEF：(x, y, z, qx, qy, qz, qw)</li>
+<li>Joints：最多 7 DoF，不足补零</li>
+<li>动作通过 quantile 归一化到 [-1, 1]</li>
+</ul>
+<hr />
+<h2 id="_13">七、局限性</h2>
+<ol>
+<li><strong>计算开销</strong>：尽管有异步推理和部分去噪优化，5.3B 参数的视频-动作世界模型仍需要约 18-24GB VRAM，在资源受限的边缘设备上部署有挑战</li>
+<li><strong>可形变物体操作</strong>：Fold Clothes 任务上 Progress Score（48.8%）仍较低，说明对高度可形变物体的精确操作仍是开放挑战</li>
+<li><strong>视频 VAE 压缩</strong>：依赖 Wan2.2 VAE，其压缩率和质量直接影响下游策略性能；更高效的压缩方案是未来方向</li>
+<li><strong>模态限制</strong>：当前仅使用视觉和语言输入；论文指出未来可融合触觉、力觉、音频等多模态传感，以应对复杂接触动力学的任务</li>
+<li><strong>仿真到真机的迁移</strong>：Post-training 需要 50 个真机示教，虽然远少于 π₀.₅ 但仍有收集成本</li>
+</ol>
+<hr />
+<h2 id="_14">八、关键概念速查</h2>
+<table>
+<thead>
+<tr>
+<th>概念</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Autoregressive Diffusion</strong></td>
+<td>自回归 + 扩散模型：每个 chunk 内用 flow matching 并行生成，chunk 间用因果自回归连接</td>
+</tr>
+<tr>
+<td><strong>Flow Matching</strong></td>
+<td>连续时间生成框架，学习从噪声分布到数据分布的 ODE 向量场；相比 DDPM 更高效的采样</td>
+</tr>
+<tr>
+<td><strong>Mixture-of-Transformers (MoT)</strong></td>
+<td>多模态 Transformer 架构：各模态独立 Transformer 处理 + 跨模态注意力融合</td>
+</tr>
+<tr>
+<td><strong>Inverse Dynamics Model (IDM)</strong></td>
+<td>从状态变化推理动作：<span class="math inline">$a_t = g(o_t, o_{t+1})$</span>，而非直接 <span class="math inline">$a_t = \pi(o_t)$</span></td>
+</tr>
+<tr>
+<td><strong>Forward Dynamics Model (FDM)</strong></td>
+<td>前向动力学预测：<span class="math inline">$z_t = f(z_{t-1}, a_t)$</span>，用于异步推理中的重对齐</td>
+</tr>
+<tr>
+<td><strong>KV Cache</strong></td>
+<td>缓存历史的 Key-Value pair，避免自回归推理中的重复计算</td>
+</tr>
+<tr>
+<td><strong>Teacher Forcing</strong></td>
+<td>训练时使用 ground-truth 历史作为条件，而非模型自身预测</td>
+</tr>
+<tr>
+<td><strong>Noisy History Augmentation</strong></td>
+<td>训练时给历史视频加噪，使推理时可部分去噪而加速</td>
+</tr>
+<tr>
+<td><strong>Classifier-Free Guidance (CFG)</strong></td>
+<td>通过混合条件和无条件预测引导生成质量</td>
+</tr>
+<tr>
+<td><strong>Variable Chunk Size</strong></td>
+<td>训练时随机采样 chunk 长度，推理时可灵活选择</td>
+</tr>
+<tr>
+<td><strong>Causal VAE</strong></td>
+<td>Wan2.2 的因果视频 VAE，在时间维度上保持因果性（以历史帧为条件编码当前帧）</td>
+</tr>
+<tr>
+<td><strong>Sequence Packing</strong></td>
+<td>将多个 episode 打包为长序列训练，类似 LLM 训练中 pad-to-longest 的优化</td>
+</tr>
+<tr>
+<td><strong>EEF Pose</strong></td>
+<td>End-Effector Pose：末端执行器位姿，XYZ + 旋转四元数</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<blockquote>
+<p><strong>总结</strong>：LingBot-VA 提出了一种原则性的范式转换——从"直接预测动作"到"先因果地想象未来，再推理动作"。通过自回归扩散架构、MoT 统一建模、KV Cache 持久记忆、异步推理等系统性设计，在长序列操作、精密控制、样本效率和新场景泛化上均展现了显著优势。这项工作有力地论证了视频世界建模可以作为机器人学习的基础支柱，与 VLMs 互补而非从属。</p>
+</blockquote>
+  </div>
+</main>
+
+
+<script>
+(function() {
+  const sidebar = document.getElementById('sidebar');
+  const links = sidebar.querySelectorAll('a');
+  const headings = document.querySelectorAll('h1[id], h2[id], h3[id], h4[id]');
+  if (headings.length === 0) return;
+
+  const linkMap = new Map();
+  links.forEach(function(a) {
+    const href = a.getAttribute('href');
+    if (href && href.startsWith('#')) linkMap.set(href.slice(1), a);
+  });
+
+  function onScroll() {
+    let currentId = null;
+    const scrollTop = window.scrollY + 80;
+    headings.forEach(function(h) { if (h.offsetTop <= scrollTop) currentId = h.id; });
+    links.forEach(function(a) { a.classList.remove('active'); });
+    if (currentId && linkMap.has(currentId)) {
+      const el = linkMap.get(currentId);
+      el.classList.add('active');
+      const sr = sidebar.getBoundingClientRect();
+      const er = el.getBoundingClientRect();
+      if (er.bottom > sr.bottom || er.top < sr.top) {
+        el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+    }
+  }
+
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LaST-R1 论文分享简明笔记</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #ffffff;
+    --text: #1a1a2e;
+    --text-secondary: #555;
+    --border: #e1e4e8;
+    --link: #0969da;
+    --table-stripe: #f6f8fa;
+    --heading: #0d1117;
+    --blockquote-border: #0969da;
+    --blockquote-bg: #f0f6ff;
+    --inline-code: #d73a49;
+    --inline-code-bg: #f6f8fa;
+    --sidebar-width: 260px;
+    --toc-active: #0969da;
+    --content-max-width: 900px;
+    --content-padding: 48px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "Inter", "Noto Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 16px;
+    line-height: 1.75;
+    color: var(--text);
+    background: var(--bg);
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    width: var(--sidebar-width);
+    overflow-y: auto;
+    padding: 28px 20px 40px;
+    background: #fafbfc;
+    border-right: 1px solid var(--border);
+    z-index: 10;
+    scrollbar-width: thin;
+  }
+  .sidebar-title {
+    font-size: 13px; font-weight: 700; color: var(--text-secondary);
+    margin-bottom: 16px; letter-spacing: 0.06em; text-transform: uppercase;
+  }
+  .toc-list { list-style: none; padding: 0; margin: 0; }
+  .toc-list ul { list-style: none; padding-left: 14px; }
+  .toc-list li { margin: 1px 0; }
+  .toc-list a {
+    display: block; padding: 4px 12px; font-size: 13.5px; line-height: 1.45;
+    color: var(--text-secondary); text-decoration: none; border-radius: 4px;
+    border-left: 2px solid transparent; transition: all 0.15s;
+  }
+  .toc-list a:hover { color: var(--link); background: #e8f0fe; }
+  .toc-list a.active {
+    color: var(--toc-active); font-weight: 600;
+    border-left-color: var(--toc-active); background: #e8f0fe;
+  }
+  .toc-h1 a { font-weight: 600; color: var(--heading); font-size: 14px; }
+  .toc-h3 a { padding-left: 24px; font-size: 13px; }
+  .toc-h4 a { padding-left: 36px; font-size: 12.5px; }
+  .toc-empty { color: var(--text-secondary); font-size: 13px; font-style: italic; }
+
+  .main-wrapper {
+    margin-left: var(--sidebar-width);
+    min-height: 100vh;
+    display: flex; justify-content: center;
+  }
+  .content-inner {
+    width: 100%;
+    max-width: var(--content-max-width);
+    padding: 40px var(--content-padding) 80px;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    color: var(--heading); font-weight: 700; line-height: 1.3;
+    margin-top: 2em; margin-bottom: 0.6em; scroll-margin-top: 24px;
+  }
+  h1 { font-size: 2em; border-bottom: 2px solid var(--border); padding-bottom: 0.3em; margin-top: 0; }
+  h2 { font-size: 1.5em; border-bottom: 1px solid var(--border); padding-bottom: 0.25em; }
+  h3 { font-size: 1.25em; }
+  h4 { font-size: 1.1em; }
+  p { margin-bottom: 1em; }
+  a { color: var(--link); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  strong { font-weight: 600; }
+
+  blockquote {
+    border-left: 4px solid var(--blockquote-border);
+    background: var(--blockquote-bg);
+    padding: 12px 20px; margin: 1em 0;
+    border-radius: 0 6px 6px 0; color: var(--text-secondary);
+  }
+  blockquote p:last-child { margin-bottom: 0; }
+
+  code {
+    font-family: "JetBrains Mono", "SF Mono", "Fira Code", monospace;
+    font-size: 0.875em; background: var(--inline-code-bg);
+    padding: 2px 6px; border-radius: 4px; color: var(--inline-code);
+  }
+  pre {
+    background: #1e1e2e; color: #cdd6f4;
+    border-radius: 8px; padding: 16px 20px; overflow-x: auto;
+    margin: 1em 0; font-size: 14px; line-height: 1.55;
+  }
+  pre code { background: none; padding: 0; border-radius: 0; color: inherit; font-size: inherit; }
+
+  .codehilite { background: #1e1e2e; border-radius: 8px; padding: 16px 20px; overflow-x: auto; margin: 1em 0; }
+  .codehilite pre { background: none; padding: 0; margin: 0; border-radius: 0; }
+  .codehilite .hll { background-color: #2a2a3e; }
+  .codehilite .c  { color: #6c7086; font-style: italic; }
+  .codehilite .k  { color: #cba6f7; }
+  .codehilite .o  { color: #89b4fa; }
+  .codehilite .s  { color: #a6e3a1; }
+  .codehilite .n  { color: #cdd6f4; }
+  .codehilite .p  { color: #bac2de; }
+  .codehilite .mi { color: #fab387; }
+  .codehilite .nf { color: #89b4fa; }
+  .codehilite .nb { color: #f38ba8; }
+  .codehilite .nc { color: #f9e2af; }
+  .codehilite .bp { color: #f38ba8; }
+
+  table { width: 100%; border-collapse: collapse; margin: 1em 0; font-size: 0.925em; }
+  th, td { border: 1px solid var(--border); padding: 10px 14px; text-align: left; }
+  th { background: var(--table-stripe); font-weight: 600; color: var(--heading); }
+  tr:nth-child(even) td { background: var(--table-stripe); }
+
+  .math.display { display: block; overflow-x: auto; padding: 12px 0; margin: 1em 0; }
+  ul, ol { padding-left: 1.5em; margin-bottom: 1em; }
+  li { margin-bottom: 0.3em; }
+  hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+  img { max-width: 100%; height: auto; border-radius: 6px; margin: 0.5em 0; }
+  p:has(img) { text-align: center; }
+  p:has(img) + p { text-align: center; font-size: 0.9em; color: var(--text-secondary); }
+  .mermaid { text-align: center; margin: 1.5em 0; background: #fafbfc; border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+
+  @media (max-width: 1024px) {
+    .sidebar { position: static; width: 100%; height: auto; max-height: 35vh; border-right: none; border-bottom: 1px solid var(--border); }
+    .main-wrapper { margin-left: 0; display: block; }
+    .content-inner { max-width: none; padding: 24px 20px 60px; }
+  }
+</style>
+
+<script>
+MathJax = {
+  tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']], processEscapes: true, tags: 'none' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] }
+};
+</script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  mermaid.initialize({ startOnLoad: true, theme: 'neutral', securityLevel: 'loose' });
+});
+</script>
+
+</head>
+<body>
+
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-title">目录</div>
+  <ul class="toc-list">
+<li class="toc-h1"><a href="#last-r1">LaST-R1 论文分享简明笔记</a>
+<ul>
+</li>
+<li class="toc-h2"><a href="#1">1. 一句话讲清楚</a>
+</li>
+<li class="toc-h2"><a href="#2">2. 论文要解决什么问题</a>
+</li>
+<li class="toc-h2"><a href="#3">3. 方法总览</a>
+</li>
+<li class="toc-h2"><a href="#4-latent">4. 模型结构：latent 从哪里来</a>
+</li>
+<li class="toc-h2"><a href="#5-lapo-rl-action-latent">5. LAPO：把 RL 从 action 扩展到 latent</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#51-action-ratio">5.1 action ratio</a>
+</li>
+<li class="toc-h3"><a href="#52-latent-ratio">5.2 latent ratio</a>
+</li>
+<li class="toc-h3"><a href="#53-latent_end-ratio">5.3 &lt;latent_end&gt; ratio</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#6-adaptive-latent-cot">6. adaptive latent CoT：学会动态分配思考预算</a>
+</li>
+<li class="toc-h2"><a href="#7">7. 训练流程</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#71">7.1 预训练</a>
+</li>
+<li class="toc-h3"><a href="#72-sft-warm-up">7.2 SFT warm-up</a>
+</li>
+<li class="toc-h3"><a href="#73-rl">7.3 在线 RL</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#8">8. 实验结论</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#81-libero-benchmark">8.1 LIBERO benchmark</a>
+</li>
+<li class="toc-h3"><a href="#82-ablation">8.2 关键 ablation</a>
+</li>
+<li class="toc-h3"><a href="#83">8.3 真实机器人实验</a>
+</li>
+<li class="toc-h3"><a href="#84">8.4 泛化和执行效率</a>
+</li>
+<li class="toc-h3"><a href="#85">8.5 视觉注意力证据</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#9">9. 这篇论文的核心贡献</a>
+</li>
+<li class="toc-h2"><a href="#10">10. 常见问题</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#q1latent-cot">Q1：latent CoT 是不是可解释的文字推理？</a>
+</li>
+<li class="toc-h3"><a href="#q2lapo-latent-loss-mse">Q2：LAPO 的 latent loss 是不是普通 MSE？</a>
+</li>
+<li class="toc-h3"><a href="#q3old_latents">Q3：old_latents 是不是标准答案？</a>
+</li>
+<li class="toc-h3"><a href="#q4-adaptive-latent-length">Q4：为什么 adaptive latent length 有用？</a>
+</li>
+<li class="toc-h3"><a href="#q5">Q5：论文最应该关注的局限是什么？</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#11-takeaway">11. 最短版 takeaway</a>
+</ul></li>
+</li></ul>
+</nav>
+
+<main class="main-wrapper">
+  <div class="content-inner" id="main-content">
+<h1 id="last-r1">LaST-R1 论文分享简明笔记</h1>
+<blockquote>
+<p>本文基于以下本地材料整理：</p>
+<ul>
+<li>长版笔记：<code>LaST-R1论文与代码笔记.md</code></li>
+<li>论文 tex 源码：<code>arXiv-2604.28192v3/main.tex</code></li>
+<li>论文图片：<code>arXiv-2604.28192v3/figs/*.pdf</code></li>
+<li>本文图片导出目录：<code>assets/last-r1-share/</code></li>
+</ul>
+</blockquote>
+<h2 id="1">1. 一句话讲清楚</h2>
+<p>LaST-R1 的核心想法是：机器人 VLA 模型在输出动作前，先在连续 <code>latent</code> 空间里“想一想”；然后用在线 RL 的环境奖励同时优化“怎么想”“想多久”和“怎么动”。</p>
+<p>这篇论文的核心不是又做了一个更大的 VLA，而是提出了一个针对 <strong>latent reasoning-before-acting policy</strong> 的 RL post-training 框架：<strong>LAPO, Latent-to-Action Policy Optimization</strong>。</p>
+<p><img alt="LaST-R1 总览" src="assets/last-r1-share/teaser.jpg" /></p>
+<p><em>图 1：论文 teaser，一张图概括全文逻辑。画面分四个部分：</em></p>
+<ul>
+<li><strong>(a) 传统 action-only RL</strong>：模型直接从观测映射到动作，RL 信号只优化最后的 action token，中间的推理过程不受环境反馈影响。</li>
+<li><strong>(b) LaST-R1 + LAPO</strong>：模型先产生 adaptive latent CoT（绿色），在 <code>&lt;latent_end&gt;</code> 处终止推理，再并行解码 action token。关键区别是 RL 信号同时作用于 latent、action 和 stop length 三个对象。</li>
+<li><strong>(c) 仿真学习曲线</strong>：LaST-R1 + LAPO（红色）相比 Action-Only + PPO（蓝色），收敛更快、最终成功率更高——这在 Long suite 上尤其明显。</li>
+<li><strong>(d) 真实世界泛化</strong>：LaST-R1 在 unseen object/background/lighting 等 OOD 场景下，性能下降远小于 full-size SFT 的 π₀.₅ 基线。</li>
+</ul>
+<div class="codehilite"><pre><span></span><code>以前：image + instruction -&gt; action
+现在：image + instruction -&gt; latent reasoning -&gt; action
+关键：reward 不只优化 action，也优化 latent reasoning 和 stop length
+</code></pre></div>
+
+<h2 id="2">2. 论文要解决什么问题</h2>
+<p>VLA 模型通常把图像、语言指令和机器人动作接起来：</p>
+<div class="codehilite"><pre><span></span><code>image + instruction -&gt; action
+</code></pre></div>
+
+<p>这个范式有两个常见问题：</p>
+<ol>
+<li>
+<p><strong>只靠 SFT / behavior cloning 容易被数据限制。</strong>
+   模型模仿专家轨迹，但没有真正和环境试错；一旦执行时偏离专家分布，错误会累积。</p>
+</li>
+<li>
+<p><strong>现有 VLA RL 多数只优化 action。</strong>
+   在线 RL 能利用成功/失败奖励改进动作，但如果模型内部有 CoT / reasoning 过程，普通 PPO/GRPO 往往没有直接优化这部分“思考”。</p>
+</li>
+</ol>
+<p>LaST-R1 的切入点是：复杂机器人操作不是只靠最后的动作 token 决定成败，动作之前的物理理解、空间推理和未来动态建模也应该被环境反馈优化。</p>
+<h2 id="3">3. 方法总览</h2>
+<p>LaST-R1 把一次决策拆成三段：</p>
+<div class="codehilite"><pre><span></span><code>image + instruction
+  -&gt; latent reasoning embeddings
+  -&gt; &lt;latent_end&gt;
+  -&gt; action tokens
+</code></pre></div>
+
+<p>直观解释：</p>
+<ul>
+<li><code>latent reasoning embeddings</code>：模型内部的连续向量推理过程，用来表示物体关系、空间结构、未来动态等难以直接用文字表达的信息。</li>
+<li><code>&lt;latent_end&gt;</code>：表示“想完了，可以开始行动”的特殊 token。</li>
+<li><code>action tokens</code>：离散化后的机器人动作 token，最后再解码成连续控制量。</li>
+</ul>
+<p><img alt="LaST-R1 方法框架" src="assets/last-r1-share/method.jpg" /></p>
+<p><em>图 2：方法框架，三栏分别展示模型结构、训练流程和自适应推理效果。</em></p>
+<p><strong>左栏 (a) LaST-R1 VLA 模型结构：</strong></p>
+<ul>
+<li>输入：RGB 图像经过 SigLIP2-Large 视觉编码器，与语言指令的 text embedding 拼接后送入 LLM backbone（基于 Qwen3-VL-4B）。</li>
+<li>Latent CoT 生成：模型先自回归地产生 latent reasoning embeddings（绿色方块），每一步的 latent 向量表示空间关系、物体动态等物理信息。这些 latent 的训练 target 来自 DINOv3 视觉基础模型的 <code>&lt;CLS&gt;</code> token（离线预计算，不增加在线开销）。</li>
+<li>推理终止：当模型预测出 <code>&lt;latent_end&gt;</code> token，表示”想完了”。</li>
+<li>Action 解码：基于 latent 推理结果，用并行解码一次性输出整个 action chunk（56 个离散 action token），再通过 parameter-free tokenizer 映射回连续控制量。Action token 之间使用双向注意力，推理上下文使用因果注意力。</li>
+</ul>
+<p><strong>中栏 (b) LAPO 在线 RL 训练流程：</strong></p>
+<ul>
+<li>Rollout：VLA 与环境闭环交互，每步记录四个东西——latent sequence（Z_old）、action token sequence（C_t）、对应的 log-probabilities、以及 value head 估计的状态价值。</li>
+<li>Reward 获取：环境根据任务成功/失败返回稀疏二元奖励（终点成功 = 1，其余 = 0），成功时额外乘以 5 放大信号。</li>
+<li>Advantage 计算：用 GAE（γ=0.99, λ=0.95）计算每一步的 advantage。</li>
+<li>Policy Update：LAPO 把 advantage 作为权重，同时优化三个 ratio——action ratio（离散 token，标准 PPO likelihood ratio）、latent ratio（连续向量，用高斯密度近似）、<code>&lt;latent_end&gt;</code> ratio（离散停止决策）。详见第 5 节公式。</li>
+</ul>
+<p><strong>右栏 (c) Adaptive Latent CoT 效果示意：</strong></p>
+<ul>
+<li>模型学会在不同任务/状态下使用不同的 reasoning length。</li>
+<li>示例 1（顶部）：简单任务只用 2 个 latent token 就能完成，且泛化到 unseen 场景。</li>
+<li>示例 2（底部）：复杂任务需要更长的 latent CoT，LAPO 优化后模型把注意力准确聚焦在关键交互部位（热力图深色区域）。</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>模块</th>
+<th>做什么</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>LaST-R1 VLA</td>
+<td>输入图像和指令，先生成 latent，再生成 action</td>
+</tr>
+<tr>
+<td>LAPO rollout/update</td>
+<td>和环境交互，记录 latent、action、reward</td>
+</tr>
+<tr>
+<td>Adaptive latent CoT</td>
+<td>学会什么时候发出 <code>&lt;latent_end&gt;</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="4-latent">4. 模型结构：latent 从哪里来</h2>
+<p>LaST-R1 基于 <code>Qwen3-VL-4B</code>，视觉编码器使用 <code>SigLIP2-Large</code>，动作采用离散 token 表示。</p>
+<p>关键设计是：latent target 不是随便初始化的 learnable token，而是来自视觉基础模型 <code>DINOv3</code>：</p>
+<ol>
+<li>用 DINOv3 提取图像 <code>&lt;CLS&gt;</code> token，原始维度为 4096；</li>
+<li>按通道特征幅值做 top-k 选择，取 <code>k = 2560</code>；</li>
+<li>得到与 VLA hidden size 对齐的 dense latent target；</li>
+<li>这些 latent target 离线预计算，训练和推理时不需要额外跑 DINOv3。</li>
+</ol>
+<p>为什么这样做：</p>
+<ul>
+<li>比简单 global pooling 更少丢空间语义；</li>
+<li>比 Q-Former / convolution 这类额外模块更少引入训练不稳定因素；</li>
+<li>离线预计算避免增加在线训练和推理开销。</li>
+</ul>
+<h2 id="5-lapo-rl-action-latent">5. LAPO：把 RL 从 action 扩展到 latent</h2>
+<p>普通 PPO 的思路是：</p>
+<div class="codehilite"><pre><span></span><code>如果某个 action 带来了比预期更好的结果，就提高它再次出现的概率；
+如果结果比预期差，就降低它再次出现的概率。
+</code></pre></div>
+
+<p>LaST-R1 把这个思想扩展到三类决策：</p>
+<table>
+<thead>
+<tr>
+<th>决策对象</th>
+<th>论文里的优化含义</th>
+<th>直觉</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>action tokens</td>
+<td>学会做什么动作</td>
+<td>成功动作更常出现，失败动作更少出现</td>
+</tr>
+<tr>
+<td>latent embeddings</td>
+<td>学会怎么内部推理</td>
+<td>成功时的 latent 思考路径被拉近，失败时的路径被抑制</td>
+</tr>
+<tr>
+<td><code>&lt;latent_end&gt;</code></td>
+<td>学会什么时候停止思考</td>
+<td>简单状态少想，复杂状态多想</td>
+</tr>
+</tbody>
+</table>
+<h3 id="51-action-ratio">5.1 action ratio</h3>
+<p>action 是离散 token，可以直接算新旧策略概率比：</p>
+<p><div class="math display">$$r_t^a(\theta)
+=
+\exp(
+\log \pi_\theta(C_t)
+-
+\log \pi_{\theta_{old}}(C_t)
+)$$</div></p>
+<p>这里 <code>C_t</code> 是一次决策输出的 action token 序列。论文和代码里通常把一个 action chunk 离散成多个 token，再把它们的 logprob 加起来作为整段 action 的 logprob。</p>
+<h3 id="52-latent-ratio">5.2 latent ratio</h3>
+<p>latent 是连续向量，没有 softmax 概率。LAPO 的做法是：假设 rollout 时旧策略生成的 <code>old_latents</code> 来自一个以当前策略 latent 输出为均值的高斯分布。</p>
+<p>于是 latent ratio 可以写成：</p>
+<p><div class="math display">$$r_t^z(\theta)
+=
+\exp\left(
+-\frac{1}{2\sigma^2}
+\sum_i
+\|z_{t,i}^{old} - z_{t,i}^{\theta}\|^2
+\right)$$</div></p>
+<p>直觉：</p>
+<ul>
+<li>当前策略生成的 latent 越接近成功 rollout 里的 old latent，ratio 越大；</li>
+<li>越远，ratio 越小；</li>
+<li>再乘上 advantage，就能决定“靠近成功思考路径”还是“远离失败思考路径”。</li>
+</ul>
+<p>所以这里看起来像 MSE，但它在 LAPO 里扮演的是连续 latent 的 likelihood ratio surrogate，不是普通监督学习里的 MSE loss。</p>
+<h3 id="53-latent_end-ratio">5.3 <code>&lt;latent_end&gt;</code> ratio</h3>
+<p><code>&lt;latent_end&gt;</code> 也是一个策略决策：模型需要决定什么时候结束 latent CoT。</p>
+<p>训练时，论文会记录 rollout 中选择的停止位置，并像 PPO 优化离散 token 一样优化它：</p>
+<div class="codehilite"><pre><span></span><code>新的 &lt;latent_end&gt; logprob - 旧的 &lt;latent_end&gt; logprob -&gt; end ratio
+</code></pre></div>
+
+<p>如果较短 reasoning length 已经能成功，RL 会鼓励早停；如果任务复杂、想太少导致失败，RL 会降低过早停止的倾向。</p>
+<h2 id="6-adaptive-latent-cot">6. adaptive latent CoT：学会动态分配思考预算</h2>
+<p>固定长度 latent CoT 的问题是：</p>
+<ul>
+<li>简单动作也被迫想满固定 token，浪费推理时间；</li>
+<li>复杂动作可能又需要更多内部建模。</li>
+</ul>
+<p>LaST-R1 让 <code>&lt;latent_end&gt;</code> 可以在若干候选位置发出。论文默认最大 latent 长度为 8，并设置若干候选停止位置。</p>
+<p>在 rollout 时：</p>
+<ol>
+<li>模型在候选位置上给出 <code>&lt;latent_end&gt;</code> logits；</li>
+<li>用带温度的 categorical distribution 采样一个 reasoning length；</li>
+<li>执行动作并得到环境 reward；</li>
+<li>用 advantage 优化这个停止长度。</li>
+</ol>
+<p>在推理时：</p>
+<ul>
+<li>如果 <code>&lt;latent_end&gt;</code> 置信度足够高，就提前停止；</li>
+<li>否则继续生成 latent，直到达到最大长度。</li>
+</ul>
+<p><img alt="Adaptive latent reasoning length" src="assets/last-r1-share/appd_freq.jpg" /></p>
+<p><em>图 3：adaptive reasoning length 频率分布，对比 SFT warm-up 后（蓝色）和 RL 优化后（红色）的长度分布，四个子图对应 LIBERO 的四个 task suite（Spatial / Object / Goal / Long）。</em></p>
+<p>关键发现：</p>
+<ul>
+<li><strong>SFT 阶段</strong>：warm-up 时 reasoning length 从 {2, 4, 6, 8} 中均匀采样，所以蓝色柱高度差异不大。模型还没有学会区分”什么时候需要多想、什么时候可以早停”。</li>
+<li><strong>RL 后</strong>：LAPO 优化后（红色柱），分布剧烈向短长度倾斜——长度 2 和 4 占据了绝大多数决策步。这说明环境 reward 成功教会模型：对于大部分状态，短推理就足够做出正确 action，不必浪费计算。</li>
+<li><strong>Long suite 的特例</strong>：在 LIBERO-Long（右下）上，长度 6 和 8 的红色柱依然有可见比例，反映长任务确实有部分状态需要更多 latent token 来做物理建模。</li>
+<li><strong>终态</strong>：RL 后模型在短长度上集中，在长长度上仅保留必要余量，实现了”够用就停”的推理效率。</li>
+</ul>
+<p>Adaptive CoT 不是手工指定”所有任务都想 8 步”，而是让环境 reward 选择更有效的思考长度。</p>
+<h2 id="7">7. 训练流程</h2>
+<p>论文整体训练分成三步：</p>
+<p><pre class="mermaid">flowchart TD
+    A["大规模机器人数据预训练"] --> B["任务内 SFT warm-up"]
+    B --> C["在线 RL post-training"]
+    C --> D["同时优化 action、latent、latent_end、value"]</pre></p>
+<h3 id="71">7.1 预训练</h3>
+<p>论文使用约 <code>400K</code> 条轨迹、<code>28M</code> 帧，来源包括 <code>Open-X-Embodiment</code>、<code>DROID</code>、<code>RoboMIND</code> 等机器人数据集。DINOv3 latent target 会离线预计算。</p>
+<h3 id="72-sft-warm-up">7.2 SFT warm-up</h3>
+<p>SFT 阶段让模型先学会基本动作和 latent reasoning 格式：</p>
+<ul>
+<li>latent 对齐 DINOv3 离线 target；</li>
+<li><code>&lt;latent_end&gt;</code> 用 CE loss；</li>
+<li>action token 用 CE loss。</li>
+</ul>
+<p>在 LIBERO 上，论文采用极低数据设定：每个任务只用 <code>1</code> 条 expert trajectory 做 warm-up。</p>
+<h3 id="73-rl">7.3 在线 RL</h3>
+<p>LIBERO 仿真里，LaST-R1 使用 LAPO 做在线交互：</p>
+<ul>
+<li>action chunk 长度为 8；</li>
+<li>单次决策有 <code>56</code> 个 action tokens；</li>
+<li>成功给稀疏终点奖励，并乘以 <code>5</code>；</li>
+<li>advantage 用 GAE，<code>gamma = 0.99</code>，<code>lambda = 0.95</code>；</li>
+<li>policy loss 包含 action loss、latent loss、value loss，以及 adaptive 版本里的 <code>&lt;latent_end&gt;</code> loss。</li>
+</ul>
+<p>真实机器人实验的 RL 细节和 LIBERO 不完全一样。论文附录描述真实世界采用异步 actor-learner、LoRA 更新、BC + Q-guided policy improvement、one-step TD target，以及人工确认成功奖励。</p>
+<h2 id="8">8. 实验结论</h2>
+<h3 id="81-libero-benchmark">8.1 LIBERO benchmark</h3>
+<p>论文在 LIBERO 的四个 suite 上评估：</p>
+<ul>
+<li><code>LIBERO-Spatial</code></li>
+<li><code>LIBERO-Object</code></li>
+<li><code>LIBERO-Goal</code></li>
+<li><code>LIBERO-Long</code></li>
+</ul>
+<p>主要结果：</p>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th style="text-align: right;">Spatial</th>
+<th style="text-align: right;">Object</th>
+<th style="text-align: right;">Goal</th>
+<th style="text-align: right;">Long</th>
+<th style="text-align: right;">平均 SR</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>OpenVLA-OFT</td>
+<td style="text-align: right;">97.6</td>
+<td style="text-align: right;">98.4</td>
+<td style="text-align: right;">97.9</td>
+<td style="text-align: right;">94.5</td>
+<td style="text-align: right;">97.1</td>
+</tr>
+<tr>
+<td>SimpleVLA-RL</td>
+<td style="text-align: right;">98.2</td>
+<td style="text-align: right;">98.7</td>
+<td style="text-align: right;">98.8</td>
+<td style="text-align: right;">91.7</td>
+<td style="text-align: right;">96.9</td>
+</tr>
+<tr>
+<td>RLinf-GRPO</td>
+<td style="text-align: right;">98.9</td>
+<td style="text-align: right;">99.7</td>
+<td style="text-align: right;">98.3</td>
+<td style="text-align: right;">93.6</td>
+<td style="text-align: right;">97.6</td>
+</tr>
+<tr>
+<td><code>pi_RL</code></td>
+<td style="text-align: right;">99.6</td>
+<td style="text-align: right;">100.0</td>
+<td style="text-align: right;">99.6</td>
+<td style="text-align: right;">94.0</td>
+<td style="text-align: right;">98.3</td>
+</tr>
+<tr>
+<td><strong>LaST-R1</strong></td>
+<td style="text-align: right;"><strong>99.8</strong></td>
+<td style="text-align: right;"><strong>100.0</strong></td>
+<td style="text-align: right;"><strong>100.0</strong></td>
+<td style="text-align: right;"><strong>99.8</strong></td>
+<td style="text-align: right;"><strong>99.9</strong></td>
+</tr>
+</tbody>
+</table>
+<p>最值得强调的是 Long suite：LaST-R1 达到 <code>99.8%</code>，而对比的 <code>pi_RL</code> 是 <code>94.0%</code>。这说明 latent reasoning 对长任务更有帮助。</p>
+<p><img alt="LIBERO learning curves" src="assets/last-r1-share/main_results_score.jpg" /></p>
+<p><em>图 4：LIBERO one-shot online RL 学习曲线，四个子图分别对应四个 task suite。横轴是 RL 训练步数，纵轴是平均成功率 SR（50 个 hold-out 测试场景）。红色是 LaST-R1 + LAPO，蓝色是 Action-Only + PPO。</em></p>
+<p>关键观察：</p>
+<ul>
+<li><strong>收敛速度</strong>：在所有四个 suite 上，红色曲线都更早进入高 SR 区间。尤其在 Long suite（右下），Action-Only + PPO 需要大量步数才勉强接近 90%，而 LaST-R1 快速拉升。</li>
+<li><strong>最终性能</strong>：LaST-R1 在 Spatial / Object / Goal 上都接近 100%，在 Long 上也达到 ~99.8%。对比之下，Action-Only + PPO 在 Long 上始终无法收敛到 95% 以上。</li>
+<li><strong>曲线平滑度</strong>：红色曲线震荡更小，说明 latent reasoning 起到了"认知缓冲"的作用——有了内部思考过程，RL 的优化景观变得更平滑，策略更新更稳定。</li>
+<li><strong>SFT warm-up 的起点差异</strong>：图中虚线标注了 warm-up 后的初始 SR——LaST-R1 warm-up（~63.9%）高于 Action-Only warm-up（~51.0%），说明即使不做 RL，latent reasoning 本身也带来了初始优势。</li>
+</ul>
+<p>Long suite 上的曲线差距直接证明了 latent reasoning 对长任务不是锦上添花，而是必需的。</p>
+<h3 id="82-ablation">8.2 关键 ablation</h3>
+<p>论文的 ablation 支持三点：</p>
+<ol>
+<li>
+<p><strong>latent reasoning 本身有用。</strong>
+   one-shot SFT warm-up 后，LaST-R1 Warm-up 平均 SR 是 <code>63.9%</code>，Action-Only baseline 是 <code>51.0%</code>。在 LIBERO-Long 上提升更明显：<code>49.6%</code> vs <code>26.2%</code>。</p>
+</li>
+<li>
+<p><strong>RL 后 LAPO 明显优于 action-only PPO。</strong>
+   LaST-R1 + LAPO 平均 SR 达到 <code>99.9%</code>，Action-Only + PPO 是 <code>95.2%</code>。</p>
+</li>
+<li>
+<p><strong>DINOv3 latent 表征最好。</strong>
+   DINOv3 表征在 ablation 中达到 <code>99.8%</code> SR，高于 Convolution <code>98.4%</code>、Q-Former <code>97.2%</code>、Global Pooling <code>96.8%</code>。</p>
+</li>
+</ol>
+<p><img alt="Latent ablation studies" src="assets/last-r1-share/main_ablation_latent.jpg" /></p>
+<p><em>图 5：三组核心消融实验（均在 LIBERO-Spatial 上评估）。</em></p>
+<p><strong>子图 (a) Latent 表征方式对比（RL 后 SR）：</strong></p>
+<ul>
+<li>对比四种构造 latent target 的方法：Global Pooling（对 VLA 视觉特征做平均池化，96.8%）、Convolution（reshape 后卷积下采样，98.4%）、Q-Former（learnable query 做 cross-attention 聚合，97.2%）、DINOv3（提取 <code>&lt;CLS&gt;</code> token + top-k 通道选择，99.8%）。</li>
+<li>DINOv3 最优，因为它利用了大模型预训练的语义丰富特征，top-k 选择保留了最显著的视觉分量；Global Pooling 最差，简单平均丢失了空间结构。Q-Former 不如 Convolution，说明在低数据 RL 场景下，额外的可学习参数反而增加优化难度。</li>
+</ul>
+<p><strong>子图 (b) Latent CoT 固定长度对比（RL 后 SR）：</strong></p>
+<ul>
+<li>测试 1 / 2 / 4 / 8 四种固定 latent 长度，同时对比 Action-Only 基线（无 latent reasoning，95.0%）。</li>
+<li>长度 1→2→4 带来持续提升（95.0% → 96.2% → 97.6% → 97.8%），但从 4→8 收益递减（97.8% → 98.4%），说明 8 个 latent token 已经足够编码有效推理信息。</li>
+<li>关键信息：即使只有 1 个 latent token，也优于完全没有 latent reasoning（96.2% vs 95.0%），验证了"先想再做"这一设计本身就优于纯 reaction。</li>
+</ul>
+<p><strong>子图 (c) Adaptive 候选位置数量 M 对比（RL 后 SR）：</strong></p>
+<ul>
+<li>固定最大长度为 8，对比 M = 1 / 2 / 4 / 8 四种候选停止位置设置（M=1 只能在第 8 位停止，相当于固定长度；M=8 在每个位置都可以停止）。</li>
+<li>M=4 达到最优 99.8%；M=8 反而降到 99.0%，说明停止位置过多会增加探索方差，不利于稳定优化。</li>
+<li>所有 adaptive 设置（M &gt;= 2）都优于固定长度（M=1 的 98.4%），证明动态推理长度本身就有正向收益。</li>
+</ul>
+<p>总结：DINOv3 表征最好，8 个 latent token 够用，4 个候选停止位置是探索 vs 稳定的最佳折中。</p>
+<h3 id="83">8.3 真实机器人实验</h3>
+<p>真实世界任务包括：</p>
+<ul>
+<li>Insert hexagon block；</li>
+<li>Open bag zipper；</li>
+<li>Wipe vase with sponge；</li>
+<li>Open bottle cap。</li>
+</ul>
+<p>论文报告：LaST-R1 使用少量 SFT 数据加在线 RL 后，原始场景平均 SR 从 <code>52.5%</code> 提升到 <code>93.75%</code>，超过使用 100 条专家轨迹 full SFT 的 <code>pi_0.5</code> baseline（<code>71.25%</code>）。</p>
+<p><img alt="Real-world results" src="assets/last-r1-share/main_real.jpg" /></p>
+<p><em>图 6：真实机器人实验结果总览。图片分四行，对应四个真实任务（Insert hexagon block / Open bag zipper / Wipe vase with sponge / Open bottle cap），每行包含多组场景的照片序列，展示机器人从初始状态到完成的关键帧。</em></p>
+<p>图中四个任务的特点和难点：</p>
+<ul>
+<li><strong>Insert hexagon block</strong>（单臂）：要求六边形柱体精准插入底座槽位，考验 6-DoF 空间对准能力和 tight clearance 下的轨迹精度。</li>
+<li><strong>Open bag zipper</strong>（双臂）：一只臂固定柔性袋体，另一只拉动拉链，考验双机械臂协调和对可变形物体的连续操作。</li>
+<li><strong>Wipe vase with sponge</strong>（双臂）：一只臂固定花瓶，另一只持海绵沿曲面擦拭，要求接触力持续稳定、双机械臂轨迹精确同步。</li>
+<li><strong>Open bottle cap</strong>（双臂）：一只臂固定瓶身，另一只拧开瓶盖，考验精细力矩控制和旋转操作的协调。</li>
+</ul>
+<p>对比数据：</p>
+<table>
+<thead>
+<tr>
+<th>对比维度</th>
+<th>π₀.₅（100 条轨迹 full SFT）</th>
+<th>LaST-R1（30 条 SFT → RL）</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>原始场景平均 SR</td>
+<td>71.25%</td>
+<td>52.5% → <strong>93.75%</strong></td>
+</tr>
+<tr>
+<td>Unseen-Object 泛化</td>
+<td>最高下降 45%</td>
+<td>下降控制在 15% 以内</td>
+</tr>
+<tr>
+<td>Background/Lighting 扰动</td>
+<td>下降 5–25%</td>
+<td>接近零下降</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>LaST-R1 只用 30 条 SFT 数据加在线 RL，超过用 100 条 full SFT 的 π₀.₅，数据效率提升 ~3×。</li>
+<li>π₀.₅ 遇到 unseen object 时 SR 断崖式下跌（如 Open bag zipper 从 75% 掉到 30%），而 LaST-R1 仍保持高成功率。</li>
+</ul>
+<h3 id="84">8.4 泛化和执行效率</h3>
+<p>论文还从两个角度解释为什么 latent reasoning 有帮助：</p>
+<ul>
+<li>OOD 泛化：Action-Only + PPO 容易过拟合训练任务，LaST-R1 + LAPO 在 held-out task 上仍能持续提升；</li>
+<li>执行效率：RL 后轨迹步数减少，说明模型不只是更容易成功，也更会走直接有效的路线。</li>
+</ul>
+<p><img alt="Generalization analysis (detailed)" src="assets/last-r1-share/appd_gen.jpg" /></p>
+<p><em>附录图 10：LIBERO OOD 泛化曲线详情（论文附录 §Additional Generalization Analysis）。每个 LIBERO suite 展示 2 个代表性 held-out task，共 8 个子图。横轴是 RL 训练步数，纵轴是 held-out task 上的成功率 SR。红色 = LaST-R1 + LAPO，蓝色 = Action-Only + PPO。</em></p>
+<p>上图列出了每个 suite 的 2 个 held-out task，其关键趋势如下：</p>
+<ul>
+<li><strong>Spatial suite</strong>：Action-Only + PPO 在一些 spatial 任务上完全失效（如 Spatial-Task8 长期在 0% 附近震荡），而 LaST-R1 + LAPO 在 Spatial-Task0 上快速收敛至 100%。</li>
+<li><strong>Object suite</strong>：LaST-R1 + LAPO 能稳定收敛至 100%（如 Object-Task0），而 Action-Only 曲线容易早期崩盘后停滞。</li>
+<li><strong>Goal suite</strong>：Action-Only + PPO 在训练中段达到 ~65% 后开始退化——典型的过拟合迹象。LaST-R1 + LAPO 保持单调增长至 100%（如 Goal-Task5）。</li>
+<li><strong>Long suite</strong>：Action-Only + PPO 过拟合最严重——在 Long-Task7 上从峰值跌落至接近 0%；在 Long-Task4 上也始终低于 20%。LaST-R1 + LAPO 则持续提升，在 Long-Task4 上稳步爬升至 54%。</li>
+</ul>
+<p>核心洞察：这张图直接支持了论文的关键主张——action-only RL 会有"过拟合"到训练任务特定运动模式的风险。加入 latent reasoning 后，模型从环境反馈中学到的是可迁移的物理理解（空间关系、物体动态），而不是机械记忆训练分布的轨迹模式，因此对 unseen 任务持续泛化。</p>
+<p><img alt="Episode length comparison" src="assets/last-r1-share/appd_step.jpg" /></p>
+<p><em>图 8：平均执行步数对比，四个子图对应四个 LIBERO suite。每个子图有三组柱形：Expert（仿真专家轨迹）、Before RL（SFT warm-up 后 RL 前的策略）、After RL（LAPO 优化后的策略）。数据在 500 条 rollout 上无条件平均（包含成功和失败的 episode）。</em></p>
+<p>三个关键对比：</p>
+<ul>
+<li><strong>Before RL vs Expert</strong>：SFT warm-up 后策略的执行步数远高于专家。这是因为 SFT 只在专家数据上做 behavior cloning，遇到 OOD 状态时靠纯反应式行为，容易陷入低效循环或长时间徘徊，逼近最大步数限制才终止。这反映的是模仿学习的经典问题——复合误差导致轨迹拖长。</li>
+<li><strong>After RL vs Before RL</strong>：RL 后步数大幅下降。这说明 LAPO 不仅提高了成功率，也直接改善了轨迹效率——模型学会了走更直接、更果断的行动路线。</li>
+<li><strong>After RL vs Expert</strong>（最大亮点）：在 Spatial、Object、Goal 三个 suite 上，LaST-R1 RL 后的平均步数甚至低于专家轨迹。这意味着 RL 后的模型不是简单模仿专家的保守路径，而是通过优化 latent reasoning 找到了比专家更高效的解决方案（例如更直接的抓取路径、更少的中间调整）。</li>
+</ul>
+<p>关于"latent reasoning 会不会让模型变慢"：RL 后 latent length 缩短（图 3），执行步数也减少（图 8），整体比专家更快完成。</p>
+<h3 id="85">8.5 视觉注意力证据</h3>
+<p>论文附录还用 attention 可视化说明：加入 latent reasoning 和 LAPO 后，action token 对视觉区域的关注更集中在任务相关物体和目标位置上。</p>
+<p><img alt="Action-to-vision attention" src="assets/last-r1-share/appd_attn.jpg" /></p>
+<p><em>图 9：action-to-vision cross-attention 可视化（Grad-CAM），四行对应 LIBERO 四个 suite 上的典型轨迹，四列对应四种模型配置。热力图叠加在原图上，深色/暖色区域表示 action token 对视觉区域的关注度更高。</em></p>
+<p>四种配置的纵向对比（按列看）：</p>
+<ul>
+<li><strong>Action-Only (SFT)</strong>（第 1 列）：注意力散乱、覆盖大面积无关背景区域。SFT 后的纯动作模型没有形成对任务相关物体的明确聚焦。</li>
+<li><strong>LaST-R1 Warm-up (SFT)</strong>（第 2 列）：加入 latent reasoning 后，注意力明显更集中在关键交互对象上。latent 推理起到了"语义锚点"的作用，为 action 解码提供了更好的视觉上下文。</li>
+<li><strong>Action-Only + PPO</strong>（第 3 列）：RL 后注意力过于集中在夹爪附近区域，缺乏对目标位置的远程感知。这说明纯粹优化 action 空间会导致模型过度近视——它学会了"在夹爪周围小心操作"，但没有学会"看向目标"。</li>
+<li><strong>LaST-R1 + LAPO</strong>（第 4 列，最佳）：注意力精准且动态迁移——在抓取阶段集中在被操作物体上，在放置/目标阶段转向目标位置。因为 LAPO 同时优化 latent reasoning 和 action，模型学会了将视觉注意力从物体动态切换到目标导向。</li>
+</ul>
+<p>按行看任务案例：</p>
+<ul>
+<li>Spatial 例子：LaST-R1 + LAPO 在抓取碗时关注碗，移动时关注目标盘子。</li>
+<li>Object 例子：LAPO 后准确定位目标物体（如特定颜色的积木）。</li>
+<li>Goal 例子：注意力随任务阶段（移动→放置）自然转移。</li>
+<li>Long 例子：在多步骤长任务中保持连贯的注意力切换。</li>
+</ul>
+<p>这组热力图是 latent reasoning 的定性证据——它不只是数字的微小提升，而是从根本上改变了模型"看"的方式。</p>
+<h2 id="9">9. 这篇论文的核心贡献</h2>
+<p>可以概括成三点：</p>
+<ol>
+<li>
+<p><strong>提出 LaST-R1 框架。</strong>
+   将 latent CoT reasoning 和 action generation 放进同一个 VLA policy 里，先推理再行动。</p>
+</li>
+<li>
+<p><strong>提出 LAPO。</strong>
+   把 PPO 风格的 RL post-training 从 action 扩展到 continuous latent reasoning 和 <code>&lt;latent_end&gt;</code> 停止决策。</p>
+</li>
+<li>
+<p><strong>提出 adaptive latent CoT。</strong>
+   让模型根据环境状态动态选择 reasoning length，兼顾复杂任务的推理能力和简单任务的执行效率。</p>
+</li>
+</ol>
+<h2 id="10">10. 常见问题</h2>
+<h3 id="q1latent-cot">Q1：latent CoT 是不是可解释的文字推理？</h3>
+<p>不是。这里的 CoT 是连续 latent embedding，不是自然语言文本。它更像模型内部的物理状态表示或未来动态摘要。</p>
+<h3 id="q2lapo-latent-loss-mse">Q2：LAPO 的 latent loss 是不是普通 MSE？</h3>
+<p>不完全是。形式上包含 latent 距离，但论文把它解释为高斯分布下的 likelihood ratio surrogate，再用 PPO clipping 和 advantage 加权。它的作用不是固定模仿某个 ground-truth latent，而是根据 rollout 的好坏决定靠近或远离旧策略产生的 latent。</p>
+<h3 id="q3old_latents">Q3：<code>old_latents</code> 是不是标准答案？</h3>
+<p>不是。<code>old_latents</code> 是 rollout 时旧策略实际生成的 latent 轨迹。它是否值得学习，取决于这段轨迹的 advantage。</p>
+<h3 id="q4-adaptive-latent-length">Q4：为什么 adaptive latent length 有用？</h3>
+<p>因为不同状态需要的推理预算不同。简单状态可以早停，复杂状态需要更多 latent token。RL 通过 reward 学会哪个长度更可能带来成功。</p>
+<h3 id="q5">Q5：论文最应该关注的局限是什么？</h3>
+<p>论文当前的 adaptive CoT 仍然依赖最大长度和候选停止位置，例如最大长度为 8、候选位置数量有限。它还不是完全自由的动态停止机制。另外，真实世界实验虽然展示了强结果，但附录中的真实世界 RL pipeline 与 LIBERO 的 LAPO/PPO 实现并不完全一致，需要注意仿真和真实机器人的训练细节不同。</p>
+<h2 id="11-takeaway">11. 最短版 takeaway</h2>
+<p>LaST-R1 = <code>latent reasoning-before-acting</code> + <code>online RL post-training</code>。</p>
+<p>它的关键是 LAPO：不只优化机器人最后的 action，还用环境 reward 优化 action 之前的 continuous latent reasoning 和 <code>&lt;latent_end&gt;</code> 停止长度。因此成功经验会同时塑造“怎么想、想多久、怎么动”，这也是它在长任务和泛化实验中表现更好的主要解释。</p>
+  </div>
+</main>
+
+
+<script>
+(function() {
+  const sidebar = document.getElementById('sidebar');
+  const links = sidebar.querySelectorAll('a');
+  const headings = document.querySelectorAll('h1[id], h2[id], h3[id], h4[id]');
+  if (headings.length === 0) return;
+
+  const linkMap = new Map();
+  links.forEach(function(a) {
+    const href = a.getAttribute('href');
+    if (href && href.startsWith('#')) linkMap.set(href.slice(1), a);
+  });
+
+  function onScroll() {
+    let currentId = null;
+    const scrollTop = window.scrollY + 80;
+    headings.forEach(function(h) { if (h.offsetTop <= scrollTop) currentId = h.id; });
+    links.forEach(function(a) { a.classList.remove('active'); });
+    if (currentId && linkMap.has(currentId)) {
+      const el = linkMap.get(currentId);
+      el.classList.add('active');
+      const sr = sidebar.getBoundingClientRect();
+      const er = el.getBoundingClientRect();
+      if (er.bottom > sr.bottom || er.top < sr.top) {
+        el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+    }
+  }
+
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+})();
+</script>
+
+</body>
+</html>

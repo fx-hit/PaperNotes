@@ -1,0 +1,1287 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OneVL: One-Step Latent Reasoning and Planning with Vision-Language Explanations</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #ffffff;
+    --text: #1a1a2e;
+    --text-secondary: #555;
+    --border: #e1e4e8;
+    --link: #0969da;
+    --table-stripe: #f6f8fa;
+    --heading: #0d1117;
+    --blockquote-border: #0969da;
+    --blockquote-bg: #f0f6ff;
+    --inline-code: #d73a49;
+    --inline-code-bg: #f6f8fa;
+    --sidebar-width: 260px;
+    --toc-active: #0969da;
+    --content-max-width: 900px;
+    --content-padding: 48px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "Inter", "Noto Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 16px;
+    line-height: 1.75;
+    color: var(--text);
+    background: var(--bg);
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    width: var(--sidebar-width);
+    overflow-y: auto;
+    padding: 28px 20px 40px;
+    background: #fafbfc;
+    border-right: 1px solid var(--border);
+    z-index: 10;
+    scrollbar-width: thin;
+  }
+  .sidebar-title {
+    font-size: 13px; font-weight: 700; color: var(--text-secondary);
+    margin-bottom: 16px; letter-spacing: 0.06em; text-transform: uppercase;
+  }
+  .toc-list { list-style: none; padding: 0; margin: 0; }
+  .toc-list ul { list-style: none; padding-left: 14px; }
+  .toc-list li { margin: 1px 0; }
+  .toc-list a {
+    display: block; padding: 4px 12px; font-size: 13.5px; line-height: 1.45;
+    color: var(--text-secondary); text-decoration: none; border-radius: 4px;
+    border-left: 2px solid transparent; transition: all 0.15s;
+  }
+  .toc-list a:hover { color: var(--link); background: #e8f0fe; }
+  .toc-list a.active {
+    color: var(--toc-active); font-weight: 600;
+    border-left-color: var(--toc-active); background: #e8f0fe;
+  }
+  .toc-h1 a { font-weight: 600; color: var(--heading); font-size: 14px; }
+  .toc-h3 a { padding-left: 24px; font-size: 13px; }
+  .toc-h4 a { padding-left: 36px; font-size: 12.5px; }
+  .toc-empty { color: var(--text-secondary); font-size: 13px; font-style: italic; }
+
+  .main-wrapper {
+    margin-left: var(--sidebar-width);
+    min-height: 100vh;
+    display: flex; justify-content: center;
+  }
+  .content-inner {
+    width: 100%;
+    max-width: var(--content-max-width);
+    padding: 40px var(--content-padding) 80px;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    color: var(--heading); font-weight: 700; line-height: 1.3;
+    margin-top: 2em; margin-bottom: 0.6em; scroll-margin-top: 24px;
+  }
+  h1 { font-size: 2em; border-bottom: 2px solid var(--border); padding-bottom: 0.3em; margin-top: 0; }
+  h2 { font-size: 1.5em; border-bottom: 1px solid var(--border); padding-bottom: 0.25em; }
+  h3 { font-size: 1.25em; }
+  h4 { font-size: 1.1em; }
+  p { margin-bottom: 1em; }
+  a { color: var(--link); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  strong { font-weight: 600; }
+
+  blockquote {
+    border-left: 4px solid var(--blockquote-border);
+    background: var(--blockquote-bg);
+    padding: 12px 20px; margin: 1em 0;
+    border-radius: 0 6px 6px 0; color: var(--text-secondary);
+  }
+  blockquote p:last-child { margin-bottom: 0; }
+
+  code {
+    font-family: "JetBrains Mono", "SF Mono", "Fira Code", monospace;
+    font-size: 0.875em; background: var(--inline-code-bg);
+    padding: 2px 6px; border-radius: 4px; color: var(--inline-code);
+  }
+  pre {
+    background: #1e1e2e; color: #cdd6f4;
+    border-radius: 8px; padding: 16px 20px; overflow-x: auto;
+    margin: 1em 0; font-size: 14px; line-height: 1.55;
+  }
+  pre code { background: none; padding: 0; border-radius: 0; color: inherit; font-size: inherit; }
+
+  .codehilite { background: #1e1e2e; border-radius: 8px; padding: 16px 20px; overflow-x: auto; margin: 1em 0; }
+  .codehilite pre { background: none; padding: 0; margin: 0; border-radius: 0; }
+  .codehilite .hll { background-color: #2a2a3e; }
+  .codehilite .c  { color: #6c7086; font-style: italic; }
+  .codehilite .k  { color: #cba6f7; }
+  .codehilite .o  { color: #89b4fa; }
+  .codehilite .s  { color: #a6e3a1; }
+  .codehilite .n  { color: #cdd6f4; }
+  .codehilite .p  { color: #bac2de; }
+  .codehilite .mi { color: #fab387; }
+  .codehilite .nf { color: #89b4fa; }
+  .codehilite .nb { color: #f38ba8; }
+  .codehilite .nc { color: #f9e2af; }
+  .codehilite .bp { color: #f38ba8; }
+
+  table { width: 100%; border-collapse: collapse; margin: 1em 0; font-size: 0.925em; }
+  th, td { border: 1px solid var(--border); padding: 10px 14px; text-align: left; }
+  th { background: var(--table-stripe); font-weight: 600; color: var(--heading); }
+  tr:nth-child(even) td { background: var(--table-stripe); }
+
+  .math.display { display: block; overflow-x: auto; padding: 12px 0; margin: 1em 0; }
+  ul, ol { padding-left: 1.5em; margin-bottom: 1em; }
+  li { margin-bottom: 0.3em; }
+  hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+  img { max-width: 100%; height: auto; border-radius: 6px; margin: 0.5em 0; }
+  p:has(img) { text-align: center; }
+  p:has(img) + p { text-align: center; font-size: 0.9em; color: var(--text-secondary); }
+  .mermaid { text-align: center; margin: 1.5em 0; background: #fafbfc; border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+
+  @media (max-width: 1024px) {
+    .sidebar { position: static; width: 100%; height: auto; max-height: 35vh; border-right: none; border-bottom: 1px solid var(--border); }
+    .main-wrapper { margin-left: 0; display: block; }
+    .content-inner { max-width: none; padding: 24px 20px 60px; }
+  }
+</style>
+
+<script>
+MathJax = {
+  tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']], processEscapes: true, tags: 'none' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] }
+};
+</script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  mermaid.initialize({ startOnLoad: true, theme: 'neutral', securityLevel: 'loose' });
+});
+</script>
+
+</head>
+<body>
+
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-title">目录</div>
+  <ul class="toc-list">
+<li class="toc-h1"><a href="#onevl-one-step-latent-reasoning-and-planning-with-vision-language-explanations">OneVL: One-Step Latent Reasoning and Planning with Vision-Language Explanations</a>
+<ul>
+</li>
+<li class="toc-h2"><a href="#_1">一、核心问题</a>
+</li>
+<li class="toc-h2"><a href="#_2">二、核心思路 / 方法</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#21">2.1 总体设计</a>
+</li>
+<li class="toc-h3"><a href="#22-token">2.2 隐 Token 设计</a>
+</li>
+<li class="toc-h3"><a href="#23">2.3 辅助解码器详细设计</a>
+</li>
+<li class="toc-h3"><a href="#24">2.4 联合训练目标</a>
+</li>
+<li class="toc-h3"><a href="#25-prefill">2.5 Prefill 推理机制</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_3">三、三阶段训练管线</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#_4">预训练：视觉辅助解码器自监督预训练</a>
+</li>
+<li class="toc-h3"><a href="#stage-0">Stage 0：主模型热身</a>
+</li>
+<li class="toc-h3"><a href="#stage-1">Stage 1：辅助解码器热身</a>
+</li>
+<li class="toc-h3"><a href="#stage-2">Stage 2：端到端联合微调</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_5">四、实验与结果</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#41">4.1 实验设置</a>
+</li>
+<li class="toc-h3"><a href="#42">4.2 主要结果</a>
+</li>
+<li class="toc-h3"><a href="#43">4.3 解释质量评估</a>
+</li>
+<li class="toc-h3"><a href="#44">4.4 消融实验</a>
+</li>
+<li class="toc-h3"><a href="#45-mlp-head">4.5 部署优化：MLP Head 变体</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_6">五、关键洞察与技术亮点</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#51-cot">5.1 为什么隐式推理超越了显式 CoT？</a>
+</li>
+<li class="toc-h3"><a href="#52">5.2 为什么视觉监督比语言监督贡献更大？</a>
+</li>
+<li class="toc-h3"><a href="#53-cot">5.3 已有隐式 CoT 方法的失败分析</a>
+</li>
+<li class="toc-h3"><a href="#54">5.4 压缩驱动泛化</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_7">六、代码实现解读</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#61">6.1 整体推理流程</a>
+</li>
+<li class="toc-h3"><a href="#62-token">6.2 隐 Token 位置检测（代码核心机制）</a>
+</li>
+<li class="toc-h3"><a href="#63">6.3 辅助解码器推理流程</a>
+</li>
+<li class="toc-h3"><a href="#64">6.4 关键代码映射</a>
+</li>
+<li class="toc-h3"><a href="#65-tokenizer">6.5 视觉 Tokenizer 设计</a>
+</li>
+<li class="toc-h3"><a href="#66">6.6 数据格式</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_8">七、局限性</a>
+</li>
+<li class="toc-h2"><a href="#_9">八、关键概念速查</a>
+</ul></li>
+</li></ul>
+</nav>
+
+<main class="main-wrapper">
+  <div class="content-inner" id="main-content">
+<h1 id="onevl-one-step-latent-reasoning-and-planning-with-vision-language-explanations">OneVL: One-Step Latent Reasoning and Planning with Vision-Language Explanations</h1>
+<blockquote>
+<p><strong>论文信息</strong>
+- 作者：Xiaomi Embodied Intelligence Team（卢竞辉、关嘉怡、黄志坚 等核心贡献者 19 人 + 贡献者 24 人）
+- 通讯作者：龙晨（Long Chen）
+- 投稿方向：arXiv 预印本，投稿中（under review）
+- arXiv ID：2604.18486
+- 代码：https://github.com/xiaomi-research/OneVL
+- 模型权重：https://huggingface.co/collections/xiaomi-research/onevl-models
+- 项目页：https://Xiaomi-Embodied-Intelligence.github.io/OneVL
+- 基座模型：Qwen3-VL-4B-Instruct（4B 参数）</p>
+</blockquote>
+<hr />
+<h2 id="_1">一、核心问题</h2>
+<p>自动驾驶 VLA（Vision-Language-Action）模型的一个重要进展是在输出轨迹前先生成 Chain-of-Thought（CoT）推理文本，显著提升了预测质量。然而，标准自回归（AR）CoT 需要在生成每个推理 token 之后才能产生轨迹，导致<strong>推理延迟与 CoT 长度成正比</strong>——在安全关键的实时场景中不可接受。</p>
+<p>一类称为 <strong>Latent CoT（隐式思维链）</strong> 的工作试图将推理压缩为连续隐向量而非离散 token，从而消除逐 token 生成的开销。但已有的隐式 CoT 方法（COCONUT、CODI、SIM-CoT）在自动驾驶 VLA 任务上<strong>全部失败</strong>——不仅不如显式 CoT，甚至不如无推理的纯答案预测（AR Answer）。</p>
+<p>本文的核心洞察是：<strong>压缩语言描述不等于压缩场景动力学。</strong> 自然语言对驾驶场景的描述本质上是抽象的——它编码的是语义标签而非物理因果结构。因此，纯粹的语言隐式表征压缩的是"世界的符号抽象"，而非"世界本身的因果动力学"。</p>
+<p><img alt="图1：核心对比——三种 CoT 范式与准确率/延迟对比" src="arXiv-2604.18486v3/figs_jpg/comparison.jpg" /></p>
+<p><em>图1：三种 Chain-of-Thought 范式对比与四个 benchmark 的综合表现。</em></p>
+<p><strong>子图 (a) 显式 CoT：</strong> 模型自回归地生成完整的离散推理 token 序列，再生成轨迹答案。优点是推理过程可读、可审计；缺点是延迟随推理链长度线性增长，例如 NAVSIM 上 AR CoT+Answer 的延迟为 6.58s。</p>
+<p><strong>子图 (b) 隐式 CoT（COCONUT/CODI/SIM-CoT）：</strong> 将推理压缩为少量连续的隐向量 Z，理论上更快。但在自动驾驶任务上全面崩溃——COCONUT 在 NAVSIM 上的 PDM-score 仅 84.84，远低于 AR Answer 的 87.47。原因在于这些方法源自纯文本推理，缺少视觉世界模型监督，隐空间坍塌为仅编码语言层面抽象，丢失了几何精度。</p>
+<p><strong>子图 (c) OneVL（本文）：</strong> 引入两类隐 token——视觉隐 token（Z_v，红色）和语言隐 token（Z_l，橙色）。训练时通过双辅助解码器（视觉→未来帧预测、语言→CoT 文本重建）对隐表征施加物理因果约束。推理时抛弃全部辅助解码器，所有隐 token 通过 Prefill 并行注入 prompt，速度与纯答案预测持平（NAVSIM 上 4.46s vs 4.49s），但准确率超过显式 CoT（PDM-score 88.84 vs 88.29）。</p>
+<p><strong>底部柱状图（准确率-效率 Pareto）：</strong> 纵轴为 PDM-score（NAVSIM）或 ADE（ROADWork），横轴为推理延迟。OneVL 落在绿色阴影标注的最优区域（最低延迟、最佳指标）。所有先前的隐式 CoT 方法（COCONUT、CODI、SIM-CoT）均落于 AR Answer 下方——这是一个关键发现：已有隐式 CoT 方法在驾驶任务上全部失效。OneVL 是唯一同时超越 AR Answer 和 AR CoT+Answer 的隐式 CoT 方法。</p>
+<hr />
+<h2 id="_2">二、核心思路 / 方法</h2>
+<h3 id="21">2.1 总体设计</h3>
+<p>OneVL 在 Qwen3-VL-4B-Instruct 基础上增加：</p>
+<ul>
+<li><strong>6 个隐式 token</strong>（4 个视觉隐 token + 2 个语言隐 token），使用原始词表 token 实现（无需新增特殊 token）</li>
+<li><strong>两个辅助解码器</strong>（仅训练时使用）：<ul>
+<li>语言辅助解码器 <span class="math inline">$\mathcal{D}_l$</span>：从语言隐 token 重建 CoT 推理文本</li>
+<li>视觉辅助解码器 <span class="math inline">$\mathcal{D}_v$</span>：从视觉隐 token 预测未来帧的视觉 token（世界模型监督）</li>
+</ul>
+</li>
+</ul>
+<p><img alt="图2：OneVL 整体架构" src="arXiv-2604.18486v3/figs_jpg/framework.jpg" /></p>
+<p><em>图2：OneVL 完整架构图。</em></p>
+<p><strong>输入层（上部）：</strong> 前视摄像头图像 + 结构化文本 prompt（ego 状态、导航指令、历史轨迹）送入 VLM 主干（Qwen3-VL ViT + MLP Aligner + LLM）。</p>
+<p><strong>隐 Token 序列（中部 VLM 输出 hidden states 下方）：</strong> 从 LLM 的输出 hidden states 中提取五个部分——图像 token（T_v）、文本 token（T_l）、视觉隐 token（Z_v，4 个）、语言隐 token（Z_l，2 个）、轨迹答案 token（T_y）。关键设计：视觉隐 token 放在语言隐 token 之前，两者均位于 assistant 回复中 trajectory answer 之前的位置。</p>
+<p><strong>左分支——视觉辅助解码器 D_v：</strong> 接收视觉隐 token 的 hidden states H_v 与 ViT patch embedding V（经 MLP 投影），自回归预测 t+0.5s 和 t+1.0s 两帧未来图像的视觉 token 序列。视觉 token 使用 Emu3.5 IBQ（Index Backpropagation Quantization）tokenizer，codebook 大小 131,072。该解码器充当<strong>世界模型</strong>，强制视觉隐 token 编码场景的因果动力学（agent 运动、道路几何演变、新危险的出现）。</p>
+<p><strong>右分支——语言辅助解码器 D_l：</strong> 接收语言隐 token 的 hidden states H_l 与 ViT patch embedding V（经 MLP 投影到解码器嵌入空间），自回归重建 CoT 推理文本。条件化于 ViT 特征使解码器在生成 CoT 时可参考当前视觉上下文。</p>
+<p><strong>推理时（虚线红叉）：</strong> 两个辅助解码器均被丢弃。所有隐 token（视觉 + 语言）以 Prefill 方式并行注入 prompt（现代 Transformer 在 prefill 阶段对所有 token 并行计算），随后仅自回归生成轨迹 token。延迟等同于纯答案预测。</p>
+<h3 id="22-token">2.2 隐 Token 设计</h3>
+<p>两类隐 token 使用原始词表 token 实现（而非新增特殊 token），因为实验发现添加专用特殊 token（如 <code>&lt;|latent-vis|&gt;</code>）会降低性能：</p>
+<table>
+<thead>
+<tr>
+<th>Token 类型</th>
+<th>数量</th>
+<th>实现</th>
+<th>位置</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>视觉隐 token</td>
+<td>C_v = 4</td>
+<td>用已有词表 token 表示（实现为约 35 个 token）</td>
+<td><code>&lt;\|start-latent-vis\|&gt; &lt;\|latent-vis\|&gt;×4 &lt;\|end-latent-vis\|&gt;</code></td>
+</tr>
+<tr>
+<td>语言隐 token</td>
+<td>C_t = 2</td>
+<td>用已有词表 token 表示（实现为约 20 个 token）</td>
+<td><code>&lt;\|start-latent\|&gt; &lt;\|latent\|&gt;×2 &lt;\|end-latent\|&gt;</code></td>
+</tr>
+<tr>
+<td>轨迹答案</td>
+<td>-</td>
+<td>标准自回归输出</td>
+<td><code>&lt;answer&gt; [[x,y], ...] &lt;/answer&gt;</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="23">2.3 辅助解码器详细设计</h3>
+<p><strong>语言辅助解码器 <span class="math inline">$\mathcal{D}_l$</span>：</strong></p>
+<p>输入构造：
+<div class="math display">$$\mathcal{Z}_l = [W_l(\mathcal{V}), W_l(\mathcal{H}_l)]$$</div></p>
+<p>其中 <span class="math inline">$\mathcal{V} \in \mathbb{R}^{N_v \times d}$</span> 是 ViT patch embedding，<span class="math inline">$\mathcal{H}_l \in \mathbb{R}^{C_t \times d}$</span> 是语言隐 token 的 hidden states，<span class="math inline">$W_l$</span> 是 MLP 投影层。训练目标为标准的自回归交叉熵损失 <span class="math inline">$\mathcal{L}_l$</span>，预测 ground-truth CoT 推理文本。</p>
+<p><strong>视觉辅助解码器 <span class="math inline">$\mathcal{D}_v$</span>：</strong></p>
+<p>输入构造：
+<div class="math display">$$\mathcal{Z}_v = [W_v(\mathcal{V}), W_v(\mathcal{H}_v)]$$</div></p>
+<p>其中 <span class="math inline">$\mathcal{H}_v \in \mathbb{R}^{C_v \times d}$</span> 是视觉隐 token 的 hidden states。训练目标为预测未来两帧（t+0.5s, t+1.0s）的视觉 token 序列 <span class="math inline">$\mathcal{T}_{y_v}$</span> 的交叉熵损失 <span class="math inline">$\mathcal{L}_v$</span>。</p>
+<p>视觉 tokenizer 采用 Emu3.5 IBQ，codebook 131,072，图像最大分辨率 512×512。Qwen3-VL-4B 原始词表被扩展 131,072 个视觉 token ID。视觉 token 序列在训练前离线构建（用 IBQ tokenizer 对 ground-truth 未来帧编码），训练时不需要额外前向传播。</p>
+<blockquote>
+<p><strong>核心动机：为什么是"世界模型"辅助？</strong> 自动驾驶本质上是时空预测任务。未来帧的视觉 token——即驾驶场景在近未来时刻的视觉表现——是学习视觉隐表征的自然目标。该任务作为严格的泛化测试：预测 unseen 的场景配置需要一个鲁棒的因果模型，而非模式记忆。结合视觉和语言解码器，框架在物理动力学和语义意图两个维度上监督隐 token，施加多模态约束以捕获环境的共享因果结构。</p>
+</blockquote>
+<h3 id="24">2.4 联合训练目标</h3>
+<p>总损失为三个组件的加权和：
+<div class="math display">$$\mathcal{L} = \mathcal{L}_c + \lambda_l \mathcal{L}_l + \lambda_v \mathcal{L}_v$$</div></p>
+<p>其中 <span class="math inline">$\mathcal{L}_c$</span> 为主模型交叉熵损失（轨迹答案 + 隐 token），<span class="math inline">$\lambda_l = 1.0$</span>，<span class="math inline">$\lambda_v = 0.1$</span>。<span class="math inline">$\lambda_v$</span> 较低是因为视觉 token 重建是更困难的任务，较小的权重防止其支配训练信号。</p>
+<h3 id="25-prefill">2.5 Prefill 推理机制</h3>
+<p>推理时 prompt 构造为：</p>
+<div class="codehilite"><pre><span></span><code><span class="o">[</span><span class="n">System</span><span class="o">,</span><span class="w"> </span><span class="n">User</span><span class="w"> </span><span class="n">query</span><span class="o">,</span><span class="w"> </span><span class="o">&lt;|</span><span class="n">start</span><span class="o">-</span><span class="n">latent</span><span class="o">-</span><span class="n">vis</span><span class="o">|&gt;,</span><span class="w"> </span><span class="o">&lt;|</span><span class="n">latent</span><span class="o">-</span><span class="n">vis</span><span class="o">|&gt;</span><span class="err">×</span><span class="mi">4</span><span class="o">,</span><span class="w"> </span><span class="o">&lt;|</span><span class="k">end</span><span class="o">-</span><span class="n">latent</span><span class="o">-</span><span class="n">vis</span><span class="o">|&gt;,</span>
+<span class="w"> </span><span class="o">&lt;|</span><span class="n">start</span><span class="o">-</span><span class="n">latent</span><span class="o">|&gt;,</span><span class="w"> </span><span class="o">&lt;|</span><span class="n">latent</span><span class="o">|&gt;</span><span class="err">×</span><span class="mi">2</span><span class="o">,</span><span class="w"> </span><span class="o">&lt;|</span><span class="k">end</span><span class="o">-</span><span class="n">latent</span><span class="o">|&gt;]</span>
+</code></pre></div>
+
+<p>所有隐 token 在 <strong>prefill 阶段</strong> 并行处理（现代 Transformer 对 prefill 序列做一次并行前向传播），模型随后仅自回归生成轨迹 token。由于 prefill 阶段已经包含大量图像 patch token，额外几个隐 token 的开销可忽略。</p>
+<p>可选地，训练后可通过辅助解码器生成语言解释和视觉解释（例如用于人类审核或安全审计）。</p>
+<hr />
+<h2 id="_3">三、三阶段训练管线</h2>
+<p>联合训练主 VLM、语言辅助解码器和视觉辅助解码器面临独特挑战：三者有根本不同的学习目标和不同的初始化状态。OneVL 通过渐进式三阶段管线解决这一问题。</p>
+<table>
+<thead>
+<tr>
+<th>超参数</th>
+<th>预训练</th>
+<th>Stage 0</th>
+<th>Stage 1</th>
+<th>Stage 2</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>步数/Epoch</td>
+<td>13,040 steps</td>
+<td>2 epochs</td>
+<td>1 epoch</td>
+<td>5 epochs</td>
+</tr>
+<tr>
+<td>全局 Batch</td>
+<td>256</td>
+<td>64</td>
+<td>64</td>
+<td>64</td>
+</tr>
+<tr>
+<td>学习率</td>
+<td>1×10⁻⁴</td>
+<td>4×10⁻⁵</td>
+<td>1×10⁻⁴</td>
+<td>1×10⁻⁴</td>
+</tr>
+<tr>
+<td>LR 调度</td>
+<td>Cosine</td>
+<td>Cosine</td>
+<td>Cosine</td>
+<td>Cosine</td>
+</tr>
+<tr>
+<td>优化器</td>
+<td>AdamW</td>
+<td>AdamW</td>
+<td>AdamW</td>
+<td>AdamW</td>
+</tr>
+<tr>
+<td>精度</td>
+<td>BF16</td>
+<td>BF16</td>
+<td>BF16</td>
+<td>BF16</td>
+</tr>
+<tr>
+<td>并行</td>
+<td>ZeRO-2</td>
+<td>ZeRO-2</td>
+<td>ZeRO-2</td>
+<td>ZeRO-2</td>
+</tr>
+<tr>
+<td>可训练</td>
+<td>视觉辅助解码器</td>
+<td>ViT + LLM + Aligner</td>
+<td>语言 &amp; 视觉辅助解码器</td>
+<td>全部</td>
+</tr>
+<tr>
+<td>冻结</td>
+<td>—</td>
+<td>—</td>
+<td>主 VLM</td>
+<td>—</td>
+</tr>
+<tr>
+<td>λ_l</td>
+<td>—</td>
+<td>—</td>
+<td>1.0</td>
+<td>1.0</td>
+</tr>
+<tr>
+<td>λ_v</td>
+<td>1.0</td>
+<td>—</td>
+<td>0.1</td>
+<td>0.1</td>
+</tr>
+</tbody>
+</table>
+<h3 id="_4">预训练：视觉辅助解码器自监督预训练</h3>
+<p>在集成到完整管线前，视觉辅助解码器先独立预训练为无条件未来帧生成器。仅接收当前帧 ViT embedding <span class="math inline">$\mathcal{V}$</span>（无隐 token），预测 t+0.5s 和 t+1.0s 的视觉 token：
+<div class="math display">$$\mathcal{L}_p = -\sum \log P_{\mathcal{D}_v}(\mathcal{T}_{y_v, t} \mid \mathcal{V}, \mathcal{T}_{y_v, &lt;t})$$</div></p>
+<p>预训练后，解码器已学会从当前场景预测合理的未来帧，具备了隐式的"世界模型"能力。当后续连接主模型时，视觉隐 token 作为额外条件信号加入——解码器从"无条件下一帧生成"转变为"以动作为条件的世界模型 rollout"。</p>
+<h3 id="stage-0">Stage 0：主模型热身</h3>
+<p>训练主 VLM（全参数：ViT + LLM + Aligner）在轨迹预测任务上，隐 token 嵌入每个训练样本的 assistant 回复中。模型学会：</p>
+<ul>
+<li>预测准确的轨迹（CE 损失监督）</li>
+<li>发展有意义的隐表征（通过注意力机制，轨迹 token 可以 attention 到隐 token 位置，建立辅助解码器后续利用的信息路由路径）</li>
+</ul>
+<h3 id="stage-1">Stage 1：辅助解码器热身</h3>
+<p><strong>冻结主模型</strong>，仅训练两个辅助解码器。主模型产生的隐表征稳定后，解码器在一个一致的语义分布上优化，学习从固定隐特征到 CoT 文本和未来帧视觉 token 的映射。</p>
+<h3 id="stage-2">Stage 2：端到端联合微调</h3>
+<p>解冻所有组件，用总损失 <span class="math inline">$\mathcal{L}$</span> 联合微调。梯度从 <span class="math inline">$\mathcal{L}_l$</span> 和 <span class="math inline">$\mathcal{L}_v$</span> 回流到主模型，直接塑造隐表征以同时服务轨迹预测、语言解释和视觉预测三个目标。</p>
+<blockquote>
+<p><strong>为什么三阶段训练必不可少？</strong> 消融实验显示直接端到端联合训练导致灾难性失败——PDM-score 从 88.84 暴跌至 67.13。原因有二：(1) 初始化时有严重的"梯度冲击"，梯度 norm 达到 378.22，而三阶段策略维持在 0.28；(2) 端到端联合训练导致灾难性任务干扰，主模型同时优化冲突目标，最终轨迹预测 loss 更高（0.186 vs 0.136）。</p>
+</blockquote>
+<hr />
+<h2 id="_5">四、实验与结果</h2>
+<h3 id="41">4.1 实验设置</h3>
+<p><strong>数据集（4 个 benchmark）：</strong></p>
+<table>
+<thead>
+<tr>
+<th>Benchmark</th>
+<th>来源</th>
+<th>特点</th>
+<th>评估指标</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>NAVSIM</td>
+<td>nuPlan 驾驶日志</td>
+<td>大规模非反应式规划评估</td>
+<td>PDM-score（安全 + 舒适 + 进度）</td>
+</tr>
+<tr>
+<td>ROADWork</td>
+<td>自建</td>
+<td>施工区导航：临时标志、非标车道、锥桶/障碍物</td>
+<td>ADE / FDE（像素）</td>
+</tr>
+<tr>
+<td>Impromptu</td>
+<td>8 个开放数据集蒸馏</td>
+<td>非结构化 corner-case：无清晰边界道路、临时交通规则、非常规障碍物</td>
+<td>ADE / FDE（米）+ L2@1s-4s</td>
+</tr>
+<tr>
+<td>Alpamayo-R1</td>
+<td>CoC 标注</td>
+<td>决策锚定的推理链 + 复杂驾驶行为</td>
+<td>ADE / FDE（米）</td>
+</tr>
+</tbody>
+</table>
+<p><strong>CoT 标注构建：</strong> NAVSIM 使用 AdaThinkDrive 发布的 CoT 标注；ROADWork 使用自研标注管线（施工区特有：危险识别、非标车道解释、速度/间隙推理）；Impromptu 从原始 Q&amp;A 对构建；Alpamayo-R1 使用作者发布的 checkpoint 复现 CoT 标注。</p>
+<p><strong>基线方法：</strong></p>
+<ul>
+<li>AR 方法：AR Answer（无推理）、AR CoT+Answer（显式 CoT）</li>
+<li>隐式 CoT 方法：COCONUT、CODI、SIM-CoT（均为 Qwen3-VL-4B 基础）</li>
+<li>已有 SOTA：AdaThinkDrive (8B)、LaST-VLA (8B)、Impromptu VLA (3B)、Cosmos-Reason (10B)、YNet</li>
+</ul>
+<h3 id="42">4.2 主要结果</h3>
+<p><strong>NAVSIM（PDM-score ↑，延迟 ↓）：</strong></p>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th style="text-align: center;">模型大小</th>
+<th style="text-align: center;">PDM-score ↑</th>
+<th style="text-align: center;">延迟 (s) ↓</th>
+<th style="text-align: center;">可解释性</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>AdaThinkDrive</td>
+<td style="text-align: center;">8B</td>
+<td style="text-align: center;">86.20</td>
+<td style="text-align: center;">—</td>
+<td style="text-align: center;">语言</td>
+</tr>
+<tr>
+<td>LaST-VLA</td>
+<td style="text-align: center;">8B</td>
+<td style="text-align: center;">87.30</td>
+<td style="text-align: center;">—</td>
+<td style="text-align: center;">—</td>
+</tr>
+<tr>
+<td>AR Answer</td>
+<td style="text-align: center;">4B</td>
+<td style="text-align: center;">87.47</td>
+<td style="text-align: center;">4.49</td>
+<td style="text-align: center;">—</td>
+</tr>
+<tr>
+<td>AR CoT+Answer</td>
+<td style="text-align: center;">4B</td>
+<td style="text-align: center;">88.29</td>
+<td style="text-align: center;">6.58</td>
+<td style="text-align: center;">语言</td>
+</tr>
+<tr>
+<td>COCONUT</td>
+<td style="text-align: center;">4B</td>
+<td style="text-align: center;">84.84</td>
+<td style="text-align: center;">5.93</td>
+<td style="text-align: center;">—</td>
+</tr>
+<tr>
+<td>CODI</td>
+<td style="text-align: center;">4B</td>
+<td style="text-align: center;">83.92</td>
+<td style="text-align: center;">8.62</td>
+<td style="text-align: center;">—</td>
+</tr>
+<tr>
+<td>SIM-CoT</td>
+<td style="text-align: center;">4B</td>
+<td style="text-align: center;">84.21</td>
+<td style="text-align: center;">10.86</td>
+<td style="text-align: center;">语言</td>
+</tr>
+<tr>
+<td><strong>OneVL</strong></td>
+<td style="text-align: center;"><strong>4B</strong></td>
+<td style="text-align: center;"><strong>88.84</strong></td>
+<td style="text-align: center;"><strong>4.46</strong></td>
+<td style="text-align: center;"><strong>视觉 + 语言</strong></td>
+</tr>
+</tbody>
+</table>
+<p>OneVL 以 4B 参数超越所有 8B 模型和所有 AR/隐式基线。与 AR Answer 相比延迟几乎相同（4.46s vs 4.49s），但 PDM-score 高 1.37。这是<strong>首个隐式 CoT 方法超越显式 AR CoT</strong>（88.84 vs 88.29）。</p>
+<p><strong>ROADWork（ADE/FDE ↓，像素）：</strong></p>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th style="text-align: center;">ADE ↓</th>
+<th style="text-align: center;">FDE ↓</th>
+<th style="text-align: center;">延迟 (s) ↓</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>YNet</td>
+<td style="text-align: center;">22.68</td>
+<td style="text-align: center;">80.78</td>
+<td style="text-align: center;">—</td>
+</tr>
+<tr>
+<td>AR Answer</td>
+<td style="text-align: center;">15.98</td>
+<td style="text-align: center;">40.29</td>
+<td style="text-align: center;">4.74</td>
+</tr>
+<tr>
+<td>AR CoT+Answer</td>
+<td style="text-align: center;">13.18</td>
+<td style="text-align: center;">29.98</td>
+<td style="text-align: center;">10.74</td>
+</tr>
+<tr>
+<td>COCONUT</td>
+<td style="text-align: center;">15.44</td>
+<td style="text-align: center;">38.60</td>
+<td style="text-align: center;">6.06</td>
+</tr>
+<tr>
+<td>CODI</td>
+<td style="text-align: center;">16.45</td>
+<td style="text-align: center;">44.28</td>
+<td style="text-align: center;">6.73</td>
+</tr>
+<tr>
+<td>SIM-CoT</td>
+<td style="text-align: center;">16.49</td>
+<td style="text-align: center;">44.32</td>
+<td style="text-align: center;">6.19</td>
+</tr>
+<tr>
+<td><strong>OneVL</strong></td>
+<td style="text-align: center;"><strong>12.49</strong></td>
+<td style="text-align: center;"><strong>28.80</strong></td>
+<td style="text-align: center;"><strong>4.71</strong></td>
+</tr>
+</tbody>
+</table>
+<p>OneVL 比 AR CoT+Answer 快 2.3×（4.71s vs 10.74s），且 ADE/FDE 更低。施工区场景对推理精度要求极高——COCONUT/CODI/SIM-CoT 甚至不如 AR Answer，再次验证纯语言隐式 CoT 在复杂驾驶场景的失败。</p>
+<p><strong>Impromptu（ADE/FDE ↓，米）：</strong></p>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th style="text-align: center;">ADE ↓</th>
+<th style="text-align: center;">FDE ↓</th>
+<th style="text-align: center;">延迟 (s) ↓</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Impromptu VLA</td>
+<td style="text-align: center;">1.60</td>
+<td style="text-align: center;">4.28</td>
+<td style="text-align: center;">6.10</td>
+</tr>
+<tr>
+<td>AR Answer</td>
+<td style="text-align: center;">1.46</td>
+<td style="text-align: center;">4.03</td>
+<td style="text-align: center;">4.24</td>
+</tr>
+<tr>
+<td>AR CoT+Answer</td>
+<td style="text-align: center;">1.42</td>
+<td style="text-align: center;">3.96</td>
+<td style="text-align: center;">6.84</td>
+</tr>
+<tr>
+<td>COCONUT</td>
+<td style="text-align: center;">1.49</td>
+<td style="text-align: center;">4.07</td>
+<td style="text-align: center;">5.27</td>
+</tr>
+<tr>
+<td>CODI</td>
+<td style="text-align: center;">1.86</td>
+<td style="text-align: center;">5.18</td>
+<td style="text-align: center;">5.24</td>
+</tr>
+<tr>
+<td>SIM-CoT</td>
+<td style="text-align: center;">2.43</td>
+<td style="text-align: center;">6.10</td>
+<td style="text-align: center;">5.09</td>
+</tr>
+<tr>
+<td><strong>OneVL</strong></td>
+<td style="text-align: center;"><strong>1.34</strong></td>
+<td style="text-align: center;"><strong>3.70</strong></td>
+<td style="text-align: center;"><strong>4.02</strong></td>
+</tr>
+</tbody>
+</table>
+<p>Impromptu 聚焦非结构化 corner-case（无清晰边界道路、临时交通规则等），这类场景正是 CoT 推理最有价值的场景。SIM-CoT 在此类场景上表现最差（ADE 2.43），而 OneVL 建立新的 SOTA。</p>
+<p><strong>Alpamayo-R1（ADE/FDE ↓，米）：</strong></p>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th style="text-align: center;">ADE ↓</th>
+<th style="text-align: center;">FDE ↓</th>
+<th style="text-align: center;">延迟 (s) ↓</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Cosmos-Reason (10B)</td>
+<td style="text-align: center;">2.86</td>
+<td style="text-align: center;"><strong>7.42</strong></td>
+<td style="text-align: center;">—</td>
+</tr>
+<tr>
+<td>AR Answer</td>
+<td style="text-align: center;">3.27</td>
+<td style="text-align: center;">9.59</td>
+<td style="text-align: center;">3.06</td>
+</tr>
+<tr>
+<td>AR CoT+Answer</td>
+<td style="text-align: center;">2.99</td>
+<td style="text-align: center;">8.54</td>
+<td style="text-align: center;">3.51</td>
+</tr>
+<tr>
+<td>COCONUT</td>
+<td style="text-align: center;">3.29</td>
+<td style="text-align: center;">9.48</td>
+<td style="text-align: center;">3.76</td>
+</tr>
+<tr>
+<td>CODI</td>
+<td style="text-align: center;">3.22</td>
+<td style="text-align: center;">9.25</td>
+<td style="text-align: center;">3.85</td>
+</tr>
+<tr>
+<td>SIM-CoT</td>
+<td style="text-align: center;">3.40</td>
+<td style="text-align: center;">9.85</td>
+<td style="text-align: center;">3.78</td>
+</tr>
+<tr>
+<td><strong>OneVL</strong></td>
+<td style="text-align: center;"><strong>2.62</strong></td>
+<td style="text-align: center;">7.53</td>
+<td style="text-align: center;">3.23</td>
+</tr>
+</tbody>
+</table>
+<p>OneVL 在 ADE 上最优（2.62），FDE 略低于 Cosmos-Reason（7.53 vs 7.42），后者使用了 RL 进一步增强能力。注意 Alpamayo-R1 上所有隐式 CoT 方法均未崩溃（不同于其他 benchmark），但 COCONUT/CODI/SIM-CoT 仍不如 AR Answer。</p>
+<h3 id="43">4.3 解释质量评估</h3>
+<p><strong>文本 CoT 质量（NAVSIM 500 测试样本）：</strong></p>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th style="text-align: center;">Meta Action Acc. ↑</th>
+<th style="text-align: center;">STS Score ↑</th>
+<th style="text-align: center;">LLM Judge ↑</th>
+<th style="text-align: center;">平均 ↑</th>
+<th style="text-align: center;">延迟 (s) ↓</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>AR CoT+Answer</td>
+<td style="text-align: center;">73.20</td>
+<td style="text-align: center;">79.75</td>
+<td style="text-align: center;">81.86</td>
+<td style="text-align: center;">78.27</td>
+<td style="text-align: center;">6.58</td>
+</tr>
+<tr>
+<td>SIM-CoT</td>
+<td style="text-align: center;">67.20</td>
+<td style="text-align: center;">76.25</td>
+<td style="text-align: center;">78.73</td>
+<td style="text-align: center;">74.06</td>
+<td style="text-align: center;">10.86</td>
+</tr>
+<tr>
+<td>OneVL (lang. aux.)</td>
+<td style="text-align: center;">71.00</td>
+<td style="text-align: center;">78.26</td>
+<td style="text-align: center;">79.13</td>
+<td style="text-align: center;">76.13</td>
+<td style="text-align: center;">4.46</td>
+</tr>
+</tbody>
+</table>
+<p>三种评估指标：</p>
+<ul>
+<li><strong>Meta Action Accuracy：</strong> 提取 CoT 末尾的高层驾驶决策（如"keep lane, maintain speed"），与 ground-truth 做精确字符串匹配。直接影响安全性——决策错误是最危险的。</li>
+<li><strong>STS Score：</strong> 使用 BGE-reranker-v2-m3 交叉编码器计算语义文本相似度。交叉编码器对关键局部矛盾高度敏感（如"slowly" vs "fastly"），经全局 min-max 归一化到 [0, 1]。</li>
+<li><strong>LLM-as-Judge：</strong> 使用 Gemini-3.1-flash-lite-preview 作为自动评分器，在感知准确性、运动状态预测、决策正确性、语言流畅性四个维度评分，考虑视觉 grounding。</li>
+</ul>
+<p>OneVL 的语言辅助解码器恢复了 AR CoT 约 97% 的解释质量（76.13 vs 78.27），但延迟仅为 AR CoT 的 68%（4.46s vs 6.58s），并在所有指标上显著超过 SIM-CoT。</p>
+<h3 id="44">4.4 消融实验</h3>
+<table>
+<thead>
+<tr>
+<th>模型变体</th>
+<th style="text-align: center;">语言辅助解码器</th>
+<th style="text-align: center;">视觉辅助解码器</th>
+<th style="text-align: center;">分阶段训练</th>
+<th style="text-align: center;">PDM-score ↑</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>OneVL w/o 视觉解码器</td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">—</td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">87.97</td>
+</tr>
+<tr>
+<td>OneVL w/o 语言解码器</td>
+<td style="text-align: center;">—</td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">88.53</td>
+</tr>
+<tr>
+<td>OneVL w/o 分阶段训练</td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">—</td>
+<td style="text-align: center;">67.13</td>
+</tr>
+<tr>
+<td><strong>OneVL（完整）</strong></td>
+<td style="text-align: center;"><strong>✓</strong></td>
+<td style="text-align: center;"><strong>✓</strong></td>
+<td style="text-align: center;"><strong>✓</strong></td>
+<td style="text-align: center;"><strong>88.84</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>关键发现：</strong></p>
+<ul>
+<li>视觉辅助解码器贡献 +0.87 PDM-score（88.84 - 87.97），远超语言解码器的 +0.31。反映了视觉世界模型监督的本质价值：轨迹预测是空间预测任务，未来帧重建提供的是与几何推理天然对齐的监督信号。</li>
+<li>分阶段训练是必需的——跳过它导致 21.71 分的灾难性下降。直接端到端训练在初始化时发生梯度爆炸（grad norm 378.22 vs 三阶段的 0.28），且最终轨迹预测损失更高（0.186 vs 0.136）。</li>
+</ul>
+<p><img alt="图3：消融实验——视觉 CoT 质量对比" src="arXiv-2604.18486v3/figs_jpg/ablations/ablation_comparison.jpg" /></p>
+<p><em>图3：完整训练配方 vs 无分阶段训练——视觉辅助解码器输出对比。</em></p>
+<p><strong>子图 (a) 完整三阶段训练：</strong> 上半部分展示使用完整训练配方的结果。视觉辅助解码器从同一输入图像解码出的 t+1 和 t+2 未来帧保持场景一致性——道路布局、车辆位置、车道线结构与输入图像在空间上连贯，证明视觉隐 token 确实编码了有意义的场景动力学。这构成了一个"视觉思维链"：模型不仅能告诉你它打算做什么，还能展示它预期看到的场景演变。</p>
+<p><strong>子图 (b) 无分阶段训练（直接端到端）：</strong> 下半部分展示跳过三阶段 curriculum 的结果。解码出的"未来帧"与输入图像完全无关——表现为抽象的、模式化的伪影，而非合理的场景演变。这说明没有渐进式训练，视觉辅助解码器过拟合——走捷径记忆训练数据模式，而非学习泛化的场景动力学。此时语言 CoT 推理也是错误的（论文报告了类似退化）。最关键的是，这种失效的监督信号不仅无用，反而引入噪声，使整体性能从 88.84 暴跌至 67.13。</p>
+<p><strong>为什么这张图重要：</strong> 它直接可视化了"压缩的质量决定智能的质量"这一中心论点。三阶段训练确保隐 token 瓶颈编码的是可泛化的场景动力学（因果结构），而非记忆的捷径（表面统计规律）。</p>
+<h3 id="45-mlp-head">4.5 部署优化：MLP Head 变体</h3>
+<table>
+<thead>
+<tr>
+<th>变体</th>
+<th style="text-align: center;">PDM-score ↑</th>
+<th style="text-align: center;">延迟 (s) ↓</th>
+<th style="text-align: center;">推理频率</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>OneVL (MLP)</td>
+<td style="text-align: center;">86.83</td>
+<td style="text-align: center;">0.24</td>
+<td style="text-align: center;">4.16 Hz</td>
+</tr>
+<tr>
+<td>OneVL (AR)</td>
+<td style="text-align: center;">88.84</td>
+<td style="text-align: center;">4.46</td>
+<td style="text-align: center;">—</td>
+</tr>
+</tbody>
+</table>
+<p>在最后一个隐 token 的 hidden state 上附加轻量 MLP head，单次前向传播即可输出轨迹（无需自回归解码）。延迟仅 0.24s（4.16 Hz），达到车载实时部署的频率要求（通常为几 Hz），同时保持有竞争力的性能（86.83 仍超过 LaST-VLA 的 87.30 仅差 0.47，但参数少一半）。</p>
+<hr />
+<h2 id="_6">五、关键洞察与技术亮点</h2>
+<h3 id="51-cot">5.1 为什么隐式推理超越了显式 CoT？</h3>
+<p>一个自然的问题是：为什么 OneVL 用更少的 token 表达推理（6 个隐 token vs 数百个 CoT token），性能反而更好（88.84 vs 88.29）？论文提出两个机制：</p>
+<ol>
+<li>
+<p><strong>压缩红利（Compression Benefit）：</strong> 紧凑的隐 token 强制模型将最关键的推理内容蒸馏到小型表征瓶颈中，过滤掉无关或冗余内容。这正是信息瓶颈原理（Information Bottleneck）的预期效果——更紧的压缩丢弃噪声，仅保留对输出有预测性的因果特征。相比之下，冗长的自由形式 CoT 链中，切题的推理可能引入噪声。</p>
+</li>
+<li>
+<p><strong>世界模型接地（World Model Grounding）：</strong> 视觉辅助解码器明确要求视觉隐 token 编码时空场景动力学（未来帧内容），这是与轨迹预测直接相关的信号。显式语言 CoT 没有类似的接地机制——它符号性地描述世界，因果几何保持隐式。</p>
+</li>
+</ol>
+<h3 id="52">5.2 为什么视觉监督比语言监督贡献更大？</h3>
+<p>视觉解码器贡献 +0.87，语言解码器仅 +0.31。这一非对称性反映了：</p>
+<ul>
+<li>自动驾驶轨迹预测本质上是<strong>空间预测任务</strong>，未来帧重建（预测 0.5-1.0 秒后的场景）提供的监督信号与轨迹预测的几何性质天然对齐。</li>
+<li>未来帧预测是<strong>世界模型目标</strong>——为最小化 unseen 场景配置上的重建损失，视觉隐 token 必须编码场景的因果动力学（agent 运动、道路几何），而非仅当前外观。</li>
+<li>语言 CoT 标注描述的是符号化、抽象的推理过程——对语义接地有价值，但离物理动力学隔了一层。</li>
+</ul>
+<h3 id="53-cot">5.3 已有隐式 CoT 方法的失败分析</h3>
+<p>COCONUT、CODI、SIM-CoT 在自动驾驶上集体失败的根本原因：</p>
+<ol>
+<li>
+<p><strong>缺少视觉世界模型监督：</strong> 没有视觉辅助解码器强制隐 token 编码时空场景内容，隐表征压缩的是语言层面的抽象，丢失了轨迹预测所需的几何精度。OneVL w/o 视觉解码器（87.97）仍低于完整模型（88.84），仅移除世界模型监督就导致 -0.87 的下降。</p>
+</li>
+<li>
+<p><strong>缺少分阶段训练：</strong> 已有方法通常在优化开始时就让隐 token 与轨迹预测处于未对齐状态。消融实验分离了该效应——即使没有视觉解码器但有三阶段训练（87.97），仍远高于无分阶段训练的崩溃水平（67.13）和所有先前隐式 CoT 基线。</p>
+</li>
+</ol>
+<h3 id="54">5.4 压缩驱动泛化</h3>
+<p>OneVL 的核心哲学：<strong>压缩驱动泛化。</strong> 模型被强制将丰富的多模态输入压缩为紧凑的隐 token 时，必须保留真正的因果结构——而这正是泛化所依赖的。语言辅助解码器和视觉辅助解码器作为双重验证：如果紧凑的隐 token 能同时解码为连贯的语言推理和合理的未来帧，模型必然学到了可迁移的场景动力学表征，而非记忆输入-输出映射。</p>
+<hr />
+<h2 id="_7">六、代码实现解读</h2>
+<p>OneVL 的推理代码约 820 行（<code>infer_onevl.py</code>），评估代码约 740 行（<code>eval_results.py</code>），视觉 tokenizer 约 120 行。整体架构清晰——训练后的 checkpoint 将所有权重（主模型 + 辅助解码器 + 投影层）存储在同一个 safetensors 文件中，推理脚本按前缀提取各子模块权重。</p>
+<h3 id="61">6.1 整体推理流程</h3>
+<div class="codehilite"><pre><span></span><code><span class="w">                    </span>┌─────────────────────────────────┐
+<span class="w">                    </span>│<span class="w">        </span><span class="nv">infer_onevl</span>.<span class="nv">py</span><span class="w">            </span>│
+<span class="w">                    </span>│<span class="w">        </span><span class="nv">main</span><span class="ss">()</span><span class="w"> </span>入口<span class="w">               </span>│
+<span class="w">                    </span>└──────────────┬──────────────────┘
+<span class="w">                                   </span>│
+<span class="w">            </span>┌──────────────────────┼──────────────────────┐
+<span class="w">            </span>│<span class="w">                      </span>│<span class="w">                      </span>│
+<span class="w">            </span>▼<span class="w">                      </span>▼<span class="w">                      </span>▼
+<span class="w">   </span>┌────────────────┐<span class="w">   </span>┌──────────────────┐<span class="w">   </span>┌──────────────────┐
+<span class="w">   </span>│<span class="w"> </span>加载主模型<span class="w">      </span>│<span class="w">   </span>│<span class="w"> </span>构建辅助解码器<span class="w">    </span>│<span class="w">   </span>│<span class="w"> </span>加载测试数据集<span class="w">    </span>│
+<span class="w">   </span>│<span class="w"> </span><span class="nv">Qwen3VLForCon</span><span class="o">-</span><span class="w"> </span>│<span class="w">   </span>│<span class="w"> </span><span class="ss">(</span>可选,按前缀提取<span class="ss">)</span><span class="w"> </span>│<span class="w">   </span>│<span class="w"> </span><span class="nv">JSON</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="nv">JSONL</span><span class="w">     </span>│
+<span class="w">   </span>│<span class="w"> </span><span class="nv">ditionalGene</span><span class="o">-</span><span class="w">  </span>│<span class="w">   </span>│<span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nv">text</span><span class="w"> </span><span class="nv">aux</span><span class="w"> </span><span class="nv">dec</span><span class="w">   </span>│<span class="w">   </span>│<span class="w"> </span><span class="nv">resolve</span><span class="w"> </span>图片路径<span class="w">  </span>│
+<span class="w">   </span>│<span class="w"> </span><span class="nv">ration</span>.<span class="nv">from_</span><span class="w">   </span>│<span class="w">   </span>│<span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nv">visual</span><span class="w"> </span><span class="nv">aux</span><span class="w"> </span><span class="nv">dec</span><span class="w"> </span>│<span class="w">   </span>└──────────────────┘
+<span class="w">   </span>│<span class="w"> </span><span class="nv">pretrained</span><span class="ss">()</span><span class="w">   </span>│<span class="w">   </span>│<span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nv">latent</span><span class="w"> </span><span class="nv">proj</span><span class="w">    </span>│
+<span class="w">   </span>└────────────────┘<span class="w">   </span>└──────────────────┘
+<span class="w">            </span>│<span class="w">                      </span>│
+<span class="w">            </span>└──────────┬───────────┘
+<span class="w">                       </span>│
+<span class="w">                       </span>▼
+<span class="w">            </span>┌─────────────────────┐
+<span class="w">            </span>│<span class="w">  </span>逐样本推理循环<span class="w">       </span>│
+<span class="w">            </span>│<span class="w">  </span><span class="k">for</span><span class="w"> </span><span class="nv">idx</span>,<span class="w"> </span><span class="nv">item</span><span class="w"> </span>...<span class="w">  </span>│
+<span class="w">            </span>└──────────┬──────────┘
+<span class="w">                       </span>│
+<span class="w">        </span>┌──────────────┼──────────────┐
+<span class="w">        </span>│<span class="w">              </span>│<span class="w">              </span>│
+<span class="w">        </span>▼<span class="w">              </span>▼<span class="w">              </span>▼
+<span class="w">   </span>┌──────────┐<span class="w"> </span>┌────────────┐<span class="w"> </span>┌──────────────┐
+<span class="w">   </span>│构造<span class="w"> </span><span class="nv">prompt</span>│<span class="w"> </span>│可选:<span class="w"> </span><span class="nv">forward</span>│<span class="w"> </span>│生成轨迹答案<span class="w">   </span>│
+<span class="w">   </span>│<span class="o">+</span><span class="w"> </span>隐<span class="w"> </span><span class="nv">token</span><span class="w"> </span>│<span class="w"> </span>│<span class="w"> </span><span class="nv">pass</span><span class="w"> </span>获取<span class="w">   </span>│<span class="w"> </span>│<span class="nv">model</span>.<span class="nv">generate</span>│
+<span class="w">   </span>│<span class="o">+</span><span class="w"> </span>图像加载<span class="w"> </span>│<span class="w"> </span>│<span class="w"> </span><span class="nv">hidden</span><span class="w">      </span>│<span class="w"> </span>│测量延迟<span class="w">       </span>│
+<span class="w">   </span>│<span class="o">+</span><span class="w"> </span>编码<span class="w">    </span>│<span class="w"> </span>│<span class="w"> </span><span class="nv">states</span><span class="w"> </span>→<span class="w">    </span>│<span class="w"> </span>│<span class="w">               </span>│
+<span class="w">   </span>└──────────┘<span class="w"> </span>│<span class="w"> </span>辅助解码<span class="w">    </span>│<span class="w"> </span>└──────────────┘
+<span class="w">                </span>└────────────┘
+</code></pre></div>
+
+<h3 id="62-token">6.2 隐 Token 位置检测（代码核心机制）</h3>
+<p>由于 OneVL 使用原始词表 token 实现隐 token（而非新增特殊 token），推理时需要从 tokenized 序列中精确检测隐 token 的位置。检测逻辑在 <code>infer_onevl.py:76-196</code>：</p>
+<div class="codehilite"><pre><span></span><code><span class="n">输入序列</span><span class="w"> </span><span class="n">ID</span><span class="w"> </span><span class="n">扫描</span>
+<span class="w">        </span><span class="err">│</span>
+<span class="w">        </span><span class="err">▼</span>
+<span class="err">┌───────────────────────────────────┐</span>
+<span class="err">│</span><span class="w">  </span><span class="n">_get_latent_pattern_ids</span><span class="p">()</span><span class="w">        </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="n">获取关键</span><span class="w"> </span><span class="n">token</span><span class="w"> </span><span class="nl">ID</span><span class="p">:</span><span class="w">               </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="s1">&#39;latent&#39;</span><span class="w"> </span><span class="n">keyword</span><span class="w">              </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="s1">&#39;|&#39;</span><span class="w"> </span><span class="n">pipe</span><span class="w">                      </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="s1">&#39;-vis&#39;</span><span class="w"> </span><span class="n">suffix</span><span class="w">                 </span><span class="err">│</span>
+<span class="err">└───────────────┬───────────────────┘</span>
+<span class="w">                </span><span class="err">│</span>
+<span class="w">                </span><span class="err">▼</span>
+<span class="err">┌───────────────────────────────────┐</span>
+<span class="err">│</span><span class="w">  </span><span class="n">_find_latent_keyword_positions</span><span class="p">()</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="n">扫描序列中</span><span class="w"> </span><span class="o">|</span><span class="n">latent</span><span class="o">|</span><span class="w"> </span><span class="n">模式</span><span class="w">          </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="nl">条件</span><span class="p">:</span><span class="w"> </span><span class="n">ids</span><span class="o">[</span><span class="n">i-1</span><span class="o">]==</span><span class="n">pipe</span><span class="w"> </span><span class="ow">AND</span><span class="w">        </span><span class="err">│</span>
+<span class="err">│</span><span class="w">         </span><span class="n">ids</span><span class="o">[</span><span class="n">i</span><span class="o">]==</span><span class="n">latent_keyword</span><span class="w">   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">         </span><span class="ow">AND</span><span class="w"> </span><span class="n">ids</span><span class="o">[</span><span class="n">i+1</span><span class="o">]==</span><span class="n">pipe</span><span class="w">       </span><span class="err">│</span>
+<span class="err">└───────────────┬───────────────────┘</span>
+<span class="w">                </span><span class="err">│</span>
+<span class="w">                </span><span class="err">▼</span>
+<span class="err">┌───────────────────────────────────────┐</span>
+<span class="err">│</span><span class="w">  </span><span class="n">_find_visual_latent_keyword_positions</span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="n">扫描序列中</span><span class="w"> </span><span class="o">|</span><span class="n">latent</span><span class="o">-</span><span class="n">vis</span><span class="w"> </span><span class="n">模式</span><span class="w">           </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="nl">条件</span><span class="p">:</span><span class="w"> </span><span class="n">ids</span><span class="o">[</span><span class="n">i-1</span><span class="o">]==</span><span class="n">pipe</span><span class="w"> </span><span class="ow">AND</span><span class="w">            </span><span class="err">│</span>
+<span class="err">│</span><span class="w">         </span><span class="n">ids</span><span class="o">[</span><span class="n">i</span><span class="o">]==</span><span class="n">latent_keyword</span><span class="w">       </span><span class="err">│</span>
+<span class="err">│</span><span class="w">         </span><span class="ow">AND</span><span class="w"> </span><span class="n">ids</span><span class="o">[</span><span class="n">i+1</span><span class="o">]==</span><span class="n">vis_suffix</span><span class="w">     </span><span class="err">│</span>
+<span class="err">└───────────────┬───────────────────────┘</span>
+<span class="w">                </span><span class="err">│</span>
+<span class="w">                </span><span class="err">▼</span>
+<span class="err">┌───────────────────────────────────┐</span>
+<span class="err">│</span><span class="w">  </span><span class="n">_expand_keyword_positions_</span><span class="w">       </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="n">with_stop</span><span class="p">()</span><span class="w">                      </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="n">从关键词位置向两端扩展</span><span class="err">，</span><span class="w">          </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="n">包含所有标记组件token</span><span class="w">             </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="p">(</span><span class="k">start</span><span class="o">/</span><span class="k">end</span><span class="w"> </span><span class="n">delimiter等</span><span class="p">)</span><span class="w">          </span><span class="err">│</span>
+<span class="err">└───────────────┬───────────────────┘</span>
+<span class="w">                </span><span class="err">│</span>
+<span class="w">                </span><span class="err">▼</span>
+<span class="w">        </span><span class="n">返回</span><span class="w"> </span><span class="p">(</span><span class="n">text_positions</span><span class="p">,</span><span class="w"> </span><span class="n">visual_positions</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="63">6.3 辅助解码器推理流程</h3>
+<div class="codehilite"><pre><span></span><code>           主模型 forward pass
+           (output_hidden_states=True)
+                   │
+                   ▼
+        ┌─────────────────────┐
+        │  提取 hidden_states  │
+        │  [-1] (最后一层)      │
+        └──────────┬──────────┘
+                   │
+     ┌─────────────┴─────────────┐
+     │                           │
+     ▼                           ▼
+┌──────────────┐          ┌──────────────┐
+│ 语言隐 token │          │ 视觉隐 token │
+│ positions    │          │ positions    │
+└──────┬───────┘          └──────┬───────┘
+       │                         │
+       ▼                         ▼
+┌──────────────┐          ┌──────────────┐
+│ latent_embeds│          │ latent_embeds│
+│ = last_hidden│          │ = last_hidden│
+│ [b, pos, :]  │          │ [b, pos, :]  │
+└──────┬───────┘          └──────┬───────┘
+       │                         │
+       ▼                         ▼
+┌──────────────┐          ┌──────────────┐
+│latent_proj   │          │visual_latent │
+│MLP 投影      │          │proj MLP 投影  │
+└──────┬───────┘          └──────┬───────┘
+       │                         │
+       ▼                         ▼
+┌──────────────┐          ┌──────────────┐
+│ 可选: 拼接   │          │ 可选: 拼接   │
+│ ViT embeds   │          │ ViT embeds   │
+│ (视觉条件)   │          │ (视觉条件)   │
+└──────┬───────┘          └──────┬───────┘
+       │                         │
+       ▼                         ▼
+┌──────────────┐          ┌──────────────┐
+│ 语言辅助     │          │ 视觉辅助     │
+│ 解码器 D_l   │          │ 解码器 D_v   │
+│ 自回归生成    │          │ 自回归生成    │
+│ CoT 文本     │          │ 视觉 token    │
+└──────────────┘          └──────────────┘
+</code></pre></div>
+
+<h3 id="64">6.4 关键代码映射</h3>
+<table>
+<thead>
+<tr>
+<th>论文概念</th>
+<th>代码位置</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>隐 token 位置检测</td>
+<td><code>infer_onevl.py:76-196</code></td>
+<td><code>compute_inference_latent_positions()</code></td>
+</tr>
+<tr>
+<td>语言辅助解码器构建</td>
+<td><code>infer_onevl.py:213-255</code></td>
+<td><code>build_aux_decoder_from_checkpoint()</code>，前缀 <code>_latent_cot_aux_decoder.</code></td>
+</tr>
+<tr>
+<td>视觉辅助解码器构建</td>
+<td><code>infer_onevl.py:213-255</code></td>
+<td>同上，前缀 <code>_latent_cot_visual_aux_decoder.</code></td>
+</tr>
+<tr>
+<td>隐投影层构建</td>
+<td><code>infer_onevl.py:258-273</code></td>
+<td><code>build_projection_from_checkpoint()</code>，前缀 <code>_latent_cot_latent_proj.</code></td>
+</tr>
+<tr>
+<td>语言解释解码</td>
+<td><code>infer_onevl.py:330-393</code></td>
+<td><code>decode_latent_with_aux()</code>，自回归解码 CoT 文本</td>
+</tr>
+<tr>
+<td>视觉解释解码</td>
+<td><code>infer_onevl.py:396-465</code></td>
+<td><code>decode_latent_with_visual_aux()</code>，自回归解码视觉 token</td>
+</tr>
+<tr>
+<td>ViT embedding 提取</td>
+<td><code>infer_onevl.py:316-324</code></td>
+<td><code>extract_visual_embeds()</code>，按 <code>image_token_id</code> 选择</td>
+</tr>
+<tr>
+<td>Prefill 推理（隐 token 注入 prompt）</td>
+<td><code>infer_onevl.py:573-588</code></td>
+<td><code>assistant_prefix</code> 构造，<code>latent_block</code> 字符串</td>
+</tr>
+<tr>
+<td>答案生成（隐 token 在 prefill，仅生成轨迹）</td>
+<td><code>infer_onevl.py:752-761</code></td>
+<td><code>model.generate(**inputs, ...)</code> 标准自回归生成</td>
+</tr>
+<tr>
+<td>轨迹解析</td>
+<td><code>eval_results.py:40</code></td>
+<td><code>_PAIR_RE</code> 正则提取 <code>[x, y]</code> 坐标对</td>
+</tr>
+<tr>
+<td>ROADWork 评估</td>
+<td><code>eval_results.py:142-222</code></td>
+<td><code>cmd_roadwork()</code>，像素级 0-1000 归一化反算</td>
+</tr>
+<tr>
+<td>Impromptu 评估</td>
+<td><code>eval_results.py:306-500</code></td>
+<td><code>cmd_impromptu()</code>，BEV 坐标系，L2@1s-4s</td>
+</tr>
+<tr>
+<td>AR1 评估</td>
+<td><code>eval_results.py:609-710</code></td>
+<td><code>cmd_ar1()</code>，ego-frame meters</td>
+</tr>
+</tbody>
+</table>
+<h3 id="65-tokenizer">6.5 视觉 Tokenizer 设计</h3>
+<p>论文使用 Emu3.5 IBQ (Index Backpropagation Quantization) tokenizer（<code>vq_decoder/ibq.py</code>），架构为 VQ-VAE 变体：</p>
+<div class="codehilite"><pre><span></span><code>输入图像 x (512×512)
+        │
+        ▼
+┌───────────────────┐
+│     Encoder       │  CNN 编码器
+│  (下采样 + 残差块) │
+└────────┬──────────┘
+         │
+         ▼
+┌───────────────────┐
+│   quant_conv      │  1×1 Conv: z_channels → embed_dim
+└────────┬──────────┘
+         │
+         ▼
+┌───────────────────────────────┐
+│  IndexPropagationQuantize     │
+│  - Codebook: 131,072 codes   │
+│  - Straight-through Gumbel    │
+│    softmax + argmax           │
+│  - 量化损失: β=0.25           │
+│  - 可选熵损失 (codebook 利用) │
+└───────────────┬───────────────┘
+         │
+         ▼
+   离散 token indices
+   (每个 token 对应 codebook 中一个条目)
+         │
+         ▼ (解码路径)
+┌───────────────────┐
+│ post_quant_conv   │  1×1 Conv: embed_dim → z_channels
+└────────┬──────────┘
+         │
+         ▼
+┌───────────────────┐
+│     Decoder       │  CNN 解码器
+│  (上采样 + 残差块) │
+└────────┬──────────┘
+         │
+         ▼
+   重建图像
+</code></pre></div>
+
+<p>快速 tokenizer（<code>visual_tokenizer/tokenization_qwen3vl_visual.py</code>）通过映射技巧高效加载 131K 视觉 token 词表：将 <code>&lt;|visual token XXXXXX|&gt;</code> 替换为 NUL 字节占位符，在 Rust 后端编码后交换占位符 ID 为真实视觉 token ID，避免 Aho-Corasick 缓慢构建。</p>
+<h3 id="66">6.6 数据格式</h3>
+<p>训练/推理数据格式基于对话结构：</p>
+<div class="codehilite"><pre><span></span><code><span class="p">[{</span>
+<span class="w">  </span><span class="nt">&quot;messages&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span><span class="nt">&quot;role&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;user&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;content&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;image&gt;Front-view image... Command: MOVE FORWARD...&quot;</span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span><span class="nt">&quot;role&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;assistant&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;content&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;latent tokens + &lt;answer&gt;[[x,y],...]&lt;/answer&gt;&quot;</span><span class="p">}</span>
+<span class="w">  </span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;images&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;path/to/frame.jpg&quot;</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;GT&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;[[1.0, 0.0], [2.5, 0.1], ...]&quot;</span>
+<span class="p">}]</span>
+</code></pre></div>
+
+<p>Assistant 回复中的隐 token 格式：</p>
+<div class="codehilite"><pre><span></span><code><span class="err">&lt;</span>|start-latent-vis|&gt;<span class="err">&lt;</span>|latent-vis|&gt;×4<span class="err">&lt;</span>|end-latent-vis|&gt;
+<span class="err">&lt;</span>|start-latent|&gt;<span class="err">&lt;</span>|latent|&gt;×2<span class="err">&lt;</span>|end-latent|&gt;
+<span class="nt">&lt;answer&gt;</span>[[x,y],<span class="w"> </span>...]<span class="nt">&lt;/answer&gt;</span>
+</code></pre></div>
+
+<hr />
+<h2 id="_8">七、局限性</h2>
+<ol>
+<li><strong>训练内存开销大：</strong> 训练时需要约 3× 内存（三个完整 4B 模型实例同时驻留），依赖 DeepSpeed ZeRO-2 缓解但仍对基础设施有较高要求。</li>
+<li><strong>隐 token 数量未系统调优：</strong> C_v=4、C_t=2 为经验选择，隐 token 数量与表征容量之间的 trade-off 留待未来系统研究。</li>
+<li><strong>轨迹仍为自回归生成：</strong> Prefill 消除了隐 CoT 开销，但轨迹 token 本身仍逐 token 生成。MLP head 变体降低了延迟但牺牲了性能。并行或非自回归轨迹解码是通往真正实时部署的关键方向。</li>
+<li><strong>单摄像头输入：</strong> 当前仅使用前视摄像头。扩展到多摄像头可支持 360° 未来场景预测和更全面的因果场景理解。</li>
+</ol>
+<hr />
+<h2 id="_9">八、关键概念速查</h2>
+<table>
+<thead>
+<tr>
+<th>概念</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>VLA</strong></td>
+<td>Vision-Language-Action：同时处理视觉、语言和动作输出的多模态模型</td>
+</tr>
+<tr>
+<td><strong>CoT</strong></td>
+<td>Chain-of-Thought：在给出最终答案前逐步推理的生成策略</td>
+</tr>
+<tr>
+<td><strong>Latent CoT</strong></td>
+<td>将推理过程压缩为连续隐向量而非生成离散 token</td>
+</tr>
+<tr>
+<td><strong>信息瓶颈原理</strong></td>
+<td>更紧的压缩丢弃噪声，保留对输出有预测性的因果特征</td>
+</tr>
+<tr>
+<td><strong>IBQ</strong></td>
+<td>Index Backpropagation Quantization：通过直通估计 + Gumbel softmax 的 VQ 变体</td>
+</tr>
+<tr>
+<td><strong>PDM-score</strong></td>
+<td>Predictive Driver Model score：NAVSIM 的复合指标，综合安全、舒适和进度</td>
+</tr>
+<tr>
+<td><strong>ADE / FDE</strong></td>
+<td>Average/Final Displacement Error：轨迹预测的像素/米级误差</td>
+</tr>
+<tr>
+<td><strong>Prefill Inference</strong></td>
+<td>将隐 token 放入 prompt prefill 阶段并行处理，消除 AR 生成开销</td>
+</tr>
+<tr>
+<td><strong>世界模型辅助</strong></td>
+<td>通过预测未来帧迫使隐表征编码场景因果动力学</td>
+</tr>
+<tr>
+<td><strong>ZeRO-2</strong></td>
+<td>DeepSpeed 的分布式训练优化策略，分片优化器状态 + 梯度</td>
+</tr>
+<tr>
+<td><strong>ViT</strong></td>
+<td>Vision Transformer：将图像编码为 patch embedding 序列</td>
+</tr>
+<tr>
+<td><strong>MLP Aligner</strong></td>
+<td>将 ViT 输出投影到 LLM 嵌入空间的中间层</td>
+</tr>
+<tr>
+<td><strong>λ_v = 0.1</strong></td>
+<td>视觉损失权重远低于语言损失（视觉 token 重建更难，防止支配训练）</td>
+</tr>
+</tbody>
+</table>
+  </div>
+</main>
+
+
+<script>
+(function() {
+  const sidebar = document.getElementById('sidebar');
+  const links = sidebar.querySelectorAll('a');
+  const headings = document.querySelectorAll('h1[id], h2[id], h3[id], h4[id]');
+  if (headings.length === 0) return;
+
+  const linkMap = new Map();
+  links.forEach(function(a) {
+    const href = a.getAttribute('href');
+    if (href && href.startsWith('#')) linkMap.set(href.slice(1), a);
+  });
+
+  function onScroll() {
+    let currentId = null;
+    const scrollTop = window.scrollY + 80;
+    headings.forEach(function(h) { if (h.offsetTop <= scrollTop) currentId = h.id; });
+    links.forEach(function(a) { a.classList.remove('active'); });
+    if (currentId && linkMap.has(currentId)) {
+      const el = linkMap.get(currentId);
+      el.classList.add('active');
+      const sr = sidebar.getBoundingClientRect();
+      const er = el.getBoundingClientRect();
+      if (er.bottom > sr.bottom || er.top < sr.top) {
+        el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+    }
+  }
+
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+})();
+</script>
+
+</body>
+</html>

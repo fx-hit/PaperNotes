@@ -1,0 +1,1316 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MindVLA-U1: VLA Beats VA with Unified Streaming Architecture for Autonomous Driving</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #ffffff;
+    --text: #1a1a2e;
+    --text-secondary: #555;
+    --border: #e1e4e8;
+    --link: #0969da;
+    --table-stripe: #f6f8fa;
+    --heading: #0d1117;
+    --blockquote-border: #0969da;
+    --blockquote-bg: #f0f6ff;
+    --inline-code: #d73a49;
+    --inline-code-bg: #f6f8fa;
+    --sidebar-width: 260px;
+    --toc-active: #0969da;
+    --content-max-width: 900px;
+    --content-padding: 48px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "Inter", "Noto Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 16px;
+    line-height: 1.75;
+    color: var(--text);
+    background: var(--bg);
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    width: var(--sidebar-width);
+    overflow-y: auto;
+    padding: 28px 20px 40px;
+    background: #fafbfc;
+    border-right: 1px solid var(--border);
+    z-index: 10;
+    scrollbar-width: thin;
+  }
+  .sidebar-title {
+    font-size: 13px; font-weight: 700; color: var(--text-secondary);
+    margin-bottom: 16px; letter-spacing: 0.06em; text-transform: uppercase;
+  }
+  .toc-list { list-style: none; padding: 0; margin: 0; }
+  .toc-list ul { list-style: none; padding-left: 14px; }
+  .toc-list li { margin: 1px 0; }
+  .toc-list a {
+    display: block; padding: 4px 12px; font-size: 13.5px; line-height: 1.45;
+    color: var(--text-secondary); text-decoration: none; border-radius: 4px;
+    border-left: 2px solid transparent; transition: all 0.15s;
+  }
+  .toc-list a:hover { color: var(--link); background: #e8f0fe; }
+  .toc-list a.active {
+    color: var(--toc-active); font-weight: 600;
+    border-left-color: var(--toc-active); background: #e8f0fe;
+  }
+  .toc-h1 a { font-weight: 600; color: var(--heading); font-size: 14px; }
+  .toc-h3 a { padding-left: 24px; font-size: 13px; }
+  .toc-h4 a { padding-left: 36px; font-size: 12.5px; }
+  .toc-empty { color: var(--text-secondary); font-size: 13px; font-style: italic; }
+
+  .main-wrapper {
+    margin-left: var(--sidebar-width);
+    min-height: 100vh;
+    display: flex; justify-content: center;
+  }
+  .content-inner {
+    width: 100%;
+    max-width: var(--content-max-width);
+    padding: 40px var(--content-padding) 80px;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    color: var(--heading); font-weight: 700; line-height: 1.3;
+    margin-top: 2em; margin-bottom: 0.6em; scroll-margin-top: 24px;
+  }
+  h1 { font-size: 2em; border-bottom: 2px solid var(--border); padding-bottom: 0.3em; margin-top: 0; }
+  h2 { font-size: 1.5em; border-bottom: 1px solid var(--border); padding-bottom: 0.25em; }
+  h3 { font-size: 1.25em; }
+  h4 { font-size: 1.1em; }
+  p { margin-bottom: 1em; }
+  a { color: var(--link); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  strong { font-weight: 600; }
+
+  blockquote {
+    border-left: 4px solid var(--blockquote-border);
+    background: var(--blockquote-bg);
+    padding: 12px 20px; margin: 1em 0;
+    border-radius: 0 6px 6px 0; color: var(--text-secondary);
+  }
+  blockquote p:last-child { margin-bottom: 0; }
+
+  code {
+    font-family: "JetBrains Mono", "SF Mono", "Fira Code", monospace;
+    font-size: 0.875em; background: var(--inline-code-bg);
+    padding: 2px 6px; border-radius: 4px; color: var(--inline-code);
+  }
+  pre {
+    background: #1e1e2e; color: #cdd6f4;
+    border-radius: 8px; padding: 16px 20px; overflow-x: auto;
+    margin: 1em 0; font-size: 14px; line-height: 1.55;
+  }
+  pre code { background: none; padding: 0; border-radius: 0; color: inherit; font-size: inherit; }
+
+  .codehilite { background: #1e1e2e; border-radius: 8px; padding: 16px 20px; overflow-x: auto; margin: 1em 0; }
+  .codehilite pre { background: none; padding: 0; margin: 0; border-radius: 0; }
+  .codehilite .hll { background-color: #2a2a3e; }
+  .codehilite .c  { color: #6c7086; font-style: italic; }
+  .codehilite .k  { color: #cba6f7; }
+  .codehilite .o  { color: #89b4fa; }
+  .codehilite .s  { color: #a6e3a1; }
+  .codehilite .n  { color: #cdd6f4; }
+  .codehilite .p  { color: #bac2de; }
+  .codehilite .mi { color: #fab387; }
+  .codehilite .nf { color: #89b4fa; }
+  .codehilite .nb { color: #f38ba8; }
+  .codehilite .nc { color: #f9e2af; }
+  .codehilite .bp { color: #f38ba8; }
+
+  table { width: 100%; border-collapse: collapse; margin: 1em 0; font-size: 0.925em; }
+  th, td { border: 1px solid var(--border); padding: 10px 14px; text-align: left; }
+  th { background: var(--table-stripe); font-weight: 600; color: var(--heading); }
+  tr:nth-child(even) td { background: var(--table-stripe); }
+
+  .math.display { display: block; overflow-x: auto; padding: 12px 0; margin: 1em 0; }
+  ul, ol { padding-left: 1.5em; margin-bottom: 1em; }
+  li { margin-bottom: 0.3em; }
+  hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+  img { max-width: 100%; height: auto; border-radius: 6px; margin: 0.5em 0; }
+  p:has(img) { text-align: center; }
+  p:has(img) + p { text-align: center; font-size: 0.9em; color: var(--text-secondary); }
+  .mermaid { text-align: center; margin: 1.5em 0; background: #fafbfc; border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+
+  @media (max-width: 1024px) {
+    .sidebar { position: static; width: 100%; height: auto; max-height: 35vh; border-right: none; border-bottom: 1px solid var(--border); }
+    .main-wrapper { margin-left: 0; display: block; }
+    .content-inner { max-width: none; padding: 24px 20px 60px; }
+  }
+</style>
+
+<script>
+MathJax = {
+  tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']], processEscapes: true, tags: 'none' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] }
+};
+</script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  mermaid.initialize({ startOnLoad: true, theme: 'neutral', securityLevel: 'loose' });
+});
+</script>
+
+</head>
+<body>
+
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-title">目录</div>
+  <ul class="toc-list">
+<li class="toc-h1"><a href="#mindvla-u1-vla-beats-va-with-unified-streaming-architecture-for-autonomous-driving">MindVLA-U1: VLA Beats VA with Unified Streaming Architecture for Autonomous Driving</a>
+<ul>
+</li>
+<li class="toc-h2"><a href="#_1">一、核心问题</a>
+</li>
+<li class="toc-h2"><a href="#_2">二、核心思路 / 方法</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#21-unified-shared-backbone">2.1 总体架构：统一共享骨干（Unified Shared Backbone）</a>
+</li>
+<li class="toc-h3"><a href="#22-ar-flow-matching-on-shared-backbone">2.2 联合训练：AR + Flow Matching on Shared Backbone</a>
+</li>
+<li class="toc-h3"><a href="#23-intent-cfg">2.3 语言到动作桥梁：Intent-CFG</a>
+</li>
+<li class="toc-h3"><a href="#24-motmixture-of-transformers">2.4 快/慢系统与 MoT（Mixture-of-Transformers）</a>
+</li>
+<li class="toc-h3"><a href="#25-streaming-paradigm">2.5 流式范式（Streaming Paradigm）</a>
+</li>
+<li class="toc-h3"><a href="#26-mindlabel-vla">2.6 MindLabel：驾驶原生 VLA 监督数据</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_3">三、训练目标</a>
+</li>
+<li class="toc-h2"><a href="#_4">四、实验与结果</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#41-wod-e2e">4.1 WOD-E2E 验证集结果</a>
+</li>
+<li class="toc-h3"><a href="#42-wod-e2e">4.2 WOD-E2E 官方测试集结果</a>
+</li>
+<li class="toc-h3"><a href="#43-intent-cfg">4.3 Intent-CFG 消融实验</a>
+</li>
+<li class="toc-h3"><a href="#44">4.4 流式记忆消融</a>
+</li>
+<li class="toc-h3"><a href="#45-mot">4.5 MoT 变体对比</a>
+</li>
+<li class="toc-h3"><a href="#46">4.6 吞吐量对比</a>
+</li>
+<li class="toc-h3"><a href="#47-vlm-scaling">4.7 VLM 骨干规模 Scaling</a>
+</li>
+<li class="toc-h3"><a href="#48-valtest">4.8 Val/Test 分布偏移诊断</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_5">五、关键洞察与技术亮点</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#51-vla-va">5.1 "VLA 落后 VA 是接口问题，不是范式问题"</a>
+</li>
+<li class="toc-h3"><a href="#52">5.2 语言到动作的可度量桥接</a>
+</li>
+<li class="toc-h3"><a href="#53-vlm">5.3 流式记忆 &gt; 多帧 VLM 输入</a>
+</li>
+<li class="toc-h3"><a href="#54">5.4 语言质量与动作质量解耦</a>
+</li>
+<li class="toc-h3"><a href="#55">5.5 单阶段端到端训练</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_6">六、代码实现解读</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#61">6.1 论文公式 → 模块映射</a>
+</li>
+<li class="toc-h3"><a href="#62">6.2 核心模块映射</a>
+</li>
+<li class="toc-h3"><a href="#63">6.3 前向传播数据流</a>
+</li>
+<li class="toc-h3"><a href="#64">6.4 推理流程（快/慢路径）</a>
+</li>
+<li class="toc-h3"><a href="#65">6.5 训练配置</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_7">七、局限性</a>
+</li>
+<li class="toc-h2"><a href="#_8">八、关键概念速查</a>
+</ul></li>
+</li></ul>
+</nav>
+
+<main class="main-wrapper">
+  <div class="content-inner" id="main-content">
+<h1 id="mindvla-u1-vla-beats-va-with-unified-streaming-architecture-for-autonomous-driving">MindVLA-U1: VLA Beats VA with Unified Streaming Architecture for Autonomous Driving</h1>
+<blockquote>
+<p><strong>论文信息</strong>
+- 作者：Yuzhou Huang<span class="math inline">$^{1,2*}$</span>, Benjin Zhu<span class="math inline">$^{2,3*\Letter\bigstar}$</span>（通讯+项目负责人）, Hengtong Lu<span class="math inline">$^{2,3}$</span>, Victor Shea-Jay Huang<span class="math inline">$^{1,2}$</span>, Haiming Zhang<span class="math inline">$^{2}$</span>, Wei Chen<span class="math inline">$^{2}$</span>, Jifeng Dai<span class="math inline">$^{3}$</span>, Yan Xie<span class="math inline">$^{2}$</span>, Hongsheng Li<span class="math inline">$^{1\Letter}$</span>
+- 机构：<span class="math inline">$^{1}$</span>CUHK MMLab, <span class="math inline">$^{2}$</span>Li Auto（理想汽车）, <span class="math inline">$^{3}$</span>清华大学
+- 投稿方向：NeurIPS 2026（preprint）
+- arXiv ID：2605.12624
+- 代码：项目页 https://mind-omni.github.io/（代码暂未公开）
+- 项目：MindLabel 数据集（约 3.8M VQA + 约 250K dreamed trajectories）</p>
+</blockquote>
+<hr />
+<h2 id="_1">一、核心问题</h2>
+<p>自动驾驶从模块化管线走向端到端统一，VLA（Vision-Language-Action）是超越 VA（Vision-to-Action）的自然延伸。但<strong>在实践中，驾驶 VLA 的规划质量通常落后于 VA</strong>。论文认为这不是规模问题，而是<strong>接口设计问题</strong>（interface-level failure）：</p>
+<ol>
+<li><strong>动作接口与精度不匹配</strong>：现有 VLA 要么把轨迹离散化成 token 走 language head 解码（丢失厘米级精度），要么用独立的 action expert 读 VLM 特征（动作 token 不参与 VLM 的 self-attention，VLM 退化成特征编码器）</li>
+<li><strong>时序建模短视</strong>：预测固定长度的 action chunk，chunk 边界产生不连续；把多帧视频塞给 VLM 做 temporal modeling 导致大量 token 冗余</li>
+<li><strong>语言没有通向动作的显式路径</strong>：大多数 VLA 训练时用模板化的驾驶指令，推理时语言路径坍塌为固定前缀，实际上退化成了 VA with VLM weights</li>
+</ol>
+<p>论文的核心主张：<strong>这些不是范式限制，而是接口错误</strong>。正确设计的 VLA 架构可以在不牺牲精度、吞吐或语言接口的前提下，弥合 VLA-VA 的规划差距。</p>
+<hr />
+<h2 id="_2">二、核心思路 / 方法</h2>
+<h3 id="21-unified-shared-backbone">2.1 总体架构：统一共享骨干（Unified Shared Backbone）</h3>
+<p>MindVLA-U1 的核心设计是<strong>一个 VLM 骨干同时做场景理解和连续动作生成</strong>：</p>
+<ul>
+<li><strong>语言保持自回归</strong>：AR language tokens 通过 LM head 输出</li>
+<li><strong>动作保持连续</strong>：Flow-matching（扩散风格）连续轨迹通过一个轻量 MLP（action head）输出</li>
+<li><strong>共享权重、单次前向</strong>：视觉、自车状态、语言、记忆、噪声动作 token 流经同一个 transformer 的所有 self-attention 和 FFN</li>
+<li><strong>两路梯度在该共享骨干上同时反向传播</strong>：<span class="math inline">$\mathcal{L} = \mathcal{L}_{\mathrm{AR}} + \mathcal{L}_{\mathrm{FM}}$</span></li>
+</ul>
+<p><img alt="图1：MindVLA-U1 总体架构" src="arXiv-2605.12624v1/figure/Framework6.jpg" /></p>
+<p><em>图1：MindVLA-U1 总体架构图，展示从输入到输出的完整数据流和训练/推理机制。以下解析基于论文 caption 原文和 §2.1、§2.5 正文描述。</em></p>
+<p><strong>五类 Token 统一入网（论文 caption："Vision, ego-state, language, memory, and noisy action tokens flow through a shared VLM backbone in one forward pass"）：</strong></p>
+<ul>
+<li>Vision（V）：多视图图像经冻结视觉编码器 + 可训练 visual merger 压缩后的 token</li>
+<li>Language（L）：包含 Question + Answer 两部分</li>
+<li>Memory（M）：从 FIFO 通道读出的 128 个运动对齐压缩记忆 token</li>
+<li>Ego-State（S）：由 3 个轻量 MLP 编码的 16 步历史位置/速度/加速度</li>
+<li>Noisy Action（A）：20 个噪声动作 token，经 flow-matching 逐步去噪为目标轨迹</li>
+</ul>
+<p>正文（§2.1）明确："noisy action tokens flow through every transformer layer of the backbone exactly like vision and language tokens with no separate computation path"——五类 token 共享所有 self-attention 和 FFN 权重。</p>
+<p><strong>双头读出（论文 caption："the LM head and the flow-matching action head read out at their respective token positions"）：</strong>
+正文（§2.1）："A language LM head decodes language tokens and a thin flow-matching MLP reads out the action velocity field at action positions, both in a single forward pass"。左侧 LM head 自回归解码 VQA 答案 + intent token；右侧 Action MLP（2 层 SiLU，6 维输出 = pos+vel+acc）读出速度场，经 2 步 Euler 积分恢复 5s/4Hz 轨迹。</p>
+<p><strong>流式记忆循环（论文 caption："A FIFO memory channel propagates compact temporal context across frames, motion-aligned on read and refreshed after each pass"）：</strong>
+每帧前向后，Propagation Transformer（Q-Former 风格，6 层 cross-attention，16 头）压缩骨干输出为 128 个新记忆 token 写入 FIFO 通道头部，最旧帧被驱逐。读记忆时用 SE(2) 相对位姿变换对齐到当前自车坐标系（§2.5）。正文明确"Gradients flow through the propagation transformer across frames"——帧 i 的 loss 监督帧 i−1 写入的记忆。</p>
+<p><strong>四种推理模式（论文 caption："Attention-mask composition exposes four inference orderings (vqa_first/only, action_first/only) for fast/slow execution from the same weights"）：</strong>
+<code>vqa_first</code> 先语言后动作（慢路径，~2,594ms）、<code>action_first</code> 先动作后语言（产生轨迹解释）、<code>action_only</code> 纯动作（快路径，~103ms）、<code>vqa_only</code> 纯语言。同一组权重通过注意力掩码切换，无需额外模块。</p>
+<p><strong>该图支持的核心论点：</strong> MindVLA-U1 的"统一"是 token 级接口重新设计——语言和动作在同一个 self-attention 中交互，记忆在帧间流动，推理模式在掩码层面切换。直接支撑论文"VLA-VA 差距是接口问题"的中心主张。*</p>
+<h3 id="22-ar-flow-matching-on-shared-backbone">2.2 联合训练：AR + Flow Matching on Shared Backbone</h3>
+<p>对于单帧步骤，多视图视觉 token <span class="math inline">$\mathbf{I}$</span>、自车状态历史 <span class="math inline">$\mathbf{e}$</span>、语言查询 <span class="math inline">$\mathbf{q}$</span>、语言答案 <span class="math inline">$\mathbf{a}$</span>、长度为 <span class="math inline">$N$</span> 的噪声动作 token <span class="math inline">$\mathbf{x}_t$</span>：</p>
+<ul>
+<li>Prefix <span class="math inline">$(\mathbf{I},\mathbf{e},\mathbf{q},\mathbf{a})$</span> 因果掩码；动作 token 双向可见</li>
+<li>
+<p><strong>AR loss</strong>（语言头）：
+  <div class="math display">$$\mathcal{L}_{\mathrm{AR}} = -\sum_{l=1}^{L} \log p_\theta(a_l \mid \mathbf{I},\mathbf{e},\mathbf{q},a_{&lt;l})$$</div></p>
+</li>
+<li>
+<p><strong>Flow-matching loss</strong>（动作头）：<span class="math inline">$\mathbf{x}_t = t\boldsymbol{\epsilon} + (1-t)\mathbf{x}_0$</span>，<span class="math inline">$t \sim \mathrm{Beta}(1.5, 1.0)$</span>
+  <div class="math display">$$\mathcal{L}_{\mathrm{FM}} = \|v_\theta(\mathbf{x}_t, t; \mathbf{I},\mathbf{e},\mathbf{q},\mathbf{a}) - (\boldsymbol{\epsilon} - \mathbf{x}_0)\|^2$$</div></p>
+</li>
+<li>
+<p>推理时通过 ODE 积分恢复轨迹，仅需 2 步 Euler 积分</p>
+</li>
+</ul>
+<blockquote>
+<p><strong>关键洞察</strong>：离散 AR cross-entropy 和连续 flow-matching MSE 在共享骨干参数上训练是稳定的，因为两者作用在<strong>不同输出位置、不同读出头</strong>——共享梯度但不共享目标，场景特征相互补充而非竞争。</p>
+</blockquote>
+<p><img alt="图2a：Step 1" src="arXiv-2605.12624v1/exp_results/diffusion_step_1.png" /> <img alt="图2b：Step 2" src="arXiv-2605.12624v1/exp_results/diffusion_step_2.png" /> <img alt="图2c：Step 3" src="arXiv-2605.12624v1/exp_results/diffusion_step_3.png" /> <img alt="图2d：Step 4" src="arXiv-2605.12624v1/exp_results/diffusion_step_4.png" /> <img alt="图2e：Step 5" src="arXiv-2605.12624v1/exp_results/diffusion_step_5.png" /></p>
+<p><em>图2(a-e)：Flow-matching 动作头在 5 步 Euler 积分下的去噪过程可视化（BEV 视图：自车前进方向为 +X，横向为 +Y）。论文推理仅需 2 步，这里用 5 步展示完整的去噪动力学。5 张子图从左到右分别对应去噪步骤 1 至 5。</em></p>
+<p><em>图中各元素含义（依据论文 caption 和正文描述）：</em><em>绿色轨迹</em><em>为 GT ground truth（自车未来 5 秒真实行驶轨迹），</em><em>灰色轨迹</em><em>为过去已行驶路径，</em><em>蓝色轨迹</em><em>为当前去噪步骤预测的轨迹（20 个 waypoints，4Hz 采样）。坐标原点为自车当前位置。</em></p>
+<p><em>逐步骤解析：</em></p>
+<ul>
+<li><em>Step 1（图2a）：从纯高斯噪声出发（噪声输入本身未在图中展示），经 1 步 Euler 积分，轨迹首次成形。蓝色 waypoint 大致呈现前进方向，但 waypoint 间距分布不均匀（速度 profile 还带噪声），末端横向位置抖动较大。这是从噪声到结构的最大跳跃——第 1 步去噪的效果最大</em></li>
+<li><em>Step 2（图2b）：轨迹方向进一步收敛稳定，表明速度场 <span class="math inline">$v_\theta$</span> 的全局方向分量在前 2 步就能可靠确定。但 waypoint 间距（速度 profile）仍不完全均匀，横向位置在 GT corridor 附近小幅振荡。这是去噪的"中间阶段"——方向对了但速度和曲率还在微调</em></li>
+<li><em>Step 3（图2c）：轨迹形状明显稳定。Waypoint 排列趋于均匀平滑，速度 profile 开始与 GT 对齐——证明 <span class="math inline">$v_\theta$</span> 在速度/加速度辅助通道（w_vel=w_acc=0.5）上的训练有效。蓝色与绿色横向偏差缩小</em></li>
+<li><em>Step 4（图2d）：预测轨迹（蓝色）与 GT（绿色）高度重合。仅在后段（&gt;4s horizon 的尾部 waypoint）有轻微发散——这是 flow-matching 固有的 horizon 效应：远期 flow 方向不确定性更大。论文用 2 步推理时，这部分 ADE 是主要误差来源</em></li>
+<li><em>Step 5（图2e）：最终去噪结果。轨迹平滑紧贴 GT corridor，近端（<span class="math inline">$t=0$</span> 处）几乎完美匹配——近端控制精度得到保证。即使 5 步去噪，末端仍有轻微偏差，但 RFS 的 trust region 可以吸收</em></li>
+</ul>
+<p><em>该图支持的论点：(1) Flow-matching 在共享 VLM 骨干上的去噪行为健康——从噪声到结构的过渡平滑单调，无模式坍塌 (2) 2 步推理可行是因为 <span class="math inline">$v_\theta$</span> 学到了从噪声到数据的近似直线 flow（flow-matching 核心优势 vs diffusion 弯曲路径）(3) 5 步比 2 步改善的主要是 &gt;4s 远期 waypoint，非近端控制。</em></p>
+<h3 id="23-intent-cfg">2.3 语言到动作桥梁：Intent-CFG</h3>
+<p><strong>直觉</strong>：无论场景多复杂，人类驾驶员最终会确定一个驾驶意图（直行、变道、让行）并据此行动。Intent 是连接语言推理和连续动作的自然紧凑桥梁。</p>
+<p>实现方式：</p>
+<ol>
+<li>语言头预测当前场景的 intent label <span class="math inline">$z$</span>（如 Left/Right/Go Straight），通过标准 next-token prediction</li>
+<li>预测的 intent token 被嵌入并<strong>注入 action MLP 的 time embedding</strong></li>
+<li>训练时偶尔替换为无条件 token <span class="math inline">$\emptyset$</span>（CFG dropout = 0.15）</li>
+<li>推理时跑两次前向（条件/无条件），混合速度场：
+   <div class="math display">$$v_{\mathrm{cfg}} = v_\theta(\emptyset) + s(v_\theta(z) - v_\theta(\emptyset))$$</div>
+   其中 guidance scale <span class="math inline">$s = 1.5$</span></li>
+</ol>
+<p><img alt="图3a：WOD-E2E 3-class intent + unconditional" src="arXiv-2605.12624v1/exp_results/0075c28f1f1a68c4c1c8dcf37958046b-149.png" /></p>
+<p><img alt="图3b：MindLabel 20-class intent + unconditional" src="arXiv-2605.12624v1/exp_results/0081c482170156ee7aedf36157d4ff21-149.png" /></p>
+<p><em>图3(a-b)：Intent-CFG 作为结构化多模态机制——从同一个 MindVLA-U1 checkpoint，在同一帧 WOD-E2E 场景上，通过变化 intent conditioning token 生成的轨迹集。该图是论文最核心的可视化证据之一。</em></p>
+<p><strong>子图 (a) WOD-E2E 官方 3 类 intent + unconditional baseline：</strong>
+使用 WOD-E2E 原生 3 类 GT intent（straight / left / right）和 unconditional baseline（CFG 中使用 ∅ token）。论文正文将该可视化描述为：左侧 BEV 总览显示绿色 GT 轨迹；右侧排列各 intent 条件下的预测轨迹。关键结果——Unconditional baseline 产生接近 GT 的默认轨迹；<code>straight</code> 条件接近 unconditional（该场景 GT 为直行）；<code>left</code> / <code>right</code> 条件分别向左/右偏移——<strong>证明 intent token 改变了动作扩散的去噪方向</strong>。CFG guidance scale s=1.5。</p>
+<p><strong>子图 (b) MindLabel 20 类 intent + unconditional baseline：</strong>
+从同一个 checkpoint 出发，使用 MindLabel 的 20 类细粒度 intent 词汇，展示 21 个条件（20 类 intent + 1 unconditional）的预测轨迹。论文关键观察——轨迹随 intent 系统性分叉：<code>u_turn</code> 产生调头轨迹，<code>lane_change_left</code> 产生左变道，<code>starting</code> 产生起步加速，<code>reversing</code> 产生倒车——每个 intent 将动作扩散引导到语义一致的方向。多模态来自条件接口而非场景内容——即使场景 GT 是直行，conditioning 在 u_turn/reversing 上也能产生对应意图方向的行为。</p>
+<p><strong>但论文同时指出 fidelity 限制：</strong> <code>u_turn</code>、<code>reversing</code>、<code>parking</code> 在 WOD-E2E 训练集中极少或无 GT 样本，因此条件轨迹只会"朝正确方向走"而不会形成教科书级机动。这是数据问题（MindLabel 的 20 类 intent 可用于构造均衡训练分布）而非架构问题。</p>
+<p><strong>该图支持的核心论点：</strong> (1) Intent-CFG 暴露的是<strong>结构化多模态</strong>——intent token 作为"地址线"为动作扩散提供可寻址的模态轴 (2) 语言→动作桥接是<strong>可度量</strong>的（改变 intent token 确实改变输出轨迹）(3) 这是 VLA 领域首次可视化展示语言端信号如何操控连续动作生成 (4) 无条件 baseline 收敛到接近 GT 的行为——intent 是<strong>可选控制信号</strong>而非必须输入。实验设置：MindVLA-U1 dense 配置（RFS 7.83），训练时 CFG dropout=0.15，推理时 s=1.5。*</p>
+<h3 id="24-motmixture-of-transformers">2.4 快/慢系统与 MoT（Mixture-of-Transformers）</h3>
+<p>统一骨干天然支持快/慢推理：通过注意力掩码组合，同一组权重可以走四种推理顺序：</p>
+<table>
+<thead>
+<tr>
+<th>模式</th>
+<th>含义</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>vqa_first</code></td>
+<td>先解码语言，再以此条件做动作扩散</td>
+<td>慢路径：语义推理增强动作</td>
+</tr>
+<tr>
+<td><code>vqa_only</code></td>
+<td>仅解码语言</td>
+<td>诊断/理解</td>
+</tr>
+<tr>
+<td><code>action_first</code></td>
+<td>先做动作扩散，再条件解码语言</td>
+<td>产生轨迹的自然语言解释</td>
+</tr>
+<tr>
+<td><code>action_only</code></td>
+<td>纯动作，不跑语言头</td>
+<td>快路径：接近 VA 级吞吐</td>
+</tr>
+</tbody>
+</table>
+<p><strong>稀疏 MoT 变体</strong>将每层拆分为两组专家：</p>
+<ul>
+<li><strong>Context group</strong>（V, L tokens）：感知/语言</li>
+<li><strong>Action group</strong>（M, S, A tokens）：记忆/自车状态/动作</li>
+</ul>
+<p>两组共享 self-attention（通用 K/V 池），但使用独立的 Q/K/V/O 投影和 FFN。Fast mode 下物理移除语言 token，action subgraph 独立运行，实现真实计算缩减。</p>
+<div class="codehilite"><pre><span></span><code><span class="w">                    </span><span class="err">┌─────────────────────────────────────────┐</span>
+<span class="w">                    </span><span class="err">│</span><span class="w">          </span><span class="nx">Shared</span><span class="w"> </span><span class="k">Self</span><span class="o">-</span><span class="nx">Attention</span><span class="w">           </span><span class="err">│</span>
+<span class="w">                    </span><span class="err">│</span><span class="w">          </span><span class="p">(</span><span class="nx">Universal</span><span class="w"> </span><span class="nx">K</span><span class="o">/</span><span class="nx">V</span><span class="w"> </span><span class="nx">Pool</span><span class="p">)</span><span class="w">            </span><span class="err">│</span>
+<span class="w">                    </span><span class="err">└────┬──────────────────────────┬─────────┘</span>
+<span class="w">                         </span><span class="err">│</span><span class="w">                          </span><span class="err">│</span>
+<span class="w">              </span><span class="err">┌──────────▼─────────┐</span><span class="w">    </span><span class="err">┌──────────▼──────────┐</span>
+<span class="w">              </span><span class="err">│</span><span class="w">  </span><span class="nx">Q</span><span class="o">/</span><span class="nx">K</span><span class="o">/</span><span class="nx">V</span><span class="o">/</span><span class="nx">O_ctx</span><span class="w">       </span><span class="err">│</span><span class="w">    </span><span class="err">│</span><span class="w">  </span><span class="nx">Q</span><span class="o">/</span><span class="nx">K</span><span class="o">/</span><span class="nx">V</span><span class="o">/</span><span class="nx">O_act</span><span class="w">        </span><span class="err">│</span>
+<span class="w">              </span><span class="err">│</span><span class="w">  </span><span class="p">(</span><span class="nx">context</span><span class="w"> </span><span class="nx">tokens</span><span class="p">)</span><span class="w">  </span><span class="err">│</span><span class="w">    </span><span class="err">│</span><span class="w">  </span><span class="p">(</span><span class="nx">action</span><span class="w"> </span><span class="nx">tokens</span><span class="p">)</span><span class="w">     </span><span class="err">│</span>
+<span class="w">              </span><span class="err">└──────────┬─────────┘</span><span class="w">    </span><span class="err">└──────────┬──────────┘</span>
+<span class="w">                         </span><span class="err">│</span><span class="w">                          </span><span class="err">│</span>
+<span class="w">              </span><span class="err">┌──────────▼─────────┐</span><span class="w">    </span><span class="err">┌──────────▼──────────┐</span>
+<span class="w">              </span><span class="err">│</span><span class="w">  </span><span class="nx">V</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="nx">L</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="nx">W</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="nx">P</span><span class="w">     </span><span class="err">│</span><span class="w">    </span><span class="err">│</span><span class="w">  </span><span class="nx">M</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="nx">S</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="nx">A</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="nx">C</span><span class="w">       </span><span class="err">│</span>
+<span class="w">              </span><span class="err">└────────────────────┘</span><span class="w">    </span><span class="err">└─────────────────────┘</span>
+<span class="w">               </span><span class="nx">context</span><span class="w"> </span><span class="nx">tokens</span><span class="w">              </span><span class="nx">action</span><span class="w"> </span><span class="nx">tokens</span>
+<span class="w">             </span><span class="p">(</span><span class="nx">V</span><span class="p">=</span><span class="nx">Vision</span><span class="p">,</span><span class="w"> </span><span class="nx">L</span><span class="p">=</span><span class="nx">Language</span><span class="p">)</span><span class="w">     </span><span class="p">(</span><span class="nx">M</span><span class="p">=</span><span class="nx">Memory</span><span class="p">,</span><span class="w"> </span><span class="nx">S</span><span class="p">=</span><span class="nx">EgoState</span><span class="p">,</span><span class="w"> </span><span class="nx">A</span><span class="p">=</span><span class="nx">Action</span><span class="p">)</span>
+
+<span class="w">              </span><span class="nx">After</span><span class="w"> </span><span class="nx">Shared</span><span class="w"> </span><span class="nx">SA</span><span class="p">:</span>
+<span class="w">              </span><span class="err">┌──────────┐</span><span class="w"> </span><span class="err">┌──────────┐</span><span class="w"> </span><span class="err">┌────────────┐</span><span class="w"> </span><span class="err">┌────────────┐</span>
+<span class="w">              </span><span class="err">│</span><span class="w"> </span><span class="nx">FFN_ctx</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="nx">FFN_act</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="nx">FFN_reason</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="nx">FFN_safety</span><span class="w"> </span><span class="err">│</span>
+<span class="w">              </span><span class="err">│</span><span class="w"> </span><span class="p">(</span><span class="nx">active</span><span class="p">)</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="p">(</span><span class="nx">active</span><span class="p">)</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="p">(</span><span class="nx">future</span><span class="p">)</span><span class="w">   </span><span class="err">│</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="p">(</span><span class="nx">future</span><span class="p">)</span><span class="w">   </span><span class="err">│</span>
+<span class="w">              </span><span class="err">└──────────┘</span><span class="w"> </span><span class="err">└──────────┘</span><span class="w"> </span><span class="err">└────────────┘</span><span class="w"> </span><span class="err">└────────────┘</span>
+<span class="w">               </span><span class="nx">context</span><span class="w"> </span><span class="nx">FFN</span><span class="w">   </span><span class="nx">action</span><span class="w"> </span><span class="nx">FFN</span><span class="w">    </span><span class="nx">ext</span><span class="p">.</span><span class="w"> </span><span class="nx">slots</span><span class="w">     </span><span class="nx">ext</span><span class="p">.</span><span class="w"> </span><span class="nx">slots</span>
+</code></pre></div>
+
+<p><em>示意图（ASCII）：MoT 架构单层结构。每层拆分为两组并行的 FFN 专家——context（V, L）和 action（M, S, A）——通过共享 self-attention 池连接。Per-modality Q/K/V/O 投影送入共享 SA；per-functionality FFN 专家在 SA 之后解码。Fast mode（<code>action_only</code>）物理排除语言 token，action subgraph 无需支付 VQA 解码开销。</em></p>
+<h3 id="25-streaming-paradigm">2.5 流式范式（Streaming Paradigm）</h3>
+<p>论文将驾驶建模为<strong>逐帧流式处理</strong>，而非固定 video-action chunk：</p>
+<ul>
+<li>每步仅处理当前多视图帧 + 紧凑的记忆 token <span class="math inline">$\mathbf{m}_i$</span></li>
+<li>记忆通道是<strong>有界 FIFO</strong>：存储压缩的每帧骨干状态（非原始视觉 token）</li>
+<li><strong>运动对齐</strong>：读记忆时，利用 SE(2) 相对位姿变换将历史记忆对齐到当前自车坐标系</li>
+<li><strong>梯度跨帧流通</strong>：帧 <span class="math inline">$i$</span> 的 loss 监督帧 <span class="math inline">$i-1$</span> 写入的记忆——通道从被动缓存变为主动被监督的状态</li>
+</ul>
+<div class="codehilite"><pre><span></span><code>   Frame i-2      Frame i-1       Frame i        Frame i+1
+      │               │               │               │
+      │  write m_{i-2}│  write m_{i-1}│  write m_i    │  write m_{i+1}
+      │       ┌───────┤       ┌───────┤       ┌───────┤
+      ▼       │       ▼       │       ▼       │       ▼
+   ┌────┐ ┌──▼──┐ ┌────┐ ┌──▼──┐ ┌────┐ ┌──▼──┐ ┌────┐
+   │VLM │→│Prop.│→│VLM │→│Prop.│→│VLM │→│Prop.│→│VLM │→ ...
+   └────┘ │Trans│ └────┘ │Trans│ └────┘ │Trans│ └────┘
+           │former│       │former│       │former│
+           └──┬───┘       └──┬───┘       └──┬───┘
+              │              │              │
+    ┌─────────▼──────────────▼──────────────▼──────────┐
+    │              FIFO Memory Channel                  │
+    │  [m_{i-2}] [m_{i-1}]  →  read m_i (aligned)      │
+    │  motion-aligned to current ego pose on read       │
+    └───────────────────────────────────────────────────┘
+</code></pre></div>
+
+<p><em>示意图（ASCII）：流式记忆更新机制。帧 <span class="math inline">$i$</span> 的前向传播消费当前帧和从 FIFO 通道读出的运动对齐记忆 token <span class="math inline">$\mathbf{m}_i$</span>；前向完成后，Q-Former 风格的传播 transformer 将骨干输出压缩为新记忆写入通道，最旧条目被驱逐。梯度通过传播 transformer 跨帧流动。</em></p>
+<p><img alt="图4：流式推理逐帧可视化" src="arXiv-2605.12624v1/exp_results/sample_1407.png" /></p>
+<p><em>图4：流式推理在连续 6 帧上的逐帧可视化输出，展示 MindVLA-U1 流式范式的实际推理行为。图中 6 列对应流中的连续 6 个帧步（约 1.5 秒实际时间窗口，4Hz 处理频率），每列从上到下分为 5 行。</em></p>
+<p><strong>各行含义与行间关系：</strong></p>
+<ul>
+<li><strong>第 1-2 行（前视图 RGB 输入）</strong>：每列顶部两行展示该帧步的前视摄像头原始图像。两行之间展示的是不同相机或不同时刻的裁剪视图，提供场景的视觉上下文。关键点：流式范式每步只接收<strong>当前帧</strong>——不是把 6 帧同时塞给 VLM。6 帧之间的场景变化是平滑连续的（前车位置渐变、车道线连续），但模型在每步只看到"当下"，历史通过记忆通道传递</li>
+<li><strong>第 3 行（BEV 预测轨迹）</strong>：每帧步的 BEV 鸟瞰轨迹预测（5 秒 horizon，20 waypoints，4Hz 采样）。这是 action head 的最终输出——经 2 步 Euler 积分从 <span class="math inline">$v_\theta$</span> 恢复的完整轨迹</li>
+<li><strong>第 4-5 行（Waypoint 置信度热力图）</strong>：heatmap 颜色深浅表示每个 waypoint 位置的预测置信度（深色=高置信度，浅色=低置信度）。这是模型对自己预测的 uncertainty estimation，两行展示不同视角或不同分辨率的置信度分布</li>
+</ul>
+<p><strong>逐列（逐帧）分析：</strong></p>
+<ul>
+<li><em>Frame 1（最左列）</em>：流起始帧，记忆通道为初始空状态。RGB 显示前方道路清晰无前车。BEV 轨迹预测为平滑直行，近端 waypoint 排列紧凑均匀（预测恒定低速）。置信度热力图显示近端（&lt;2s）高置信（深色占主导），远端（&gt;4s）开始变浅</li>
+<li><em>Frame 2</em>：场景与前帧几乎相同（无前车、无弯道）。BEV 轨迹与 Frame 1 高度一致——这是流式连续性的体现：没有 chunk 边界导致的轨迹突变。置信度模式与前帧相似，但远端浅色区域略缩小——记忆通道开始积累上下文，减少了远期不确定性</li>
+<li><em>Frame 3</em>：场景仍为直行。BEV 轨迹继续维持一致性，waypoint 排列无跳跃。置信度热力图进一步稳定——记忆通道在 3 帧后已 warm up，模型对场景的时序理解趋于稳定</li>
+<li><em>Frame 4</em>：场景出现细微变化（前视图中道路前方可能出现弯道或路口）。BEV 轨迹开始出现轻微的曲率调整——轨迹末端略微弯曲。这个调整是<strong>渐进的</strong>而非突变的，因为 memory channel 传递的前几帧上下文起到了平滑作用。置信度在弯曲段略有下降（浅色区域向右端集中）</li>
+<li><em>Frame 5</em>：曲率调整更加明显，轨迹末端弯曲角度增大。Waypoint 间距在弯曲段重新均匀化——速度 profile 已适配弯道。置信度热力图与 Frame 4 相似，说明模型对弯道预测的确定性没有进一步恶化</li>
+<li><em>Frame 6（最右列）</em>：轨迹已稳定在新曲率上，waypoint 排列平滑。与 Frame 1 对比可以看出：6 帧之内轨迹从直行平滑过渡为弯道，没有 chunk 边界跳跃、没有 stale waypoint 残留。置信度热力图维持空间平滑——即使在弯曲段也没有置信度断层</li>
+</ul>
+<p><strong>该图支持的核心论点：</strong> 流式范式在实际推理中产生连续、平滑、无 chunk 边界的轨迹序列——6 帧跨度内轨迹从直行演变为弯道的过程是渐进式的。这直接回应了"chunk-wise VLA 在 chunk 边界产生不连续"这一已知问题，证明了流式+记忆的设计在定量（+0.14 RFS）和定性上均优于 chunk-wise。*</p>
+<p><img alt="图5：Streaming Memory 通道详细示意图" src="arXiv-2605.12624v1/figure/MemoryBank4.jpg" /></p>
+<p><em>图5：Streaming Memory 通道的详细工作流程。该图从单帧视角展示了记忆通道的 read→forward→write 三步循环，是理解 MindVLA-U1 流式范式的关键图。</em></p>
+<p><strong>图的上半部分——当前帧 i 的 forward pass：</strong>
+帧 i 的输入由三部分组成：(1) 当前多视图图像（经过 frozen vision encoder + visual merger）；(2) 从 FIFO 通道读出的记忆 token 集合 <span class="math inline">$\mathbf{m}_i$</span>（经过运动对齐）；(3) 语言 query / 噪声动作 token。这些 token 联合送入共享 VLM 骨干做单次前向传播。注意与之前 VLA 方法的关键区别：<strong>每步只处理当前帧，不把多帧视频 token 塞进 VLM</strong>——多帧冗余视觉 token 被压缩记忆取代。</p>
+<p><strong>图的中部——FIFO Memory Channel 的结构：</strong>
+FIFO 通道存储 <span class="math inline">$N_g=2$</span> 个帧步条目，每条目包含 <span class="math inline">$N_m=128$</span> 个 token（维度 <span class="math inline">$H=2048$</span>），总容量 256 token。条目按时间顺序排列（Frame i−2→Frame i−1→Frame i），最新条目在右端，最旧条目将被驱逐。图中用不同颜色区分不同帧步的记忆，示意了运动对齐（motion alignment）过程：每帧记忆存储在该帧的自车坐标系下，读出时通过 SE(2) 相对位姿变换 <span class="math inline">$T_{j \to i} = P_i \cdot P_j^{-1}$</span> 对齐到当前帧坐标系，然后由轻量 MLP 将 5 维运动特征（cosφ, sinφ, δx, δy, 归一化时间偏移）映射为 modulation vector 逐元素加到 128 个 token 上。</p>
+<p><strong>图的下半部分——记忆写入（Memory Writing）：</strong>
+前向传播完成后，Propagation Transformer（Q-Former 风格，6 层 cross-attention，16 头）做对称操作：128 个 learnable query token cross-attend 到骨干输出 <span class="math inline">$\mathbf{h}_i$</span>，压缩为新的 128 个记忆 token，写入 FIFO 通道右端。若通道已满（≥2 帧），最旧的左端条目被驱逐。</p>
+<p><strong>红色虚线箭头——梯度跨帧流通：</strong>
+图中红色虚线标注了梯度流：帧 i 的 loss（<span class="math inline">$\mathcal{L}_{\mathrm{AR}} + \mathcal{L}_{\mathrm{FM}}$</span>）通过 propagation transformer 反向传播到帧 i−1 写入的记忆。这意味着记忆通道不是被动缓存（"存一下上次的状态"），而是<strong>被主动监督的时序状态</strong>——记忆特征被 flow-matching 和语言目标共同塑造。训练和推理使用相同的 read→forward→write 循环，无 train-test mismatch。</p>
+<p><strong>该图支持的核心论点：</strong> 流式记忆不是往 VLM 多塞几帧图像的工程技巧，而是对"VLA 应该怎么建模时间"这个问题的根本性重新回答——把时序上下文的压缩和传播变成 VLM 架构<strong>内部</strong>的可学习组件，而非通过增加 VLM 输入 token 来外部化处理。消融实验证明这个设计选择带来了 +0.10 RFS，而直接多帧 VLM 输入（DeepStack）反而降低了 RFS（7.61 vs 7.69）。*</p>
+<h3 id="26-mindlabel-vla">2.6 MindLabel：驾驶原生 VLA 监督数据</h3>
+<p>论文构建了 MindLabel 自动标注管线，在同一训练帧上生成：</p>
+<ol>
+<li><strong>场景理解 VQA</strong>（5 类）：Common（事实感知）、Spatial（空间关系）、Temporal（时序变化）、Motion（安全分析/规划决策）、Object-Centric（检测实例锚定）</li>
+<li><strong>Action Dreaming</strong>：基于 GT intent 条件生成的多样化 dreamed trajectories（AFF：4 条质量分级轨迹；EXP：人偏好迁移轨迹）</li>
+<li><strong>轨迹评估 QA</strong>：CoT 推理评价 dreamed trajectory 质量</li>
+<li><strong>20 类细粒度 intent 标签</strong>（vs. WOD-E2E 官方 3 类）</li>
+</ol>
+<p><img alt="图6：MindLabel 标注管线概览" src="arXiv-2605.12624v1/figure/MindLabel1.jpg" /></p>
+<p><em>图6：MindLabel 自动标注管线架构总览。该管线解决的核心问题是：驾驶日志只有轨迹没有语言——需要自动生成场景理解和轨迹评估的语言标注。管线分为三个并行/串行阶段：</em></p>
+<p><strong>左支——Scene Understanding Question Generation（场景理解问题生成）：</strong>
+该阶段分三步。Step 1 Scene Grounding：融合当前帧的静态空间布局与前 4 秒动态历史窗口，生成一段自然语言场景描述（有意不含 metric 坐标和结构化物体列表）。Step 2 General Cognition QA：基于场景叙事，在 4 个认知维度生成问题——Common（事实感知，如"前方红绿灯什么颜色？"）、Spatial（相对位置和距离）、Temporal（时序变化和因果推理）、Motion（安全分析和规划决策，如"自车应该前进、让行还是停车？"）。每个问题独立标注难度（Easy/Medium/Hard）和 CoT 标志。Step 3 Object-Centric QA：对当前帧做统一检测（车辆、行人、骑行者、交通标志、信号灯），为每个检测实例生成以自然语言描述（如"左车道约 15 米前的红色卡车"）锚定的问题。</p>
+<p><strong>右支——Action Dreaming（动作梦想）：</strong>
+不满足于单一 GT 轨迹，生成多样化的 dreamed trajectories。包含两个子策略：(1) AFF（Affordance-Guided Generation）：从 GT 提取 20 类驾驶意图标签 → 生成 4 条同一意图但质量分级（Better/Alternative/Conservative/Worse）的完整 5 秒轨迹，用 GT 轨迹曲率做形状参考；(2) EXP（Exemplar-Guided Generation）：从同序列中检索带人偏好标注的参考帧，提取驾驶原则作为 in-context guidance，将人偏好迁移到生成轨迹中。每个 dreamed trajectory 配套生成评估问题（固定 4 题 + 采样 3 题），使用 opaque identifier 引用轨迹，迫使模型从视频和 BEV 推断质量。</p>
+<p><strong>底部——Unified Answer Generation（统一答案生成）：</strong>
+所有问题经共享模块生成答案，不同类型有不同格式策略：Common 输出简洁事实、Spatial 附加单位和相对位置、Temporal 引用时间点和因果关系、Motion 以可执行驾驶建议收尾（proceed/yield/stop）。带 CoT 标志的问题输出多步推理链。</p>
+<p><strong>标注规模：</strong> 覆盖 WOD-E2E 全量 4,021 个序列（训练 2,037 + 验证 479 + 测试 1,505），按 2Hz 采样、4s 窗口切 clip，每 clip 由 Qwen3-VL 和 Qwen3.5-Plus 两个骨干独立标注，合计 ~18.8K clips → ~3.8M VQA + ~250K dreamed trajectories。论文主结果只用了基础场景 VQA + GT 3-class intent；其余数据留给未来工作。*</p>
+<blockquote>
+<p>论文主结果只用了基础场景 VQA + 3 类 GT intent；其余（dreamed trajectories、20 类 intent、CoT rationales）留给未来工作。</p>
+</blockquote>
+<hr />
+<h2 id="_3">三、训练目标</h2>
+<p>联合训练目标：</p>
+<p><div class="math display">$$\mathcal{L} = \underbrace{-\sum_{l=1}^{L} \log p_\theta(a_l \mid \mathbf{I},\mathbf{e},\mathbf{q},a_{&lt;l})}_{\mathcal{L}_{\mathrm{AR}}\text{：语言 AR loss}} + \underbrace{\|v_\theta(\mathbf{x}_t, t; \mathbf{I},\mathbf{e},\mathbf{q},\mathbf{a}) - (\boldsymbol{\epsilon} - \mathbf{x}_0)\|^2}_{\mathcal{L}_{\mathrm{FM}}\text{：动作 flow-matching loss}}$$</div></p>
+<ul>
+<li>训练方案：端到端单阶段，VLM 骨干直接从公开 checkpoint 初始化</li>
+<li>无需 AD 专用预训练（区别于 Poutine 等需要专门 AD 预训练阶段的方法）</li>
+<li>8×H200 GPU，BF16 + DeepSpeed ZeRO-2，50 epochs，约 7 小时</li>
+<li>RL 后训练：GRPO，以 RFS 为唯一 reward，~8.20 RFS</li>
+</ul>
+<hr />
+<h2 id="_4">四、实验与结果</h2>
+<h3 id="41-wod-e2e">4.1 WOD-E2E 验证集结果</h3>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th>骨干</th>
+<th>AD-PT</th>
+<th>L B/R↑</th>
+<th>RFS-GT ADE 3/5↓</th>
+<th>RFS-matched ADE 3/5↓</th>
+<th>RFS↑</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>VA Methods</strong></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>VAD</td>
+<td>ImageNet ViT</td>
+<td>×</td>
+<td>--</td>
+<td>3.19 / 5.81</td>
+<td>--</td>
+<td>4.45</td>
+</tr>
+<tr>
+<td>UniAD</td>
+<td>ImageNet ViT</td>
+<td>×</td>
+<td>--</td>
+<td>6.50 / 10.81</td>
+<td>--</td>
+<td>5.78</td>
+</tr>
+<tr>
+<td>RAP-DINO</td>
+<td>DINOv3-H</td>
+<td>✓</td>
+<td>--</td>
+<td>0.97 / 2.20</td>
+<td>--</td>
+<td>7.91</td>
+</tr>
+<tr>
+<td><strong>VLA Methods (action-only at inference)</strong></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Poutine-Base</td>
+<td>Qwen2.5-VL-3B</td>
+<td>✓</td>
+<td>--</td>
+<td>1.27 / 2.94</td>
+<td>--</td>
+<td>8.12</td>
+</tr>
+<tr>
+<td><strong>Real human driver</strong></td>
+<td>---</td>
+<td>---</td>
+<td>---</td>
+<td>---</td>
+<td>---</td>
+<td>8.13</td>
+</tr>
+<tr>
+<td><strong>MindVLA-U1 (Ours)</strong></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>MindVLA-U1</td>
+<td>Qwen3-VL-2B</td>
+<td>×</td>
+<td>0.30 / 0.49</td>
+<td>0.92 / 2.14</td>
+<td>0.50 / 1.05</td>
+<td>7.83</td>
+</tr>
+<tr>
+<td>MindVLA-U1 + Intent-CFG</td>
+<td>Qwen3-VL-2B</td>
+<td>×</td>
+<td><strong>0.31 / 0.52</strong></td>
+<td><strong>0.86</strong> / 2.13</td>
+<td><strong>0.47</strong> / 1.07</td>
+<td>7.92</td>
+</tr>
+<tr>
+<td>MindVLA-U1 + MoT</td>
+<td>Qwen3-VL-2B</td>
+<td>×</td>
+<td>0.30 / 0.51</td>
+<td>0.89 / <strong>2.11</strong></td>
+<td>0.49 / 1.05</td>
+<td>7.92</td>
+</tr>
+<tr>
+<td>MindVLA-U1 + RL</td>
+<td>Qwen3-VL-2B</td>
+<td>×</td>
+<td>--</td>
+<td>1.01 / 2.28</td>
+<td>0.51 / <strong>1.03</strong></td>
+<td><strong>8.20</strong></td>
+</tr>
+</tbody>
+</table>
+<h3 id="42-wod-e2e">4.2 WOD-E2E 官方测试集结果</h3>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th>骨干</th>
+<th>AD-PT</th>
+<th>RFS-GT ADE 3/5↓</th>
+<th>RFS↑</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>VA Methods</strong></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>DiffusionLTF</td>
+<td>DiffusionDrive</td>
+<td>?</td>
+<td>1.36 / 2.98</td>
+<td>7.72</td>
+</tr>
+<tr>
+<td>UniPlan</td>
+<td>DiffusionDrive</td>
+<td>?</td>
+<td>1.31 / 2.99</td>
+<td>7.69</td>
+</tr>
+<tr>
+<td><strong>VLA Methods (action-only at inference)</strong></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>AutoVLA</td>
+<td>Qwen2.5-VL-3B</td>
+<td>✓</td>
+<td>1.35 / 2.96</td>
+<td>7.56</td>
+</tr>
+<tr>
+<td>dVLM-AD</td>
+<td>LLaDA-V + SigLIP2</td>
+<td>✓</td>
+<td>1.29 / 3.02</td>
+<td>7.63</td>
+</tr>
+<tr>
+<td>HMVLM</td>
+<td>Qwen2.5-VL-3B</td>
+<td>?</td>
+<td>1.33 / 3.07</td>
+<td>7.74</td>
+</tr>
+<tr>
+<td><strong>MindVLA-U1 (Ours, Language-preserving)</strong></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>MindVLA-U1</td>
+<td>Qwen3-VL-2B</td>
+<td>×</td>
+<td>1.16 / 2.67</td>
+<td>7.77</td>
+</tr>
+<tr>
+<td>MindVLA-U1 + RL</td>
+<td>Qwen3-VL-2B</td>
+<td>×</td>
+<td><strong>1.09 / 2.66</strong></td>
+<td><strong>7.87</strong></td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>关键结论</strong>：
+- MindVLA-U1 是首个在 WOD-E2E 上<strong>语言保持可用</strong>（推理时保留 language head 输出 VQA）的 VLA，而非在推理时退化为纯 VA
+- 在测试集上 ADE 3s/5s 显著优于所有 VA/VLA 方法（1.09 / 2.66 vs dVLM-AD 的 1.29 / 3.02）
+- RL 后训练将 RFS 从 7.83 推到 8.20（val），<strong>首次超越人类驾驶员</strong>（8.13 GT RFS）
+- trust-region 命中率从 66.0% 升至 73.1%</p>
+</blockquote>
+<h3 id="43-intent-cfg">4.3 Intent-CFG 消融实验</h3>
+<table>
+<thead>
+<tr>
+<th>Variant</th>
+<th>L B/R↑</th>
+<th>RFS-GT ADE 3/5↓</th>
+<th>RFS↑</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>No-intent baseline</td>
+<td>0.30 / 0.49</td>
+<td>0.92 / 2.14</td>
+<td>7.83</td>
+</tr>
+<tr>
+<td>+ Trajectory-derived Intent-CFG</td>
+<td>0.30 / 0.49</td>
+<td>0.88 / 2.14</td>
+<td>7.81</td>
+</tr>
+<tr>
+<td>+ GT-supplied Intent-CFG</td>
+<td>0.29 / 0.47</td>
+<td>0.89 / 2.15</td>
+<td>7.83</td>
+</tr>
+<tr>
+<td><strong>+ NTP-predicted Intent-CFG (Ours)</strong></td>
+<td><strong>0.31 / 0.52</strong></td>
+<td><strong>0.86 / 2.13</strong></td>
+<td><strong>7.92</strong></td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>核心发现</strong>：轨迹推导的 intent 和 GT 提供的 3 类 intent 都接近无 intent baseline（~7.82），只有 NTP 预测的 intent + prototype-grounded embedding 精炼方案带来了 <strong>+0.09 RFS</strong> 的提升。这表明 Intent-CFG 既是<strong>可控性结果</strong>（语言侧状态可度量地影响了连续动作），也是 aggregate planning 的改善——在正确 embedding 设计下。</p>
+</blockquote>
+<h3 id="44">4.4 流式记忆消融</h3>
+<table>
+<thead>
+<tr>
+<th>Configuration</th>
+<th>RFS-GT ADE 3/5↓</th>
+<th>RFS-matched ADE 3/5↓</th>
+<th>seq ADE 25s↓</th>
+<th>RFS↑</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Chunk-wise, single frame</td>
+<td>0.92 / 2.15</td>
+<td>0.52 / 1.13</td>
+<td>---</td>
+<td>7.69</td>
+</tr>
+<tr>
+<td>Chunk-wise + image seq (4 frames)</td>
+<td>1.14 / 2.53</td>
+<td>0.63 / 1.27</td>
+<td>---</td>
+<td>7.61</td>
+</tr>
+<tr>
+<td>Streaming, no memory</td>
+<td>0.98 / 2.30</td>
+<td>0.50 / 1.14</td>
+<td>1.54</td>
+<td>7.73</td>
+</tr>
+<tr>
+<td><strong>Streaming + memory (Ours)</strong></td>
+<td><strong>0.92 / 2.14</strong></td>
+<td><strong>0.50 / 1.05</strong></td>
+<td><strong>1.50</strong></td>
+<td><strong>7.83</strong></td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>关键发现</strong>：
+- Chunk-wise → Streaming-no-memory：+0.04 RFS
+- Streaming-no-memory → Streaming + memory：<strong>+0.10 RFS</strong>
+- 把 4 帧直接塞给 VLM（Qwen3-VL DeepStack）反而<strong>降低</strong> RFS（7.61 vs 7.69）——多帧驾驶视频 token 严重冗余，通用 VLM 没有经过将冗余视觉 token 压缩为规划相关时序状态的训练
+- Memory channel 在所有规划指标上改善，尤其是长序列 ADE（25s ADE: 1.54 → 1.50）</p>
+</blockquote>
+<h3 id="45-mot">4.5 MoT 变体对比</h3>
+<table>
+<thead>
+<tr>
+<th>System</th>
+<th>RFS-GT ADE 3/5↓</th>
+<th>RFS↑</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Dense</td>
+<td>0.92 / 2.14</td>
+<td>7.83</td>
+</tr>
+<tr>
+<td>MoT (V,L,M,S)+(A) → context vs. action</td>
+<td>0.92 / <strong>2.11</strong></td>
+<td><strong>8.01</strong></td>
+</tr>
+<tr>
+<td>MoT (V,L)+(M,S,A) → context vs. proprio+action <strong>(Ours)</strong></td>
+<td><strong>0.89 / 2.11</strong></td>
+<td>7.92</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>两种 MoT 分组都优于 Dense baseline。论文推荐 (V,L)+(M,S,A) 分组：将记忆和状态与动作归为一组，形成"模态纯粹"的 motor group——fast mode 下无需跨 attention group 读取记忆/ego-state token，吞吐分离更干净。该路由原则（感知模态 → context，运动/本体感知 → action）也可自然扩展到其他模态。</p>
+</blockquote>
+<h3 id="46">4.6 吞吐量对比</h3>
+<table>
+<thead>
+<tr>
+<th>Configuration</th>
+<th>Latency↓</th>
+<th>FPS↑</th>
+<th>RFS↑</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>RAP-DINO (VA, ~0.88B)</td>
+<td>57ms</td>
+<td>17.68</td>
+<td>7.91</td>
+</tr>
+<tr>
+<td>MindVLA-U1 (InternVL-2 1B, template QA, 2 steps)</td>
+<td>64ms</td>
+<td><strong>15.55</strong></td>
+<td><strong>7.78</strong></td>
+</tr>
+<tr>
+<td>MindVLA-U1 (slow path: <code>vqa_first_decoding</code>)</td>
+<td>2,594ms</td>
+<td>0.39</td>
+<td>7.83</td>
+</tr>
+<tr>
+<td>MindVLA-U1 (<code>action_only</code>, 2 steps)</td>
+<td>103ms</td>
+<td>9.70</td>
+<td>7.74</td>
+</tr>
+<tr>
+<td>MindVLA-U1 (<code>vqa_first_fast</code>, template QA, 2 steps)</td>
+<td>108ms</td>
+<td><strong>9.26</strong></td>
+<td><strong>7.82</strong></td>
+</tr>
+<tr>
+<td>MindVLA-U1 (<code>vqa_first_fast</code>, template QA, 1 step)</td>
+<td>63ms</td>
+<td>15.92</td>
+<td>7.67</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>成本分解</strong>：AR VQA decoding 占据慢路径 ~94% 延迟（~2,450ms），其他阶段（prefix embedding: ~30ms, VQA prefilling: ~40ms, action diffusion 2 steps: ~74ms）都比它便宜 1-2 个数量级。<strong>Fast 模式通过物理移除 answer token 来回收这些成本</strong>——这是接口级优化而非容量级优化。在 ~1B 参数匹配规模下，MindVLA-U1 的 fast path 接近 VA 级吞吐（15.55 FPS vs RAP-DINO 17.68 FPS）。</p>
+</blockquote>
+<h3 id="47-vlm-scaling">4.7 VLM 骨干规模 Scaling</h3>
+<table>
+<thead>
+<tr>
+<th>Backbone</th>
+<th>L B/R↑</th>
+<th>RFS↑</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Qwen3.5-VL 0.8B</td>
+<td>0.27 / 0.48</td>
+<td>7.81</td>
+</tr>
+<tr>
+<td>Qwen3.5-VL 2B</td>
+<td>0.27 / 0.48</td>
+<td><strong>7.94</strong></td>
+</tr>
+<tr>
+<td>Qwen3.5-VL 4B</td>
+<td>0.28 / 0.48</td>
+<td>7.86</td>
+</tr>
+<tr>
+<td>Qwen3.5-VL 9B</td>
+<td><strong>0.28 / 0.49</strong></td>
+<td>7.84</td>
+</tr>
+<tr>
+<td>Qwen3.5-VL 2B (base, 无指令微调)</td>
+<td>0.12 / 0.29</td>
+<td>7.91</td>
+</tr>
+<tr>
+<td>Qwen3.5-VL 4B (base)</td>
+<td>0.13 / 0.30</td>
+<td>7.86</td>
+</tr>
+<tr>
+<td>Qwen3.5-VL 9B (200 ep)</td>
+<td>0.28 / 0.48</td>
+<td>7.91</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>RFS 在骨干规模上非单调</strong>：7.81 → 7.94 → 7.86 → 7.84，2B 峰值后下降。但 9B 延长到 200 epoch 恢复到 7.91（+0.07），说明大骨干在当前 budget 下训练不足。</p>
+</blockquote>
+<p><strong>语言质量与动作质量结构性解耦</strong>（最亮眼的发现）：</p>
+<ul>
+<li>Base VLM（无指令微调）的 VQA 质量崩溃 2×（BLEU-4: 0.27 → 0.12），但 RFS 几乎不变（7.94 → 7.91）</li>
+<li>这说明 Intent-CFG 消费的是 VLM 的<strong>场景表征</strong>（scene representation），而非<strong>语言生成能力</strong>（language generation）</li>
+<li>即使 VLM 的指令跟随能力受损或从未训练，只要共享骨干学到了可分类 intent 的场景表征，CFG 路由就是对的</li>
+</ul>
+<h3 id="48-valtest">4.8 Val/Test 分布偏移诊断</h3>
+<table>
+<thead>
+<tr>
+<th>Intent</th>
+<th>Val share</th>
+<th>Test share</th>
+<th>Δ relative</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>accelerating</td>
+<td>19.5%</td>
+<td>4.1%</td>
+<td><strong>-78.9%</strong></td>
+</tr>
+<tr>
+<td>starting</td>
+<td>10.5%</td>
+<td>4.5%</td>
+<td><strong>-57.1%</strong></td>
+</tr>
+<tr>
+<td>following</td>
+<td>2.7%</td>
+<td>5.6%</td>
+<td>+107%</td>
+</tr>
+<tr>
+<td>waiting</td>
+<td>7.6%</td>
+<td><strong>20.2%</strong></td>
+<td><strong>+167%</strong></td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>Val → Test RFS 下降（MindVLA-U1: -0.24 RFS）被归因于<strong>基准级别</strong>的意图分布偏移而非方法弱点。Test 过度代表了减速/等待场景（waiting 从 7.6% 暴涨至 20.2%），这些场景在 Waymo 3 类 GT intent（仅 left/right/straight）中无法被监督。</p>
+</blockquote>
+<hr />
+<h2 id="_5">五、关键洞察与技术亮点</h2>
+<h3 id="51-vla-va">5.1 "VLA 落后 VA 是接口问题，不是范式问题"</h3>
+<p>论文最核心的论点：行动精度低、语言没用上、时序不连贯——这些都是<strong>设计选择错误</strong>（离散化动作、chunk 输出、VLM 特征→外部 action expert），而不是 VLA 框架的固有限制。正确设计的统一骨干可以同时拥有 VA 的精度和 VLA 的语义能力。</p>
+<h3 id="52">5.2 语言到动作的可度量桥接</h3>
+<p>之前所有 VLA 声称"语言帮助了规划"但从未证明。MindVLA-U1 通过 Intent-CFG 建立了一条<strong>可度量</strong>的因果路径：predicted intent → CFG → 连续速度场调制。消融实验证明 intent 信号质量和 embedding 设计至关重要——只有 NTP-predicted + prototype-grounded 方案带来正收益。</p>
+<h3 id="53-vlm">5.3 流式记忆 &gt; 多帧 VLM 输入</h3>
+<p>直接往 VLM 塞多帧是自然但错误的做法。驾驶多视图视频帧间高度冗余，通用 VLM 没有训练过压缩这种冗余为规划相关的时序状态。流式记忆通道通过端到端监督（传播 transformer + 跨帧梯度）学到了<strong>任务相关的紧凑时序表示</strong>。</p>
+<h3 id="54">5.4 语言质量与动作质量解耦</h3>
+<p>Base VLM（无指令微调）VQA 质量跌 2×，但规划 RFS 不变。这意味着 Intent-CFG 不依赖 VLM 的语言流畅度——场景表征才是关键。这对部署有重要启示：不需要旗舰级 VLM 就能获得好的规划质量。</p>
+<h3 id="55">5.5 单阶段端到端训练</h3>
+<p>不同于 Poutine 等多阶段 VLA 需要专门的 AD 数据预训练阶段，MindVLA-U1 直接从公开 VLM checkpoint + WOD-E2E 训练。这让架构可以<strong>快速跟进 VLM 前沿</strong>——新 VLM 发布后直接 slot in 即可，无需重新跑昂贵的 AD 预训练。</p>
+<hr />
+<h2 id="_6">六、代码实现解读</h2>
+<p>（代码暂未公开，以下基于论文正文和附录的架构描述进行梳理）</p>
+<h3 id="61">6.1 论文公式 → 模块映射</h3>
+<table>
+<thead>
+<tr>
+<th>论文公式/算法</th>
+<th>对应模块</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><span class="math inline">$\mathcal{L}_{\mathrm{AR}}$</span>（Eq.1）</td>
+<td>LM Head（VLM 自带的 language modeling head）</td>
+<td>标准 AR cross-entropy，在 language token 位置计算，仅作用于 prefix tokens</td>
+</tr>
+<tr>
+<td><span class="math inline">$\mathcal{L}_{\mathrm{FM}}$</span>（Eq.2）</td>
+<td>Action Head（<code>2-layer MLP, SiLU</code>）</td>
+<td>预测速度场 <span class="math inline">$v_\theta$</span>，在 action token 位置读出，与 AR loss 共享骨干梯度</td>
+</tr>
+<tr>
+<td><span class="math inline">$v_{\mathrm{cfg}}$</span>（Eq.3）</td>
+<td>Intent-CFG Module → <code>IntentEmbedding</code> + <code>time_embedding injection</code></td>
+<td>两次前向的 velocity field 混合，guidance scale <span class="math inline">$s=1.5$</span></td>
+</tr>
+<tr>
+<td>ODE 积分（推理）</td>
+<td>Action Head → Euler integration（2 steps）</td>
+<td><span class="math inline">$x_0 \approx x_t - t \cdot v_\theta(x_t, t)$</span> 从噪声恢复轨迹</td>
+</tr>
+<tr>
+<td>SE(2) 位姿对齐（Eq.4）</td>
+<td><code>MotionAwareModulator</code>（轻量 MLP）</td>
+<td>5 维运动特征 → H 维 modulation vector，逐元素加到记忆 token</td>
+</tr>
+<tr>
+<td>Memory read/write</td>
+<td><code>PropagationTransformer</code>（Q-Former, 6 layers, 16 heads）</td>
+<td>读：learnable queries cross-attend 到 FIFO 通道；写：对称压缩骨干输出</td>
+</tr>
+<tr>
+<td>Intent token prediction</td>
+<td>LM Head（next-token prediction）</td>
+<td>语言头在 answer 序列末尾预测 intent token <span class="math inline">$z$</span></td>
+</tr>
+<tr>
+<td>CFG dropout</td>
+<td><code>IntentEmbedding</code>（<span class="math inline">$|C|+1$</span> rows）</td>
+<td>训练时 15% 概率替换为 <span class="math inline">$\emptyset$</span> row</td>
+</tr>
+</tbody>
+</table>
+<h3 id="62">6.2 核心模块映射</h3>
+<div class="codehilite"><pre><span></span><code>MindVLA-U1
+├── VLM Backbone (Qwen3-VL-2B, H=2048)
+│   ├── Vision Encoder (frozen)
+│   ├── Visual Merger (trainable)
+│   └── Language Model (trainable)
+├── Ego-history Encoders (3 lightweight MLPs)
+│   ├── Position MLP
+│   ├── Velocity MLP
+│   └── Acceleration MLP
+├── Streaming Memory Module
+│   ├── FIFO Memory Channel (N_g=2 frames × N_m=128 tokens = 256 total)
+│   ├── Motion-Aware Modulator (SE(2) alignment + MLP)
+│   └── Propagation Transformer (Q-Former-style, 6 layers, 16 heads)
+├── Action Head (2-layer MLP, SiLU activation)
+│   └── Output: 6-dim × 20 waypoints @ 4Hz (pos+vel+acc, 5s horizon)
+└── Intent-CFG Module
+    ├── Intent Embedding Table (|C|+1 rows, incl. ∅)
+    └── Time Embedding Injection (projected + residual add)
+</code></pre></div>
+
+<h3 id="63">6.3 前向传播数据流</h3>
+<div class="codehilite"><pre><span></span><code><span class="w">                            </span><span class="err">┌──────────────────────────────────┐</span>
+<span class="w">                            </span><span class="err">│</span><span class="w">     </span><span class="nx">One</span><span class="w"> </span><span class="nx">Forward</span><span class="w"> </span><span class="nx">Pass</span><span class="w">              </span><span class="err">│</span>
+<span class="w">                            </span><span class="err">│</span><span class="w">                                  </span><span class="err">│</span>
+<span class="w">  </span><span class="nx">Vision</span><span class="w"> </span><span class="err">──────────┐</span><span class="w">        </span><span class="err">│</span><span class="w">  </span><span class="err">┌────────────────────────────┐</span><span class="w">  </span><span class="err">│</span>
+<span class="w">  </span><span class="nx">Ego</span><span class="o">-</span><span class="nx">state</span><span class="w"> </span><span class="err">───────┤</span><span class="w">        </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">                            </span><span class="err">│</span><span class="w">  </span><span class="err">│</span>
+<span class="w">  </span><span class="nx">Language</span><span class="w"> </span><span class="nx">Q</span><span class="w"> </span><span class="err">──────┤</span><span class="w">        </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">   </span><span class="nx">Shared</span><span class="w"> </span><span class="nx">VLM</span><span class="w"> </span><span class="nx">Backbone</span><span class="w">      </span><span class="err">│</span><span class="w">  </span><span class="err">│</span>
+<span class="w">  </span><span class="nx">Language</span><span class="w"> </span><span class="nx">A</span><span class="w"> </span><span class="err">──────┤───────►│</span><span class="w">  </span><span class="err">│</span><span class="w">   </span><span class="p">(</span><span class="k">Self</span><span class="o">-</span><span class="nx">Attention</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nx">FFN</span><span class="p">)</span><span class="w">   </span><span class="err">│──┼──►</span><span class="w"> </span><span class="nx">LM</span><span class="w"> </span><span class="nx">Head</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="nx">AR</span><span class="w"> </span><span class="nx">tokens</span>
+<span class="w">  </span><span class="nx">Memory</span><span class="w"> </span><span class="nx">tokens</span><span class="w"> </span><span class="err">───┤</span><span class="w">        </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">                            </span><span class="err">│</span><span class="w">  </span><span class="err">│</span>
+<span class="w">  </span><span class="nx">Noisy</span><span class="w"> </span><span class="nx">Action</span><span class="w"> </span><span class="err">────┘</span><span class="w">        </span><span class="err">│</span><span class="w">  </span><span class="err">└────────────────────────────┘</span><span class="w">  </span><span class="err">│──┼──►</span><span class="w"> </span><span class="nx">Action</span><span class="w"> </span><span class="nx">MLP</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="nx">velocity</span><span class="w"> </span><span class="nx">field</span>
+<span class="w">                            </span><span class="err">│</span><span class="w">                                  </span><span class="err">│</span>
+<span class="w">                            </span><span class="err">└──────────────────────────────────┘</span>
+<span class="w">                                      </span><span class="err">│</span>
+<span class="w">                                      </span><span class="err">▼</span>
+<span class="w">                            </span><span class="err">┌──────────────────────┐</span>
+<span class="w">                            </span><span class="err">│</span><span class="w"> </span><span class="nx">Propagation</span><span class="w"> </span><span class="nx">Transformer</span><span class="err">│</span>
+<span class="w">                            </span><span class="err">│</span><span class="w"> </span><span class="p">(</span><span class="nx">compress</span><span class="w"> </span><span class="nx">backbone</span><span class="w">    </span><span class="err">│</span>
+<span class="w">                            </span><span class="err">│</span><span class="w">  </span><span class="nx">outputs</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="nx">memory</span><span class="p">)</span><span class="w">     </span><span class="err">│</span>
+<span class="w">                            </span><span class="err">└──────────┬───────────┘</span>
+<span class="w">                                       </span><span class="err">│</span>
+<span class="w">                                       </span><span class="err">▼</span>
+<span class="w">                            </span><span class="err">┌──────────────────────┐</span>
+<span class="w">                            </span><span class="err">│</span><span class="w">   </span><span class="nx">FIFO</span><span class="w"> </span><span class="nx">Memory</span><span class="w"> </span><span class="nx">Channel</span><span class="w">  </span><span class="err">│</span>
+<span class="w">                            </span><span class="err">│</span><span class="w">   </span><span class="p">(</span><span class="nx">write</span><span class="w"> </span><span class="nx">m_i</span><span class="p">,</span><span class="w"> </span><span class="nx">evict</span><span class="w">    </span><span class="err">│</span>
+<span class="w">                            </span><span class="err">│</span><span class="w">    </span><span class="nx">oldest</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="nx">full</span><span class="p">)</span><span class="w">     </span><span class="err">│</span>
+<span class="w">                            </span><span class="err">└──────────────────────┘</span>
+</code></pre></div>
+
+<h3 id="64">6.4 推理流程（快/慢路径）</h3>
+<div class="codehilite"><pre><span></span><code><span class="w">                    </span>┌──────────────┐
+<span class="w">                    </span>│<span class="w">  </span><span class="nv">Input</span><span class="w"> </span><span class="nv">Frame</span><span class="w">  </span>│
+<span class="w">                    </span>└──────┬───────┘
+<span class="w">                           </span>│
+<span class="w">                    </span>┌──────▼───────┐
+<span class="w">                    </span>│<span class="w"> </span><span class="nv">Read</span><span class="w"> </span><span class="nv">Memory</span><span class="w">  </span>│<span class="w"> </span><span class="ss">(</span><span class="nv">motion</span><span class="o">-</span><span class="nv">aligned</span><span class="w"> </span><span class="nv">from</span><span class="w"> </span><span class="nv">FIFO</span><span class="ss">)</span>
+<span class="w">                    </span>└──────┬───────┘
+<span class="w">                           </span>│
+<span class="w">              </span>┌────────────┼────────────┐
+<span class="w">              </span>│<span class="w">            </span>│<span class="w">            </span>│
+<span class="w">         </span><span class="nv">Slow</span><span class="w"> </span><span class="nv">Path</span><span class="w">     </span><span class="nv">Fast</span><span class="w"> </span><span class="nv">Path</span><span class="w">    </span><span class="nv">Action</span><span class="w"> </span><span class="nv">Only</span>
+<span class="w">         </span><span class="ss">(</span><span class="nv">vqa_first</span><span class="ss">)</span><span class="w">  </span><span class="ss">(</span><span class="nv">vqa_first</span><span class="w">   </span><span class="ss">(</span><span class="nv">action_only</span><span class="ss">)</span>
+<span class="w">                       </span><span class="nv">_fast</span><span class="ss">)</span>
+<span class="w">              </span>│<span class="w">            </span>│<span class="w">            </span>│
+<span class="w">     </span>┌────────▼──────┐<span class="w"> </span>┌──▼────────┐<span class="w"> </span>┌─▼───────────┐
+<span class="w">     </span>│<span class="w"> </span><span class="nv">AR</span><span class="w"> </span><span class="nv">VQA</span><span class="w"> </span><span class="nv">decode</span><span class="w"> </span>│<span class="w"> </span>│<span class="w"> </span><span class="nv">Template</span><span class="w">  </span>│<span class="w"> </span>│<span class="w"> </span><span class="nv">Skip</span><span class="w"> </span><span class="nv">VQA</span><span class="w">    </span>│
+<span class="w">     </span>│<span class="w"> </span><span class="ss">(</span><span class="mi">2</span>,<span class="mi">450</span><span class="nv">ms</span><span class="ss">)</span><span class="w">     </span>│<span class="w"> </span>│<span class="w"> </span><span class="nv">QA</span><span class="w"> </span><span class="nv">prefix</span><span class="w"> </span>│<span class="w"> </span>│<span class="w"> </span><span class="nv">entirely</span><span class="w">    </span>│
+<span class="w">     </span>└────────┬──────┘<span class="w"> </span>└──┬────────┘<span class="w"> </span>└─┬───────────┘
+<span class="w">              </span>│<span class="w">            </span>│<span class="w">            </span>│
+<span class="w">     </span>┌────────▼────────────▼────────────▼───────────┐
+<span class="w">     </span>│<span class="w">        </span><span class="nv">Action</span><span class="w"> </span><span class="nv">Diffusion</span><span class="w"> </span><span class="ss">(</span><span class="mi">2</span><span class="w"> </span><span class="nv">Euler</span><span class="w"> </span><span class="nv">steps</span><span class="ss">)</span><span class="w">       </span>│
+<span class="w">     </span>│<span class="w">        </span><span class="o">+</span><span class="w"> </span><span class="nv">Intent</span><span class="o">-</span><span class="nv">CFG</span><span class="w"> </span><span class="ss">(</span><span class="k">if</span><span class="w"> </span><span class="nv">enabled</span><span class="ss">)</span><span class="w">              </span>│
+<span class="w">     </span>│<span class="w">        </span><span class="o">~</span><span class="mi">74</span><span class="nv">ms</span><span class="w">                                  </span>│
+<span class="w">     </span>└────────────────────┬─────────────────────────┘
+<span class="w">                          </span>│
+<span class="w">                   </span>┌──────▼──────┐
+<span class="w">                   </span>│<span class="w"> </span><span class="nv">Write</span><span class="w"> </span><span class="nv">Memory</span>│
+<span class="w">                   </span>│<span class="w"> </span><span class="nv">to</span><span class="w"> </span><span class="nv">FIFO</span><span class="w">     </span>│
+<span class="w">                   </span>└──────┬──────┘
+<span class="w">                          </span>│
+<span class="w">                   </span>┌──────▼──────┐
+<span class="w">                   </span>│<span class="w">  </span><span class="nv">Trajectory</span><span class="w">  </span>│
+<span class="w">                   </span>│<span class="w">  </span><span class="ss">(</span><span class="mi">5</span><span class="nv">s</span>,<span class="w"> </span><span class="mi">4</span><span class="nv">Hz</span><span class="ss">)</span><span class="w">   </span>│
+<span class="w">                   </span>└─────────────┘
+</code></pre></div>
+
+<h3 id="65">6.5 训练配置</h3>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Optimizer</td>
+<td>AdamW (lr=1e-4, wd=0.1, β1=0.9, β2=0.999)</td>
+</tr>
+<tr>
+<td>Schedule</td>
+<td>Linear warmup 1K steps + cosine anneal (η_min=0.1·η_max)</td>
+</tr>
+<tr>
+<td>Precision</td>
+<td>BF16 + DeepSpeed ZeRO-2</td>
+</tr>
+<tr>
+<td>Epochs</td>
+<td>50 (default)</td>
+</tr>
+<tr>
+<td>GPUs</td>
+<td>8×H200</td>
+</tr>
+<tr>
+<td>Training time</td>
+<td>~7 hours</td>
+</tr>
+<tr>
+<td>Flow-matching weights</td>
+<td>w_pos=1.0, w_vel=0.5, w_acc=0.5</td>
+</tr>
+<tr>
+<td>Beta distribution for t</td>
+<td>Beta(1.5, 1.0)</td>
+</tr>
+<tr>
+<td>CFG dropout</td>
+<td>p_drop=0.15</td>
+</tr>
+<tr>
+<td>CFG guidance scale</td>
+<td>s=1.5</td>
+</tr>
+<tr>
+<td>Action horizon</td>
+<td>5s @ 4Hz = 20 waypoints</td>
+</tr>
+<tr>
+<td>Memory tokens</td>
+<td>N_m=128 per frame, FIFO holds N_g=2 frames</td>
+</tr>
+</tbody>
+</table>
+<p><strong>RL post-training</strong>:
+| 参数 | 值 |
+|------|-----|
+| Algorithm | GRPO |
+| Reward | RFS only (no ADE/FDE/smoothness auxiliary) |
+| Optimizer | AdamW (lr=5e-7, constant) |
+| KL regularizer | β_kl=0.008, k3 estimator |
+| PPO clip | ε=±0.2 |
+| Rollouts | 8 per sample |</p>
+<hr />
+<h2 id="_7">七、局限性</h2>
+<ol>
+<li><strong>仅开环评估</strong>：WOD-E2E 是 logged benchmark，RFS 评估开环轨迹质量而非闭环策略质量。超越 8.13 GT RFS 证明了开环优势，但实车闭环行为是另一个评估维度</li>
+<li><strong>单一 benchmark</strong>：所有结果仅限 WOD-E2E。未验证 nuScenes、NAVSIM 或实车部署的跨 benchmark 迁移</li>
+<li><strong>未建立确定的 VLA scaling law</strong>：在当前 budget 下 RFS 随骨干规模非单调；未分离 schedule、data、action-interface 和 evaluation-channel 的 confound</li>
+<li><strong>MindLabel 利用不充分</strong>：主结果仅用了基础场景 VQA + 3 类 GT intent；dreamed trajectories、20 类 intent、CoT rationales 未被使用</li>
+<li><strong>Intent 词汇有限（3 类）</strong>：Waymo GT intent 仅有 left/right/straight 三类，无法覆盖 waiting/stopping/yielding 等复杂意图。这是 val→test 分布偏移的根本原因</li>
+</ol>
+<hr />
+<h2 id="_8">八、关键概念速查</h2>
+<table>
+<thead>
+<tr>
+<th>概念</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>VLA vs VA</strong></td>
+<td>VLA = Vision-Language-Action（语言+动作统一），VA = Vision-to-Action（纯视觉→动作）</td>
+</tr>
+<tr>
+<td><strong>Unified Shared Backbone</strong></td>
+<td>单一 VLM 骨干同时输出 AR 语言和 flow-matching 连续动作，共享所有权重</td>
+</tr>
+<tr>
+<td><strong>Flow Matching</strong></td>
+<td>扩散式生成模型：学习从噪声到数据的速度场，推理时 ODE 积分（2 Euler steps）</td>
+</tr>
+<tr>
+<td><strong>AR + FM Joint Training</strong></td>
+<td>自回归交叉熵 + 连续 MSE 在同一骨干上联合优化</td>
+</tr>
+<tr>
+<td><strong>Intent-CFG</strong></td>
+<td>从语言头预测 intent token，嵌入后通过 CFG 混合条件/无条件速度场来引导动作扩散</td>
+</tr>
+<tr>
+<td><strong>MoT</strong></td>
+<td>Mixture-of-Transformers：按模态拆分 attention/FFN 组，共享 K/V 池</td>
+</tr>
+<tr>
+<td><strong>Streaming Memory</strong></td>
+<td>有界 FIFO 通道传播紧凑时序记忆，运动对齐读+端到端梯度跨帧监督</td>
+</tr>
+<tr>
+<td><strong>Fast/Slow Execution</strong></td>
+<td>同一组权重通过注意力掩码切换推理顺序，fast path 物理排除语言 token</td>
+</tr>
+<tr>
+<td><strong>RFS</strong></td>
+<td>Rater Feedback Score：轨迹与 3 条人类标注参考轨迹中最匹配者的评分 [0,10]</td>
+</tr>
+<tr>
+<td><strong>MindLabel</strong></td>
+<td>驾驶原生自动标注管线：场景 VQA + dreamed trajectories + 轨迹评估 QA</td>
+</tr>
+<tr>
+<td><strong>WOD-E2E</strong></td>
+<td>Waymo Open Dataset End-to-End：8 相机 360° 覆盖，长尾场景（事件频率 &lt;0.003%）</td>
+</tr>
+<tr>
+<td><strong>AD-PT</strong></td>
+<td>Autonomous Driving Pretraining：在 AD 日志上的额外预训练阶段</td>
+</tr>
+<tr>
+<td><strong>GRPO</strong></td>
+<td>Group Relative Policy Optimization：RL 后训练算法</td>
+</tr>
+</tbody>
+</table>
+  </div>
+</main>
+
+
+<script>
+(function() {
+  const sidebar = document.getElementById('sidebar');
+  const links = sidebar.querySelectorAll('a');
+  const headings = document.querySelectorAll('h1[id], h2[id], h3[id], h4[id]');
+  if (headings.length === 0) return;
+
+  const linkMap = new Map();
+  links.forEach(function(a) {
+    const href = a.getAttribute('href');
+    if (href && href.startsWith('#')) linkMap.set(href.slice(1), a);
+  });
+
+  function onScroll() {
+    let currentId = null;
+    const scrollTop = window.scrollY + 80;
+    headings.forEach(function(h) { if (h.offsetTop <= scrollTop) currentId = h.id; });
+    links.forEach(function(a) { a.classList.remove('active'); });
+    if (currentId && linkMap.has(currentId)) {
+      const el = linkMap.get(currentId);
+      el.classList.add('active');
+      const sr = sidebar.getBoundingClientRect();
+      const er = el.getBoundingClientRect();
+      if (er.bottom > sr.bottom || er.top < sr.top) {
+        el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+    }
+  }
+
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,2468 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LaST-R1 论文与代码笔记</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #ffffff;
+    --text: #1a1a2e;
+    --text-secondary: #555;
+    --border: #e1e4e8;
+    --link: #0969da;
+    --table-stripe: #f6f8fa;
+    --heading: #0d1117;
+    --blockquote-border: #0969da;
+    --blockquote-bg: #f0f6ff;
+    --inline-code: #d73a49;
+    --inline-code-bg: #f6f8fa;
+    --sidebar-width: 260px;
+    --toc-active: #0969da;
+    --content-max-width: 900px;
+    --content-padding: 48px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "Inter", "Noto Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 16px;
+    line-height: 1.75;
+    color: var(--text);
+    background: var(--bg);
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    width: var(--sidebar-width);
+    overflow-y: auto;
+    padding: 28px 20px 40px;
+    background: #fafbfc;
+    border-right: 1px solid var(--border);
+    z-index: 10;
+    scrollbar-width: thin;
+  }
+  .sidebar-title {
+    font-size: 13px; font-weight: 700; color: var(--text-secondary);
+    margin-bottom: 16px; letter-spacing: 0.06em; text-transform: uppercase;
+  }
+  .toc-list { list-style: none; padding: 0; margin: 0; }
+  .toc-list ul { list-style: none; padding-left: 14px; }
+  .toc-list li { margin: 1px 0; }
+  .toc-list a {
+    display: block; padding: 4px 12px; font-size: 13.5px; line-height: 1.45;
+    color: var(--text-secondary); text-decoration: none; border-radius: 4px;
+    border-left: 2px solid transparent; transition: all 0.15s;
+  }
+  .toc-list a:hover { color: var(--link); background: #e8f0fe; }
+  .toc-list a.active {
+    color: var(--toc-active); font-weight: 600;
+    border-left-color: var(--toc-active); background: #e8f0fe;
+  }
+  .toc-h1 a { font-weight: 600; color: var(--heading); font-size: 14px; }
+  .toc-h3 a { padding-left: 24px; font-size: 13px; }
+  .toc-h4 a { padding-left: 36px; font-size: 12.5px; }
+  .toc-empty { color: var(--text-secondary); font-size: 13px; font-style: italic; }
+
+  .main-wrapper {
+    margin-left: var(--sidebar-width);
+    min-height: 100vh;
+    display: flex; justify-content: center;
+  }
+  .content-inner {
+    width: 100%;
+    max-width: var(--content-max-width);
+    padding: 40px var(--content-padding) 80px;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    color: var(--heading); font-weight: 700; line-height: 1.3;
+    margin-top: 2em; margin-bottom: 0.6em; scroll-margin-top: 24px;
+  }
+  h1 { font-size: 2em; border-bottom: 2px solid var(--border); padding-bottom: 0.3em; margin-top: 0; }
+  h2 { font-size: 1.5em; border-bottom: 1px solid var(--border); padding-bottom: 0.25em; }
+  h3 { font-size: 1.25em; }
+  h4 { font-size: 1.1em; }
+  p { margin-bottom: 1em; }
+  a { color: var(--link); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  strong { font-weight: 600; }
+
+  blockquote {
+    border-left: 4px solid var(--blockquote-border);
+    background: var(--blockquote-bg);
+    padding: 12px 20px; margin: 1em 0;
+    border-radius: 0 6px 6px 0; color: var(--text-secondary);
+  }
+  blockquote p:last-child { margin-bottom: 0; }
+
+  code {
+    font-family: "JetBrains Mono", "SF Mono", "Fira Code", monospace;
+    font-size: 0.875em; background: var(--inline-code-bg);
+    padding: 2px 6px; border-radius: 4px; color: var(--inline-code);
+  }
+  pre {
+    background: #1e1e2e; color: #cdd6f4;
+    border-radius: 8px; padding: 16px 20px; overflow-x: auto;
+    margin: 1em 0; font-size: 14px; line-height: 1.55;
+  }
+  pre code { background: none; padding: 0; border-radius: 0; color: inherit; font-size: inherit; }
+
+  .codehilite { background: #1e1e2e; border-radius: 8px; padding: 16px 20px; overflow-x: auto; margin: 1em 0; }
+  .codehilite pre { background: none; padding: 0; margin: 0; border-radius: 0; }
+  .codehilite .hll { background-color: #2a2a3e; }
+  .codehilite .c  { color: #6c7086; font-style: italic; }
+  .codehilite .k  { color: #cba6f7; }
+  .codehilite .o  { color: #89b4fa; }
+  .codehilite .s  { color: #a6e3a1; }
+  .codehilite .n  { color: #cdd6f4; }
+  .codehilite .p  { color: #bac2de; }
+  .codehilite .mi { color: #fab387; }
+  .codehilite .nf { color: #89b4fa; }
+  .codehilite .nb { color: #f38ba8; }
+  .codehilite .nc { color: #f9e2af; }
+  .codehilite .bp { color: #f38ba8; }
+
+  table { width: 100%; border-collapse: collapse; margin: 1em 0; font-size: 0.925em; }
+  th, td { border: 1px solid var(--border); padding: 10px 14px; text-align: left; }
+  th { background: var(--table-stripe); font-weight: 600; color: var(--heading); }
+  tr:nth-child(even) td { background: var(--table-stripe); }
+
+  .math.display { display: block; overflow-x: auto; padding: 12px 0; margin: 1em 0; }
+  ul, ol { padding-left: 1.5em; margin-bottom: 1em; }
+  li { margin-bottom: 0.3em; }
+  hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+  img { max-width: 100%; height: auto; border-radius: 6px; margin: 0.5em 0; }
+  p:has(img) { text-align: center; }
+  p:has(img) + p { text-align: center; font-size: 0.9em; color: var(--text-secondary); }
+  .mermaid { text-align: center; margin: 1.5em 0; background: #fafbfc; border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+
+  @media (max-width: 1024px) {
+    .sidebar { position: static; width: 100%; height: auto; max-height: 35vh; border-right: none; border-bottom: 1px solid var(--border); }
+    .main-wrapper { margin-left: 0; display: block; }
+    .content-inner { max-width: none; padding: 24px 20px 60px; }
+  }
+</style>
+
+<script>
+MathJax = {
+  tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']], processEscapes: true, tags: 'none' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] }
+};
+</script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  mermaid.initialize({ startOnLoad: true, theme: 'neutral', securityLevel: 'loose' });
+});
+</script>
+
+</head>
+<body>
+
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-title">目录</div>
+  <ul class="toc-list">
+<li class="toc-h1"><a href="#last-r1">LaST-R1 论文与代码笔记</a>
+<ul>
+</li>
+<li class="toc-h2"><a href="#0">0. 一句话总览</a>
+</li>
+<li class="toc-h2"><a href="#1">1. 符号表与读公式路线</a>
+</li>
+<li class="toc-h2"><a href="#2">2. 论文在做什么</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#21">2.1 背景</a>
+</li>
+<li class="toc-h3"><a href="#22-sft-rl">2.2 论文里的 SFT / RL 目标</a>
+</li>
+<li class="toc-h3"><a href="#23-last-r1">2.3 LaST-R1 的模型结构</a>
+</li>
+<li class="toc-h3"><a href="#24-latent">2.4 latent 表征来自哪里</a>
+</li>
+<li class="toc-h3"><a href="#25-lapo">2.5 LAPO 的核心思想</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#3">3. 代码地图</a>
+</li>
+<li class="toc-h2"><a href="#4-latent">4. 训练时 latent 占位怎么取特征</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#41-latent">4.1 输入序列里 latent 占位怎么放</a>
+</li>
+<li class="toc-h3"><a href="#42-action-latent-embedding">4.2 action 占位和 latent 占位的 embedding 会被改写</a>
+</li>
+<li class="toc-h3"><a href="#43-policy-update-old_latents">4.3 policy update 时 old_latents 是怎么用的</a>
+</li>
+<li class="toc-h3"><a href="#44-predicted-latent-hidden-state">4.4 predicted latent 到底从哪个 hidden state 取</a>
+</li>
+<li class="toc-h3"><a href="#45-latent-loss">4.5 latent loss 怎么和这些特征相连</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#5-rollout-latent-cot-rollout">5. 推理 / rollout 时 latent CoT 怎么 rollout</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#51-step">5.1 每个环境 step 做什么</a>
+</li>
+<li class="toc-h3"><a href="#52-latent">5.2 latent 生成分三段</a>
+<ul>
+</li>
+<li class="toc-h4"><a href="#phase-1-prefill-prompt-latent_start">Phase 1: prefill prompt + latent_start</a>
+</li>
+<li class="toc-h4"><a href="#phase-2-grouped-ar-latent-loop">Phase 2: grouped AR latent loop</a>
+</li>
+<li class="toc-h4"><a href="#phase-3-action">Phase 3: 选择长度，再并行解码 action</a>
+</ul></li>
+</li>
+<li class="toc-h3"><a href="#53-action">5.3 为什么 action 可以并行解码</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#6-rl">6. RL 基础：先把机器人任务翻译成强化学习语言</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#61">6.1 从监督学习到强化学习：差别在哪里</a>
+</li>
+<li class="toc-h3"><a href="#62-mdprl">6.2 MDP：RL 里最基础的五个对象</a>
+</li>
+<li class="toc-h3"><a href="#63-policy">6.3 policy：模型不是只输出一个答案，而是在定义概率分布</a>
+</li>
+<li class="toc-h3"><a href="#64-reward">6.4 reward：环境原始打分，不等于训练信号本身</a>
+</li>
+<li class="toc-h3"><a href="#65-return">6.5 return：从当前往后总共能拿多少奖励</a>
+</li>
+<li class="toc-h3"><a href="#66-value">6.6 value：模型对未来回报的预期</a>
+</li>
+<li class="toc-h3"><a href="#67-q-valuev-valueadvantage">6.7 Q value、V value、advantage 的关系</a>
+</li>
+<li class="toc-h3"><a href="#68-advantage">6.8 advantage：决定要不要学习这次选择</a>
+</li>
+<li class="toc-h3"><a href="#69-value-baseline">6.9 为什么要有 value baseline</a>
+</li>
+<li class="toc-h3"><a href="#610-policy-gradient-logprob-advantage">6.10 policy gradient：为什么 logprob 会乘 advantage</a>
+</li>
+<li class="toc-h3"><a href="#611-on-policyold-policynew-policy">6.11 on-policy、old policy、new policy</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#7-reward-return-advantage">7. 这份代码里的 reward / return / advantage 怎么算</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#71-rewardcomplete-decision-step">7.1 reward：complete 只放到最后一个有效 decision step</a>
+</li>
+<li class="toc-h3"><a href="#72-response-mask-step-advantage-loss">7.2 response mask：只在有效 step 上算 advantage 和 loss</a>
+</li>
+<li class="toc-h3"><a href="#73-return">7.3 return：成功终点奖励如何变成每一步的目标回报</a>
+</li>
+<li class="toc-h3"><a href="#74-gae-td-error-delta">7.4 GAE 的第一步：TD error / delta</a>
+</li>
+<li class="toc-h3"><a href="#75-gae-surprise">7.5 GAE 的第二步：把后面的 surprise 往前传</a>
+</li>
+<li class="toc-h3"><a href="#76-gae-returns-value-head">7.6 GAE 的第三步：得到 returns，训练 value head</a>
+</li>
+<li class="toc-h3"><a href="#77-masked_whiten-advantage">7.7 masked_whiten：为什么 advantage 还要标准化</a>
+</li>
+<li class="toc-h3"><a href="#78-rl">7.8 一条样本在 RL 更新前会保存哪些东西</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#8-ppo-lapo">8. PPO / LAPO 到底在优化什么</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#81-policy-gradient-loss">8.1 先看最朴素的 policy gradient loss</a>
+</li>
+<li class="toc-h3"><a href="#82-ppo-ratio">8.2 PPO ratio：新策略相对旧策略的概率变化</a>
+</li>
+<li class="toc-h3"><a href="#83-ppo-clip">8.3 为什么 PPO 要 clip</a>
+</li>
+<li class="toc-h3"><a href="#84-last-r1-ppo-action">8.4 LaST-R1 的 PPO 不只作用在 action 上</a>
+</li>
+<li class="toc-h3"><a href="#85-action-loss-action-chunk">8.5 action loss：提高或降低同一个 action chunk 的概率</a>
+</li>
+<li class="toc-h3"><a href="#86-latent-losscontinuous-latent-token">8.6 latent loss：continuous latent 没有 token 概率，所以用高斯密度近似</a>
+</li>
+<li class="toc-h3"><a href="#87-latent_end-loss-rl">8.7 latent_end loss：把“想多久”也当成 RL 决策</a>
+</li>
+<li class="toc-h3"><a href="#88-value-loss">8.8 value loss：训练“预期未来回报”的头</a>
+</li>
+<li class="toc-h3"><a href="#89-total-loss-actionlatentendvalue">8.9 total loss：把 action、latent、end、value 合起来</a>
+</li>
+<li class="toc-h3"><a href="#810">8.10 一句话串起来</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#9">9. 训练和推理流程合在一起看</a>
+</li>
+<li class="toc-h2"><a href="#10">10. 常见误解</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#101-advantage-reward">10.1 advantage 不是 reward</a>
+</li>
+<li class="toc-h3"><a href="#102-rl-latent-loss-dinov3-supervised-loss">10.2 RL 阶段的 latent loss 不是 DINOv3 supervised loss</a>
+</li>
+<li class="toc-h3"><a href="#103-old_latents">10.3 old_latents 不是“真实答案”</a>
+</li>
+<li class="toc-h3"><a href="#104-latent_end-token">10.4 &lt;latent_end&gt; 既是 token，也是决策</a>
+</li>
+<li class="toc-h3"><a href="#105-continuous-latent-ppo">10.5 为什么 continuous latent 也能用 PPO</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#11">11. 公式到代码速查表</a>
+</li>
+<li class="toc-h2"><a href="#12">12. 我对代码实现的简明判断</a>
+</ul></li>
+</li></ul>
+</nav>
+
+<main class="main-wrapper">
+  <div class="content-inner" id="main-content">
+<h1 id="last-r1">LaST-R1 论文与代码笔记</h1>
+<blockquote>
+<p>目标：总结 LaST-R1 论文，并结合代码解释三个问题：</p>
+<ol>
+<li>训练时 latent 占位怎么取特征；</li>
+<li>推理/rollout 时 latent CoT 怎么生成、怎么决定停在哪；</li>
+<li>RL 里的 reward / advantage 到底在优化什么。</li>
+</ol>
+<p>本文对应本地材料：</p>
+<ul>
+<li>论文源码：<code>2026-05-08/arXiv-2604.28192v3</code></li>
+<li>代码仓库：<code>2026-05-08/LaST-R1</code></li>
+</ul>
+</blockquote>
+<h2 id="0">0. 一句话总览</h2>
+<p>LaST-R1 想解决的是：机器人 VLA 模型不要直接从「图像 + 指令」跳到 action，而是先在连续 latent 空间里“想几步”，再输出动作；并且这个“想几步”和“怎么想”不只靠模仿学习，而是通过在线 RL 的成功/失败奖励一起优化。</p>
+<p>核心方法叫 <strong>LAPO, Latent-to-Action Policy Optimization</strong>：</p>
+<ul>
+<li>action token 继续用 PPO 风格的概率比值优化；</li>
+<li>连续 latent 没有离散 token 概率，所以用一个高斯近似，把“新策略 latent 是否接近 rollout 时旧策略产生的 latent”变成 likelihood ratio；</li>
+<li><code>&lt;latent_end&gt;</code> 也作为一个要优化的决策，学会什么时候停止 latent CoT。</li>
+</ul>
+<p>注意：本文后面结合代码讲的 PPO/GAE/LAPO 闭环，主要对应公开仓库里的 LIBERO 仿真 RL 路径。论文附录描述的真实世界 RL 采用异步 actor-learner、BC + Q-guided policy improvement、LoRA 更新和 one-step TD target；我在当前公开仓库里没有找到这套真实世界 RL 代码。</p>
+<p>直观讲：</p>
+<ul>
+<li>如果某段 rollout 成功了，advantage 为正，训练会让模型更倾向于复现当时的 action、latent、停止长度；</li>
+<li>如果某段 rollout 比预期差，advantage 为负，训练会降低这些选择再次出现的倾向；</li>
+<li>value head 学的是“当前状态大概能拿多少未来奖励”，它不是直接输出动作，而是给 advantage 提供 baseline。</li>
+</ul>
+<h2 id="1">1. 符号表与读公式路线</h2>
+<p>先把论文符号和代码变量对齐，后面公式就容易读很多。</p>
+<table>
+<thead>
+<tr>
+<th>论文符号</th>
+<th>含义</th>
+<th>代码里大致对应</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>s_t</code></td>
+<td>第 <code>t</code> 个决策点的状态：图像、指令、可选机器人状态</td>
+<td><code>input_ids</code>, <code>pixel_values</code>, <code>attention_mask</code>, <code>image_grid_thw</code></td>
+</tr>
+<tr>
+<td><code>Z_t^old</code></td>
+<td>rollout 时旧策略生成的 latent CoT 序列</td>
+<td><code>old_latents</code></td>
+</tr>
+<tr>
+<td><code>Z_t^theta</code></td>
+<td>policy update 时新策略重新预测的 latent 序列</td>
+<td><code>latents</code></td>
+</tr>
+<tr>
+<td><code>C_t</code></td>
+<td>一次决策输出的 action token 序列</td>
+<td><code>responses</code>，当前配置 <code>N_a = 7 * 8 = 56</code></td>
+</tr>
+<tr>
+<td><code>r_t</code></td>
+<td>环境奖励</td>
+<td><code>token_level_scores</code> / <code>token_level_rewards</code></td>
+</tr>
+<tr>
+<td><code>R_hat_t</code></td>
+<td>return：从当前步往后的折扣总奖励</td>
+<td><code>returns</code></td>
+</tr>
+<tr>
+<td><code>v_t</code> / <code>V(s_t)</code></td>
+<td>value head 对未来 return 的预测</td>
+<td><code>old_values</code>, <code>v_preds</code></td>
+</tr>
+<tr>
+<td><code>A_hat_t</code></td>
+<td>advantage：这步选择比预期好多少</td>
+<td><code>advantages</code></td>
+</tr>
+<tr>
+<td><code>r_t^a(theta)</code></td>
+<td>action PPO ratio</td>
+<td><code>ratio = exp(log_prob - old_log_prob)</code></td>
+</tr>
+<tr>
+<td><code>r_t^z(theta)</code></td>
+<td>latent PPO ratio</td>
+<td><code>latent_ratio = exp(latent_negative_approx_kl)</code></td>
+</tr>
+<tr>
+<td><code>r_t^end(theta)</code></td>
+<td><code>&lt;latent_end&gt;</code> 停止位置的 PPO ratio</td>
+<td><code>end_ratio = exp(latent_end_log_prob - old_latent_end_log_prob)</code></td>
+</tr>
+</tbody>
+</table>
+<p>上表第一列故意用 ASCII 简写，而不是直接把复杂 LaTeX 放进表格单元格。GitHub 对表格里的 inline math 偶尔不稳定；完整数学定义放在表格外的 <code>math</code> fenced block 里更稳。</p>
+<blockquote>
+<p>符号注意：论文里小写 <span class="math inline">$r$</span> 有两种含义。</p>
+<ul>
+<li><span class="math inline">$r_t$</span>：reward，环境在第 <span class="math inline">$t$</span> 步给的奖励；</li>
+<li><span class="math inline">$r_t^a(\theta), r_t^z(\theta), r_t^{end}(\theta)$</span>：ratio，新旧策略的概率/密度比，用在 PPO/LAPO loss 里。</li>
+</ul>
+<p>简单判断：没有上标、出现在 return 里的 <span class="math inline">$r_t$</span> 是 reward；带上标 <span class="math inline">$a/z/end$</span> 且依赖 <span class="math inline">$\theta$</span> 的 <span class="math inline">$r_t^\cdot(\theta)$</span> 是 ratio。</p>
+</blockquote>
+<p>状态、latent 和 action 的对应关系：</p>
+<p><div class="math display">$$\begin{aligned}
+\mathbf{s}_t
+&=
+(\mathbf{o}_t,\mathbf{x},\mathbf{p}_t),
+&
+\mathbf{Z}_t^{old}
+&=
+\{\mathbf{z}_{t,i}^{old}\}_{i=1}^{N_z},
+&
+\mathbf{Z}_t^\theta
+&=
+\{\mathbf{z}_{t,i}^{\theta}\}_{i=1}^{N_z},
+\\
+\mathbf{C}_t
+&=
+\{\mathbf{a}_{t,j}\}_{j=1}^{N_a},
+&
+N_a
+&=
+7\times8=56
+\end{aligned}$$</div></p>
+<p>其中 <code>o_t</code> 对应图像观测，<code>x</code> 对应语言指令，<code>p_t</code> 对应可选机器人 proprioception 状态；代码里它们被整理成 <code>input_ids</code>、<code>pixel_values</code>、<code>attention_mask</code>、<code>image_grid_thw</code> 等模型输入。</p>
+<p>reward、return、value 和 advantage 的对应关系：</p>
+<p><div class="math display">$$\begin{aligned}
+r_t
+&=
+5\cdot\mathbf{1}[\text{complete at step }t]
+\quad
+(\text{当前配置 } \mathrm{KL}=0),
+\\
+\hat{R}_t
+&=
+\sum_{k=t}^{T}\gamma^{k-t}r_k,
+&
+v_t
+&=
+V_\theta(\mathbf{s}_t),
+\\
+\hat{A}_t
+&\approx
+\hat{R}_t-v_t
+\end{aligned}$$</div></p>
+<p>PPO/LAPO 里真正被 <code>advantage</code> 加权的三个 ratio：</p>
+<p><div class="math display">$$\begin{aligned}
+r_t^a(\theta)
+&=
+\exp\left(
+\log \pi_\theta(\mathbf{C}_t\mid\cdot)
+-
+\log \pi_{\theta_{old}}(\mathbf{C}_t\mid\cdot)
+\right),
+\\
+\log \pi_\theta(\mathbf{C}_t\mid\cdot)
+&=
+\sum_{j=1}^{N_a}
+\log \pi_\theta(\mathbf{a}_{t,j}\mid\cdot),
+\\
+r_t^z(\theta)
+&=
+\exp\left(
+-\frac{1}{2\sigma^2}
+\sum_{i=1}^{N_z}
+\left\|
+\mathbf{z}_{t,i}^{old}
+-
+\mathbf{z}_{t,i}^{\theta}
+\right\|^2
+\right),
+\\
+r_t^{end}(\theta)
+&=
+\exp\left(
+\log \pi_\theta(\mathbf{z}_t^{end}\mid\cdot)
+-
+\log \pi_{\theta_{old}}(\mathbf{z}_t^{end}\mid\cdot)
+\right)
+\end{aligned}$$</div></p>
+<p>读公式时可以按这条链路走：</p>
+<div class="codehilite"><pre><span></span><code>环境成功/失败 -&gt; reward r_t -&gt; GAE 算 advantage A_t
+  -&gt; A_t 去加权 action ratio / latent ratio / latent_end ratio
+  -&gt; 好的 rollout 被拉近，坏的 rollout 被推远
+</code></pre></div>
+
+<p>也就是说，公式里最关键的不是某一个 loss 名字，而是 <strong>reward 先变成 advantage，advantage 再决定当前策略要不要复现 rollout 时的 latent/action/停止长度</strong>。</p>
+<h2 id="2">2. 论文在做什么</h2>
+<h3 id="21">2.1 背景</h3>
+<p>VLA 模型把视觉、语言和机器人动作连起来。传统路线常见两种：</p>
+<ul>
+<li><strong>SFT / behavior cloning</strong>：用专家示范训练，模型学“看到这个状态就做这个动作”。缺点是受限于数据，遇到分布外状态容易累积错误。</li>
+<li><strong>RL post-training</strong>：让模型在环境里试错，根据成功/失败奖励更新策略。缺点是很多 VLA RL 只优化 action，不优化中间推理过程。</li>
+</ul>
+<p>LaST-R1 的出发点是：复杂操作不应该只靠 action 层面的试错，还应该让环境反馈塑造模型内部的物理理解。</p>
+<h3 id="22-sft-rl">2.2 论文里的 SFT / RL 目标</h3>
+<p>论文先把 VLA 看成一个策略 <span class="math inline">$\pi_\theta$</span>：输入当前状态 <span class="math inline">$\mathbf{s}_t$</span>，输出未来一个 action chunk <span class="math inline">$\mathbf{a}_{t:t+H}$</span>。</p>
+<p>SFT 的目标是模仿专家动作：</p>
+<p><div class="math display">$$\mathcal{J}_{\text{SFT}}(\theta)
+=
+\mathbb{E}_{(\mathbf{s}_t,\mathbf{a}_{t:t+H})\sim\mathcal{D}}
+\left[
+\log \pi_\theta(\mathbf{a}_{t:t+H}\mid\mathbf{s}_t)
+\right]$$</div></p>
+<p>白话说：专家在这个状态下做了这串动作，那就提高模型输出这串动作的概率。这里没有环境试错，只有“像不像专家”。</p>
+<p>RL 的目标是最大化轨迹上的折扣奖励：</p>
+<p><div class="math display">$$\mathcal{J}_{\text{RL}}(\theta)
+=
+\mathbb{E}_{\tau\sim\pi_\theta}
+\left[
+\sum_{t=0}^{T}\gamma^t r_t
+\right]$$</div></p>
+<p>RL 的最终目标始终是最大化 reward；但策略更新时不直接用单步 reward <span class="math inline">$r_t$</span>，而是用由 reward 推导出来的 return / advantage 作为权重。Advantage 不只是为了解决 reward 稀疏，也用于减小策略梯度的方差，让模型学习“比预期更好/更差”的动作。论文使用的GAE 则是一种从稀疏 reward 和 value 估计中计算 advantage 的方法。</p>
+<p>策略梯度常写成：</p>
+<p><div class="math display">$$\nabla_\theta \mathcal{J}_{\text{RL}}(\theta)
+=
+\mathbb{E}_{\tau\sim\pi_\theta}
+\left[
+\sum_{t=0}^{T}
+\nabla_\theta \log \pi_\theta(\mathbf{a}_{t:t+H}\mid\mathbf{s}_t)\,\hat{A}_t
+\right]$$</div></p>
+<p>这里 <span class="math inline">$\hat{A}_t$</span> 乘在 logprob 前面，含义是“这次动作到底值不值得学”。如果 <span class="math inline">$\hat{A}_t>0$</span>，说明这次选择比模型预期更好，梯度会提高它的概率；如果 <span class="math inline">$\hat{A}_t&lt;0$</span>，说明比预期差，梯度会降低它的概率。LaST-R1 后面做的事，就是把这个思想从 action 扩展到 latent CoT 和 <code>&lt;latent_end&gt;</code> 停止位置。</p>
+<h3 id="23-last-r1">2.3 LaST-R1 的模型结构</h3>
+<p>论文模型基于 Qwen3-VL-4B，输入包括：</p>
+<ul>
+<li>当前图像观测；</li>
+<li>语言任务指令；</li>
+<li>可选 proprioception 状态；</li>
+<li>latent CoT 占位；</li>
+<li>action token 占位。</li>
+</ul>
+<p>输出顺序是：</p>
+<div class="codehilite"><pre><span></span><code>image + instruction
+  -&gt; latent_start
+  -&gt; latent reasoning embeddings
+  -&gt; latent_end
+  -&gt; action tokens
+</code></pre></div>
+
+<p>动作是连续 7-DoF end-effector 控制量，但代码里先离散成 token：</p>
+<ul>
+<li>每个 action step 有 7 个 action token；</li>
+<li>一个 chunk 有 8 个未来 action step；</li>
+<li>所以一次决策输出 <code>7 * 8 = 56</code> 个 action token。</li>
+</ul>
+<p>代码配置见 <code>scripts/run_libero_rl_training.sh</code>：</p>
+<div class="codehilite"><pre><span></span><code><span class="nv">action_token_len</span><span class="o">=</span><span class="m">7</span>
+<span class="nv">action_chunks_len</span><span class="o">=</span><span class="m">8</span>
+<span class="nv">latent_length</span><span class="o">=</span><span class="m">8</span>
+<span class="nv">latent_end_num</span><span class="o">=</span><span class="m">4</span>
+<span class="nv">latent_mode</span><span class="o">=</span><span class="s1">&#39;ar&#39;</span>
+<span class="nv">value_choice</span><span class="o">=</span><span class="s1">&#39;latent_end&#39;</span>
+</code></pre></div>
+
+<h3 id="24-latent">2.4 latent 表征来自哪里</h3>
+<p>论文中的 supervised warm-up / pretraining 阶段，latent target 不是模型随便学出来的，而是离线预计算：</p>
+<ol>
+<li>用 DINOv3 提取图像 <code>&lt;CLS&gt;</code> token，维度是 4096；</li>
+<li>按通道特征幅值做 top-k，取 <code>k = 2560</code>；</li>
+<li>这样得到和 Qwen3-VL hidden size 对齐的 dense latent target；</li>
+<li>这些 target 离线存好，训练时直接加载，不在训练/推理时跑 DINOv3。</li>
+</ol>
+<p>用公式写就是：</p>
+<p><div class="math display">$$f_d \in \mathbb{R}^{1\times4096},
+\qquad
+\mathbf{z}^{GT}=\text{TopK}_{k=2560}(f_d)
+\in \mathbb{R}^{1\times2560}$$</div></p>
+<p>其中 <span class="math inline">$f_d$</span> 是 DINOv3 的 <code>&lt;CLS&gt;</code> 特征，<span class="math inline">$\mathbf{z}^{GT}$</span> 是离线得到的 latent 监督目标。它的维度被裁到 2560，是为了和 VLA/LLM hidden size 对齐。</p>
+<p>论文认为这样比 global pooling、conv downsampling、Q-Former 更好，因为 DINOv3 的全局视觉语义和结构先验更强。</p>
+<p>先回答一个容易混的问题：<strong>DINOv3 <code>&lt;CLS&gt;</code> 单次提取本身没有时间维度</strong>。它是对一张图像得到的全局向量：</p>
+<div class="codehilite"><pre><span></span><code>一张图 I_t -&gt; DINOv3 &lt;CLS&gt; -&gt; f_d(t) shape = [1, 4096]
+</code></pre></div>
+
+<p>如果数据管线对一条轨迹里的多帧都离线提取 DINOv3 特征，那么时间维度来自“你选了哪些帧”，而不是来自 <code>&lt;CLS&gt;</code> token 自己。也就是说，可能的数据张量会像：</p>
+<div class="codehilite"><pre><span></span><code>T 张图像 -&gt; T 个 &lt;CLS&gt; -&gt; [T, 4096]
+</code></pre></div>
+
+<p>但每个 <code>&lt;CLS&gt;</code> 仍然只是单帧图像的全局特征。论文说 latent 用来建模 future dynamics，是指模型自回归地产生 <code>N_z</code> 个 latent reasoning embeddings；<code>N_z</code> 是内部“想几步”的长度，不等于 action chunk 的未来动作步数。</p>
+<p>对当前 LIBERO 设置，论文写的是单前视当前观测，代码默认也从当前 <code>obs["full_image"]</code> 构造输入；未来动作步数由下面这个配置控制：</p>
+<div class="codehilite"><pre><span></span><code>action_chunks_len = 8
+</code></pre></div>
+
+<p>所以这里有三种“长度”不要混：</p>
+<table>
+<thead>
+<tr>
+<th>长度</th>
+<th>控制什么</th>
+<th>当前设置</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>DINO <code>&lt;CLS&gt;</code> 数量</td>
+<td>离线选了多少帧做 latent target</td>
+<td>论文说对 frames 离线预计算，公开代码未展开完整生成管线</td>
+</tr>
+<tr>
+<td><code>N_z</code> / <code>latent_length</code></td>
+<td>模型内部 latent CoT 最多想几步</td>
+<td><code>8</code></td>
+</tr>
+<tr>
+<td><code>action_chunks_len</code></td>
+<td>一次输出多少个未来 action step</td>
+<td><code>8</code></td>
+</tr>
+</tbody>
+</table>
+<p>如果看到 <code>num_images_in_input &gt; 1</code>，那主要是多相机视角，例如 front + wrist image，不是“输入未来观测帧”。</p>
+<p>你问的关键其实是：<strong>如果 latent CoT 长度是 2 或 8，<code>z^GT</code> 到底取哪几个？</strong></p>
+<p>按论文文字最保守的理解，<code>z^GT</code> 不是只有一个向量，而是离线为轨迹帧准备好的一串 future-state latent targets。对一个训练样本的当前时刻 <code>t</code>，可以先想象有一个离线 target buffer：</p>
+<div class="codehilite"><pre><span></span><code>轨迹图像:
+I_t, I_{t+1}, I_{t+2}, I_{t+3}, ...
+
+离线 DINOv3:
+I_{t+u1} -&gt; DINO &lt;CLS&gt; -&gt; TopK -&gt; z^GT_1
+I_{t+u2} -&gt; DINO &lt;CLS&gt; -&gt; TopK -&gt; z^GT_2
+I_{t+u3} -&gt; DINO &lt;CLS&gt; -&gt; TopK -&gt; z^GT_3
+...
+I_{t+u8} -&gt; DINO &lt;CLS&gt; -&gt; TopK -&gt; z^GT_8
+
+得到最多 8 个监督槽:
+[z^GT_1, z^GT_2, z^GT_3, z^GT_4, z^GT_5, z^GT_6, z^GT_7, z^GT_8]
+</code></pre></div>
+
+<p>这里的 <code>u1..u8</code> 表示从当前时刻往后取哪些 future observation frames。论文和公开代码没有给出具体 offset 规则，比如是否连续取 <code>t+1..t+8</code>，还是在一个更长 horizon 内均匀采样；所以不能把具体步长写死。但可以确定的是：如果要监督 2 个或 8 个 latent，合理形式必须是“取 2 个或 8 个 target 槽”，不是把当前帧的同一个 <code>&lt;CLS&gt;</code> 简单复制 2 次或 8 次。</p>
+<p>如果本样本采样到 latent CoT 长度 <code>L=2</code>，就只用前 2 个 target：</p>
+<div class="codehilite"><pre><span></span><code>模型输出:
+&lt;latent_start&gt; -&gt; z^theta_1 -&gt; z^theta_2 -&gt; &lt;latent_end&gt; -&gt; action tokens
+
+监督 target:
+                 z^GT_1       z^GT_2
+
+loss:
+cos(z^theta_1, z^GT_1)
+cos(z^theta_2, z^GT_2)
+CE(&lt;latent_end&gt; at length 2)
+CE(56 action tokens)
+
+不使用:
+z^GT_3 ... z^GT_8
+</code></pre></div>
+
+<p>如果本样本采样到 latent CoT 长度 <code>L=8</code>，就用完整 8 个 target：</p>
+<div class="codehilite"><pre><span></span><code>模型输出:
+&lt;latent_start&gt;
+  -&gt; z^theta_1 -&gt; z^theta_2 -&gt; z^theta_3 -&gt; z^theta_4
+  -&gt; z^theta_5 -&gt; z^theta_6 -&gt; z^theta_7 -&gt; z^theta_8
+  -&gt; &lt;latent_end&gt; -&gt; action tokens
+
+监督 target:
+     z^GT_1       z^GT_2       z^GT_3       z^GT_4
+     z^GT_5       z^GT_6       z^GT_7       z^GT_8
+
+loss:
+sum_{i=1..8} cos(z^theta_i, z^GT_i)
+CE(&lt;latent_end&gt; at length 8)
+CE(56 action tokens)
+</code></pre></div>
+
+<p>和代码里的 grouped layout 对齐看，当前 <code>latent_length=8, latent_end_num=4, G=2</code>，候选停止点是：</p>
+<div class="codehilite"><pre><span></span><code>候选 1: z1 z2 &lt;latent_end&gt;                         -&gt; L = 2
+候选 2: z1 z2 &lt;latent_end&gt; z3 z4 &lt;latent_end&gt;       -&gt; L = 4
+候选 3: z1 z2 &lt;latent_end&gt; z3 z4 &lt;latent_end&gt;
+        z5 z6 &lt;latent_end&gt;                         -&gt; L = 6
+候选 4: z1 z2 &lt;latent_end&gt; z3 z4 &lt;latent_end&gt;
+        z5 z6 &lt;latent_end&gt; z7 z8 &lt;latent_end&gt;       -&gt; L = 8
+</code></pre></div>
+
+<p>所以 SFT 里的变长监督可以理解成：</p>
+<div class="codehilite"><pre><span></span><code>先离线准备最多 8 个 z^GT target
+训练时采样 L in {2,4,6,8}
+只监督前 L 个 z^theta_i 对齐 z^GT_i
+只在第 L 个 latent 后的 &lt;latent_end&gt; 位置算停止 CE
+后面的 z^GT / latent 槽通过 mask 忽略
+</code></pre></div>
+
+<p>SFT / warm-up 里输出端 latent CoT 长度确实可以变化。论文附录说 LIBERO 多任务 warm-up 会对每个样本从 <code>{2, 4, 6, 8}</code> 均匀采样 reasoning length；real-world 单任务则固定长度 8。可以把一个样本的 SFT 目标写成：</p>
+<p><div class="math display">$$\mathcal{L}_{\text{SFT}}
+=
+\lambda_z
+\frac{1}{L}
+\sum_{i=1}^{L}
+\left(
+1-\cos(\mathbf{z}_{i}^{\theta}, \mathbf{z}_{i}^{GT})
+\right)
++
+\lambda_{end}
+\operatorname{CE}(\texttt{&lt;latent\_end>})
++
+\lambda_a
+\sum_{j=1}^{56}
+\operatorname{CE}(\mathbf{a}_j)$$</div></p>
+<p>其中 <code>L</code> 是本样本选中的 latent 长度，比如 4；latent loss 只算前 <code>L</code> 个 chosen prefix，后面预留但未选中的 latent 槽不参与监督。论文给的 warm-up loss 权重大意是：</p>
+<div class="codehilite"><pre><span></span><code>latent cosine similarity loss : &lt;latent_end&gt; CE : action CE = 1 : 0.1 : 1
+</code></pre></div>
+
+<p>所以“变长 latent 怎么做 loss”的答案是：工程上仍然可以预留最大长度 8，再用 <code>chosen_length</code> / <code>latent_mask</code> 只让有效前缀参与 latent loss，同时用 <code>&lt;latent_end&gt;</code> 的 CE 监督应该在哪个候选位置停止。</p>
+<p>注意：当前仓库公开代码主要展示 RL/LAPO 路径；DINOv3 latent 离线生成和 SFT 数据管线没有完整展开。但模型 forward 里已经有 <code>latent_gt_embeds</code> 这种接口，可以把外部 latent target/rollout latent 写入占位槽。关于未来帧和 DINO latent target 的精确对齐方式，本文只按论文公开描述做保守解释，不虚构未公开实现细节。</p>
+<h3 id="25-lapo">2.5 LAPO 的核心思想</h3>
+<p>普通 PPO 优化 action：</p>
+<div class="codehilite"><pre><span></span><code>新策略生成同一个 action 的概率 / 旧策略生成这个 action 的概率
+</code></pre></div>
+
+<p>LaST-R1 多加了 latent：</p>
+<div class="codehilite"><pre><span></span><code>新策略生成同一个 latent trajectory 的密度 / 旧策略生成这个 latent trajectory 的密度
+</code></pre></div>
+
+<p>但 latent 是连续向量，没有 vocab softmax 概率。论文假设 latent 服从以当前模型输出为均值的各向同性高斯：</p>
+<p><div class="math display">$$r_t^z(\theta)
+=
+\exp\left(
+-\frac{1}{2\sigma^2}
+\sum_{i=1}^{N_z}
+\left\|
+\mathbf{z}_{t,i}^{old}-\mathbf{z}_{t,i}^{\theta}
+\right\|^2
+\right)$$</div></p>
+<p>这条式子不是凭空把 MSE 塞进 PPO，而是来自一个高斯密度的比值。对单个 latent，先假设当前策略输出的 <span class="math inline">$\mathbf{z}_{t,i}^{\theta}$</span> 是高斯均值，方差固定为 <span class="math inline">$\sigma^2 I$</span>：</p>
+<p><div class="math display">$$\pi_\theta(\mathbf{x})
+=
+\mathcal{N}(\mathbf{x}; \mathbf{z}_{t,i}^{\theta}, \sigma^2 I)
+=
+\frac{1}{(2\pi\sigma^2)^{D/2}}
+\exp\left(
+-\frac{1}{2\sigma^2}
+\|\mathbf{x}-\mathbf{z}_{t,i}^{\theta}\|^2
+\right)$$</div></p>
+<p>现在把 rollout 时旧策略真的采到的 latent <span class="math inline">$\mathbf{z}_{t,i}^{old}$</span> 代进去：</p>
+<p><div class="math display">$$\pi_\theta(\mathbf{z}_{t,i}^{old})
+=
+\frac{1}{(2\pi\sigma^2)^{D/2}}
+\exp\left(
+-\frac{1}{2\sigma^2}
+\|\mathbf{z}_{t,i}^{old}-\mathbf{z}_{t,i}^{\theta}\|^2
+\right)$$</div></p>
+<p>而旧策略那一侧按“旧策略均值就是当时采到的 rollout latent”近似：</p>
+<p><div class="math display">$$\pi_{\theta_{old}}(\mathbf{z}_{t,i}^{old})
+=
+\frac{1}{(2\pi\sigma^2)^{D/2}}
+\exp(0)$$</div></p>
+<p>两边一除，前面的归一化常数抵消，就得到：</p>
+<p><div class="math display">$$r_{t,i}^{z}(\theta)
+=
+\exp\left(
+-\frac{1}{2\sigma^2}
+\|\mathbf{z}_{t,i}^{old}-\mathbf{z}_{t,i}^{\theta}\|^2
+\right)$$</div></p>
+<p>整段 latent CoT 再假设条件独立，单个 ratio 相乘，乘积就变成指数里的平方距离求和：</p>
+<p><div class="math display">$$\prod_i r_{t,i}^{z}(\theta)
+=
+\exp\left(
+-\frac{1}{2\sigma^2}
+\sum_i
+\|\mathbf{z}_{t,i}^{old}-\mathbf{z}_{t,i}^{\theta}\|^2
+\right)$$</div></p>
+<p>所以代码里看到的 <code>diff2</code> 像 MSE，但它在这里扮演的是“高斯 log density 里的 Mahalanobis distance”。这不是普通 supervised MSE loss，而是把连续 latent 距离转成 PPO 可以使用的 likelihood ratio surrogate。</p>
+<p>所以 latent loss 的直觉很简单：</p>
+<ul>
+<li>advantage &gt; 0：新 latent 要靠近 old latent，复现“成功时的思考路径”；</li>
+<li>advantage &lt; 0：新 latent 要远离 old latent，减少“失败时的思考路径”；</li>
+<li>PPO clipping 限制更新幅度，防止一次把策略改太猛。</li>
+</ul>
+<h2 id="3">3. 代码地图</h2>
+<p>重点文件：</p>
+<ul>
+<li>
+<p><code>verl/workers/rollout/rob_rollout.py</code></p>
+<ul>
+<li>构造输入；</li>
+<li>与 LIBERO 环境交互；</li>
+<li>rollout 时生成 latent、action、value；</li>
+<li>保存 <code>old_latents</code>、<code>old_log_probs</code>、<code>old_values</code>、<code>chosen_length</code> 等。</li>
+</ul>
+</li>
+<li>
+<p><code>transformers/models/qwen3_vl/modeling_qwen3_vl.py</code></p>
+<ul>
+<li>Qwen3-VL forward；</li>
+<li>latent/action 占位 embedding 的处理；</li>
+<li>value head；</li>
+<li>policy update 时从 hidden states 取 predicted latents。</li>
+</ul>
+</li>
+<li>
+<p><code>transformers/integrations/sdpa_attention.py</code></p>
+<ul>
+<li>修改 attention mask；</li>
+<li>latent 部分 causal；</li>
+<li>action 部分 full attention，从而 56 个 action token 可以并行解码。</li>
+</ul>
+</li>
+<li>
+<p><code>verl/workers/actor/dp_rob.py</code></p>
+<ul>
+<li>actor 更新；</li>
+<li>调用模型重新算 new logprob / new latent / value；</li>
+<li>汇总 action loss、latent loss、latent_end loss、value loss。</li>
+</ul>
+</li>
+<li>
+<p><code>verl/trainer/ppo/core_algos.py</code></p>
+<ul>
+<li>GAE；</li>
+<li>PPO policy loss；</li>
+<li>latent PPO loss；</li>
+<li>value loss。</li>
+</ul>
+</li>
+<li>
+<p><code>verl/trainer/main_ppo.py</code></p>
+<ul>
+<li>reward manager；</li>
+<li>把 rollout 是否成功 <code>complete</code> 转成 terminal reward。</li>
+</ul>
+</li>
+</ul>
+<h2 id="4-latent">4. 训练时 latent 占位怎么取特征</h2>
+<p>这里要区分两个阶段：</p>
+<ul>
+<li>warm-up / SFT 阶段：论文说 latent target 来自离线 DINOv3 <code>&lt;CLS&gt;</code> top-k 特征；</li>
+<li>RL policy update 阶段：代码用 rollout 时旧策略自己生成的 <code>old_latents</code> 作为待复现/待远离的 latent 样本。</li>
+</ul>
+<p>对应到论文符号，rollout 阶段保存的是：</p>
+<p><div class="math display">$$\mathbf{Z}_t^{old}
+=
+\{\mathbf{z}_{t,i}^{old}\}_{i=1}^{N_z}$$</div></p>
+<p>update 阶段当前策略重新预测的是：</p>
+<p><div class="math display">$$\mathbf{Z}_t^\theta
+=
+\{\mathbf{z}_{t,i}^{\theta}\}_{i=1}^{N_z}$$</div></p>
+<p>latent loss 比较的就是这两组向量。<code>old</code> 不是“真值标签”，而是旧策略在环境里真的走过的 latent 轨迹；它是好是坏，要看这条轨迹后面算出的 advantage。</p>
+<p>下面主要结合代码讲 RL update，因为这部分代码最完整。</p>
+<h3 id="41-latent">4.1 输入序列里 latent 占位怎么放</h3>
+<p>在 <code>rob_rollout.py::process_input</code> 里，如果启用 latent 且 <code>latent_end_num=4, latent_bind=0</code>，代码会在 prompt 后拼一个固定 tail：</p>
+<div class="codehilite"><pre><span></span><code><span class="n">group_tokens</span> <span class="o">=</span> <span class="p">[</span><span class="n">latent_pad_id</span><span class="p">]</span> <span class="o">*</span> <span class="n">G</span> <span class="o">+</span> <span class="p">[</span><span class="n">latent_end_id</span><span class="p">]</span>
+<span class="n">body_tokens</span> <span class="o">=</span> <span class="n">group_tokens</span> <span class="o">*</span> <span class="n">latent_end_num</span>
+<span class="n">tail_tokens</span> <span class="o">=</span> <span class="p">[</span><span class="n">latent_start_id</span><span class="p">]</span> <span class="o">+</span> <span class="n">body_tokens</span> <span class="o">+</span> <span class="p">[</span><span class="n">action_0_id</span><span class="p">]</span> <span class="o">*</span> <span class="n">action_token_num</span>
+</code></pre></div>
+
+<p>当前脚本配置：</p>
+<div class="codehilite"><pre><span></span><code>latent_length = 8
+latent_end_num = 4
+G = latent_length / latent_end_num = 2
+action_token_num = 8 * 7 = 56
+</code></pre></div>
+
+<p>所以 tail 形状是：</p>
+<div class="codehilite"><pre><span></span><code>&lt;latent_start&gt;
+  &lt;latent_pad&gt; &lt;latent_pad&gt; &lt;latent_end&gt;
+  &lt;latent_pad&gt; &lt;latent_pad&gt; &lt;latent_end&gt;
+  &lt;latent_pad&gt; &lt;latent_pad&gt; &lt;latent_end&gt;
+  &lt;latent_pad&gt; &lt;latent_pad&gt; &lt;latent_end&gt;
+  &lt;action_0&gt; * 56
+</code></pre></div>
+
+<p>这 4 个 <code>&lt;latent_end&gt;</code> 不是都一定会被用作最终停止点，而是 4 个候选停止位置，对应 latent 长度 <code>{2, 4, 6, 8}</code>。</p>
+<h3 id="42-action-latent-embedding">4.2 action 占位和 latent 占位的 embedding 会被改写</h3>
+<p>在 <code>Qwen3VLModel.forward</code> 里：</p>
+<ol>
+<li>如果传了 <code>action_length</code>，最后 <code>action_length</code> 个 action 占位 embedding 被置零：</li>
+</ol>
+<div class="codehilite"><pre><span></span><code><span class="n">inputs_embeds</span><span class="p">[:,</span> <span class="o">-</span><span class="n">action_length</span><span class="p">:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="mi">0</span>
+</code></pre></div>
+
+<p>这意味着 action token 的输入不是 <code>&lt;action_0&gt;</code> 本身的 embedding，而是全零占位。模型通过这些零向量位置输出 hidden state，再用 <code>lm_head</code> 预测真正的 action token。</p>
+<ol>
+<li>如果没有 <code>latent_gt_embeds</code>，latent 占位也会被置零：</li>
+</ol>
+<div class="codehilite"><pre><span></span><code><span class="n">inputs_embeds</span><span class="p">[:,</span> <span class="o">-</span><span class="p">(</span><span class="n">latent_length</span> <span class="o">+</span> <span class="n">action_length</span><span class="p">):</span><span class="n">latent_end</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="mi">0</span>
+</code></pre></div>
+
+<ol>
+<li>如果传了 <code>latent_gt_embeds</code>，代码会把这些 continuous latent 写入 <code>&lt;latent_pad&gt;</code> 对应的位置：</li>
+</ol>
+<div class="codehilite"><pre><span></span><code><span class="n">inputs_embeds</span><span class="p">[</span><span class="n">b</span><span class="p">,</span> <span class="n">dst</span><span class="p">:</span><span class="n">dst</span> <span class="o">+</span> <span class="n">G</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">latent_emb</span><span class="p">[</span><span class="n">b</span><span class="p">,</span> <span class="n">lat_idx</span><span class="p">:</span><span class="n">lat_idx</span> <span class="o">+</span> <span class="n">G</span><span class="p">,</span> <span class="p">:]</span>
+</code></pre></div>
+
+<p>对于 <code>latent_end_num=4</code>，每组是：</p>
+<div class="codehilite"><pre><span></span><code>G 个 latent 槽 + 1 个 &lt;latent_end&gt; token
+</code></pre></div>
+
+<p>所以写入位置是每组前 <code>G</code> 个 <code>&lt;latent_pad&gt;</code>，<code>&lt;latent_end&gt;</code> 仍保留为普通 token embedding。</p>
+<h3 id="43-policy-update-old_latents">4.3 policy update 时 old_latents 是怎么用的</h3>
+<p>在 rollout 阶段，旧策略已经生成了一串 latent，保存在 batch 里：</p>
+<div class="codehilite"><pre><span></span><code><span class="s2">&quot;old_latents&quot;</span><span class="p">:</span> <span class="n">inferred_latents</span>
+<span class="s2">&quot;latent_mask&quot;</span><span class="p">:</span> <span class="n">latent_mask</span>
+<span class="s2">&quot;chosen_length&quot;</span><span class="p">:</span> <span class="n">chosen_length</span>
+<span class="s2">&quot;old_latent_end_log_prob&quot;</span><span class="p">:</span> <span class="n">old_latent_end_log_prob</span>
+</code></pre></div>
+
+<p>到了 <code>dp_rob.py::update_policy</code>，这些东西会被取出来，传给模型：</p>
+<div class="codehilite"><pre><span></span><code><span class="n">action_logits</span><span class="p">,</span> <span class="n">v_preds</span><span class="p">,</span> <span class="n">latents</span><span class="p">,</span> <span class="n">latent_end_logits</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">actor_module</span><span class="p">(</span>
+    <span class="o">...</span><span class="p">,</span>
+    <span class="n">old_latents</span><span class="o">=</span><span class="n">old_latents</span><span class="p">,</span>
+    <span class="n">latent_length</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">latent_length</span><span class="p">,</span>
+    <span class="n">latent_mode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">latent_mode</span><span class="p">,</span>
+    <span class="n">latent_end_num</span><span class="o">=...</span><span class="p">,</span>
+    <span class="n">latent_mask</span><span class="o">=</span><span class="n">latent_mask</span><span class="p">,</span>
+    <span class="n">chosen_length</span><span class="o">=</span><span class="n">chosen_length</span><span class="p">,</span>
+<span class="p">)</span>
+</code></pre></div>
+
+<p>模型内部走 <code>Qwen3VLForConditionalGeneration.forward</code> 的 grouped AR update 分支：</p>
+<div class="codehilite"><pre><span></span><code><span class="k">if</span> <span class="n">latent_length</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">latent_end_id</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">latent_end_num</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">old_latents</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+</code></pre></div>
+
+<p>这里会把 <code>old_latents</code> 当成 <code>latent_gt_embeds</code> 写入 latent pad 槽，相当于 teacher forcing：</p>
+<div class="codehilite"><pre><span></span><code><span class="n">latent_gt_embeds</span><span class="o">=</span><span class="n">old_latents</span>
+<span class="n">latent_gt_pad_start</span><span class="o">=</span><span class="n">latent_pad_start</span>
+</code></pre></div>
+
+<p>这一步的目的不是“让 old_latents 再生成一次 action”这么简单，而是让新策略在同一个 rollout context 下重新输出：</p>
+<ul>
+<li>new action logprob；</li>
+<li>new predicted latents；</li>
+<li>new <code>&lt;latent_end&gt;</code> logprob；</li>
+<li>new value。</li>
+</ul>
+<p>PPO 更新比较的就是 old 和 new 的差别。</p>
+<h3 id="44-predicted-latent-hidden-state">4.4 predicted latent 到底从哪个 hidden state 取</h3>
+<p>这是最容易混的地方。</p>
+<p>代码不是从 <code>&lt;latent_pad&gt;</code> 自己位置直接取 latent target，而是从“预测这个 latent 的前一个位置”的 hidden state 取特征：</p>
+<div class="codehilite"><pre><span></span><code><span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">latent_length</span><span class="p">):</span>
+    <span class="n">g</span> <span class="o">=</span> <span class="n">i</span> <span class="o">//</span> <span class="n">G</span>
+    <span class="n">j</span> <span class="o">=</span> <span class="n">i</span> <span class="o">%</span> <span class="n">G</span>
+    <span class="n">pad_abs</span> <span class="o">=</span> <span class="n">latent_pad_start</span> <span class="o">+</span> <span class="n">g</span> <span class="o">*</span> <span class="p">(</span><span class="n">G</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="n">j</span> <span class="o">-</span> <span class="mi">1</span>
+    <span class="n">inferred_latents</span><span class="p">[:,</span> <span class="n">i</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">hidden_states</span><span class="p">[:,</span> <span class="n">pad_abs</span><span class="p">,</span> <span class="p">:]</span>
+</code></pre></div>
+
+<p>以 <code>G=2</code> 为例，一组位置如下：</p>
+<div class="codehilite"><pre><span></span><code>位置 s-1: &lt;latent_start&gt; 的 hidden state
+位置 s:   old_latent[0] 写入的槽
+位置 s+1: old_latent[1] 写入的槽
+位置 s+2: &lt;latent_end&gt;
+</code></pre></div>
+
+<p>取 latent 特征时：</p>
+<table>
+<thead>
+<tr>
+<th>要比较的 latent</th>
+<th>取哪个 hidden state</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>latent[0]</td>
+<td><code>hidden_states[s-1]</code></td>
+<td>prompt + <code>&lt;latent_start&gt;</code> 后，模型预测第 1 个 latent</td>
+</tr>
+<tr>
+<td>latent[1]</td>
+<td><code>hidden_states[s]</code></td>
+<td>喂入 old latent[0] 后，模型预测第 2 个 latent</td>
+</tr>
+<tr>
+<td><code>&lt;latent_end&gt;</code> logit</td>
+<td><code>hidden_states[s+1]</code></td>
+<td>喂入第 2 个 latent 后，预测是否该结束</td>
+</tr>
+<tr>
+<td>value</td>
+<td><code>hidden_states[s+2]</code></td>
+<td><code>&lt;latent_end&gt;</code> token 聚合后的状态价值</td>
+</tr>
+</tbody>
+</table>
+<p>所以：<strong>latent 占位写入的是 old latent；训练时拿来优化的新 latent，是这些占位前一拍的 hidden state。</strong></p>
+<p>这符合自回归语言模型的习惯：位置 <code>t</code> 的 hidden state 用来预测位置 <code>t+1</code> 的内容。</p>
+<p>数学上可以写成：</p>
+<p><div class="math display">$$\mathbf{z}_{t,i}^{\theta}
+=
+h_{\text{pos}(i)-1}$$</div></p>
+<p>这里 <span class="math inline">$h_{\text{pos}(i)-1}$</span> 是第 <code>i</code> 个 latent 槽前一位置的 hidden state。代码里的：</p>
+<div class="codehilite"><pre><span></span><code><span class="n">pad_abs</span> <span class="o">=</span> <span class="n">latent_pad_start</span> <span class="o">+</span> <span class="n">g</span> <span class="o">*</span> <span class="p">(</span><span class="n">G</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="n">j</span> <span class="o">-</span> <span class="mi">1</span>
+</code></pre></div>
+
+<p>最后的 <code>- 1</code> 正是在实现这个 <span class="math inline">$\text{pos}(i)-1$</span>。没有这个 <code>-1</code>，就会变成从已经写入 old latent 的当前位置取 hidden state，语义就错了。</p>
+<h3 id="45-latent-loss">4.5 latent loss 怎么和这些特征相连</h3>
+<p><code>dp_rob.py</code> 把模型返回的 <code>latents</code> 和 rollout 存的 <code>old_latents</code> 传给：</p>
+<div class="codehilite"><pre><span></span><code><span class="n">core_algos</span><span class="o">.</span><span class="n">compute_policy_loss_with_latent</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+</code></pre></div>
+
+<p>在 <code>core_algos.py</code> 里：</p>
+<div class="codehilite"><pre><span></span><code><span class="n">diff2</span> <span class="o">=</span> <span class="p">(</span><span class="n">old_latents</span> <span class="o">-</span> <span class="n">latents</span><span class="p">)</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">diff2</span> <span class="o">=</span> <span class="n">diff2</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">latent_length</span><span class="p">)</span>
+<span class="k">if</span> <span class="n">latent_mask</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">diff2</span> <span class="o">*=</span> <span class="n">per_step_mask</span>
+<span class="n">diff2</span> <span class="o">=</span> <span class="n">diff2</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+
+<span class="n">latent_negative_approx_kl</span> <span class="o">=</span> <span class="o">-</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">diff2</span> <span class="o">/</span> <span class="p">(</span><span class="n">latent_sigma</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+<span class="n">latent_ratio</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">latent_negative_approx_kl</span><span class="p">)</span>
+</code></pre></div>
+
+<p>这里的 <code>latent_ratio</code> 就是论文里的：</p>
+<p><div class="math display">$$r_t^z(\theta)
+=
+\frac{\pi_\theta(\mathbf{Z}_t^{old}\mid\cdot)}
+{\pi_{\theta_{old}}(\mathbf{Z}_t^{old}\mid\cdot)}
+=
+\exp\left(
+-\frac{1}{2\sigma^2}
+\sum_{i=1}^{N_z}
+\left\|
+\mathbf{z}_{t,i}^{old}-\mathbf{z}_{t,i}^{\theta}
+\right\|^2
+\right)$$</div></p>
+<p>代码里 <code>diff2</code> 就是 <span class="math inline">$\sum_i \|\mathbf{z}_{t,i}^{old}-\mathbf{z}_{t,i}^{\theta}\|^2$</span>，<code>latent_sigma</code> 就是 <span class="math inline">$\sigma$</span>。当前默认 <code>latent_sigma=10</code>，所以距离越小，<code>latent_ratio</code> 越接近 1；距离越大，<code>latent_ratio</code> 越接近 0。</p>
+<p><code>latent_mask</code> 用来处理动态长度：如果本次选择长度是 4，就只让前 4 个 latent 参与 loss，后面的候选 latent 不算。</p>
+<h2 id="5-rollout-latent-cot-rollout">5. 推理 / rollout 时 latent CoT 怎么 rollout</h2>
+<p>代码里的 rollout 发生在 <code>rob_rollout.py::_generate_one_step_qwen_oft</code>。</p>
+<h3 id="51-step">5.1 每个环境 step 做什么</h3>
+<p>对 LIBERO 来说，外层 rollout loop 是：</p>
+<div class="codehilite"><pre><span></span><code>当前环境观测 obs
+  -&gt; process_input(obs, task_description)
+  -&gt; _generate_one_step(...)
+  -&gt; 得到 8-step action chunk
+  -&gt; 环境连续执行这个 action chunk
+  -&gt; 拿到新 obs / done / complete / finish_step
+  -&gt; 循环
+</code></pre></div>
+
+<p>由于一次输出 8 个 action step，所以外层 <code>step += action_chunks_len</code>。</p>
+<h3 id="52-latent">5.2 latent 生成分三段</h3>
+<h4 id="phase-1-prefill-prompt-latent_start">Phase 1: prefill prompt + latent_start</h4>
+<p>代码先只喂 prompt 和 <code>&lt;latent_start&gt;</code>：</p>
+<div class="codehilite"><pre><span></span><code><span class="n">prefill_ids</span> <span class="o">=</span> <span class="n">idx</span><span class="p">[:,</span> <span class="p">:</span><span class="n">prompt_start_len</span><span class="p">]</span>
+<span class="n">outputs_prefill</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">module</span><span class="o">.</span><span class="n">model</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">use_cache</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">prev_latent_hidden</span> <span class="o">=</span> <span class="n">outputs_prefill</span><span class="o">.</span><span class="n">last_hidden_state</span><span class="p">[:,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:]</span>
+</code></pre></div>
+
+<p><code>prev_latent_hidden</code> 就是第一个 latent 的起点。后续 latent 不通过 vocab 采样，而是把上一步 hidden state 直接当作下一步 input embedding。</p>
+<p>论文用下面的式子描述这件事：
+<span class="math inline">$\mathbf{z}_{t,i}^{\mathrm{old}} \sim \pi_\theta(\cdot \mid \mathbf{s}_t, \mathbf{z}_{t,&lt;i}^{\mathrm{old}})$</span></p>
+<p>意思是：第 <code>i</code> 个 latent 不是独立生成的，它依赖当前环境状态 <span class="math inline">$\mathbf{s}_t$</span> 和前面已经生成的 latent。代码里的 <code>past_key_values</code> 和 <code>_ar_step(...)</code> 就是在复用前文 KV cache，实现这个条件依赖。</p>
+<h4 id="phase-2-grouped-ar-latent-loop">Phase 2: grouped AR latent loop</h4>
+<p>当前配置下：</p>
+<div class="codehilite"><pre><span></span><code>latent_length = 8
+latent_end_num = 4
+G = 2
+candidate_lengths = [2, 4, 6, 8]
+</code></pre></div>
+
+<p>循环 4 个 group，每个 group 先自回归生成 2 个 latent，再看当前位置对 <code>&lt;latent_end&gt;</code> 的 logit：</p>
+<div class="codehilite"><pre><span></span><code><span class="k">for</span> <span class="n">_g</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">max_groups</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">_p</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">G</span><span class="p">):</span>
+        <span class="n">prev_latent_hidden</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="n">inputs_embeds</span><span class="o">=</span><span class="n">prev_latent_hidden</span><span class="p">)</span>
+    <span class="n">step_logits</span> <span class="o">=</span> <span class="n">lm_head</span><span class="p">(</span><span class="n">prev_latent_hidden</span><span class="p">)</span>
+    <span class="n">end_logits</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">step_logits</span><span class="p">)</span>
+    <span class="n">prev_latent_hidden</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="n">inputs_embeds</span><span class="o">=</span><span class="n">latent_end_embed</span><span class="p">)</span>
+</code></pre></div>
+
+<p>关键点：</p>
+<ul>
+<li>latent 是 continuous hidden state，不是离散 token；</li>
+<li><code>&lt;latent_end&gt;</code> 是离散 token，所以可以从 <code>lm_head</code> 里读它的 logit/logprob；</li>
+<li>每个 group 结束时都产生一个“现在是否该结束”的候选分数。</li>
+</ul>
+<h4 id="phase-3-action">Phase 3: 选择长度，再并行解码 action</h4>
+<p>训练 rollout 时，脚本设置：</p>
+<div class="codehilite"><pre><span></span><code><span class="nv">do_sample</span><span class="o">=</span>True
+<span class="nv">end_do_sample</span><span class="o">=</span>True
+<span class="nv">temperature</span><span class="o">=</span><span class="m">1</span>.6
+</code></pre></div>
+
+<p>代码会拿每个候选位置上 <code>&lt;latent_end&gt;</code> 的 logit 做 softmax，然后采样一个 group：</p>
+<div class="codehilite"><pre><span></span><code><span class="n">group_end_probs</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">softmax</span><span class="p">(</span><span class="n">group_end_logits</span><span class="p">[:,</span> <span class="p">:,</span> <span class="n">latent_end_id</span><span class="p">],</span> <span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">chosen_idx</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">multinomial</span><span class="p">(</span><span class="n">group_end_probs</span><span class="p">,</span> <span class="n">num_samples</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+</code></pre></div>
+
+<p>论文里的长度采样公式是：</p>
+<p><div class="math display">$$p_m
+=
+\frac{\exp(l_m/\beta)}
+{\sum_{i=1}^{M}\exp(l_i/\beta)},
+\qquad
+m\in\{1,\dots,M\}$$</div></p>
+<p>其中 <span class="math inline">$l_m$</span> 是第 <code>m</code> 个候选停止位置上 <code>&lt;latent_end&gt;</code> 的 logit，<span class="math inline">$\beta$</span> 是温度。代码里 <code>temperature=1.6</code>，<code>M=latent_end_num=4</code>，候选长度就是 <code>{2,4,6,8}</code>。训练 rollout 用 <code>torch.multinomial(...)</code> 从这个分布采样，是为了让模型探索不同思考长度，而不是永远走当前最大概率长度。</p>
+<p>用字符画看就是这样：</p>
+<div class="codehilite"><pre><span></span><code>先完整生成最多 8 个 latent，并在 4 个候选点打分：
+
+prompt + &lt;latent_start&gt;
+  |
+  v
+z1 -&gt; z2 -&gt; &lt;end1&gt; | z3 -&gt; z4 -&gt; &lt;end2&gt; | z5 -&gt; z6 -&gt; &lt;end3&gt; | z7 -&gt; z8 -&gt; &lt;end4&gt;
+              |                  |                  |                  |
+              v                  v                  v                  v
+            logit1             logit2             logit3             logit4
+</code></pre></div>
+
+<p>然后只拿 4 个 <code>&lt;latent_end&gt;</code> 位置的 logit 做长度分布：</p>
+<div class="codehilite"><pre><span></span><code>[logit1, logit2, logit3, logit4]
+          |
+          v
+softmax / temperature
+          |
+          v
+p(length=2), p(length=4), p(length=6), p(length=8)
+          |
+          v
+multinomial 采样
+</code></pre></div>
+
+<p>假设这次采到了 <code>chosen_length = 4</code>，action 解码时逻辑上只让 action 看前 4 个 latent 和第二个 <code>&lt;latent_end&gt;</code>：</p>
+<div class="codehilite"><pre><span></span><code>可见前缀:
+prompt + &lt;latent_start&gt;
+  z1 z2 &lt;end1&gt; z3 z4 &lt;end2&gt;
+
+被 mask 掉:
+  z5 z6 &lt;end3&gt; z7 z8 &lt;end4&gt;
+
+并行 action 占位:
+  [a1] [a2] [a3] ... [a56]
+</code></pre></div>
+
+<p>对应的 attention 关系可以粗略画成：</p>
+<div class="codehilite"><pre><span></span><code>action query 看到:
+
+prompt / text / image tokens      yes
+z1 z2 &lt;end1&gt; z3 z4 &lt;end2&gt;         yes
+z5 z6 &lt;end3&gt; z7 z8 &lt;end4&gt;         no
+其他 action placeholder           yes
+</code></pre></div>
+
+<p>所以 Phase 3 的“选择长度，再并行解码 action”不是先真的截断 tensor，而是：</p>
+<div class="codehilite"><pre><span></span><code>固定跑满候选 latent -&gt; 采样 chosen_length -&gt; 用 attention_mask 屏蔽未选后缀 -&gt; 一次 forward 输出 56 个 action logits
+</code></pre></div>
+
+<p>这里的 56 个 action placeholder 是一起进模型的。action token 之间用 full attention，所以不是 <code>a1 -&gt; a2 -&gt; ... -&gt; a56</code> 这样逐个自回归生成，而是一次 forward 并行预测整个 action chunk。</p>
+<p>如果不采样，比如推理/验证可走 confidence-based early exit：</p>
+<div class="codehilite"><pre><span></span><code><span class="n">threshold_log</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mf">0.99</span><span class="p">)</span>
+<span class="n">exceeds</span> <span class="o">=</span> <span class="n">group_end_log_probs</span> <span class="o">&gt;=</span> <span class="n">threshold_log</span>
+<span class="n">chosen_idx</span> <span class="o">=</span> <span class="n">first_exceed_idx</span> <span class="k">if</span> <span class="n">has_any</span> <span class="k">else</span> <span class="n">best_group_idx</span>
+</code></pre></div>
+
+<p>也就是论文说的：</p>
+<div class="codehilite"><pre><span></span><code>如果 &lt;latent_end&gt; 概率 &gt;= 0.99，就停止 latent reasoning；
+否则用分数最高的候选位置。
+</code></pre></div>
+
+<p>选好后：</p>
+<div class="codehilite"><pre><span></span><code><span class="n">chosen_length</span> <span class="o">=</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">8</span><span class="p">][</span><span class="n">chosen_idx</span><span class="p">]</span>
+<span class="n">latent_mask</span> <span class="o">=</span> <span class="n">arange</span><span class="p">(</span><span class="n">L</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">chosen_length</span>
+</code></pre></div>
+
+<p>代码为了批处理形状稳定，会先跑完整 8 个 latent / 4 个候选 group，再用 attention mask 让 action 只看选中的前缀：</p>
+<div class="codehilite"><pre><span></span><code><span class="n">body_mask</span> <span class="o">=</span> <span class="n">arange</span><span class="p">(</span><span class="n">body_len</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">prefix_len</span>
+<span class="n">full_attention</span> <span class="o">=</span> <span class="n">cat</span><span class="p">([</span><span class="n">prefill_mask</span><span class="p">,</span> <span class="n">body_mask</span><span class="p">,</span> <span class="n">action_mask_ones</span><span class="p">])</span>
+</code></pre></div>
+
+<p>然后构造 56 个全零 action 占位：</p>
+<div class="codehilite"><pre><span></span><code><span class="n">action_zero_embeds</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">B</span><span class="p">,</span> <span class="n">action_token_num</span><span class="p">,</span> <span class="n">D</span><span class="p">)</span>
+<span class="n">outputs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">module</span><span class="o">.</span><span class="n">model</span><span class="p">(</span>
+    <span class="n">inputs_embeds</span><span class="o">=</span><span class="n">action_zero_embeds</span><span class="p">,</span>
+    <span class="n">past_key_values</span><span class="o">=</span><span class="n">past_key_values</span><span class="p">,</span>
+    <span class="n">attention_mask</span><span class="o">=</span><span class="n">full_attention</span><span class="p">,</span>
+    <span class="n">action_length</span><span class="o">=</span><span class="n">action_token_num</span><span class="p">,</span>
+<span class="p">)</span>
+</code></pre></div>
+
+<p>action token logits 来自最后 56 个 hidden state：</p>
+<div class="codehilite"><pre><span></span><code><span class="n">action_logits</span> <span class="o">=</span> <span class="n">lm_head</span><span class="p">(</span><span class="n">hidden_states</span><span class="p">[:,</span> <span class="o">-</span><span class="n">action_token_num</span><span class="p">:,</span> <span class="p">:])</span>
+<span class="n">action_logits_last256</span> <span class="o">=</span> <span class="n">action_logits</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">action_0_id</span><span class="p">:</span><span class="n">action_0_id</span> <span class="o">+</span> <span class="mi">256</span><span class="p">]</span>
+</code></pre></div>
+
+<p>最后采样或 argmax 得到 56 个离散 action token，再用 <code>ActionTokenizer</code> 解码回连续动作。</p>
+<p>action chunk 的 logprob 在论文里写成 joint log-probability：</p>
+<p><div class="math display">$$\log \pi_\theta(\mathbf{C}_t\mid\cdot)
+=
+\sum_{j=1}^{N_a}
+\log \pi_\theta(\mathbf{a}_{t,j}\mid\cdot)$$</div></p>
+<p>代码里的 <code>logprobs.sum(dim=1, keepdim=True)</code> 就是在把 56 个 action token 的 logprob 加起来，得到一个 step-level 的 action logprob。</p>
+<h3 id="53-action">5.3 为什么 action 可以并行解码</h3>
+<p>默认 LLM 是 causal attention，后面的 token 不能被前面的 token 看见。但 action chunk 是一组同时预测的控制 token，论文希望高效并行解码。</p>
+<p><code>sdpa_attention.py</code> 里对 action 部分改 mask：</p>
+<div class="codehilite"><pre><span></span><code><span class="k">if</span> <span class="n">action_length</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+    <span class="n">causal_mask</span><span class="p">[:,</span> <span class="p">:,</span> <span class="o">-</span><span class="n">action_length</span><span class="p">:,</span> <span class="o">-</span><span class="n">action_length</span><span class="p">:]</span> <span class="o">=</span> <span class="kc">True</span>
+</code></pre></div>
+
+<p>意思是：最后 56 个 action query 之间互相可见。于是模型一次 forward 就能输出整个 action chunk。</p>
+<p>latent 部分仍然是 causal 的，因为 latent CoT 需要一步一步自回归。</p>
+<h2 id="6-rl">6. RL 基础：先把机器人任务翻译成强化学习语言</h2>
+<p>这一节先不看 LaST-R1 的复杂公式，只回答一个问题：机器人在仿真环境里试错，为什么能变成 <code>reward -&gt; advantage -&gt; loss</code> 这条训练链路。</p>
+<h3 id="61">6.1 从监督学习到强化学习：差别在哪里</h3>
+<p>监督学习的训练样本长这样：</p>
+<div class="codehilite"><pre><span></span><code>输入 x -&gt; 标准答案 y
+</code></pre></div>
+
+<p>模型输出错了，可以直接算：</p>
+<div class="codehilite"><pre><span></span><code>loss = 模型输出 和 标准答案 的差距
+</code></pre></div>
+
+<p>机器人 RL 的数据不是这样。它更像：</p>
+<div class="codehilite"><pre><span></span><code>当前画面和指令 -&gt; 模型选一个动作 -&gt; 环境变成下一个状态 -&gt; 最后告诉你成功/失败
+</code></pre></div>
+
+<p>这里有三个麻烦点：</p>
+<ul>
+<li>环境不会告诉你“这一步正确动作是什么”，只告诉你最后有没有完成任务；</li>
+<li>很多动作早期看不出好坏，可能第 3 步的选择影响第 20 步成败；</li>
+<li>机器人环境本身通常不可微，不能把梯度从“任务成功”直接反传进模型。</li>
+</ul>
+<p>所以 RL 的核心不是“拟合标签”，而是：</p>
+<div class="codehilite"><pre><span></span><code>让模型多产生高回报轨迹，少产生低回报轨迹。
+</code></pre></div>
+
+<h3 id="62-mdprl">6.2 MDP：RL 里最基础的五个对象</h3>
+<p>强化学习通常把任务写成 MDP，也就是 Markov Decision Process。不要被名字吓到，它只是在说一个循环：</p>
+<div class="codehilite"><pre><span></span><code>state s_t
+  -&gt; policy 选择 action a_t
+  -&gt; environment 产生 reward r_t 和 next state s_{t+1}
+  -&gt; 继续
+</code></pre></div>
+
+<p>对应到 LaST-R1 / LIBERO：</p>
+<table>
+<thead>
+<tr>
+<th>RL 概念</th>
+<th>普通含义</th>
+<th>在 LaST-R1 里是什么</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>state s_t</code></td>
+<td>当前可观察到的情况</td>
+<td>图像、语言指令、可选机器人状态</td>
+</tr>
+<tr>
+<td><code>action a_t</code></td>
+<td>策略做出的选择</td>
+<td>更准确说是 latent CoT、停止长度、action chunk</td>
+</tr>
+<tr>
+<td><code>reward r_t</code></td>
+<td>环境给这一刻的分数</td>
+<td>成功终点给 5，大多数 step 是 0</td>
+</tr>
+<tr>
+<td><code>transition</code></td>
+<td>环境如何进入下一状态</td>
+<td>LIBERO 仿真执行 action chunk 后更新场景</td>
+</tr>
+<tr>
+<td><code>policy pi_theta</code></td>
+<td>模型的行为规则</td>
+<td>Qwen3-VL backbone + latent/action head</td>
+</tr>
+</tbody>
+</table>
+<p>一条完整 episode / trajectory 可以写成：</p>
+<p><div class="math display">$$\tau =
+(\mathbf{s}_0,\mathbf{u}_0,r_0,\mathbf{s}_1,\mathbf{u}_1,r_1,\ldots,\mathbf{s}_T,\mathbf{u}_T,r_T)$$</div></p>
+<p>这里我用 <span class="math inline">$\mathbf{u}_t$</span> 表示 LaST-R1 在第 <code>t</code> 个决策点做出的“组合决策”：</p>
+<p><div class="math display">$$\mathbf{u}_t
+=
+(\mathbf{Z}_t,\mathbf{z}^{end}_t,\mathbf{C}_t)$$</div></p>
+<p>也就是：</p>
+<ul>
+<li><span class="math inline">$\mathbf{Z}_t$</span>：这一步生成的 latent CoT；</li>
+<li><span class="math inline">$\mathbf{z}^{end}_t$</span>：选在哪个候选位置停止思考；</li>
+<li><span class="math inline">$\mathbf{C}_t$</span>：最终输出的 action token chunk。</li>
+</ul>
+<p>所以 LaST-R1 的 policy 严格说不是单纯的“动作策略”：</p>
+<p><div class="math display">$$\pi_\theta(\mathbf{u}_t\mid\mathbf{s}_t)
+=
+\pi_\theta(
+\mathbf{Z}_t,\mathbf{z}^{end}_t,\mathbf{C}_t
+\mid
+\mathbf{s}_t
+)$$</div></p>
+<h3 id="63-policy">6.3 policy：模型不是只输出一个答案，而是在定义概率分布</h3>
+<p>RL 里说的 policy 不是“固定规则”，而是一个带参数的概率分布：</p>
+<p><div class="math display">$$\pi_\theta(a_t\mid s_t)$$</div></p>
+<p>意思是：在状态 <span class="math inline">$s_t$</span> 下，模型给每个可选动作一个概率。训练不是直接把某个动作改成“正确答案”，而是调整这些概率。</p>
+<p>对语言模型式 action token 来说，这很自然：</p>
+<div class="codehilite"><pre><span></span><code>logits -&gt; softmax -&gt; 每个 action token 的概率
+</code></pre></div>
+
+<p>如果 rollout 时模型真的采样到了某个 action chunk <span class="math inline">$\mathbf{C}_t$</span>，代码可以计算：</p>
+<p><div class="math display">$$\log \pi_\theta(\mathbf{C}_t\mid\cdot)
+=
+\sum_{j=1}^{N_a}
+\log \pi_\theta(\mathbf{a}_{t,j}\mid\cdot)$$</div></p>
+<p>这里 <span class="math inline">$N_a=56$</span>，因为一次输出 <code>7 * 8</code> 个 action token。</p>
+<p>LaST-R1 里还多了 continuous latent。continuous vector 没有 softmax 概率，所以后面 LAPO 用高斯近似把“latent 距离”转成类似概率密度的 ratio。</p>
+<h3 id="64-reward">6.4 reward：环境原始打分，不等于训练信号本身</h3>
+<p>reward 是环境给的原始分数。LIBERO 这条路径里非常稀疏：</p>
+<p><div class="math display">$$r_t =
+\begin{cases}
+5, & \text{任务成功并到达终点}\\
+0, & \text{否则}
+\end{cases}$$</div></p>
+<p>代码里 <code>complete=True</code> 先记为 1，再乘 <code>reward_coef=5</code>，所以成功终点 reward 是 5。</p>
+<p>要特别注意：reward 不是“每一步动作好坏的精确标签”。在稀疏奖励任务里，大多数 step 的 reward 都是 0。比如：</p>
+<div class="codehilite"><pre><span></span><code>t:       0    1    2    3    4
+reward:  0    0    0    0    5
+</code></pre></div>
+
+<p>这只告诉你“这条轨迹最后成功了”，没有直接告诉你第 0 步、第 1 步、第 2 步分别该给多少 credit。后面的 return、value、advantage、GAE 都是在解决这个 credit assignment 问题。</p>
+<h3 id="65-return">6.5 return：从当前往后总共能拿多少奖励</h3>
+<p>return 是“从当前 step 往后，折扣后的奖励总和”：</p>
+<p><div class="math display">$$\hat{R}_t
+=
+r_t+\gamma r_{t+1}+\gamma^2 r_{t+2}+\cdots
+=
+\sum_{k=t}^{T}\gamma^{k-t}r_k$$</div></p>
+<p><code>gamma</code> 是 discount factor。LaST-R1 脚本里是：</p>
+<div class="codehilite"><pre><span></span><code>algorithm.gamma<span class="o">=</span><span class="m">0</span>.99
+</code></pre></div>
+
+<p><code>gamma=0.99</code> 的含义：</p>
+<ul>
+<li>未来奖励仍然很重要；</li>
+<li>但越远的奖励权重略低；</li>
+<li>数值上也能避免无限长任务的 return 发散。</li>
+</ul>
+<p>如果只有最后一步 reward 是 5，且先忽略 episode 结束外的 value bootstrap，那么 return 大概是：</p>
+<div class="codehilite"><pre><span></span><code>t:         0       1       2       3       4
+reward:    0       0       0       0       5
+return: 4.803   4.851   4.900   4.950   5.000
+</code></pre></div>
+
+<p>这里 <code>t=0</code> 的 return 是 <span class="math inline">$0.99^4 * 5 \approx 4.803$</span>。这说明：即使第 0 步 reward 是 0，它仍然能因为未来成功而得到正的训练信号。</p>
+<h3 id="66-value">6.6 value：模型对未来回报的预期</h3>
+<p>value function 回答的是：</p>
+<div class="codehilite"><pre><span></span><code>从当前状态开始，按当前策略继续走，预计能拿多少 return？
+</code></pre></div>
+
+<p>公式是：</p>
+<p><div class="math display">$$V_\theta(\mathbf{s}_t)
+\approx
+\mathbb{E}_{\tau\sim\pi_\theta}
+\left[
+\hat{R}_t
+\mid
+\mathbf{s}_t
+\right]$$</div></p>
+<p>白话：</p>
+<div class="codehilite"><pre><span></span><code>value 不是动作。
+value 是模型对“这个局面有多大希望成功”的估计。
+</code></pre></div>
+
+<p>LaST-R1 代码里 value head 接在 Qwen3-VL backbone 后面：</p>
+<div class="codehilite"><pre><span></span><code><span class="bp">self</span><span class="o">.</span><span class="n">value_head</span> <span class="o">=</span> <span class="n">ValueHead</span><span class="p">(</span><span class="n">input_dim</span><span class="o">=</span><span class="n">hidden_size</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
+</code></pre></div>
+
+<p>当前配置：</p>
+<div class="codehilite"><pre><span></span><code><span class="nv">value_choice</span><span class="o">=</span><span class="s1">&#39;latent_end&#39;</span>
+</code></pre></div>
+
+<p>所以 value 主要从 <code>&lt;latent_end&gt;</code> 位置的 hidden state 预测。这个位置已经看过图像、指令和 latent reasoning，比较适合估计“当前决策后未来能拿多少奖励”。</p>
+<h3 id="67-q-valuev-valueadvantage">6.7 Q value、V value、advantage 的关系</h3>
+<p>很多 RL 教程会同时出现 <code>Q</code>、<code>V</code>、<code>A</code>，容易混。</p>
+<table>
+<thead>
+<tr>
+<th>名字</th>
+<th>问的问题</th>
+<th>直觉</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>V(s)</code></td>
+<td>当前状态整体有多好</td>
+<td>这个局面平均能拿多少回报</td>
+</tr>
+<tr>
+<td><code>Q(s,a)</code></td>
+<td>在当前状态选这个动作有多好</td>
+<td>这个动作选下去预计能拿多少回报</td>
+</tr>
+<tr>
+<td><code>A(s,a)</code></td>
+<td>这个动作比平均选择好多少</td>
+<td>好于预期还是差于预期</td>
+</tr>
+</tbody>
+</table>
+<p>它们的关系是：</p>
+<p><div class="math display">$$A(s_t,a_t)
+=
+Q(s_t,a_t)-V(s_t)$$</div></p>
+<p>实际代码不显式训练一个 Q head，而是用 rollout 得到的 return / GAE 估计“这次实际选择的动作到底比预期好多少”：</p>
+<p><div class="math display">$$\hat{A}_t
+\approx
+\hat{R}_t
+-
+V_\theta(\mathbf{s}_t)$$</div></p>
+<p>所以 advantage 的核心含义是：</p>
+<div class="codehilite"><pre><span></span><code>实际结果 - 模型原本预期
+</code></pre></div>
+
+<h3 id="68-advantage">6.8 advantage：决定要不要学习这次选择</h3>
+<p>advantage 是 policy update 的方向盘：</p>
+<div class="codehilite"><pre><span></span><code>advantage &gt; 0：这次选择比预期好，提高它再次出现的概率
+advantage &lt; 0：这次选择比预期差，降低它再次出现的概率
+advantage = 0：和预期差不多，不需要明显更新
+</code></pre></div>
+
+<p>举一个数值例子：</p>
+<div class="codehilite"><pre><span></span><code>某一步实际 return = 5
+value 预期       = 3
+advantage        = 2
+</code></pre></div>
+
+<p>说明这一步的 latent/action/end 组合比模型原本预期更好，应该鼓励。</p>
+<p>再看另一个：</p>
+<div class="codehilite"><pre><span></span><code>某一步实际 return = 5
+value 预期       = 5
+advantage        = 0
+</code></pre></div>
+
+<p>虽然这条轨迹成功了，但模型本来就预期它会成功，所以这一步不需要大幅更新。</p>
+<p>第三个：</p>
+<div class="codehilite"><pre><span></span><code>某一步实际 return = 0
+value 预期       = 3
+advantage        = -3
+</code></pre></div>
+
+<p>说明模型以为这个局面会成功，结果失败了。这次选择应该被降低概率。</p>
+<p>这就是为什么 PPO 不直接用 reward 当训练权重。reward 只看“拿了几分”，advantage 看的是“比预期多拿还是少拿”。</p>
+<h3 id="69-value-baseline">6.9 为什么要有 value baseline</h3>
+<p>不用 baseline 的策略梯度可以粗略想成：</p>
+<div class="codehilite"><pre><span></span><code>成功轨迹里出现过的动作都加概率
+失败轨迹里出现过的动作都减概率
+</code></pre></div>
+
+<p>这会很吵。因为成功轨迹里也可能有多余动作，失败轨迹里也可能有一些正确动作，只是后面某一步出错了。</p>
+<p>引入 value baseline 后，更新变成：</p>
+<div class="codehilite"><pre><span></span><code>不是看“成功还是失败”，而是看“比当前模型预期更好还是更差”。
+</code></pre></div>
+
+<p>baseline 不改变 policy gradient 的期望方向，但能显著降低方差。实际工程里，value head 的质量越好，advantage 越稳定，policy update 通常也越稳定。</p>
+<h3 id="610-policy-gradient-logprob-advantage">6.10 policy gradient：为什么 logprob 会乘 advantage</h3>
+<p>RL 不能直接对环境成功率反传梯度，所以用 policy gradient。核心公式是：</p>
+<p><div class="math display">$$\nabla_\theta J(\theta)
+=
+\mathbb{E}_{\tau\sim\pi_\theta}
+\left[
+\sum_t
+\nabla_\theta
+\log \pi_\theta(a_t\mid s_t)
+\hat{A}_t
+\right]$$</div></p>
+<p>先只看直觉：</p>
+<div class="codehilite"><pre><span></span><code>如果 A_t &gt; 0，就把这次采样到的动作 logprob 往上推；
+如果 A_t &lt; 0，就把这次采样到的动作 logprob 往下压。
+</code></pre></div>
+
+<p>为什么是 <code>logprob</code>？因为采样动作本身不可微，但“模型给这个已采样动作的概率”是可微的。用 logprob 有一个经典恒等式：</p>
+<p><div class="math display">$$\nabla_\theta \pi_\theta(a\mid s)
+=
+\pi_\theta(a\mid s)
+\nabla_\theta \log \pi_\theta(a\mid s)$$</div></p>
+<p>它让我们可以用采样出来的轨迹估计“提高哪些选择的概率会提高期望回报”。</p>
+<p>对应到 LaST-R1：</p>
+<div class="codehilite"><pre><span></span><code>advantage 不是只乘 action logprob，
+还会乘 latent ratio 和 latent_end ratio。
+</code></pre></div>
+
+<p>这就是 LAPO 相对普通 action PPO 的关键扩展。</p>
+<h3 id="611-on-policyold-policynew-policy">6.11 on-policy、old policy、new policy</h3>
+<p>PPO 是 on-policy 方法。意思是：训练用的数据应该来自当前或刚刚过去的策略，而不是很久以前的旧数据。</p>
+<p>一次 PPO 更新通常分两段：</p>
+<div class="codehilite"><pre><span></span><code>rollout 阶段：
+  用 old policy 跑环境，采样 latent/action/end，保存 old logprob、old latent、old value、reward
+
+update 阶段：
+  用当前 new policy 重新计算同一批选择的概率/latent/value
+  比较 new 和 old 的差异
+  用 advantage 决定是提高还是降低这些选择的倾向
+</code></pre></div>
+
+<p>为什么要保存 old policy 的信息？因为 PPO 的更新目标不是“新策略随便变好”，而是：</p>
+<div class="codehilite"><pre><span></span><code>在不要偏离 rollout 策略太多的前提下，
+让高 advantage 的选择更可能、低 advantage 的选择更不可能。
+</code></pre></div>
+
+<p>这就引出后面的 ratio：</p>
+<p><div class="math display">$$r_t(\theta)
+=
+\frac{
+\pi_\theta(a_t\mid s_t)
+}{
+\pi_{\theta_{old}}(a_t\mid s_t)
+}$$</div></p>
+<p>如果 <code>ratio = 1</code>，说明新旧策略对这次选择的概率一样。<code>ratio &gt; 1</code> 表示新策略更倾向这次选择；<code>ratio &lt; 1</code> 表示新策略不那么倾向这次选择。</p>
+<h2 id="7-reward-return-advantage">7. 这份代码里的 reward / return / advantage 怎么算</h2>
+<p>这一节把上面的 RL 概念落到当前公开仓库的 LIBERO 仿真路径。先记住一个粒度差异：这里的一个 RL step 不是一个底层机器人控制 tick，而是一次 <strong>decision step</strong>，一次会输出 <code>action_chunks_len=8</code> 个未来动作。</p>
+<h3 id="71-rewardcomplete-decision-step">7.1 reward：<code>complete</code> 只放到最后一个有效 decision step</h3>
+<p><code>main_ppo.py::RobRewardManager.verify</code> 里：</p>
+<div class="codehilite"><pre><span></span><code><span class="n">completes</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">batch</span><span class="p">[</span><span class="s1">&#39;complete&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+<span class="n">score</span> <span class="o">=</span> <span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="n">item</span><span class="p">)</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">completes</span><span class="p">]</span>
+<span class="n">data</span><span class="o">.</span><span class="n">batch</span><span class="p">[</span><span class="s1">&#39;acc&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">score</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
+</code></pre></div>
+
+<p>也就是环境 rollout 结束后：</p>
+<div class="codehilite"><pre><span></span><code>complete=True  -&gt; verifier_score = 1
+complete=False -&gt; verifier_score = 0
+</code></pre></div>
+
+<p><code>RobRewardManager.__call__</code> 里再把这个分数放到最后一个有效 decision step：</p>
+<div class="codehilite"><pre><span></span><code><span class="n">valid_response_length</span> <span class="o">=</span> <span class="n">ceil</span><span class="p">(</span><span class="n">finish_step</span> <span class="o">/</span> <span class="n">action_chunks_len</span><span class="p">)</span>
+<span class="n">idx</span> <span class="o">=</span> <span class="n">valid_response_length</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span>
+<span class="n">verifier_reward</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">idx</span><span class="p">]</span> <span class="o">+=</span> <span class="n">verifier_score</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+<span class="n">reward_tensor</span> <span class="o">+=</span> <span class="n">reward_coef</span> <span class="o">*</span> <span class="n">verifier_reward</span>
+</code></pre></div>
+
+<p>因为默认 <code>reward_coef=5</code>，所以最终：</p>
+<div class="codehilite"><pre><span></span><code>成功轨迹：最后一个有效 decision step 的 reward = 5
+失败轨迹：所有有效 decision step 的 reward = 0
+</code></pre></div>
+
+<p>举例，假设某条轨迹执行了 4 个 decision step 才成功：</p>
+<div class="codehilite"><pre><span></span><code>t:                    0    1    2    3
+token_level_scores:   0    0    0    5
+</code></pre></div>
+
+<p>如果失败：</p>
+<div class="codehilite"><pre><span></span><code>t:                    0    1    2    3
+token_level_scores:   0    0    0    0
+</code></pre></div>
+
+<p>训练脚本里：</p>
+<div class="codehilite"><pre><span></span><code>algorithm.kl_ctrl.kl_coef<span class="o">=</span><span class="m">0</span>.00
+</code></pre></div>
+
+<p>所以当前配置下 KL penalty 实际不生效：</p>
+<div class="codehilite"><pre><span></span><code>token_level_rewards ≈ token_level_scores
+</code></pre></div>
+
+<p>如果以后把 KL 打开，<code>token_level_rewards</code> 就会变成：</p>
+<div class="codehilite"><pre><span></span><code>环境 reward - KL penalty
+</code></pre></div>
+
+<p>它会惩罚 policy 离 reference policy 太远。</p>
+<h3 id="72-response-mask-step-advantage-loss">7.2 response mask：只在有效 step 上算 advantage 和 loss</h3>
+<p>代码里会根据 <code>finish_step</code> 和 <code>action_chunks_len</code> 算有效 decision step：</p>
+<div class="codehilite"><pre><span></span><code><span class="n">response_mask</span> <span class="o">=</span> <span class="n">steps</span> <span class="o">&lt;</span> <span class="n">ceil</span><span class="p">(</span><span class="n">finish_step</span> <span class="o">/</span> <span class="n">action_chunks_len</span><span class="p">)</span>
+</code></pre></div>
+
+<p>这个 mask 很重要。batch 里为了张量形状统一，可能会有 padding step；这些位置不是环境真实执行过的决策，不应该参与：</p>
+<ul>
+<li>reward 统计；</li>
+<li>advantage 标准化；</li>
+<li>PPO policy loss；</li>
+<li>value loss。</li>
+</ul>
+<p>后面看到的 <code>eos_mask</code> / <code>response_mask</code>，可以先理解成：</p>
+<div class="codehilite"><pre><span></span><code>哪些 decision step 是真的，哪些只是 padding。
+</code></pre></div>
+
+<h3 id="73-return">7.3 return：成功终点奖励如何变成每一步的目标回报</h3>
+<p>如果只按 Monte Carlo return 算，成功例子会从最后一步往前得到折扣回报：</p>
+<div class="codehilite"><pre><span></span><code>gamma = 0.99
+
+t:       0       1       2       3
+reward:  0       0       0       5
+return: 4.851   4.900   4.950   5.000
+</code></pre></div>
+
+<p>这个 return 说明第 0、1、2 步虽然即时 reward 是 0，但它们在一条成功轨迹里，所以也应该收到正信号。</p>
+<p>不过实际代码没有直接用纯 Monte Carlo return，而是用 GAE。GAE 会结合：</p>
+<ul>
+<li>实际 reward；</li>
+<li>下一步 value；</li>
+<li>当前 value；</li>
+<li><code>gamma=0.99</code>；</li>
+<li><code>lambda=0.95</code>。</li>
+</ul>
+<h3 id="74-gae-td-error-delta">7.4 GAE 的第一步：TD error / delta</h3>
+<p>GAE 是用来从 rollout 的 reward 和 value 里计算 advantage的方法。
+它回答的是：第 t 步这次选择，比模型原本预期的好多少？
+也就是：
+advantage = 实际表现 - 模型预期</p>
+<p>为什么不直接用reward？
+因为 LaST-R1 / LIBERO 里的 reward 很稀疏：大多数 step reward 是 0，只有任务最后成功才给奖励。你的代码笔记里也写到，成功记 1，再乘 reward_coef=5，所以成功终点 reward 是 5。假设一条轨迹是：</p>
+<div class="codehilite"><pre><span></span><code>step 0: reward = 0
+step 1: reward = 0
+step 2: reward = 0
+step 3: reward = 5  # 最后成功
+</code></pre></div>
+
+<p>如果只用当前 step 的 reward，那么前面 0、1、2 步都看不到功劳。但实际成功可能正是因为前面几步做对了。</p>
+<p>所以 GAE 的作用是：把最后成功的信用，比较平滑地往前面的 step 传播。</p>
+<p>训练脚本：</p>
+<div class="codehilite"><pre><span></span><code>algorithm.adv_estimator<span class="o">=</span>gae
+algorithm.gamma<span class="o">=</span><span class="m">0</span>.99
+algorithm.lam<span class="o">=</span><span class="m">0</span>.95
+</code></pre></div>
+
+<p><code>ray_trainer.py::compute_advantage</code> 会取：</p>
+<div class="codehilite"><pre><span></span><code><span class="n">values</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">batch</span><span class="p">[</span><span class="s1">&#39;old_values&#39;</span><span class="p">]</span>
+<span class="n">token_level_rewards</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">batch</span><span class="p">[</span><span class="s1">&#39;token_level_rewards&#39;</span><span class="p">]</span>
+</code></pre></div>
+
+<p>然后调用：</p>
+<div class="codehilite"><pre><span></span><code><span class="n">compute_gae_advantage_return</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+</code></pre></div>
+
+<p>GAE 的第一行是 TD error：</p>
+<p><div class="math display">$$\delta_t
+=
+r_t+\gamma V(\mathbf{s}_{t+1})-V(\mathbf{s}_t)$$</div></p>
+<p>白话：</p>
+<div class="codehilite"><pre><span></span><code>delta_t
+= 当前拿到的 reward
+  + 下一状态看起来还值多少钱
+
+    - 当前状态原本以为值多少钱
+</code></pre></div>
+
+<p>所以 <code>delta_t</code> 是一次“预期修正”：</p>
+<ul>
+<li><code>delta_t &gt; 0</code>：实际进展比 value head 预期更好；</li>
+<li><code>delta_t &lt; 0</code>：实际进展比 value head 预期更差；</li>
+<li><code>delta_t ≈ 0</code>：和预期差不多。</li>
+</ul>
+<p>一个简单例子：</p>
+<div class="codehilite"><pre><span></span><code>r_t = 0
+V(s_{t+1}) = 4
+V(s_t) = 3
+gamma = 0.99
+
+delta_t = 0 + 0.99 * 4 - 3 = 0.96
+</code></pre></div>
+
+<p>虽然当前 reward 是 0，但下一步局面明显更有希望，所以这一步仍然是正贡献。</p>
+<p>再看失败倾向：</p>
+<div class="codehilite"><pre><span></span><code>r_t = 0
+V(s_{t+1}) = 1
+V(s_t) = 3
+gamma = 0.99
+
+delta_t = 0 + 0.99 * 1 - 3 = -2.01
+</code></pre></div>
+
+<p>说明这一步让局面变差了，即使环境还没给失败奖励，也应该被负向更新。</p>
+<h3 id="75-gae-surprise">7.5 GAE 的第二步：把后面的 surprise 往前传</h3>
+<p>GAE 不是只用当前一步 <code>delta_t</code>，而是从后往前累积：</p>
+<p><div class="math display">$$\hat{A}_t
+=
+\delta_t
++
+\gamma\lambda\hat{A}_{t+1}$$</div></p>
+<p>代码里对应：</p>
+<div class="codehilite"><pre><span></span><code><span class="n">lastgaelam</span> <span class="o">=</span> <span class="n">delta</span> <span class="o">+</span> <span class="n">gamma</span> <span class="o">*</span> <span class="n">lam</span> <span class="o">*</span> <span class="n">lastgaelam</span>
+</code></pre></div>
+
+<p><code>lastgaelam</code> 就是“从后面传回来的累计 advantage”。代码倒着扫时间步：</p>
+<div class="codehilite"><pre><span></span><code>先算最后一步 A_T
+再算倒数第二步 A_{T-1}
+...
+最后算 A_0
+</code></pre></div>
+
+<p><code>lambda</code> 控制信用往前传多远：</p>
+<table>
+<thead>
+<tr>
+<th><code>lambda</code></th>
+<th>效果</th>
+<th>直觉</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>接近 0</td>
+<td>更依赖一步 TD error</td>
+<td>方差低，但可能短视</td>
+</tr>
+<tr>
+<td>接近 1</td>
+<td>更接近 Monte Carlo return</td>
+<td>信号传得远，但方差高</td>
+</tr>
+<tr>
+<td>0.95</td>
+<td>常用折中</td>
+<td>LaST-R1 当前配置</td>
+</tr>
+</tbody>
+</table>
+<p>在当前配置里：</p>
+<div class="codehilite"><pre><span></span><code>gamma * lambda = 0.99 * 0.95 = 0.9405
+</code></pre></div>
+
+<p>如果先忽略 value 误差，只看终点 reward 5 被往前传，粗略会像：</p>
+<div class="codehilite"><pre><span></span><code>t:            0       1       2       3
+reward:       0       0       0       5
+GAE weight: 0.831   0.884   0.941   1.000
+signal:     4.157   4.422   4.703   5.000
+</code></pre></div>
+
+<p>这不是代码里的精确 advantage，因为真实计算还要减去 value baseline，并做 masked whitening。但这个例子能说明：最后一步成功奖励会通过 GAE 传回早期决策。</p>
+<h3 id="76-gae-returns-value-head">7.6 GAE 的第三步：得到 returns，训练 value head</h3>
+<p>GAE 算出 advantage 后，代码构造 value head 的监督目标：</p>
+<p><div class="math display">$$\hat{R}_t
+=
+\hat{A}_t+V(\mathbf{s}_t)$$</div></p>
+<p>代码：</p>
+<div class="codehilite"><pre><span></span><code><span class="n">returns</span> <span class="o">=</span> <span class="n">advantages</span> <span class="o">+</span> <span class="n">values</span>
+</code></pre></div>
+
+<p>当前训练脚本里 <code>bootstrap='none'</code>，所以走的就是这个分支。<code>core_algos.py</code> 里还保留了 <code>bootstrap='always'</code> 的分支，那种情况下 <code>values</code> 会多带一个 next value，return 用的是 <code>advantages + values[:, :-1]</code>。</p>
+<p>这行容易误解。它不是说 return 的定义变了，而是：</p>
+<div class="codehilite"><pre><span></span><code>advantage = 比当前 value 预期多出来的那部分
+return    = 当前 value 预期 + 多出来的那部分
+</code></pre></div>
+
+<p>后面的 value loss 会让新的 value 预测 <code>v_preds</code> 拟合这个 <code>returns</code>。</p>
+<h3 id="77-masked_whiten-advantage">7.7 masked_whiten：为什么 advantage 还要标准化</h3>
+<p>代码最后做：</p>
+<div class="codehilite"><pre><span></span><code><span class="n">advantages</span> <span class="o">=</span> <span class="n">masked_whiten</span><span class="p">(</span><span class="n">advantages</span><span class="p">,</span> <span class="n">eos_mask</span><span class="p">)</span>
+</code></pre></div>
+
+<p>含义是在有效 step 上把 advantage 标准化，通常近似变成：</p>
+<div class="codehilite"><pre><span></span><code>均值约为 0，方差约为 1
+</code></pre></div>
+
+<p>它改变的是训练尺度，不改变“正的是鼓励、负的是抑制”这个核心作用。</p>
+<p>为什么需要它？因为不同 batch 的 reward / value 尺度可能波动很大。如果不标准化，某些 batch 的梯度会特别大，训练不稳。</p>
+<h3 id="78-rl">7.8 一条样本在 RL 更新前会保存哪些东西</h3>
+<p>rollout 阶段会保存“当时旧策略实际做过什么”：</p>
+<table>
+<thead>
+<tr>
+<th>保存项</th>
+<th>含义</th>
+<th>后面怎么用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>old_log_probs</code></td>
+<td>旧策略对实际 action chunk 的 logprob</td>
+<td>算 action PPO ratio</td>
+</tr>
+<tr>
+<td><code>old_latents</code></td>
+<td>旧策略实际生成的 latent CoT</td>
+<td>算 latent ratio</td>
+</tr>
+<tr>
+<td><code>old_latent_end_log_prob</code></td>
+<td>旧策略选中停止长度的 logprob</td>
+<td>算 latent_end ratio</td>
+</tr>
+<tr>
+<td><code>chosen_length</code></td>
+<td>当时选了几个 latent</td>
+<td>构造 latent mask 和 end loss</td>
+</tr>
+<tr>
+<td><code>old_values</code></td>
+<td>旧 value head 的预测</td>
+<td>算 GAE 和 value clipping</td>
+</tr>
+<tr>
+<td><code>complete</code>, <code>finish_step</code></td>
+<td>环境是否成功、在哪里结束</td>
+<td>构造 sparse reward</td>
+</tr>
+</tbody>
+</table>
+<p>然后 update 阶段用当前新策略重新算：</p>
+<table>
+<thead>
+<tr>
+<th>新计算项</th>
+<th>和旧项比较得到什么</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>log_prob</code></td>
+<td>action ratio</td>
+</tr>
+<tr>
+<td><code>latents</code></td>
+<td>latent ratio</td>
+</tr>
+<tr>
+<td><code>latent_end_log_prob</code></td>
+<td>end ratio</td>
+</tr>
+<tr>
+<td><code>v_preds</code></td>
+<td>value loss</td>
+</tr>
+</tbody>
+</table>
+<p>所以整条链路是：</p>
+<div class="codehilite"><pre><span></span><code>rollout 保存 old 行为
+  -&gt; reward manager 根据 complete 造 reward
+  -&gt; GAE 根据 reward + old_values 算 advantages / returns
+  -&gt; update 用 new policy 重算同一批选择
+  -&gt; PPO/LAPO 根据 ratio * advantage 更新模型
+</code></pre></div>
+
+<h2 id="8-ppo-lapo">8. PPO / LAPO 到底在优化什么</h2>
+<p>这一节默认讨论 LIBERO 仿真里的 PPO/LAPO 实现。真实世界 RL 的训练细节在论文附录里是另一套 BC + Q-guided actor-learner 流程，不使用这里的 GAE/PPO loss 组合；但当前公开仓库没有提供这套真实世界 RL 实现。</p>
+<h3 id="81-policy-gradient-loss">8.1 先看最朴素的 policy gradient loss</h3>
+<p>如果不用 PPO clip，最直观的 policy loss 可以想成：</p>
+<p><div class="math display">$$\mathcal{L}_{PG}
+=
+-
+\hat{A}_t
+\log \pi_\theta(a_t\mid s_t)$$</div></p>
+<p>因为训练代码是最小化 loss：</p>
+<ul>
+<li>当 <span class="math inline">$\hat{A}_t>0$</span>，最小化 <code>-A * logprob</code> 会推高 <code>logprob</code>；</li>
+<li>当 <span class="math inline">$\hat{A}_t&lt;0$</span>，最小化 <code>-A * logprob</code> 会压低 <code>logprob</code>。</li>
+</ul>
+<p>但 PPO 不直接用这个形式。PPO 会用 old policy 采样，再用 new policy 更新多轮，所以它更关心：</p>
+<div class="codehilite"><pre><span></span><code>new policy 相比 old policy，把同一个选择的概率改了多少？
+</code></pre></div>
+
+<p>这就是 ratio。</p>
+<h3 id="82-ppo-ratio">8.2 PPO ratio：新策略相对旧策略的概率变化</h3>
+<p>PPO 的核心 ratio 是：</p>
+<p><div class="math display">$$r_t(\theta)
+=
+\exp(
+\log \pi_\theta(a_t\mid s_t)
+-
+\log \pi_{\theta_{old}}(a_t\mid s_t)
+)$$</div></p>
+<p>等价于：</p>
+<p><div class="math display">$$r_t(\theta)
+=
+\frac{
+\pi_\theta(a_t\mid s_t)
+}{
+\pi_{\theta_{old}}(a_t\mid s_t)
+}$$</div></p>
+<p>直觉：</p>
+<table>
+<thead>
+<tr>
+<th>ratio</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>1.0</code></td>
+<td>新旧策略一样倾向这次选择</td>
+</tr>
+<tr>
+<td><code>1.2</code></td>
+<td>新策略把这次选择概率提高了 20%</td>
+</tr>
+<tr>
+<td><code>0.8</code></td>
+<td>新策略把这次选择概率降低了 20%</td>
+</tr>
+</tbody>
+</table>
+<p>把 advantage 乘上 ratio：</p>
+<p><div class="math display">$$r_t(\theta)\hat{A}_t$$</div></p>
+<p>就得到一个“按好坏加权的概率变化收益”：</p>
+<ul>
+<li><code>A &gt; 0</code> 时，希望 ratio 大一点；</li>
+<li><code>A &lt; 0</code> 时，希望 ratio 小一点。</li>
+</ul>
+<h3 id="83-ppo-clip">8.3 为什么 PPO 要 clip</h3>
+<p>如果只最大化 <code>ratio * advantage</code>，模型可能一步更新太猛：</p>
+<ul>
+<li>一条成功样本被过度提高概率；</li>
+<li>一条失败样本被过度压低概率；</li>
+<li>policy 很快偏离 rollout 数据分布；</li>
+<li>训练变得不稳定。</li>
+</ul>
+<p>PPO 的处理是把 ratio 限制在一个范围内：</p>
+<p><div class="math display">$$\text{clip}(r_t,1-\epsilon_{low},1+\epsilon_{high})$$</div></p>
+<p>当前脚本里：</p>
+<div class="codehilite"><pre><span></span><code>clip_ratio_low = 0.2
+clip_ratio_high = 0.28
+</code></pre></div>
+
+<p>也就是大致限制在：</p>
+<div class="codehilite"><pre><span></span><code>ratio ∈ [0.8, 1.28]
+</code></pre></div>
+
+<p>代码写成 loss：</p>
+<div class="codehilite"><pre><span></span><code><span class="n">pg_losses</span> <span class="o">=</span> <span class="o">-</span><span class="n">advantages</span> <span class="o">*</span> <span class="n">ratio</span>
+<span class="n">pg_losses2</span> <span class="o">=</span> <span class="o">-</span><span class="n">advantages</span> <span class="o">*</span> <span class="n">clamp</span><span class="p">(</span><span class="n">ratio</span><span class="p">,</span> <span class="mi">1</span><span class="o">-</span><span class="n">low</span><span class="p">,</span> <span class="mi">1</span><span class="o">+</span><span class="n">high</span><span class="p">)</span>
+<span class="n">pg_loss</span> <span class="o">=</span> <span class="n">masked_mean</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">pg_losses</span><span class="p">,</span> <span class="n">pg_losses2</span><span class="p">),</span> <span class="n">eos_mask</span><span class="p">)</span>
+</code></pre></div>
+
+<p>这里用 <code>max</code> 是因为代码在最小化 loss；论文常写成最大化 objective，所以常见公式里是 <code>min</code>。符号不同，本质相同。</p>
+<p>可以这样理解 clip：</p>
+<table>
+<thead>
+<tr>
+<th>advantage</th>
+<th>模型想做什么</th>
+<th>clip 阻止什么</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>正</td>
+<td>大幅提高这次选择概率</td>
+<td>ratio 超过上界后不再给更多收益</td>
+</tr>
+<tr>
+<td>负</td>
+<td>大幅降低这次选择概率</td>
+<td>ratio 低于下界后不再给更多收益</td>
+</tr>
+</tbody>
+</table>
+<p>PPO 的目标不是每次把 policy 改到最优，而是每轮只做可信的小步更新。</p>
+<h3 id="84-last-r1-ppo-action">8.4 LaST-R1 的 PPO 不只作用在 action 上</h3>
+<p>普通 PPO 只会说：</p>
+<div class="codehilite"><pre><span></span><code>这次 action 好 -&gt; 提高 action 概率
+这次 action 差 -&gt; 降低 action 概率
+</code></pre></div>
+
+<p>LaST-R1 / LAPO 额外说：</p>
+<div class="codehilite"><pre><span></span><code>这次轨迹好 -&gt; 不只提高 action 概率，也让模型更倾向类似 latent reasoning 和类似停止长度
+这次轨迹差 -&gt; 不只降低 action 概率，也降低这类 latent reasoning 和停止长度的倾向
+</code></pre></div>
+
+<p>所以一次 actor update 包括四块：</p>
+<table>
+<thead>
+<tr>
+<th>loss</th>
+<th>优化对象</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>action_pg_loss</code></td>
+<td>action chunk</td>
+<td>做什么动作</td>
+</tr>
+<tr>
+<td><code>latent_pg_loss</code></td>
+<td>continuous latent CoT</td>
+<td>怎么想</td>
+</tr>
+<tr>
+<td><code>latent_end_pg_loss</code></td>
+<td><code>&lt;latent_end&gt;</code> 停止位置</td>
+<td>想多久</td>
+</tr>
+<tr>
+<td><code>value_loss</code></td>
+<td>value head</td>
+<td>预期未来回报</td>
+</tr>
+</tbody>
+</table>
+<p><code>dp_rob.py::update_policy</code> 里整体结构是：</p>
+<div class="codehilite"><pre><span></span><code>policy_loss = action_loss_weight * latent_action_pg_loss
+            + latent_loss_weight * latent_pg_loss
+
+loss = policy_loss + value_loss
+</code></pre></div>
+
+<p>当前脚本配置：</p>
+<div class="codehilite"><pre><span></span><code>action_loss_weight = 1.0
+latent_loss_weight = 0.1
+latent_end_loss_weight = 1.0
+clip_ratio_low = 0.2
+clip_ratio_high = 0.28
+latent_sigma = 10
+</code></pre></div>
+
+<h3 id="85-action-loss-action-chunk">8.5 action loss：提高或降低同一个 action chunk 的概率</h3>
+<p>action ratio 是：</p>
+<p><div class="math display">$$r_t^a(\theta)
+=
+\exp\left(
+\log \pi_\theta(\mathbf{C}_t\mid\cdot)
+-
+\log \pi_{\theta_{old}}(\mathbf{C}_t\mid\cdot)
+\right)$$</div></p>
+<p>代码里：</p>
+<ul>
+<li><code>old_log_prob</code>：rollout 时旧策略对实际采样 action chunk <span class="math inline">$\mathbf{C}_t$</span> 的 logprob；</li>
+<li><code>log_prob</code>：update 时新策略重新计算同一个 action chunk 的 logprob。</li>
+</ul>
+<p>代码：</p>
+<div class="codehilite"><pre><span></span><code><span class="n">negative_approx_kl</span> <span class="o">=</span> <span class="n">log_prob</span> <span class="o">-</span> <span class="n">old_log_prob</span>
+<span class="n">ratio</span> <span class="o">=</span> <span class="n">exp</span><span class="p">(</span><span class="n">negative_approx_kl</span><span class="p">)</span>
+<span class="n">pg_losses</span> <span class="o">=</span> <span class="o">-</span><span class="n">advantages</span> <span class="o">*</span> <span class="n">ratio</span>
+<span class="n">pg_losses2</span> <span class="o">=</span> <span class="o">-</span><span class="n">advantages</span> <span class="o">*</span> <span class="n">clamp</span><span class="p">(</span><span class="n">ratio</span><span class="p">,</span> <span class="mi">1</span><span class="o">-</span><span class="n">low</span><span class="p">,</span> <span class="mi">1</span><span class="o">+</span><span class="n">high</span><span class="p">)</span>
+<span class="n">pg_loss</span> <span class="o">=</span> <span class="n">masked_mean</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">pg_losses</span><span class="p">,</span> <span class="n">pg_losses2</span><span class="p">),</span> <span class="n">eos_mask</span><span class="p">)</span>
+</code></pre></div>
+
+<p>因为一次 action chunk 有 56 个 token，代码先把 56 个 token 的 logprob 加起来：</p>
+<div class="codehilite"><pre><span></span><code><span class="n">logprobs</span> <span class="o">=</span> <span class="n">gather</span><span class="p">(</span><span class="o">...</span><span class="p">)</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">logprobs</span> <span class="o">=</span> <span class="n">logprobs</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">keepdim</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</code></pre></div>
+
+<p>所以这里的 PPO ratio 是 step-level 的：</p>
+<div class="codehilite"><pre><span></span><code>同一个 8-step action chunk 在新策略下的概率
+/
+同一个 8-step action chunk 在旧策略下的概率
+</code></pre></div>
+
+<p>效果：</p>
+<ul>
+<li>advantage &gt; 0：提高这组 action token 的概率；</li>
+<li>advantage &lt; 0：降低这组 action token 的概率；</li>
+<li>clipping 防止概率变化过大。</li>
+</ul>
+<h3 id="86-latent-losscontinuous-latent-token">8.6 latent loss：continuous latent 没有 token 概率，所以用高斯密度近似</h3>
+<p>离散 action token 有 softmax probability，但 continuous latent vector 没有“第几个 token 的概率”。LAPO 的做法是：把当前策略预测的 latent 当成高斯分布均值。</p>
+<p>对单个 latent：</p>
+<p><div class="math display">$$p_\theta(\mathbf{x})
+=
+\frac{1}{(2\pi\sigma^2)^{D/2}}
+\exp\left(
+-\frac{1}{2\sigma^2}
+\|\mathbf{x}-\mathbf{z}_{t,i}^{\theta}\|^2
+\right)$$</div></p>
+<p>其中：</p>
+<ul>
+<li><span class="math inline">$\mathbf{z}_{t,i}^{\theta}$</span>：update 阶段新策略预测的第 <code>i</code> 个 latent；</li>
+<li><span class="math inline">$\mathbf{x}$</span>：要评估概率密度的 latent 样本；</li>
+<li><span class="math inline">$\sigma$</span>：固定标准差，代码里 <code>latent_sigma=10</code>。</li>
+</ul>
+<p>把 rollout 时旧策略实际生成的 latent <span class="math inline">$\mathbf{z}_{t,i}^{old}$</span> 代入 <span class="math inline">$\mathbf{x}$</span>，就得到：</p>
+<div class="codehilite"><pre><span></span><code>新策略认为 old latent 有多像自己会生成的 latent？
+</code></pre></div>
+
+<p>对整个 latent 序列求和后：</p>
+<p><div class="math display">$$r_t^z(\theta)
+=
+\exp\left(
+-\frac{1}{2\sigma^2}
+\sum_{i=1}^{N_z}
+\|\mathbf{z}_{t,i}^{old}-\mathbf{z}_{t,i}^{\theta}\|^2
+\right)$$</div></p>
+<p>代码：</p>
+<div class="codehilite"><pre><span></span><code><span class="n">diff2</span> <span class="o">=</span> <span class="p">(</span><span class="n">old_latents</span> <span class="o">-</span> <span class="n">latents</span><span class="p">)</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">diff2</span> <span class="o">=</span> <span class="n">diff2</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">latent_length</span><span class="p">)</span>
+<span class="n">diff2</span> <span class="o">*=</span> <span class="n">per_step_mask</span>
+<span class="n">diff2</span> <span class="o">=</span> <span class="n">diff2</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">latent_ratio</span> <span class="o">=</span> <span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">diff2</span> <span class="o">/</span> <span class="n">sigma</span><span class="o">^</span><span class="mi">2</span><span class="p">)</span>
+<span class="n">latent_pg_losses</span> <span class="o">=</span> <span class="o">-</span><span class="n">advantages</span> <span class="o">*</span> <span class="n">latent_ratio</span>
+</code></pre></div>
+
+<p>这里要抓住两个点：</p>
+<ul>
+<li><code>old_latents</code> 不是 DINOv3 真值，而是 rollout 时旧策略自己生成的 latent；</li>
+<li><code>latents</code> 是 update 时新策略在同样上下文下重新预测的 latent。</li>
+</ul>
+<p>训练效果：</p>
+<table>
+<thead>
+<tr>
+<th>advantage</th>
+<th>latent loss 做什么</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>正</td>
+<td>让新策略 latent 靠近 old latent，复现成功/超预期的思考路径</td>
+</tr>
+<tr>
+<td>负</td>
+<td>让新策略 latent 远离 old latent，减少失败/低于预期的思考路径</td>
+</tr>
+</tbody>
+</table>
+<p><code>latent_mask</code> 只让被选中的前 <code>chosen_length</code> 个 latent 参与优化。未被选中的候选 latent 虽然为了固定形状可能存在于张量里，但不应该贡献 loss。</p>
+<p>这就是论文里“environment reward shapes latent reasoning space”的代码落点：环境 reward 不直接监督 latent 的语义，而是通过 advantage 决定某段 latent 轨迹该被拉近还是推远。</p>
+<h3 id="87-latent_end-loss-rl">8.7 latent_end loss：把“想多久”也当成 RL 决策</h3>
+<p>rollout 时模型会在几个候选长度中选择一个停止位置。例如当前配置：</p>
+<div class="codehilite"><pre><span></span><code>latent_length = 8
+latent_end_num = 4
+候选长度 = 2, 4, 6, 8
+</code></pre></div>
+
+<p>rollout 时会保存：</p>
+<div class="codehilite"><pre><span></span><code><span class="n">old_latent_end_log_prob</span> <span class="o">=</span> <span class="n">group_end_log_probs</span><span class="p">[</span><span class="n">chosen_idx</span><span class="p">]</span>
+<span class="n">chosen_length</span> <span class="o">=</span> <span class="n">candidate_sizes</span><span class="p">[</span><span class="n">chosen_idx</span><span class="p">]</span>
+</code></pre></div>
+
+<p>update 时，新策略重新计算同一个 chosen length 对应 <code>&lt;latent_end&gt;</code> 的 logprob：</p>
+<div class="codehilite"><pre><span></span><code><span class="n">latent_end_log_prob</span> <span class="o">=</span> <span class="n">log_softmax</span><span class="p">(</span><span class="n">latent_end_logits</span><span class="p">)[</span><span class="n">latent_end_id</span><span class="p">]</span>
+<span class="n">end_ratio</span> <span class="o">=</span> <span class="n">exp</span><span class="p">(</span><span class="n">latent_end_log_prob</span> <span class="o">-</span> <span class="n">old_latent_end_log_prob</span><span class="p">)</span>
+</code></pre></div>
+
+<p>对应公式：</p>
+<p><div class="math display">$$r_t^{end}(\theta)
+=
+\exp\left(
+\log \pi_\theta(\mathbf{z}_t^{end}\mid\cdot)
+-
+\log \pi_{\theta_{old}}(\mathbf{z}_t^{end}\mid\cdot)
+\right)$$</div></p>
+<p>效果：</p>
+<ul>
+<li>advantage &gt; 0：增加当时那个停止长度的概率；</li>
+<li>advantage &lt; 0：降低当时那个停止长度的概率。</li>
+</ul>
+<p>所以 adaptive latent CoT 不是靠手写规则学出来的。模型是在 RL 中学：</p>
+<div class="codehilite"><pre><span></span><code>哪些状态需要想短一点，哪些状态需要想长一点。
+</code></pre></div>
+
+<h3 id="88-value-loss">8.8 value loss：训练“预期未来回报”的头</h3>
+<p>policy loss 负责更新“怎么选”，value loss 负责更新“怎么估计局面好坏”。</p>
+<p>代码：</p>
+<div class="codehilite"><pre><span></span><code><span class="n">value_loss</span><span class="p">,</span> <span class="n">value_clipfrac</span> <span class="o">=</span> <span class="n">core_algos</span><span class="o">.</span><span class="n">compute_value_loss</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+<span class="n">vpredclipped</span> <span class="o">=</span> <span class="n">clip</span><span class="p">(</span><span class="n">vpreds</span><span class="p">,</span> <span class="n">old_values</span> <span class="o">-</span> <span class="n">low</span><span class="p">,</span> <span class="n">old_values</span> <span class="o">+</span> <span class="n">low</span><span class="p">)</span>
+<span class="n">vf_losses1</span> <span class="o">=</span> <span class="p">(</span><span class="n">vpreds</span> <span class="o">-</span> <span class="n">returns</span><span class="p">)</span><span class="o">^</span><span class="mi">2</span>
+<span class="n">vf_losses2</span> <span class="o">=</span> <span class="p">(</span><span class="n">vpredclipped</span> <span class="o">-</span> <span class="n">returns</span><span class="p">)</span><span class="o">^</span><span class="mi">2</span>
+<span class="n">vf_loss</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">masked_mean</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">vf_losses1</span><span class="p">,</span> <span class="n">vf_losses2</span><span class="p">),</span> <span class="n">eos_mask</span><span class="p">)</span>
+</code></pre></div>
+
+<p>含义：</p>
+<div class="codehilite"><pre><span></span><code>v_preds  = 新 value head 的预测
+returns  = GAE 构造出来的目标回报
+old_values = rollout 时旧 value head 的预测
+</code></pre></div>
+
+<p>value clipping 和 policy clipping 的动机类似：限制 value head 单次更新不要跳太猛。</p>
+<p>这里还有两个代码细节：</p>
+<ul>
+<li><code>compute_value_loss(...)</code> 的参数里有 <code>high_clip_ratio</code>，但当前实现没有用它；value clipping 实际只用 <code>low_clip_ratio</code> 做 <code>old_values ± low</code> 的对称裁剪。</li>
+<li>函数签名里保留了 <code>huber_delta=10</code>，但 Huber loss 代码被注释掉了；当前实际使用的是上面这套 MSE-style value loss。</li>
+</ul>
+<p>value head 不直接输出动作。它的作用是让下一轮 advantage 更准：</p>
+<div class="codehilite"><pre><span></span><code>advantage = 实际回报 - value 预期
+</code></pre></div>
+
+<h3 id="89-total-loss-actionlatentendvalue">8.9 total loss：把 action、latent、end、value 合起来</h3>
+<p>论文的总目标可以概念化写成：</p>
+<p><div class="math display">$$\mathcal{L}_{total}(\theta)
+=
+\mathcal{L}_{action}(\theta)
++
+\lambda_1\mathcal{L}_{latent}(\theta)
++
+\lambda_2\mathcal{L}_{value}(\theta)
++
+\lambda_3\mathcal{L}_{end}(\theta)$$</div></p>
+<p>代码里拆得更工程化：</p>
+<div class="codehilite"><pre><span></span><code><span class="n">latent_action_pg_loss</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">n_action</span> <span class="o">*</span> <span class="n">action_pg_loss</span>
+    <span class="o">+</span> <span class="n">latent_end_loss_weight</span> <span class="o">*</span> <span class="n">latent_end_pg_loss</span>
+<span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">n_action</span> <span class="o">+</span> <span class="n">latent_end_loss_weight</span><span class="p">)</span>
+
+<span class="n">policy_loss</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">action_loss_weight</span> <span class="o">*</span> <span class="n">latent_action_pg_loss</span>
+    <span class="o">+</span> <span class="n">latent_loss_weight</span> <span class="o">*</span> <span class="n">latent_pg_loss</span>
+<span class="p">)</span>
+
+<span class="n">loss</span> <span class="o">=</span> <span class="n">policy_loss</span> <span class="o">+</span> <span class="n">value_loss</span>
+</code></pre></div>
+
+<p>对应关系只能粗略看成：</p>
+<ul>
+<li><span class="math inline">$\mathcal{L}_{action}$</span>：<code>action_pg_loss</code></li>
+<li><span class="math inline">$\mathcal{L}_{latent}$</span>：<code>latent_pg_loss</code></li>
+<li><span class="math inline">$\mathcal{L}_{end}$</span>：<code>latent_end_pg_loss</code></li>
+<li><span class="math inline">$\mathcal{L}_{value}$</span>：<code>value_loss</code></li>
+<li><span class="math inline">$\lambda_1$</span>：<code>latent_loss_weight</code></li>
+<li><span class="math inline">$\lambda_2$</span>：代码里等价于 1，直接把 <code>value_loss</code> 加进总 loss</li>
+<li><span class="math inline">$\lambda_3$</span>：不要直接等同于 <code>latent_end_loss_weight</code></li>
+</ul>
+<p>最后一条很重要。脚本里虽然写：</p>
+<div class="codehilite"><pre><span></span><code>latent_end_loss_weight = 1.0
+n_action = 7 * 8 = 56
+</code></pre></div>
+
+<p>但代码不是：</p>
+<div class="codehilite"><pre><span></span><code>loss = action_pg_loss + 1.0 * latent_end_pg_loss
+</code></pre></div>
+
+<p>而是：</p>
+<div class="codehilite"><pre><span></span><code>latent_action_pg_loss
+=
+(56 * action_pg_loss + 1.0 * latent_end_pg_loss) / 57
+</code></pre></div>
+
+<p>也就是说，<code>latent_end_loss_weight</code> 是 action/end 这个加权平均里的内部权重。它决定 <code>&lt;latent_end&gt;</code> 相对 56 个 action token 的占比，而不是论文公式里独立线性项 <span class="math inline">$\lambda_3\mathcal{L}_{end}$</span> 的直接系数。</p>
+<p>因此论文附录里说 <span class="math inline">$\lambda_3=0.1$</span> 最优，不能直接和脚本里的 <code>latent_end_loss_weight=1.0</code> 做数值对比。两边的数学组织方式不同：论文公式是一级线性加和，代码实现是先把 <code>action_pg_loss</code> 和 <code>latent_end_pg_loss</code> 按 token 数合并，再加 latent/value。</p>
+<h3 id="810">8.10 一句话串起来</h3>
+<p>如果只用一句话概括 LaST-R1 这段 RL：</p>
+<div class="codehilite"><pre><span></span><code>环境只告诉模型 rollout 最后成不成功；
+GAE 把这个结果变成每个 decision step 的 advantage；
+PPO 用 advantage 调整 action chunk 的概率；
+LAPO 进一步用同一个 advantage 调整 latent CoT 和停止长度；
+value head 学会预测未来回报，让下一轮 advantage 更可靠。
+</code></pre></div>
+
+<h2 id="9">9. 训练和推理流程合在一起看</h2>
+<p>下面是 LIBERO 仿真 PPO/LAPO 的完整闭环：</p>
+<p><pre class="mermaid">flowchart TD
+    A["环境给当前 obs + 指令"] --> B["process_input 拼 prompt + latent/action 占位"]
+    B --> C["prefill prompt + &lt;latent_start>"]
+    C --> D["AR 生成 latent hidden states"]
+    D --> E["在候选位置计算 &lt;latent_end> logprob"]
+    E --> F["采样/选择 chosen_length"]
+    F --> G["action zero placeholders 并行解码 56 个 action token"]
+    G --> H["ActionTokenizer 解码为连续动作"]
+    H --> I["环境执行 action chunk"]
+    I --> J["记录 complete / finish_step"]
+    J --> K["reward: 成功终点给 5，否则 0"]
+    K --> L["GAE 算 advantage / returns"]
+    L --> M["PPO/LAPO 更新 action、latent、latent_end、value"]
+    M --> A</pre></p>
+<h2 id="10">10. 常见误解</h2>
+<h3 id="101-advantage-reward">10.1 advantage 不是 reward</h3>
+<p>reward 是环境给的原始分数。advantage 是经过 value baseline 和 GAE 处理后的“比预期好多少”。</p>
+<p>成功轨迹里的某一步也可能 advantage 不大，因为 value head 可能早就预期它会成功；失败轨迹里的某些早期 step 也可能不全是负的，因为失败可能由后面动作造成。</p>
+<h3 id="102-rl-latent-loss-dinov3-supervised-loss">10.2 RL 阶段的 latent loss 不是 DINOv3 supervised loss</h3>
+<p>论文 warm-up 阶段用 DINOv3 latent target 做监督。RL/LAPO 阶段代码里，latent PPO loss 比较的是：</p>
+<div class="codehilite"><pre><span></span><code>rollout 时旧策略生成的 old_latents
+vs
+当前新策略在同样上下文下预测的 latents
+</code></pre></div>
+
+<p>环境 reward 通过 advantage 决定靠近还是远离这些 old_latents。</p>
+<h3 id="103-old_latents">10.3 old_latents 不是“真实答案”</h3>
+<p>old_latents 只是旧策略在当时状态下走过的 latent 轨迹。它是不是值得学习，取决于这段 rollout 的 advantage。</p>
+<ul>
+<li>成功且超预期：old_latents 被当成好样本；</li>
+<li>失败或低于预期：old_latents 被当成坏样本。</li>
+</ul>
+<h3 id="104-latent_end-token">10.4 <code>&lt;latent_end&gt;</code> 既是 token，也是决策</h3>
+<p><code>&lt;latent_end&gt;</code> 有 token embedding，也有 lm_head logit/logprob。它的 logprob 被纳入 PPO，因此模型不仅学 action，还学“何时停止思考”。</p>
+<h3 id="105-continuous-latent-ppo">10.5 为什么 continuous latent 也能用 PPO</h3>
+<p>离散 action token 可以直接用 softmax 概率。continuous latent 没有这个概率，所以论文假设：</p>
+<div class="codehilite"><pre><span></span><code>old_latent 是从以 new_latent 为均值的高斯分布里来的
+</code></pre></div>
+
+<p>距离越近，密度越高，ratio 越大；距离越远，ratio 越小。这样就把连续向量变成了可优化的 PPO surrogate。</p>
+<h2 id="11">11. 公式到代码速查表</h2>
+<p>下面这张表的第一列故意用 ASCII/代码风格简写，而不是把复杂 LaTeX 直接塞进 Markdown 表格。GitHub 对表格里的 inline math 偶尔会渲染失败；完整数学定义放在表格外的 <code>math</code> fenced block 里更稳。</p>
+<p><div class="math display">$$\begin{aligned}
+r_t^a(\theta)
+&=
+\exp\left(
+\log \pi_\theta(\mathbf{C}_t\mid\cdot)
+-
+\log \pi_{\theta_{old}}(\mathbf{C}_t\mid\cdot)
+\right),
+\\
+\log \pi_\theta(\mathbf{C}_t\mid\cdot)
+&=
+\sum_{j=1}^{N_a}
+\log \pi_\theta(\mathbf{a}_{t,j}\mid\cdot)
+\end{aligned}$$</div></p>
+<p><div class="math display">$$\begin{aligned}
+\mathbf{Z}_t^{old}
+&=
+\{\mathbf{z}_{t,i}^{old}\}_{i=1}^{N_z},
+&
+\mathbf{Z}_t^\theta
+&=
+\{\mathbf{z}_{t,i}^{\theta}\}_{i=1}^{N_z},
+\\
+r_t^z(\theta)
+&=
+\exp\left(
+-\frac{1}{2\sigma^2}
+\sum_{i=1}^{N_z}
+\left\|
+\mathbf{z}_{t,i}^{old}
+-
+\mathbf{z}_{t,i}^{\theta}
+\right\|^2
+\right)
+\end{aligned}$$</div></p>
+<p><div class="math display">$$\begin{aligned}
+r_t^{end}(\theta)
+&=
+\exp\left(
+\log \pi_\theta(\mathbf{z}_t^{end}\mid\cdot)
+-
+\log \pi_{\theta_{old}}(\mathbf{z}_t^{end}\mid\cdot)
+\right),
+\\
+\hat{R}_t
+&=
+\sum_{k=t}^{T}\gamma^{k-t}r_k,
+&
+\hat{A}_t
+&\approx
+\hat{R}_t - V_\theta(\mathbf{s}_t),
+\\
+\mathcal{L}_{value}
+&=
+\frac{1}{2}
+\left(
+V_\theta(\mathbf{s}_t)-\hat{R}_t
+\right)^2
+\end{aligned}$$</div></p>
+<table>
+<thead>
+<tr>
+<th>论文公式 / 变量</th>
+<th>代码变量</th>
+<th>位置</th>
+<th>梯度效果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>r_t^a(theta)</code></td>
+<td><code>ratio</code></td>
+<td><code>verl/trainer/ppo/core_algos.py::compute_policy_loss_with_latent</code></td>
+<td>控制当前策略对 rollout action chunk 的概率更新幅度</td>
+</tr>
+<tr>
+<td><code>log pi_theta(C_t | .)</code></td>
+<td><code>log_prob</code></td>
+<td><code>verl/workers/actor/dp_rob.py::_forward_micro_batch_update</code></td>
+<td>advantage 为正时提高该 action chunk 概率，为负时降低</td>
+</tr>
+<tr>
+<td><code>log pi_old(C_t | .)</code></td>
+<td><code>old_log_probs</code></td>
+<td><code>verl/workers/rollout/rob_rollout.py::_generate_one_step_qwen_oft</code></td>
+<td>PPO ratio 的旧策略基准，不参与当前梯度</td>
+</tr>
+<tr>
+<td><code>Z_t^old</code></td>
+<td><code>old_latents</code></td>
+<td><code>rob_rollout.py</code> 写入 batch，<code>dp_rob.py</code> 读出</td>
+<td>成功轨迹中被当成 latent 复现目标，失败轨迹中被降低倾向</td>
+</tr>
+<tr>
+<td><code>Z_t^theta</code></td>
+<td><code>latents</code></td>
+<td><code>modeling_qwen3_vl.py::forward</code></td>
+<td>当前策略 predicted latent，和 <code>old_latents</code> 算距离</td>
+</tr>
+<tr>
+<td><code>r_t^z(theta)</code></td>
+<td><code>latent_ratio</code></td>
+<td><code>verl/trainer/ppo/core_algos.py::compute_policy_loss_with_latent</code></td>
+<td>控制当前策略要靠近还是远离 rollout latent</td>
+</tr>
+<tr>
+<td><code>z_t^end</code></td>
+<td><code>chosen_length</code>, <code>old_latent_end_log_prob</code>, <code>latent_end_log_prob</code></td>
+<td><code>rob_rollout.py</code>, <code>dp_rob.py</code></td>
+<td>学习哪个候选位置该停止 latent CoT</td>
+</tr>
+<tr>
+<td><code>r_t</code></td>
+<td><code>token_level_scores</code>, <code>token_level_rewards</code></td>
+<td><code>verl/trainer/main_ppo.py::RobRewardManager</code></td>
+<td>成功终点给奖励，驱动整条轨迹的 credit assignment</td>
+</tr>
+<tr>
+<td><code>V(s_t)</code></td>
+<td><code>old_values</code>, <code>v_preds</code></td>
+<td><code>modeling_qwen3_vl.py</code>, <code>dp_rob.py</code></td>
+<td>学习未来回报 baseline，降低 policy gradient 噪声</td>
+</tr>
+<tr>
+<td><code>A_hat_t</code></td>
+<td><code>advantages</code></td>
+<td><code>ray_trainer.py::compute_advantage</code></td>
+<td>决定 action、latent、end ratio 是被鼓励还是被抑制</td>
+</tr>
+<tr>
+<td><code>R_hat_t</code></td>
+<td><code>returns</code></td>
+<td><code>core_algos.py::compute_gae_advantage_return</code></td>
+<td>value loss 的监督目标</td>
+</tr>
+<tr>
+<td><code>L_value</code></td>
+<td><code>value_loss</code></td>
+<td><code>core_algos.py::compute_value_loss</code></td>
+<td>让 value head 拟合 <code>returns</code>，从而让后续 advantage 更准</td>
+</tr>
+</tbody>
+</table>
+<h2 id="12">12. 我对代码实现的简明判断</h2>
+<p>这份实现的关键设计是“固定形状 + 动态 mask”：</p>
+<ul>
+<li>输入里始终预留最多 8 个 latent 和 4 个 <code>&lt;latent_end&gt;</code> 候选；</li>
+<li>rollout 时先生成完整候选，再选长度；</li>
+<li>action 解码时用 attention mask 只暴露被选中的 latent 前缀；</li>
+<li>update 时用 <code>latent_mask</code> 只优化有效 latent；</li>
+<li>这样 avoids 变长序列带来的分布式训练和 batch 对齐复杂度。</li>
+</ul>
+<p>最核心的一行是：</p>
+<div class="codehilite"><pre><span></span><code><span class="n">pad_abs</span> <span class="o">=</span> <span class="n">latent_pad_start</span> <span class="o">+</span> <span class="n">g</span> <span class="o">*</span> <span class="p">(</span><span class="n">G</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="n">j</span> <span class="o">-</span> <span class="mi">1</span>
+</code></pre></div>
+
+<p>它说明训练时的 predicted latent 是从“前一位置 hidden state”取的，而不是从当前 latent pad 槽直接取的。这一点和自回归 next-token prediction 对齐，也是理解 LaST-R1 latent 占位机制的关键。</p>
+  </div>
+</main>
+
+
+<script>
+(function() {
+  const sidebar = document.getElementById('sidebar');
+  const links = sidebar.querySelectorAll('a');
+  const headings = document.querySelectorAll('h1[id], h2[id], h3[id], h4[id]');
+  if (headings.length === 0) return;
+
+  const linkMap = new Map();
+  links.forEach(function(a) {
+    const href = a.getAttribute('href');
+    if (href && href.startsWith('#')) linkMap.set(href.slice(1), a);
+  });
+
+  function onScroll() {
+    let currentId = null;
+    const scrollTop = window.scrollY + 80;
+    headings.forEach(function(h) { if (h.offsetTop <= scrollTop) currentId = h.id; });
+    links.forEach(function(a) { a.classList.remove('active'); });
+    if (currentId && linkMap.has(currentId)) {
+      const el = linkMap.get(currentId);
+      el.classList.add('active');
+      const sr = sidebar.getBoundingClientRect();
+      const er = el.getBoundingClientRect();
+      if (er.bottom > sr.bottom || er.top < sr.top) {
+        el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+    }
+  }
+
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,1964 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ConsisVLA-4D 论文阅读笔记</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #ffffff;
+    --text: #1a1a2e;
+    --text-secondary: #555;
+    --border: #e1e4e8;
+    --link: #0969da;
+    --table-stripe: #f6f8fa;
+    --heading: #0d1117;
+    --blockquote-border: #0969da;
+    --blockquote-bg: #f0f6ff;
+    --inline-code: #d73a49;
+    --inline-code-bg: #f6f8fa;
+    --sidebar-width: 260px;
+    --toc-active: #0969da;
+    --content-max-width: 900px;
+    --content-padding: 48px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "Inter", "Noto Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 16px;
+    line-height: 1.75;
+    color: var(--text);
+    background: var(--bg);
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    width: var(--sidebar-width);
+    overflow-y: auto;
+    padding: 28px 20px 40px;
+    background: #fafbfc;
+    border-right: 1px solid var(--border);
+    z-index: 10;
+    scrollbar-width: thin;
+  }
+  .sidebar-title {
+    font-size: 13px; font-weight: 700; color: var(--text-secondary);
+    margin-bottom: 16px; letter-spacing: 0.06em; text-transform: uppercase;
+  }
+  .toc-list { list-style: none; padding: 0; margin: 0; }
+  .toc-list ul { list-style: none; padding-left: 14px; }
+  .toc-list li { margin: 1px 0; }
+  .toc-list a {
+    display: block; padding: 4px 12px; font-size: 13.5px; line-height: 1.45;
+    color: var(--text-secondary); text-decoration: none; border-radius: 4px;
+    border-left: 2px solid transparent; transition: all 0.15s;
+  }
+  .toc-list a:hover { color: var(--link); background: #e8f0fe; }
+  .toc-list a.active {
+    color: var(--toc-active); font-weight: 600;
+    border-left-color: var(--toc-active); background: #e8f0fe;
+  }
+  .toc-h1 a { font-weight: 600; color: var(--heading); font-size: 14px; }
+  .toc-h3 a { padding-left: 24px; font-size: 13px; }
+  .toc-h4 a { padding-left: 36px; font-size: 12.5px; }
+  .toc-empty { color: var(--text-secondary); font-size: 13px; font-style: italic; }
+
+  .main-wrapper {
+    margin-left: var(--sidebar-width);
+    min-height: 100vh;
+    display: flex; justify-content: center;
+  }
+  .content-inner {
+    width: 100%;
+    max-width: var(--content-max-width);
+    padding: 40px var(--content-padding) 80px;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    color: var(--heading); font-weight: 700; line-height: 1.3;
+    margin-top: 2em; margin-bottom: 0.6em; scroll-margin-top: 24px;
+  }
+  h1 { font-size: 2em; border-bottom: 2px solid var(--border); padding-bottom: 0.3em; margin-top: 0; }
+  h2 { font-size: 1.5em; border-bottom: 1px solid var(--border); padding-bottom: 0.25em; }
+  h3 { font-size: 1.25em; }
+  h4 { font-size: 1.1em; }
+  p { margin-bottom: 1em; }
+  a { color: var(--link); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  strong { font-weight: 600; }
+
+  blockquote {
+    border-left: 4px solid var(--blockquote-border);
+    background: var(--blockquote-bg);
+    padding: 12px 20px; margin: 1em 0;
+    border-radius: 0 6px 6px 0; color: var(--text-secondary);
+  }
+  blockquote p:last-child { margin-bottom: 0; }
+
+  code {
+    font-family: "JetBrains Mono", "SF Mono", "Fira Code", monospace;
+    font-size: 0.875em; background: var(--inline-code-bg);
+    padding: 2px 6px; border-radius: 4px; color: var(--inline-code);
+  }
+  pre {
+    background: #1e1e2e; color: #cdd6f4;
+    border-radius: 8px; padding: 16px 20px; overflow-x: auto;
+    margin: 1em 0; font-size: 14px; line-height: 1.55;
+  }
+  pre code { background: none; padding: 0; border-radius: 0; color: inherit; font-size: inherit; }
+
+  .codehilite { background: #1e1e2e; border-radius: 8px; padding: 16px 20px; overflow-x: auto; margin: 1em 0; }
+  .codehilite pre { background: none; padding: 0; margin: 0; border-radius: 0; }
+  .codehilite .hll { background-color: #2a2a3e; }
+  .codehilite .c  { color: #6c7086; font-style: italic; }
+  .codehilite .k  { color: #cba6f7; }
+  .codehilite .o  { color: #89b4fa; }
+  .codehilite .s  { color: #a6e3a1; }
+  .codehilite .n  { color: #cdd6f4; }
+  .codehilite .p  { color: #bac2de; }
+  .codehilite .mi { color: #fab387; }
+  .codehilite .nf { color: #89b4fa; }
+  .codehilite .nb { color: #f38ba8; }
+  .codehilite .nc { color: #f9e2af; }
+  .codehilite .bp { color: #f38ba8; }
+
+  table { width: 100%; border-collapse: collapse; margin: 1em 0; font-size: 0.925em; }
+  th, td { border: 1px solid var(--border); padding: 10px 14px; text-align: left; }
+  th { background: var(--table-stripe); font-weight: 600; color: var(--heading); }
+  tr:nth-child(even) td { background: var(--table-stripe); }
+
+  .math.display { display: block; overflow-x: auto; padding: 12px 0; margin: 1em 0; }
+  ul, ol { padding-left: 1.5em; margin-bottom: 1em; }
+  li { margin-bottom: 0.3em; }
+  hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+  img { max-width: 100%; height: auto; border-radius: 6px; margin: 0.5em 0; }
+  p:has(img) { text-align: center; }
+  p:has(img) + p { text-align: center; font-size: 0.9em; color: var(--text-secondary); }
+  .mermaid { text-align: center; margin: 1.5em 0; background: #fafbfc; border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+
+  @media (max-width: 1024px) {
+    .sidebar { position: static; width: 100%; height: auto; max-height: 35vh; border-right: none; border-bottom: 1px solid var(--border); }
+    .main-wrapper { margin-left: 0; display: block; }
+    .content-inner { max-width: none; padding: 24px 20px 60px; }
+  }
+</style>
+
+<script>
+MathJax = {
+  tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']], processEscapes: true, tags: 'none' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] }
+};
+</script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  mermaid.initialize({ startOnLoad: true, theme: 'neutral', securityLevel: 'loose' });
+});
+</script>
+
+</head>
+<body>
+
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-title">目录</div>
+  <ul class="toc-list">
+<li class="toc-h1"><a href="#consisvla-4d">ConsisVLA-4D 论文阅读笔记</a>
+<ul>
+</li>
+<li class="toc-h2"><a href="#_1">一、核心问题</a>
+</li>
+<li class="toc-h2"><a href="#_2">二、核心思路</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#21-cv-aligner">2.1 CV-Aligner（跨视角对齐器）—— 保证跨视角物体语义一致性</a>
+</li>
+<li class="toc-h3"><a href="#22-co-fuser">2.2 CO-Fuser（跨物体融合器）—— 保证跨物体空间几何一致性</a>
+</li>
+<li class="toc-h3"><a href="#23-cs-thinker">2.3 CS-Thinker（跨场景思考器）—— 保证跨场景时空一致性</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_3">三、训练目标</a>
+</li>
+<li class="toc-h2"><a href="#_4">四、实验与结果</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#41-libero">4.1 仿真实验（LIBERO 基准）</a>
+</li>
+<li class="toc-h3"><a href="#42">4.2 效率对比</a>
+</li>
+<li class="toc-h3"><a href="#43">4.3 真机实验</a>
+</li>
+<li class="toc-h3"><a href="#44">4.4 消融实验</a>
+<ul>
+</li>
+<li class="toc-h4"><a href="#441-cv-aligner-co-fuser">4.4.1 CV-Aligner 与 CO-Fuser 消融</a>
+</li>
+<li class="toc-h4"><a href="#442-cs-thinker4d">4.4.2 CS-Thinker（4D 推理）消融</a>
+</li>
+<li class="toc-h4"><a href="#443">4.4.3 稀疏比与压缩方法消融</a>
+</ul></li>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_5">五、关键洞察与技术亮点</a>
+</li>
+<li class="toc-h2"><a href="#_6">六、代码实现解读</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#61">6.1 整体代码结构</a>
+</li>
+<li class="toc-h3"><a href="#62">6.2 论文模块 → 代码映射</a>
+</li>
+<li class="toc-h3"><a href="#63">6.3 视觉端架构详解</a>
+<ul>
+</li>
+<li class="toc-h4"><a href="#631-prismatichybridcompressionvisionbackbonevit_wrapperpy265-474">6.3.1 PrismaticHybridCompressionVisionBackbone（vit_wrapper.py:265-474）</a>
+</li>
+<li class="toc-h4"><a href="#632-vggt-forward">6.3.2 VGGT 特征融合过程（forward 中的核心路径）</a>
+</li>
+<li class="toc-h4"><a href="#633-18">6.3.3 论文中的「1/8 压缩比」在代码中的体现</a>
+</ul></li>
+</li>
+<li class="toc-h3"><a href="#64-vggt">6.4 VGGT 集成细节</a>
+<ul>
+</li>
+<li class="toc-h4"><a href="#641-vggt-1b-vggtmodelsvggtpy">6.4.1 VGGT-1B 模型简介（vggt/models/vggt.py）</a>
+</li>
+<li class="toc-h4"><a href="#642-consisvla-4d">6.4.2 在 ConsisVLA-4D 中的使用方式</a>
+</ul></li>
+</li>
+<li class="toc-h3"><a href="#65-cv-aligner">6.5 CV-Aligner 实现细节</a>
+<ul>
+</li>
+<li class="toc-h4"><a href="#651-textguidedsamplermm_samplerpy-es-selection">6.5.1 TextGuidedSampler（mm_sampler.py）—— ES-Selection 的代码实现</a>
+</li>
+<li class="toc-h4"><a href="#652-framefuserframe_fuserpy-single-fusion">6.5.2 FrameFuser（frame_fuser.py）—— Single-Fusion 的代码实现</a>
+</li>
+<li class="toc-h4"><a href="#653-film-eq-5">6.5.3 FiLM 调制（论文 eq. 5）</a>
+</ul></li>
+</li>
+<li class="toc-h3"><a href="#66-co-fuser">6.6 CO-Fuser 实现细节</a>
+<ul>
+</li>
+<li class="toc-h4"><a href="#661-group-fusion-eq-10-11">6.6.1 Group-Fusion —— 所有视角"成组"做逐元素特征混合（论文 eq. 10-11）</a>
+</li>
+<li class="toc-h4"><a href="#662-ig-aggregation-bc-attn-mask-eq-12-13">6.6.2 IG-Aggregation —— BC-Attn mask（论文 eq. 12-13）</a>
+</ul></li>
+</li>
+<li class="toc-h3"><a href="#67-cs-thinker">6.7 CS-Thinker 实现细节</a>
+<ul>
+</li>
+<li class="toc-h4"><a href="#671-dream-queries-modeling_prismaticpy370-376">6.7.1 Dream Queries 初始化（modeling_prismatic.py:370-376）</a>
+</li>
+<li class="toc-h4"><a href="#672-dynamicfeatdecoderfeats_decoderspy">6.7.2 DynamicFeatDecoder（feats_decoders.py）—— 动态物体和深度解码</a>
+</li>
+<li class="toc-h4"><a href="#673-sc-attn-token">6.7.3 SC-Attn 的 token 排列</a>
+</ul></li>
+</li>
+<li class="toc-h3"><a href="#68">6.8 训练流程详解</a>
+<ul>
+</li>
+<li class="toc-h4"><a href="#681-vla-scriptsfinetunepy">6.8.1 训练入口（vla-scripts/finetune.py）</a>
+</li>
+<li class="toc-h4"><a href="#682-forward">6.8.2 完整 forward 流程</a>
+</li>
+<li class="toc-h4"><a href="#683">6.8.3 训练策略</a>
+</li>
+<li class="toc-h4"><a href="#684-vs">6.8.4 训练 vs 推理的差异</a>
+</ul></li>
+</li>
+<li class="toc-h3"><a href="#69">6.9 关键技术细节补充</a>
+<ul>
+</li>
+<li class="toc-h4"><a href="#691-action-tokenizerprismaticvlaaction_tokenizerpy">6.9.1 Action Tokenizer（prismatic/vla/action_tokenizer.py）</a>
+</li>
+<li class="toc-h4"><a href="#692">6.9.2 动作预测头</a>
+</li>
+<li class="toc-h4"><a href="#693">6.9.3 多编码器的像素空间对齐</a>
+</li>
+<li class="toc-h4"><a href="#694-embedding">6.9.4 各模型的 Embedding 维度汇总</a>
+</ul></li>
+</li>
+<li class="toc-h3"><a href="#610">6.10 数据集构造与监督信号构建</a>
+<ul>
+</li>
+<li class="toc-h4"><a href="#6101">6.10.1 数据管线总览</a>
+</li>
+<li class="toc-h4"><a href="#6102-libero-regenerate_libero_datasetpy">6.10.2 LIBERO 原始数据再生（regenerate_libero_dataset.py）</a>
+</li>
+<li class="toc-h4"><a href="#6103-libero-transformspy827-841">6.10.3 LIBERO 标准化变换（transforms.py:827-841）</a>
+</li>
+<li class="toc-h4"><a href="#6104-data_utilspy">6.10.4 动作归一化与统计信息计算（data_utils.py）</a>
+</li>
+<li class="toc-h4"><a href="#6105-rldsbatchtransformrlds-pytorch-batchdatasetspy33-197">6.10.5 RLDSBatchTransform：RLDS → PyTorch Batch（datasets.py:33-197）</a>
+</li>
+<li class="toc-h4"><a href="#6106-gt">6.10.6 三条监督信号的 GT 来源与构建</a>
+</li>
+<li class="toc-h4"><a href="#6107">6.10.7 数据增强策略</a>
+</li>
+<li class="toc-h4"><a href="#6108">6.10.8 轨迹变换管线的完整流程</a>
+</li>
+<li class="toc-h4"><a href="#6109">6.10.9 完整的数据流总结</a>
+</ul></li>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_7">七、局限性与思考</a>
+</li>
+<li class="toc-h2"><a href="#_8">八、总结</a>
+</ul></li>
+</li></ul>
+</nav>
+
+<main class="main-wrapper">
+  <div class="content-inner" id="main-content">
+<h1 id="consisvla-4d">ConsisVLA-4D 论文阅读笔记</h1>
+<blockquote>
+<p><strong>论文标题</strong>: ConsisVLA-4D: Advancing Spatiotemporal Consistency in Efficient 3D-Perception and 4D-Reasoning for Robotic Manipulation
+<strong>arXiv ID</strong>: 2605.05126v1
+<strong>作者</strong>: Wei Li, Jizhihui Liu, Li Yixing, Junwen Tong, Rui Shao<em>, Liqiang Nie — 哈工大（深圳）、中兴、深圳环湾研究院
+</em><em>投稿方向</em><em>: CVPR 2026
+</em><em>代码</em>*: github.com/JiuTian-VL/ConsisVLA-4D</p>
+</blockquote>
+<hr />
+<h2 id="_1">一、核心问题</h2>
+<p>当前 VLA（Vision-Language-Action）模型主要存在两大缺陷：</p>
+<ol>
+<li><strong>3D 空间理解不足</strong>：多数模型止步于 2D 观测→动作的映射；引入点云/深度图的方法依赖额外传感器，计算开销大；2D→3D 投影的方法存在投影偏差、遮挡误差，缺乏跨视角和跨物体的几何一致性。</li>
+<li><strong>4D 时空推理薄弱</strong>：现有方法最多做到预测未来帧图像，缺少与指令相关场景的对齐，导致时空一致性差，动作生成不稳定。</li>
+</ol>
+<hr />
+<p><img alt="intro：与现有范式对比" src="arXiv-2605.05126v1/fig/intro.png" /></p>
+<p><em>图1：ConsisVLA-4D 与现有 VLA 范式对比总览。左侧展示了四种 VLA 范式从 2D 观测到动作生成的演进路径，右侧展示了 ConsisVLA-4D 在四个长时序真机任务上的执行效果。</em></p>
+<p><strong>左侧——四种 VLA 范式的演进：</strong></p>
+<ul>
+<li><strong>范式 A（显式 3D/4D 输入）</strong>：直接使用点云、深度图、历史帧等 3D/4D 数据作为输入。代表方法如 PointVLA、GeoVLA。优点是信息丰富，缺点是需要额外传感器（深度相机、LiDAR），硬件成本和计算开销大。</li>
+<li><strong>范式 B（2D→3D 投影）</strong>：在 2D 特征基础上通过投影矩阵映射到 3D 空间。代表方法如 SpatialVLA、Evo。问题是投影偏差和遮挡误差难以消除，缺乏跨视角几何一致性。</li>
+<li><strong>范式 C（从 2D 预测 3D）</strong>：从 2D 观测中预测 3D 表示（如深度图），再用于动作生成。代表方法如 CoT-VLA。预测出的 3D 表示存在尺度歧义，且缺少时间维度的推理。</li>
+<li><strong>范式 D（ConsisVLA-4D，本文提出）</strong>：在统一框架内实现 3D 感知→4D 推理的完整闭环。CV-Aligner 提取指令相关的跨视角物体；CO-Fuser 聚合多视角几何关系；CS-Thinker 基于未来动态物体和全局深度的隐式知识进行动作推理。仅使用原始视觉 token 的 <strong>1/8</strong>，实现时空一致性动作生成。</li>
+</ul>
+<p><strong>右侧——四个真机长时序任务示例：</strong> 展示了 ConsisVLA-4D 在微波炉操作（放面包→加热→关门）、剥香蕉（抓起→剥皮→放盘）、抽屉整理（拉开→放入→推回）、T恤折叠等任务上的执行效果，印证了时空一致性对长时序操作的关键支撑作用。*</p>
+<h2 id="_2">二、核心思路</h2>
+<p>受人类操控行为启发（双眼视觉保持空间感知一致性 + 在稳定空间感知基础上预测未来状态），提出 <strong>ConsisVLA-4D</strong>，在一个统一框架内实现高效的 3D 感知 + 4D 推理，包含三个紧密耦合的模块：</p>
+<h3 id="21-cv-aligner">2.1 CV-Aligner（跨视角对齐器）—— 保证跨视角物体语义一致性</h3>
+<ul>
+<li><strong>Explicit Semantic Object Selection（显式语义物体选择）</strong>：<ul>
+<li>用 SigLIP 编码多视角（Main/Left/Right）图像</li>
+<li>通过 FiLM 调制增强与指令的相关性</li>
+<li>计算每个视觉 token 与指令 embedding 的余弦相似度，仅保留 Top-K（默认 K=32）最相关的 token</li>
+</ul>
+</li>
+<li><strong>Single-Fusion（逐帧融合）</strong>：<ul>
+<li>将筛选后的语义 token 作为 Q，VGGT 提取的 3D 特征作为 K、V，通过 N 层 cross-attention 逐帧融合</li>
+<li>利用 VGGT 预训练的点跟踪能力建立跨视角物体身份关联</li>
+</ul>
+</li>
+<li><strong>效果</strong>：仅用原始视觉 token 的 <strong>1/8</strong>，实现跨视角物体语义一致性</li>
+</ul>
+<h3 id="22-co-fuser">2.2 CO-Fuser（跨物体融合器）—— 保证跨物体空间几何一致性</h3>
+<ul>
+<li>
+<p><strong>Group-Fusion（分组融合）</strong>：</p>
+<ul>
+<li>
+<p>具体来说，3 个视角（M, L, R）的图像在进入 DINOv2 时被拼成一个大
+  batch（vit_wrapper.py:465-466）：
+  <code>python
+  cached_img_regular = torch.cat([img_M, img_L, img_R], dim=1)    # 所有视角的 DINOv2 图像拼接
+  cached_vggt_patches = torch.cat([vggt_M, vggt_L, vggt_R], dim=-2)  # 所有视角的 VGGT 特征拼接</code></p>
+</li>
+<li>
+<p>然后这“一组”（Group）拼接后的特征一起进入 DINOv2，在每个 Block 里和同样拼接后的 VGGT
+  特征做加权求和。这就是 Group-Fusion：
+  <span class="math inline">$\mathbf{z}_{l}^{\text{geo-3D}} = (1-{\alpha_l}) \odot \mathbf{z}_{l}^{\text{geo}} + {\alpha_l} \odot \mathbf{z}_l^{\text{3D}}$</span></p>
+</li>
+<li>
+<p>权重 <span class="math inline">$\alpha_l$</span> 随层深余弦衰减（浅层 VGGT 3D 空间先验占 ~20% → 深层 VGGT 退出，DINOv2 自身几何特征主导）</p>
+</li>
+<li>与 CV-Aligner 的 Single-Fusion（每视角独立做 Cross-Attn）对应：Group-Fusion 是所有视角"成组"一起做特征混合</li>
+<li><strong>Implicit Geometric Relation Aggregation（隐式几何关系聚合）</strong>：</li>
+<li>用块级因果自注意力（BC-Attn）对融合特征与可学习的聚合 token 进行建模</li>
+<li>组内双向注意力 + 组间因果注意力</li>
+<li><strong>效果</strong>：仅用原始视觉 token 的 <strong>1/12–1/8</strong>，隐式建模跨物体空间几何关系，消除单视角几何歧义</li>
+</ul>
+</li>
+</ul>
+<p><img alt="supp_1：BC-Attn 块级因果注意力" src="arXiv-2605.05126v1/fig/supp_1.png" /></p>
+<p><em>图8：BC-Attn（块级因果自注意力）机制示意图，展示 CO-Fuser 中 IG-Aggregation 的核心注意力设计。</em></p>
+<p><strong>注意力 mask 设计：</strong> 图中展示三视角（Main/Left/Right）的 patch token（蓝色方块）与可学习的 Aggregation Token（橙色方块，用 A 标记）之间的注意力模式。关键设计是：</p>
+<ul>
+<li><strong>组内双向注意力</strong>：同一视角（如同一行 Main）的所有 patch token 之间可以互相看到（蓝色方块之间全连接），保留视角内的完整空间上下文。</li>
+<li><strong>组间因果注意力</strong>：Aggregation Token 可以看到所有视角的 patch token（向上聚合信息），但 patch token 不能看到 Aggregation Token（防止信息从聚合 token 回流到原始 token）。不同视角的 patch token 之间也不能直接互相关注（视角间不直接通信，所有跨视角信息必须通过 Aggregation Token 中转）。</li>
+<li><strong>压缩比 1/12</strong>：三视角共 3×256=768 个 patch token，最终仅保留 64 个 Aggregation Token，压缩比 ≈1/12。</li>
+</ul>
+<p><strong>设计意图：</strong> 这种非对称的注意力设计确保 Aggregation Token 成为跨视角几何信息的唯一汇聚点——它"看"到了所有视角的空间信息但不能"告诉"任何 patch token，迫使模型将所有跨视角的空间几何关系压缩到这 64 个 token 中。推理时只使用这 64 个 Aggregation Token，丢弃所有原始 patch token，实现从 768→64 的高效压缩。*</p>
+<h3 id="23-cs-thinker">2.3 CS-Thinker（跨场景思考器）—— 保证跨场景时空一致性</h3>
+<p>核心创新：将 3D 感知拓展到 4D 推理，<strong>训练时学习隐式知识，推理时不显式生成中间表示</strong>。</p>
+<ul>
+<li><strong>多视角物体 → 单视角动态物体预测</strong>：<ul>
+<li>初始化可学习的动态 token，在 SC-Attn 中由对应视角的物体特征 + 指令引导</li>
+<li>预测固定视角的动作后动态物体，用 CoTracker 监督（<span class="math inline">$\mathcal{L}_{\text{dyn-4D}}$</span>）</li>
+</ul>
+</li>
+<li><strong>抽象关系 → 具体全局深度预测</strong>：<ul>
+<li>初始化可学习的深度 token，由 CO-Fuser 的聚合几何关系 + 指令引导</li>
+<li>解码为各视角的全局深度，用 Depth-Anything 监督（<span class="math inline">$\mathcal{L}_{\text{dep-4D}}$</span>）</li>
+</ul>
+</li>
+<li><strong>SC-Attn（时空一致性注意力）</strong>：<ul>
+<li>同时处理物体 token、几何 token、指令、动态 token、深度 token、动作 token</li>
+<li>动态物体预测和深度预测作为动作生成的<strong>中间视觉推理</strong>，并行解码</li>
+</ul>
+</li>
+<li><strong>推理时</strong>：不生成动态物体和深度图，仅靠训练中学习到的隐式知识进行高效动作生成。这些隐式知识 token 占序列的不到 10%。</li>
+</ul>
+<p><img alt="pipline：从 3D 感知到 4D 推理的机制" src="arXiv-2605.05126v1/fig/pipline.png" /></p>
+<p><em>图2：3D 感知→4D 推理完整流水线。该图从机制层面揭示 CV-Aligner 和 CO-Fuser 如何将各自的 3D 一致性拓展到 4D 时空域。</em></p>
+<p><strong>上半部分（CV-Aligner → 4D 推理）—— 从跨视角物体到动态物体预测：</strong></p>
+<p>CV-Aligner 在多视角（Main/Left/Right）图像中通过 ES-Selection + Single-Fusion 识别并匹配同一物体在不同视角下的身份，产生跨视角一致的物体表示 <span class="math inline">$\mathbf{z}_{\{M,L,R\}}^{\text{obj-3D}}$</span>。进入 4D 推理阶段后，CS-Thinker 从多视角物体 token 出发，预测动作执行后固定视角（如 Main）中的动态物体——即回答"这个物体在动作后会变成什么样、出现在什么位置"。例如，从 Main 视角看到碗在桌上、Left 视角看到碗在微波炉旁，4D 推理预测碗放入微波炉后的状态。这里的关键是从"当前多视角静态物体"到"未来单视角动态物体"的推理跨越。</p>
+<p><strong>下半部分（CO-Fuser → 4D 推理）—— 从聚合几何关系到全局深度预测：</strong></p>
+<p>CO-Fuser 通过 Group-Fusion + IG-Aggregation 聚合多视角的空间几何关系，消除单视角的尺度歧义和遮挡误差，产生紧凑的聚合几何表示 <span class="math inline">$\mathbf{z}_{\mathcal{L}'}^{\text{agg-3D}}$</span>。进入 4D 推理阶段后，CS-Thinker 从同一组几何表示出发，解码出所有视角的全局深度图——即回答"动作后整个场景的 3D 结构是什么样的"。这里的关键是从"抽象几何关系"到"具体深度图"的推理跨越。</p>
+<p><strong>整体意义：</strong> 3D 感知确保了空间一致性（物体身份跨视角一致 + 几何关系跨物体一致），4D 推理在此基础上扩展为时空一致性——既预测局部物体动态，又预测全局场景深度，两者共同作为动作生成的中间视觉推理支撑。*</p>
+<p><img alt="3d：高效 3D 感知" src="arXiv-2605.05126v1/fig/3d.png" /></p>
+<p><em>图3：高效 3D 感知保证空间一致性。该图详细展示 CV-Aligner（红色）和 CO-Fuser（橙色）的内部结构，以及三个视觉编码器（SigLIP/DINOv2/VGGT）的分工协作。</em></p>
+<p><strong>子图 (a) CV-Aligner（红色）—— 跨视角物体语义一致性：</strong></p>
+<p>CV-Aligner 的输入来自 SigLIP（语义编码器，输出 256 个 patch token/视角）和 VGGT（空间编码器，输出 3D 特征）。流程分为三步：</p>
+<ol>
+<li><strong>FiLM 调制</strong>：在 SigLIP 的每一层 Transformer Block 中，利用指令 embedding 生成 scale <span class="math inline">$\gamma(\mathbf{t})$</span> 和 shift <span class="math inline">$\beta(\mathbf{t})$</span> 参数，对视觉 token 做通道级调制 <span class="math inline">$\tilde{\mathbf{z}} = (1+\gamma) \odot \mathbf{z} + \beta$</span>。这使得指令语义渗透到每个视觉 token 中，增强视觉特征与指令的相关性。</li>
+<li><strong>ES-Selection（显式语义物体选择）</strong>：计算每个视觉 token 与指令 embedding 的余弦相似度，保留 Top-K（默认 K=32）最相关的 token。这步将 256 个 patch token 压缩为 32 个，压缩比 <strong>1/8</strong>，同时确保保留的是与当前任务指令最相关的物体 token。</li>
+<li><strong>Single-Fusion（逐帧融合）</strong>：以筛选后的 32 个语义 token 为 Q，VGGT 的 3D 特征为 K、V，通过 4 层 cross-attention 逐帧（逐视角独立）融合。利用 VGGT 的点跟踪预训练能力，隐式建立同一物体在不同视角之间的身份关联。</li>
+</ol>
+<p>最终输出 <span class="math inline">$\mathbf{z}_{i}^{\text{obj-3D}}$</span>（每个视角 32 token），实现了跨视角物体语义一致性。</p>
+<p><strong>子图 (b) CO-Fuser（橙色）—— 跨物体空间几何一致性：</strong></p>
+<p>CO-Fuser 的输入来自 DINOv2（几何编码器）和 VGGT，所有视角的图像和 VGGT 特征拼接后一起处理。流程分为两步：</p>
+<ol>
+<li><strong>Group-Fusion（分组融合）</strong>：在 DINOv2 的每个 Transformer Block 中，将 DINOv2 几何特征与 VGGT 空间特征按可学习的余弦衰减权重 <span class="math inline">$\alpha_l$</span> 做逐元素加权求和：<span class="math inline">$\mathbf{z}_{l}^{\text{geo-3D}} = (1-\alpha_l)\mathbf{z}_{l}^{\text{geo}} + \alpha_l\mathbf{z}_l^{\text{3D}}$</span>。α_l 从前 12 层的 0.2 余弦衰减到后 12 层的 0——浅层充分注入 VGGT 的 3D 空间先验，深层由 DINOv2 自身几何特征主导。</li>
+<li><strong>IG-Aggregation（隐式几何关系聚合）</strong>：引入 64 个可学习的聚合 token <span class="math inline">$\mathbf{z}^{\text{agg-3D}}$</span>，与融合后的几何 token 一起通过 BC-Attn（块级因果注意力）处理——aggregator token 可以看到所有 patch token 以聚合全局几何信息，patch token 之间保持双向注意力。</li>
+</ol>
+<p>最终仅保留 <span class="math inline">$\mathbf{z}_{\mathcal{L}'}^{\text{agg-3D}}$</span>（64 token），压缩比 <strong>1/12–1/8</strong>，消除了单视角的几何歧义。</p>
+<p><strong>三个编码器的分工：</strong></p>
+<ul>
+<li><strong>SigLIP</strong>（So400m, 1152 维）→ 语义特征，与指令对齐</li>
+<li><strong>DINOv2</strong>（ViT-L, 1024 维）→ 几何特征，自监督的几何一致性</li>
+<li><strong>VGGT</strong>（1B, 1024 维）→ 空间特征，深度/点云/点跟踪先验，冻结不参与梯度更新*</li>
+</ul>
+<hr />
+<h2 id="_3">三、训练目标</h2>
+<p><div class="math display">$$\mathcal{L}_{\text{total}} = \mathcal{L}_{\text{action}} + \mathcal{L}_{\text{dyn-4D}} + \mathcal{L}_{\text{dep-4D}}$$</div></p>
+<ul>
+<li><span class="math inline">$\mathcal{L}_{\text{action}}$</span>：L1 损失，优化动作预测</li>
+<li><span class="math inline">$\mathcal{L}_{\text{dyn-4D}}$</span>：动态物体重建损失（CoTracker 监督）</li>
+<li><span class="math inline">$\mathcal{L}_{\text{dep-4D}}$</span>：全局深度重建损失（Depth-Anything 监督）</li>
+</ul>
+<hr />
+<p><img alt="4d：高效 4D 推理" src="arXiv-2605.05126v1/fig/4d.png" /></p>
+<p><em>图4：高效 4D 推理。CS-Thinker 配合 SC-Attn 在统一上下文窗口内并行实现三件事：动态物体预测、全局深度预测、动作生成。训练时三者同时学习（动态物体和深度有监督信号），推理时仅执行动作生成（依赖隐式知识 IK）。</em></p>
+<p><strong>子图 (a) 整体结构 —— SC-Attn 统一上下文窗口：</strong></p>
+<p>CS-Thinker 的输入 token 序列被组织为：<code>[语义token(64) | 几何token(64) | 文本token | Dynamic Queries(2N) | Depth Queries(N) | Action Queries]</code>。所有 token 在 SC-Attn 的统一上下文窗口内并行处理，不同类型的 token 遵循不同的注意力模式（组内双向 + 组间因果）。其中 Dynamic Queries 和 Depth Queries 是可学习的隐式知识 token，占序列不到 10%。</p>
+<p><strong>子图 (b) 多视角物体 → 单视角动态物体预测（CoTracker 监督）：</strong></p>
+<p>为每个视角 <span class="math inline">$i$</span> 初始化一组可学习的 dynamic token <span class="math inline">$\mathbf{0}_{i}^{\text{dyn-4D}}$</span>（3 视角 × 4 token/组 = 12 token）。在 SC-Attn 中，每个 <span class="math inline">$\mathbf{0}_{i}^{\text{dyn-4D}}$</span> 由对应视角的物体特征 <span class="math inline">$\mathbf{z}_{i}^{\text{obj-3D}}$</span> 和指令 <span class="math inline">$\mathbf{t}$</span> 独立引导。经过 LLM 处理后，dynamic token 的 hidden states 被送入 DynamicFeatDecoder（8 层 ViT Block，1024 维），解码出固定视角 <span class="math inline">$i^*$</span> 中动作后的动态物体图像 <span class="math inline">$\hat{\mathbf{z}}_{i^*}^{\text{dyn-4D}}$</span>。</p>
+<p>损失函数 <span class="math inline">$\mathcal{L}_{\text{dyn-4D}}$</span>：仅对 CoTracker 离线标注的运动区域（<span class="math inline">$\mathbf{m}_{i^*}^{\text{obj-3D}}$</span>）计算 MSE，避免背景干扰。这确保模型学到的是"物体因动作发生了怎样的变化"，而非"整个画面变成了什么样"。</p>
+<p><strong>子图 (c) 抽象关系 → 具体全局深度预测（Depth-Anything 监督）：</strong></p>
+<p>初始化一组可学习的 depth token <span class="math inline">$\mathbf{0}^{\text{dep-4D}}$</span>（1 组 × 4 token = 4 token）。在 SC-Attn 中，这些 token 由 CO-Fuser 的聚合几何关系 <span class="math inline">$\mathbf{z}_{\mathcal{L}'}^{\text{agg-3D}}$</span> 和指令 <span class="math inline">$\mathbf{t}$</span> 共同引导，但与 dynamic token 的学习过程隔离。经过 LLM 处理后，depth token 的 hidden states 被送入另一组 DynamicFeatDecoder（<code>img_channel=1</code>, <code>pred_num</code>=视角数），解码出所有视角的全局深度图。</p>
+<p>损失函数 <span class="math inline">$\mathcal{L}_{\text{dep-4D}}$</span>：逐视角计算预测深度与 Depth-Anything 生成的真实深度的 MSE。注意 dynamic 和 depth 的解码器结构相同但参数独立——dynamic decoder 每个视角一个，depth decoder 单个解码器同时输出所有视角。</p>
+<p><strong>子图 (d) 并行动作解码：</strong></p>
+<p>动作 token <span class="math inline">$\mathbf{0}^A$</span> 在 SC-Attn 中与上述所有 visual reasoning token 及指令交互。训练时，LLM 最后一层的动作 token hidden states 通过 L1RegressionActionHead 预测连续动作，与 GT 动作计算 L1 损失 <span class="math inline">$\mathcal{L}_{\text{action}}$</span>。三组损失联合优化：总损失 <span class="math inline">$= \mathcal{L}_{\text{action}} + \mathcal{L}_{\text{dyn-4D}} + \mathcal{L}_{\text{dep-4D}}$</span>。</p>
+<p><strong>推理时（关键设计）：</strong> DynamicFeatDecoder 和 DepthFeatDecoder 不执行，不生成中间表示。模型仅依靠训练中学会的隐式知识（dynamic/depth dream token 在 LLM 中的 hidden states）辅助动作生成——这解释了为什么引入 2B 参数后推理反而更快 2.3 倍。*</p>
+<h2 id="_4">四、实验与结果</h2>
+<h3 id="41-libero">4.1 仿真实验（LIBERO 基准）</h3>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th>Spatial</th>
+<th>Object</th>
+<th>Goal</th>
+<th>Long</th>
+<th><strong>Avg.</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>OpenVLA</td>
+<td>84.7</td>
+<td>88.4</td>
+<td>79.2</td>
+<td>83.7</td>
+<td>76.5</td>
+</tr>
+<tr>
+<td>OpenVLA-OFT</td>
+<td>97.6</td>
+<td>98.4</td>
+<td>97.9</td>
+<td>94.5</td>
+<td>97.1</td>
+</tr>
+<tr>
+<td>π₀.₅</td>
+<td>98.8</td>
+<td>98.2</td>
+<td>98.0</td>
+<td>92.4</td>
+<td>96.9</td>
+</tr>
+<tr>
+<td>SpatialVLA</td>
+<td>88.2</td>
+<td>89.9</td>
+<td>78.6</td>
+<td>55.5</td>
+<td>78.1</td>
+</tr>
+<tr>
+<td>CoT-VLA</td>
+<td>87.5</td>
+<td>91.6</td>
+<td>87.6</td>
+<td>69.0</td>
+<td>83.9</td>
+</tr>
+<tr>
+<td><strong>ConsisVLA-4D</strong></td>
+<td><strong>98.8</strong></td>
+<td><strong>99.8</strong></td>
+<td><strong>98.0</strong></td>
+<td><strong>95.6</strong></td>
+<td><strong>98.1</strong></td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>相比 SpatialVLA（专攻空间建模）平均提升 <strong>20%</strong></li>
+<li>相比 CoT-VLA（专攻视觉推理）平均提升 <strong>14.2%</strong></li>
+<li>在 Long 任务上表现尤为突出（95.6%），说明时空一致性对长时序任务至关重要</li>
+</ul>
+<p><img alt="vis2：LIBERO 观测可视化与注意力" src="arXiv-2605.05126v1/fig/vis2.png" /></p>
+<p><em>图5：LIBERO 观测示例与 CV-Aligner/CO-Fuser 注意力可视化。该图直观展示 ConsisVLA-4D 的两个核心模块在实际任务中分别关注什么，以及这种分工如何支撑仅用 1/8 token 就达到 SOTA 性能。</em></p>
+<p><strong>第 1 行（观测视图）—— 原始输入：</strong> 展示四个 LIBERO 任务的 Main View（主视角，M）和 Wrist View（腕部视角，W）观测图像。四个任务分别为：将碗放到饼干盒上/旁、从木柜顶层抽屉取出碗、打开微波炉（stove 场景）、将盘子放到托盘上。M 视角提供全局场景上下文（物体相对位置、桌面布局），W 视角提供近距离操作细节（夹爪与物体的精确空间关系）。</p>
+<p><strong>第 2 行（橙色标记 M/W）—— CV-Aligner 提取的指令相关物体 token：</strong> 橙色标记显示 CV-Aligner 选出的 Top-K（K=32）语义 token 在原图中的对应位置。可以看到，CV-Aligner 精准定位了任务指令涉及的关键物体——饼干盒上的碗、抽屉中的碗、炉灶、盘子——而过滤掉了背景、桌面纹理、无关物体。注意 M 和 W 视角下同一物体的标记位置不同但语义一致，验证了跨视角物体身份关联的有效性。</p>
+<p><strong>第 3 行（蓝色标记 R）—— CO-Fuser 捕获的聚合几何关系 token：</strong> 蓝色标记显示 CO-Fuser 的 64 个 aggregator token 如何分布注意力到原始 patch token 上。与 CV-Aligner 的"点状聚焦"（只关注指令相关物体）不同，CO-Fuser 呈现"分布式注意力"——同时覆盖任务相关的多个空间节点（物体、容器、桌面边缘）。这反映了 CO-Fuser 关注的是物体之间的空间几何关系（"碗在饼干盒上方""抽屉的几何结构"）而非物体语义本身。</p>
+<p><strong>关键洞察：</strong> CV-Aligner 回答"关注什么物体"（语义选择），CO-Fuser 回答"物体在哪里、它们之间的空间关系如何"（几何聚合）。两者功能互补，分别在语义和几何维度实现高效压缩，合计将视觉 token 压缩到 1/8，却保留了比原始 256 token 更精准的任务相关信息。*</p>
+<p><strong>ManiSkill2 结果：</strong></p>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th>PickCube</th>
+<th>StackCube</th>
+<th>PushCube</th>
+<th><strong>Avg.</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Octo</td>
+<td>86%</td>
+<td>76%</td>
+<td>-</td>
+<td>81.0%</td>
+</tr>
+<tr>
+<td>OpenVLA†</td>
+<td>67%</td>
+<td>64%</td>
+<td>71%</td>
+<td>67.3%</td>
+</tr>
+<tr>
+<td>CogACT</td>
+<td>95%</td>
+<td>90%</td>
+<td>-</td>
+<td>92.5%</td>
+</tr>
+<tr>
+<td>GeoVLA</td>
+<td>90%</td>
+<td>90%</td>
+<td>-</td>
+<td>90.0%</td>
+</tr>
+<tr>
+<td>Dita</td>
+<td>79%</td>
+<td>80%</td>
+<td>-</td>
+<td>79.5%</td>
+</tr>
+<tr>
+<td>OpenVLA-OFT†</td>
+<td>85%</td>
+<td>93%</td>
+<td>88%</td>
+<td>88.7%</td>
+</tr>
+<tr>
+<td><strong>ConsisVLA-4D</strong></td>
+<td><strong>93%</strong></td>
+<td><strong>95%</strong></td>
+<td><strong>95%</strong></td>
+<td><strong>94.3%</strong></td>
+</tr>
+</tbody>
+</table>
+<p>† 表示在与 ConsisVLA-4D 相同条件下复现的结果。ManiSkill2 的三个任务侧重测试精细空间感知能力（PickCube 考察抓取精度、StackCube 考察堆叠空间推理、PushCube 考察推动轨迹规划），ConsisVLA-4D 在三个任务上均达到或接近最优。</p>
+<p><strong>RoboTwin 2.0 结果（7 个 ALOHA 双臂任务）：</strong></p>
+<p><img alt="vis0：RoboTwin 2.0 仿真结果" src="arXiv-2605.05126v1/fig/vis0.png" /></p>
+<p><em>图7：RoboTwin 2.0 基准上的双臂仿真结果。7 个任务涵盖点击闹钟、翻转开关、放瓶子进垃圾桶、打开笔记本、按压订书机、放空杯到杯垫、按 RGB 顺序排列方块等多样化场景，每个任务进行 100 次试验。ConsisVLA-4D（蓝色柱）在所有任务上均取得最优或接近最优的成功率，验证了时空一致性设计对双臂协调操作的普适优势。RoboTwin 2.0 基于 ALOHA 双臂平台，任务需要双臂精确配合，对 3D 空间感知（物体相对位置）和 4D 推理（双臂动作协调的时序同步）都有很高要求。</em></p>
+<h3 id="42">4.2 效率对比</h3>
+<table>
+<thead>
+<tr>
+<th>场景</th>
+<th>方法</th>
+<th>延迟 ↓</th>
+<th>吞吐 ↑</th>
+<th>FLOPs ↓</th>
+<th>训练成本 ↓</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>仿真</td>
+<td>OpenVLA</td>
+<td>0.254s</td>
+<td>3.9Hz</td>
+<td>8.48T</td>
+<td>11.7h</td>
+</tr>
+<tr>
+<td>仿真</td>
+<td>OpenVLA-OFT</td>
+<td>0.137s</td>
+<td>58.4Hz</td>
+<td>8.45T</td>
+<td>12.3h</td>
+</tr>
+<tr>
+<td>仿真</td>
+<td><strong>ConsisVLA-4D</strong></td>
+<td><strong>0.110s</strong></td>
+<td><strong>72.7Hz</strong></td>
+<td><strong>4.59T</strong></td>
+<td><strong>8.6h</strong></td>
+</tr>
+<tr>
+<td>真机</td>
+<td>OpenVLA</td>
+<td>0.552s</td>
+<td>1.8Hz</td>
+<td>16.30T</td>
+<td>12.8h</td>
+</tr>
+<tr>
+<td>真机</td>
+<td>OpenVLA-OFT</td>
+<td>0.334s</td>
+<td>74.8Hz</td>
+<td>14.95T</td>
+<td>13.7h</td>
+</tr>
+<tr>
+<td>真机</td>
+<td><strong>ConsisVLA-4D</strong></td>
+<td><strong>0.231s</strong></td>
+<td><strong>108.2Hz</strong></td>
+<td><strong>9.68T</strong></td>
+<td><strong>10.1h</strong></td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>尽管额外引入了约 2B 参数（主要来自 VGGT），推理速度反而比 OpenVLA 快 <strong>2.3×</strong>，吞吐量提升 <strong>2.4×</strong></li>
+<li>关键原因是高效 3D 感知阶段大幅压缩了视觉 token（1/8），减少了后续计算量</li>
+</ul>
+<h3 id="43">4.3 真机实验</h3>
+<p>在 Galaxea R1 Lite 和 AgileX Cobot Magic 两个平台，4 个长时序双臂任务（微波炉操作、剥香蕉、抽屉整理、T恤折叠）：</p>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th>Avg. Success（Galaxea）</th>
+<th>Avg. Success（AgileX）</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>OpenVLA</td>
+<td>28.5%</td>
+<td>30.0%</td>
+</tr>
+<tr>
+<td>OpenVLA-OFT</td>
+<td>51.8%</td>
+<td>50.3%</td>
+</tr>
+<tr>
+<td><strong>ConsisVLA-4D</strong></td>
+<td><strong>70.0%</strong></td>
+<td><strong>68.3%</strong></td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>相比 OpenVLA 提升 <strong>41.5%</strong>，相比 OpenVLA-OFT 提升 <strong>18.2%</strong></li>
+<li>跨平台波动仅 ±1.7%，sim-to-real 迁移能力稳定</li>
+</ul>
+<p><img alt="vis1v2：真机长时序任务执行" src="arXiv-2605.05126v1/fig/vis1v2.png" /></p>
+<p><em>图6：ConsisVLA-4D 在 Galaxea R1 Lite 平台上执行四个长时序双臂任务的完整过程。每个任务展示 4–5 个关键执行阶段，红色圆圈标注精细夹爪操作。该图验证了时空一致性设计对长时序操作稳定性的关键作用。</em></p>
+<p><strong>任务 1 —— 微波炉操作（3 阶段）：</strong>
+指令："Put the bread into a bowl and heat it in the microwave."</p>
+<ul>
+<li><strong>阶段 1（Put）</strong>：双臂协作将面包准确放入碗中——需要精确的 3D 空间感知来定位碗口</li>
+<li><strong>阶段 2（Place）</strong>：将碗平稳插入微波炉狭窄内腔——场景从桌面转移到微波炉内部，空间参照系完全改变，考验 4D 推理对场景变化的适应</li>
+<li><strong>阶段 3（Close）</strong>：关闭微波炉门——红色圆圈标注了夹爪精准抓握微波炉门把手的操作</li>
+</ul>
+<p><strong>任务 2 —— 剥香蕉（3 阶段）：</strong>
+指令："Peel the banana and place it on the plate."</p>
+<ul>
+<li><strong>阶段 1（Pick）</strong>：从桌面抓取香蕉——需要区分香蕉与其他物体的几何边界</li>
+<li><strong>阶段 2（Peel）</strong>：一只手（左臂）稳定香蕉，另一只手（右臂）执行精细剥皮——红色圆圈标注剥皮动作。这是对双臂协调能力的极限测试，也是时空一致性的直接体现（手部动作需要和物体状态变化同步）</li>
+<li><strong>阶段 3（Place）</strong>：将剥好的香蕉放到盘子上——场景再次变化，需要定位盘子位置</li>
+</ul>
+<p><strong>任务 3 —— 抽屉整理（3 阶段）：</strong>
+指令："Open the drawer, put the toy inside, and then close the drawer."</p>
+<ul>
+<li><strong>阶段 1（Pull）</strong>：拉开抽屉——需要感知抽屉把手的位置和拉开方向</li>
+<li><strong>阶段 2（Place）</strong>：将玩具放入抽屉——物体的目标位置在抽屉内部，存在遮挡</li>
+<li><strong>阶段 3（Push）</strong>：推回抽屉——红色圆圈标注手指精确推抽屉的操作</li>
+</ul>
+<p><strong>任务 4 —— T恤折叠（3 阶段）：</strong>
+指令："Fold the T-shirt."</p>
+<ul>
+<li><strong>阶段 1–3（Step 1→Step 2→Step 3）</strong>：逐步折叠 T恤，每个阶段都需要精确的布料操作。红色圆圈标注了夹爪夹取布料边角的精细操作。T恤折叠是经典的变形物体操作任务，对时空一致性要求极高——布料形状持续变化，模型需要持续追踪物体的新状态。</li>
+</ul>
+<p><strong>与数值结果的对应：</strong> OpenVLA 在此类长时序任务上成功率仅 28.5%（Galaxea）/ 30.0%（AgileX），OpenVLA-OFT 为 51.8%/50.3%，而 ConsisVLA-4D 达到 70.0%/68.3%。该图直观展示了性能提升的来源——时空一致性使得模型在场景持续变化的长时序操作中能稳定追踪物体状态并生成准确动作。*</p>
+<h3 id="44">4.4 消融实验</h3>
+<p>消融实验在仿真（LIBERO 四套件）和真机（Galaxea R1 Lite，微波炉操作 + T恤折叠两个任务，每个任务 30 次试验）上进行。</p>
+<h4 id="441-cv-aligner-co-fuser">4.4.1 CV-Aligner 与 CO-Fuser 消融</h4>
+<table>
+<thead>
+<tr>
+<th>ES-Sel.</th>
+<th>S-Fus.</th>
+<th>G-Fus.</th>
+<th>IG-Agg.</th>
+<th>LIBERO SR ↑</th>
+<th>Real-World SR ↑</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>✗</td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+<td>93.9 (−4.2)</td>
+<td>71.7 (−6.6)</td>
+</tr>
+<tr>
+<td>✓</td>
+<td>✗</td>
+<td>✓</td>
+<td>✓</td>
+<td>95.5 (−2.6)</td>
+<td>73.3 (−5.0)</td>
+</tr>
+<tr>
+<td>✓</td>
+<td>✓</td>
+<td>✗</td>
+<td>✓</td>
+<td>95.6 (−2.5)</td>
+<td>70.0 (−8.3)</td>
+</tr>
+<tr>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+<td>✗</td>
+<td>91.7 (−6.4)</td>
+<td>68.3 (−10.0)</td>
+</tr>
+<tr>
+<td><strong>✓</strong></td>
+<td><strong>✓</strong></td>
+<td><strong>✓</strong></td>
+<td><strong>✓</strong></td>
+<td><strong>98.1</strong></td>
+<td><strong>78.3</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>解读：</strong></p>
+<ul>
+<li><strong>移除 ES-Selection（−7.0% LIBERO / −10.0% 真机）</strong>：失去指令引导的语义筛选后，视觉 token 包含大量与任务无关的背景信息，干扰了模型对关键物体的关注。ES-Selection 不仅压缩 token，更重要的是提供了"语义聚焦"，这是性能的基础保障。</li>
+<li><strong>移除 Single-Fusion（−2.6% / −5.0%）</strong>：语义 token 没有 VGGT 3D 特征的注入，跨视角的物体身份关联变弱，同一物体在不同视角可能被识别为不同物体。降幅相对较小说明 ES-Selection 本身已经提供了可观的性能。</li>
+<li><strong>移除 Group-Fusion（−2.5% / −8.3%）</strong>：DINOv2 几何特征失去 VGGT 的空间先验注入，单视角深度歧义无法通过多视角互补消除。真机上降幅更大，说明真实场景中几何歧义问题更严重（光照变化、遮挡等）。</li>
+<li><strong>移除 IG-Aggregation（−6.4% / −10.0%）</strong>：这是降幅最大的单项移除。没有 BC-Attn 聚合跨视角几何关系，模型无法建立全局空间理解，等同于独立处理每个视角。证明隐式几何关系聚合是 CO-Fuser 最核心的设计。</li>
+<li><strong>全部移除 vs 全部保留（−7.0% / −11.6%）</strong>：两个模块同时移除后，LIBERO 降至 ~91%，真机降至 ~67%，回到接近 OpenVLA-OFT 的水平（~97% / ~52% 在其他任务上），说明 3D 感知模块是性能提升的主要驱动力。</li>
+</ul>
+<h4 id="442-cs-thinker4d">4.4.2 CS-Thinker（4D 推理）消融</h4>
+<table>
+<thead>
+<tr>
+<th>Dyn.O.</th>
+<th>Glob.D.</th>
+<th>Attention</th>
+<th>LIBERO SR ↑</th>
+<th>Real-World SR ↑</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>✗</td>
+<td>✗</td>
+<td>SC-Attn</td>
+<td>93.3 (−4.8)</td>
+<td>66.7 (−11.6)</td>
+</tr>
+<tr>
+<td>✗</td>
+<td>✓</td>
+<td>SC-Attn</td>
+<td>95.4 (−2.7)</td>
+<td>73.3 (−5.0)</td>
+</tr>
+<tr>
+<td>✓</td>
+<td>✗</td>
+<td>SC-Attn</td>
+<td>94.7 (−3.4)</td>
+<td>71.6 (−6.7)</td>
+</tr>
+<tr>
+<td>✓</td>
+<td>✓</td>
+<td>Causal</td>
+<td>90.9 (−7.2)</td>
+<td>66.7 (−11.6)</td>
+</tr>
+<tr>
+<td>✓</td>
+<td>✓</td>
+<td>Bidirectional</td>
+<td>92.2 (−5.9)</td>
+<td>68.3 (−10.0)</td>
+</tr>
+<tr>
+<td><strong>✓</strong></td>
+<td><strong>✓</strong></td>
+<td><strong>SC-Attn</strong></td>
+<td><strong>98.1</strong></td>
+<td><strong>78.3</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>解读：</strong></p>
+<ul>
+<li><strong>同时移除 Dyn.O. 和 Glob.D.（−4.8% / −11.6%）</strong>：这相当于完全去掉 4D 推理，模型退化为仅有 3D 感知。真机上降幅（−11.6%）远大于仿真（−4.8%），说明真实场景中动态场景变化更复杂，4D 推理的贡献更关键。</li>
+<li><strong>仅保留 Glob.D.（−2.7% / −5.0%）vs 仅保留 Dyn.O.（−3.4% / −6.7%）</strong>：Global Depth 的贡献略大于 Dynamic Object。可能的解释是深度预测提供了全局场景结构的理解（"这个场景的 3D 形状是什么"），对动作生成更直接有用；而动态物体预测关注的是局部物体变化，信息更稀疏。</li>
+<li><strong>SC-Attn vs Causal/Bidirectional（+5.9~7.2% / +10.0~11.6%）</strong>：SC-Attn 相比标准注意力模式的提升非常显著。普通 Causal 注意力下，不同类型的 token（语义/几何/动态/深度/动作）被迫遵循同一种注意力模式，无法进行有针对性的信息交互。SC-Attn 的组间因果 + 组内双向设计使得：语义/几何 token 组内双向共享信息、动态/深度/动作 token 只能单向从感知 token 获取信息而不反向泄露——这种定制化信息流是时空一致性建模的关键。</li>
+</ul>
+<h4 id="443">4.4.3 稀疏比与压缩方法消融</h4>
+<table>
+<thead>
+<tr>
+<th>稀疏比</th>
+<th><span class="math inline">$\mathbf{z}^{\text{obj-3D}}$</span></th>
+<th><span class="math inline">$\mathbf{z}^{\text{agg-3D}}$</span></th>
+<th><span class="math inline">$\mathbf{0}^{\text{4D}}$</span></th>
+<th>LIBERO SR ↑</th>
+<th>Real-World SR ↑</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>≈1/4</td>
+<td>128</td>
+<td>128</td>
+<td>30</td>
+<td>98.0 (−0.1)</td>
+<td>80.0 (+0.7)</td>
+</tr>
+<tr>
+<td><strong>≈1/8</strong></td>
+<td><strong>64</strong></td>
+<td><strong>64</strong></td>
+<td><strong>18</strong></td>
+<td><strong>98.1</strong></td>
+<td><strong>78.3</strong></td>
+</tr>
+<tr>
+<td>≈1/16</td>
+<td>32</td>
+<td>32</td>
+<td>12</td>
+<td>94.9 (−3.2)</td>
+<td>68.3 (−10.0)</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>≈1/8 (FastV†)</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>88.8 (−9.3)</td>
+<td>50.0 (−28.3)</td>
+</tr>
+<tr>
+<td>≈1/8 (SliME†)</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>85.6 (−12.5)</td>
+<td>46.7 (−31.6)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>解读：</strong></p>
+<ul>
+<li><strong>1/4 → 1/8 → 1/16</strong>：1/8 是最佳平衡点。1/4 保留更多 token 但真机性能仅微升 0.7%，说明多余的 token 主要是冗余信息而非有效信号。1/16 压缩过猛，在真机上骤降 10%，说明 1/8 以下已经无法保留足够的空间信息。</li>
+<li><strong>FastV 和 SliME 对比</strong>：同为 8× 压缩比，通用压缩方法 FastV（基于注意力分数的 token 剪枝）和 SliME（基于相似度聚类的 token 合并）在 LIBERO 上比 ConsisVLA-4D 低 9.3–12.5 个百分点，真机上更是低 28.3–31.6 个百分点。这揭示了一个核心差异：通用 token 压缩方法保留的是"对重建最有用"的 token，而 ConsisVLA-4D 的 ES-Selection + IG-Aggregation 保留的是"对任务指令最有用的 token"。在真机场景中指令与视觉的精确对齐远比视觉重建质量重要。</li>
+</ul>
+<hr />
+<h2 id="_5">五、关键洞察与技术亮点</h2>
+<ol>
+<li><strong>从 3D 到 4D 的范式升级</strong>：不仅构建 3D 空间表示，还将时间维度纳入，预测动作后的动态场景变化，实现完整的 4D 时空推理闭环。</li>
+<li><strong>训练-推理解耦的隐式知识设计</strong>：CS-Thinker 在训练时学习动态物体和深度的显式预测（有监督信号），推理时只依赖隐式知识，不增加额外推理开销。</li>
+<li><strong>多编码器协同分工</strong>：<ul>
+<li>SigLIP → 语义特征（与指令对齐）</li>
+<li>DINOv2 → 几何特征（自监督的几何一致性）</li>
+<li>VGGT → 空间特征（深度、点云、点跟踪先验）</li>
+</ul>
+</li>
+<li><strong>极致的 token 压缩</strong>：通过指令相关性筛选 + 几何关系聚合，将视觉 token 压缩到 1/8–1/12，使得即使加了 2B 参数的 VGGT，整体反而更快。</li>
+<li><strong>SC-Attn 的定制化注意力</strong>：不是简单的 causal 或 bidirectional，而是针对不同类型 token（语义/几何/动态/深度/动作）设计组间因果 + 组内双向的混合注意力。</li>
+</ol>
+<hr />
+<h2 id="_6">六、代码实现解读</h2>
+<h3 id="61">6.1 整体代码结构</h3>
+<div class="codehilite"><pre><span></span><code><span class="n">CVPR26</span><span class="o">-</span><span class="n">ConsisVLA</span><span class="o">-</span><span class="mi">4</span><span class="n">D</span><span class="o">/</span>
+<span class="err">├──</span><span class="w"> </span><span class="n">prismatic</span><span class="o">/</span><span class="w">                    </span><span class="c1"># 核心模型库（基于 OpenVLA 架构进行改造）</span>
+<span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">models</span><span class="o">/</span>
+<span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">vit_wrapper</span><span class="o">.</span><span class="n">py</span><span class="w">        </span><span class="c1"># ★ PrismaticHybridCompressionVisionBackbone — 整个视觉端的主入口</span>
+<span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">vggt_dino</span><span class="o">.</span><span class="n">py</span><span class="w">          </span><span class="c1"># ★ VGGTVisionTransformer + VGGTDinoBlock — 自定义 DINOv2 ViT 块</span>
+<span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">feats_decoders</span><span class="o">.</span><span class="n">py</span><span class="w">     </span><span class="c1"># ★ DynamicFeatDecoder — 动态物体/深度的解码器（Conv 风格）</span>
+<span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">frame_fuser</span><span class="o">.</span><span class="n">py</span><span class="w">        </span><span class="c1"># FrameFuser — SigLIP token 与 VGGT 特征的 cross-attention 融合</span>
+<span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">mm_sampler</span><span class="o">.</span><span class="n">py</span><span class="w">         </span><span class="c1"># TextGuidedSampler — ES-Selection 的代码实现</span>
+<span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">action_heads</span><span class="o">.</span><span class="n">py</span><span class="w">       </span><span class="c1"># L1RegressionActionHead / DiffusionActionHead</span>
+<span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">projectors</span><span class="o">.</span><span class="n">py</span><span class="w">         </span><span class="c1"># ProprioProjector（本体感知）/ NoisyActionProjector（扩散）</span>
+<span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">film_vit_wrapper</span><span class="o">.</span><span class="n">py</span><span class="w">   </span><span class="c1"># FiLM 调制的 VisionTransformer Block 包装器</span>
+<span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">   </span><span class="err">└──</span><span class="w"> </span><span class="n">vlms</span><span class="o">/</span><span class="n">prismatic</span><span class="o">.</span><span class="n">py</span><span class="w">     </span><span class="c1"># PrismaticVLM — 基座 VLM 的 forward + generate</span>
+<span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">extern</span><span class="o">/</span><span class="n">hf</span><span class="o">/</span>
+<span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">   </span><span class="err">└──</span><span class="w"> </span><span class="n">modeling_prismatic</span><span class="o">.</span><span class="n">py</span><span class="w"> </span><span class="c1"># ★ OpenVLAForActionPrediction — HF 风格的完整 forward 逻辑</span>
+<span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">conf</span><span class="o">/</span>
+<span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">vla</span><span class="o">.</span><span class="n">py</span><span class="w">                </span><span class="c1"># VLAConfig — 训练配置注册</span>
+<span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">   </span><span class="err">└──</span><span class="w"> </span><span class="n">models</span><span class="o">.</span><span class="n">py</span><span class="w">             </span><span class="c1"># 模型架构配置</span>
+<span class="err">│</span><span class="w">   </span><span class="err">└──</span><span class="w"> </span><span class="n">vla</span><span class="o">/</span>
+<span class="err">│</span><span class="w">       </span><span class="err">├──</span><span class="w"> </span><span class="n">action_tokenizer</span><span class="o">.</span><span class="n">py</span><span class="w">   </span><span class="c1"># ActionTokenizer — 连续动作离散化/反离散化</span>
+<span class="err">│</span><span class="w">       </span><span class="err">└──</span><span class="w"> </span><span class="n">constants</span><span class="o">.</span><span class="n">py</span><span class="w">          </span><span class="c1"># 常量定义（ACTION_DIM, NUM_ACTIONS_CHUNK 等）</span>
+<span class="err">├──</span><span class="w"> </span><span class="n">vggt</span><span class="o">/</span><span class="w">                         </span><span class="c1"># ★ VGGT-1B 模型（来自 Meta）</span>
+<span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">models</span><span class="o">/</span><span class="n">aggregator</span><span class="o">.</span><span class="n">py</span><span class="w">      </span><span class="c1"># Aggregator — 交替注意力的多帧处理核心</span>
+<span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">models</span><span class="o">/</span><span class="n">vggt</span><span class="o">.</span><span class="n">py</span><span class="w">            </span><span class="c1"># VGGT — 顶层模型，组合 Aggregator + Camera/Depth/Point/Track Heads</span>
+<span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">layers</span><span class="o">/</span><span class="n">block</span><span class="o">.</span><span class="n">py</span><span class="w">           </span><span class="c1"># Block — VGGT 的基础 Transformer 块（支持 RoPE）</span>
+<span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">heads</span><span class="o">/</span><span class="n">dpt_head</span><span class="o">.</span><span class="n">py</span><span class="w">         </span><span class="c1"># DPT 头 — 深度/点云预测</span>
+<span class="err">│</span><span class="w">   </span><span class="err">└──</span><span class="w"> </span><span class="n">heads</span><span class="o">/</span><span class="n">track_head</span><span class="o">.</span><span class="n">py</span><span class="w">       </span><span class="c1"># TrackHead — 点跟踪预测</span>
+<span class="err">├──</span><span class="w"> </span><span class="n">vla</span><span class="o">-</span><span class="n">scripts</span><span class="o">/</span><span class="n">finetune</span><span class="o">.</span><span class="n">py</span><span class="w">       </span><span class="c1"># ★ 微调主脚本（训练入口）</span>
+<span class="err">└──</span><span class="w"> </span><span class="n">experiments</span><span class="o">/</span><span class="n">robot</span><span class="o">/</span><span class="n">libero</span><span class="o">/</span><span class="w">     </span><span class="c1"># LIBERO 评估相关脚本</span>
+</code></pre></div>
+
+<h3 id="62">6.2 论文模块 → 代码映射</h3>
+<table>
+<thead>
+<tr>
+<th>论文概念</th>
+<th>核心代码文件</th>
+<th>关键类/函数</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>CV-Aligner: ES-Selection</strong></td>
+<td><code>mm_sampler.py</code></td>
+<td><code>TextGuidedSampler.forward()</code> — 计算 vision-text 余弦相似度 + Top-K 选取</td>
+</tr>
+<tr>
+<td><strong>CV-Aligner: FiLM</strong></td>
+<td><code>film_vit_wrapper.py</code>, <code>vggt_dino.py</code></td>
+<td><code>FiLMedVisionTransformerBlock</code> + <code>VGGTDinoBlock.scale/shift</code></td>
+</tr>
+<tr>
+<td><strong>CV-Aligner: Single-Fusion</strong></td>
+<td><code>frame_fuser.py</code></td>
+<td><code>FrameFuser</code> — Cross-Attn: Q=语义token, K/V=VGGT特征</td>
+</tr>
+<tr>
+<td><strong>CO-Fuser: Group-Fusion</strong></td>
+<td><code>vggt_dino.py:154-157</code></td>
+<td><code>VGGTDinoBlock.forward()</code> 中的 <code>(1-α)*x_img + α*vggt_features</code></td>
+</tr>
+<tr>
+<td><strong>CO-Fuser: IG-Aggregation</strong></td>
+<td><code>vggt_dino.py:404-407</code></td>
+<td><code>VGGTVisionTransformer._get_attn_mask()</code> — BC-Attn mask 构造</td>
+</tr>
+<tr>
+<td><strong>CO-Fuser: 余弦衰减权重 α_l</strong></td>
+<td><code>vggt_dino.py:320-321</code></td>
+<td><code>VGGTVisionTransformer.__post_init__()</code> 中的 <code>vggt_proportion</code></td>
+</tr>
+<tr>
+<td><strong>CS-Thinker: Dream Queries</strong></td>
+<td><code>modeling_prismatic.py:370-376</code></td>
+<td><code>init_dream_queries()</code> — 可学习的 dynamic/depth token</td>
+</tr>
+<tr>
+<td><strong>CS-Thinker: Dyn-4D Decoder</strong></td>
+<td><code>feats_decoders.py</code></td>
+<td><code>DynamicFeatDecoder</code> — 从 dream token 解码动态物体图像</td>
+</tr>
+<tr>
+<td><strong>CS-Thinker: Dep-4D Decoder</strong></td>
+<td><code>feats_decoders.py</code></td>
+<td><code>DynamicFeatDecoder</code> — 从 dream token 解码深度图（<code>img_channel=1</code>）</td>
+</tr>
+<tr>
+<td><strong>CS-Thinker: SC-Attn</strong></td>
+<td><code>modeling_llama.py</code>, <code>modeling_prismatic.py:546-559</code></td>
+<td>LLM 内部按 <code>token_slices</code> 进行分组注意力</td>
+</tr>
+<tr>
+<td><strong>Action Head</strong></td>
+<td><code>action_heads.py</code></td>
+<td><code>L1RegressionActionHead.predict_action()</code></td>
+</tr>
+<tr>
+<td><strong>整体 forward</strong></td>
+<td><code>modeling_prismatic.py:583-791</code></td>
+<td><code>OpenVLAForActionPrediction.forward()</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="63">6.3 视觉端架构详解</h3>
+<h4 id="631-prismatichybridcompressionvisionbackbonevit_wrapperpy265-474">6.3.1 PrismaticHybridCompressionVisionBackbone（vit_wrapper.py:265-474）</h4>
+<p>这是整个视觉处理的主入口，它在 <code>finetune.py:822-826</code> 被初始化并替换原始 VLA 的 vision_backbone。</p>
+<p><strong>初始化流程（<code>__init__</code>）</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="mf">1.</span><span class="w"> </span><span class="n">_wrap_dino</span><span class="p">()</span><span class="w">    </span><span class="err">→</span><span class="w"> </span><span class="n">将</span><span class="w"> </span><span class="n">DINOv2</span><span class="w"> </span><span class="n">ViT</span><span class="w"> </span><span class="n">的</span><span class="w"> </span><span class="n">Block</span><span class="w"> </span><span class="n">替换为</span><span class="w"> </span><span class="n">VGGTDinoBlock</span><span class="err">（</span><span class="n">支持</span><span class="w"> </span><span class="n">VGGT</span><span class="w"> </span><span class="n">特征融合</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">FiLM</span><span class="err">）</span>
+<span class="w">                   </span><span class="err">→</span><span class="w"> </span><span class="n">将</span><span class="w"> </span><span class="n">DINOv2</span><span class="w"> </span><span class="n">ViT</span><span class="w"> </span><span class="n">的</span><span class="w"> </span><span class="n">class</span><span class="w"> </span><span class="n">替换为</span><span class="w"> </span><span class="n">VGGTVisionTransformer</span><span class="err">（</span><span class="n">支持</span><span class="w"> </span><span class="n">BC</span><span class="o">-</span><span class="n">Attn</span><span class="err">）</span>
+<span class="w">                   </span><span class="err">→</span><span class="w"> </span><span class="n">添加</span><span class="w"> </span><span class="mf">64</span><span class="w"> </span><span class="n">个可学习的</span><span class="w"> </span><span class="n">aggregator</span><span class="w"> </span><span class="kr">to</span><span class="n">ken</span><span class="err">（</span><span class="n">aggrator_num</span><span class="o">=</span><span class="mf">64</span><span class="err">）</span>
+
+
+<span class="mf">2.</span><span class="w"> </span><span class="n">_wrap_siglip</span><span class="p">()</span><span class="w">  </span><span class="err">→</span><span class="w"> </span><span class="n">将</span><span class="w"> </span><span class="n">SigLIP</span><span class="w"> </span><span class="n">ViT</span><span class="w"> </span><span class="n">的</span><span class="w"> </span><span class="n">Block</span><span class="w"> </span><span class="n">替换为</span><span class="w"> </span><span class="n">FiLMedVisionTransformerBlock</span><span class="err">（</span><span class="n">支持</span><span class="w"> </span><span class="n">FiLM</span><span class="err">）</span>
+<span class="w">                   </span><span class="err">→</span><span class="w"> </span><span class="n">将</span><span class="w"> </span><span class="n">SigLIP</span><span class="w"> </span><span class="n">ViT</span><span class="w"> </span><span class="n">的</span><span class="w"> </span><span class="n">class</span><span class="w"> </span><span class="n">替换为</span><span class="w"> </span><span class="n">VisionTransformerRegister</span>
+
+
+<span class="mf">3.</span><span class="w"> </span><span class="n">初始化</span><span class="err">：</span>
+<span class="w">      </span><span class="o">-</span><span class="w"> </span><span class="n">dino_projector</span><span class="p">:</span><span class="w">  </span><span class="n">Linear</span><span class="p">(</span><span class="mf">1024</span><span class="err">→</span><span class="mf">1024</span><span class="o">+</span><span class="mf">1152</span><span class="err">→</span><span class="mf">4096</span><span class="p">)</span>
+<span class="w">      </span><span class="o">-</span><span class="w"> </span><span class="n">siglip_mm_sampler</span><span class="p">:</span><span class="w"> </span><span class="n">TextGuidedSampler</span><span class="err">（</span><span class="n">ES</span><span class="o">-</span><span class="n">Selection</span><span class="err">）</span>
+<span class="w">      </span><span class="o">-</span><span class="w"> </span><span class="n">siglip_frame_fuser</span><span class="p">:</span><span class="w"> </span><span class="n">FrameFuser</span><span class="err">（</span><span class="nb">Sin</span><span class="n">gle</span><span class="o">-</span><span class="n">Fusion</span><span class="p">:</span><span class="w"> </span><span class="n">Cross</span><span class="o">-</span><span class="n">Attn</span><span class="err">）</span>
+<span class="w">      </span><span class="o">-</span><span class="w"> </span><span class="n">siglip_projector</span><span class="p">:</span><span class="w"> </span><span class="n">Linear</span><span class="p">(</span><span class="mf">1152</span><span class="err">→</span><span class="mf">1024</span><span class="o">+</span><span class="mf">1152</span><span class="err">→</span><span class="mf">4096</span><span class="p">)</span>
+<span class="w">      </span><span class="o">-</span><span class="w"> </span><span class="n">vggt_encoder</span><span class="p">:</span><span class="w"> </span><span class="n">Aggregator</span><span class="err">（</span><span class="n">从</span><span class="w"> </span><span class="n">VGGT</span><span class="o">-</span><span class="mf">1</span><span class="n">B</span><span class="w"> </span><span class="n">权重加载</span><span class="err">）</span>
+<span class="w">      </span><span class="o">-</span><span class="w"> </span><span class="n">cross_vit_model</span><span class="p">:</span><span class="w"> </span><span class="n">CrossVisionTransformerInteractionWrapper</span><span class="err">（</span><span class="n">可选</span><span class="err">，</span><span class="n">多</span><span class="w"> </span><span class="n">ViT</span><span class="w"> </span><span class="n">间交互</span><span class="err">）</span>
+</code></pre></div>
+
+<p><strong>关键维度</strong>：</p>
+<ul>
+<li>SigLIP 输出维度：1152</li>
+<li>DINOv2 输出维度：1024</li>
+<li>VGGT 输出维度：1024（与 DINOv2 一致，方便融合）</li>
+<li>LLM 嵌入维度：4096（Llama-2 7B）</li>
+<li>Aggregator token 数量：64（<code>dino_cfg.num_aggregator</code>）</li>
+</ul>
+<h4 id="632-vggt-forward">6.3.2 VGGT 特征融合过程（forward 中的核心路径）</h4>
+<p>论文中多视角（M, L, R = 3 视角）的处理流程在代码中对应 <code>num_images_in_input &gt; 1</code> 的分支（vit_wrapper.py:436-474）：</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># 伪代码：多图像 forward 路径</span>
+<span class="k">for</span> <span class="n">each</span> <span class="n">viewpoint</span> <span class="p">(</span><span class="n">M</span><span class="p">,</span> <span class="n">L</span><span class="p">,</span> <span class="n">R</span><span class="p">):</span>
+    <span class="c1"># 1) SigLIP 分支</span>
+    <span class="n">siglip_patches</span> <span class="o">=</span> <span class="n">siglip_vit</span><span class="p">(</span><span class="n">image_siglip</span><span class="p">,</span> <span class="n">language_embedding</span><span class="p">)</span>    <span class="c1"># 提取语义特征</span>
+    <span class="n">siglip_patches</span> <span class="o">=</span> <span class="n">TextGuidedSampler</span><span class="p">(</span><span class="n">siglip_patches</span><span class="p">,</span> <span class="n">instruction</span><span class="p">)</span>  <span class="c1"># ES-Selection（Top-K=32）</span>
+
+    <span class="c1"># 2) VGGT 分支（冻结，无梯度）</span>
+    <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">inference_mode</span><span class="p">():</span>
+        <span class="n">vggt_patches_list</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">vggt_output</span> <span class="o">=</span> <span class="n">vggt_encoder</span><span class="p">(</span><span class="n">vggt_image</span><span class="p">)</span>
+
+    <span class="c1"># 3) Single-Fusion：语义 token + VGGT 3D 特征</span>
+    <span class="n">siglip_patches</span> <span class="o">=</span> <span class="n">FrameFuser</span><span class="p">(</span><span class="n">siglip_patches</span><span class="p">,</span> <span class="n">vggt_output</span><span class="p">)</span>
+    <span class="n">siglip_patches</span> <span class="o">=</span> <span class="n">siglip_projector</span><span class="p">(</span><span class="n">siglip_patches</span><span class="p">)</span>  <span class="c1"># → 4096 维</span>
+
+<span class="c1"># 4) DINOv2 + VGGT Group-Fusion（跨视角批量处理）</span>
+<span class="n">dino_features</span> <span class="o">=</span> <span class="n">dino_vit</span><span class="p">(</span><span class="n">all_images_dinov2</span><span class="p">,</span> 
+                         <span class="n">vggt_features</span><span class="o">=</span><span class="n">all_vggt_patches</span><span class="p">,</span>    <span class="c1"># Group-Fusion</span>
+                         <span class="n">language_embedding</span><span class="p">)</span>                 <span class="c1"># FiLM</span>
+<span class="n">dino_features</span> <span class="o">=</span> <span class="n">dino_projector</span><span class="p">(</span><span class="n">dino_features</span><span class="p">)</span>                <span class="c1"># → 4096 维</span>
+
+<span class="c1"># 5) 拼接输出</span>
+<span class="n">output</span> <span class="o">=</span> <span class="n">concat</span><span class="p">([</span><span class="n">siglip_patches_all_views</span><span class="p">,</span> <span class="n">dino_features</span><span class="p">])</span>
+</code></pre></div>
+
+<p><strong>实际 token 数量</strong>（以 2 视角为例，论文中仿真使用 Main + Wrist）：</p>
+<ul>
+<li>SigLIP token：<code>2 * 32(selected) = 64</code></li>
+<li>DINOv2 aggregator token：<code>64</code></li>
+<li>Dream queries：<code>2*N + N</code>（dynamic = 2N, depth = N，N = <code>num_dream_queries_per_image</code>）</li>
+<li>总计 ≈ 128 + dream_queries</li>
+</ul>
+<h4 id="633-18">6.3.3 论文中的「1/8 压缩比」在代码中的体现</h4>
+<p>论文说的 1/8 压缩来源于：</p>
+<ul>
+<li>原始 ViT 每个视角输出 256 个 patch token（224/14 = 16 × 16 grid）</li>
+<li>SigLIP 端通过 ES-Selection 从 256 → 32（1/8）</li>
+<li>DINOv2 端通过 aggregator token（64 个）隐式压缩了几何信息</li>
+</ul>
+<p>代码中 <code>siglip_cfg.num_vision_queries = 32</code> 对应 ES-Selection 的 K=32，<code>dino_cfg.num_aggregator = 64</code> 对应 Aggregator token 数量。</p>
+<h3 id="64-vggt">6.4 VGGT 集成细节</h3>
+<h4 id="641-vggt-1b-vggtmodelsvggtpy">6.4.1 VGGT-1B 模型简介（vggt/models/vggt.py）</h4>
+<p>VGGT（Visual Geometry Grounded Transformer）是一个前馈式大型 Transformer，输入同一场景的多张 RGB 图像，一次性预测：</p>
+<ul>
+<li>相机姿态（CameraHead）</li>
+<li>深度图（DPTHead + DepthHead）</li>
+<li>3D 世界坐标点云（DPTHead + PointHead）</li>
+<li>点跟踪（TrackHead）</li>
+</ul>
+<p><strong>核心：Aggregator（vggt/models/aggregator.py）</strong></p>
+<p>交替注意力机制：在处理多帧图像时，交替执行：</p>
+<ul>
+<li><strong>Frame Attention</strong>：每帧内部的自注意力（tokens shape: <code>B*S, P, C</code>）</li>
+<li><strong>Global Attention</strong>：跨帧的全局注意力（tokens shape: <code>B, S*P, C</code>）</li>
+</ul>
+<div class="codehilite"><pre><span></span><code><span class="c1"># aggregator.py:238-249 — 交替注意力调度</span>
+<span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">aa_block_num</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">attn_type</span> <span class="ow">in</span> <span class="n">aa_order</span><span class="p">:</span>  <span class="c1"># [&quot;frame&quot;, &quot;global&quot;]</span>
+        <span class="k">if</span> <span class="n">attn_type</span> <span class="o">==</span> <span class="s2">&quot;frame&quot;</span><span class="p">:</span>
+            <span class="n">tokens</span> <span class="o">=</span> <span class="n">process_frame_attention</span><span class="p">(</span><span class="n">tokens</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>   <span class="c1"># 帧内</span>
+        <span class="k">elif</span> <span class="n">attn_type</span> <span class="o">==</span> <span class="s2">&quot;global&quot;</span><span class="p">:</span>
+            <span class="n">tokens</span> <span class="o">=</span> <span class="n">process_global_attention</span><span class="p">(</span><span class="n">tokens</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>  <span class="c1"># 帧间</span>
+</code></pre></div>
+
+<p>输出：每一层交替注意力后的拼接特征 <code>[B, S, P, 2C]</code>（frame 特征 + global 特征拼接）。</p>
+<h4 id="642-consisvla-4d">6.4.2 在 ConsisVLA-4D 中的使用方式</h4>
+<ol>
+<li>VGGT 仅在<strong>训练和推理时作为特征提取器</strong>，不参与梯度更新（<code>inference_mode</code>）</li>
+<li>从 HuggingFace 加载预训练权重：<code>ckpts/model.pt</code>（vit_wrapper.py:322）</li>
+<li>从 VGGT 的 aggregator 输出中提取：<ul>
+<li><strong>多层 patch token 列表</strong>：用于 DINOv2 每层的 Group-Fusion（<code>vggt_patches_list</code>，shape: <code>[num_layers, B, num_patches, 1024]</code>）</li>
+<li><strong>最后一层全局输出</strong>：用于 SigLIP 的 Single-Fusion（<code>vggt_output_patches</code>）</li>
+</ul>
+</li>
+</ol>
+<div class="codehilite"><pre><span></span><code><span class="c1"># vit_wrapper.py:456-459</span>
+<span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">inference_mode</span><span class="p">():</span>
+    <span class="n">vggt_patches_list</span><span class="p">,</span> <span class="n">token_start_idx</span><span class="p">,</span> <span class="n">vggt_output_patches</span> <span class="o">=</span> <span class="n">vggt_encoder</span><span class="p">(</span><span class="n">vggt_img</span><span class="p">)</span>
+    <span class="c1"># vggt_patches_list: [num_layers] × [B*S, P, 2C] → 提取后变为 [num_layers, B, num_patches, D]</span>
+    <span class="n">vggt_patches_list</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">vggt_patches_list</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="mi">2</span><span class="p">)[:,</span> <span class="p">:,</span> <span class="n">token_start_idx</span><span class="p">:]</span>
+</code></pre></div>
+
+<h3 id="65-cv-aligner">6.5 CV-Aligner 实现细节</h3>
+<h4 id="651-textguidedsamplermm_samplerpy-es-selection">6.5.1 TextGuidedSampler（mm_sampler.py）—— ES-Selection 的代码实现</h4>
+<div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">TextGuidedSampler</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">vision_topk</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;num_vision_queries&quot;</span><span class="p">,</span> <span class="mi">32</span><span class="p">)</span>  <span class="c1"># K=32</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">text_encoder</span> <span class="o">=</span> <span class="n">SiglipTextModel</span> <span class="o">/</span> <span class="n">CLIPTextModel</span>     <span class="c1"># 用 SigLIP 的 text encoder</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">text_post_projector</span> <span class="o">=</span> <span class="n">MLP</span><span class="p">(</span><span class="n">text_dim</span> <span class="err">→</span> <span class="n">vision_dim</span> <span class="err">→</span> <span class="n">vision_dim</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vision_embedding</span><span class="p">,</span> <span class="n">text_ids</span><span class="p">):</span>
+        <span class="c1"># 1) 用 SigLIP Text Encoder 编码指令</span>
+        <span class="n">text_embedding</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">text_encoder</span><span class="p">(</span><span class="n">text_ids</span><span class="p">)</span><span class="o">.</span><span class="n">last_hidden_state</span>
+        <span class="n">text_embedding</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">text_post_projector</span><span class="p">(</span><span class="n">text_embedding</span><span class="p">)</span>  <span class="c1"># 投影到视觉空间</span>
+
+        <span class="c1"># 2) 计算余弦相似度矩阵 [B, N_vision, M_text]</span>
+        <span class="n">similarity</span> <span class="o">=</span> <span class="n">cosine_sim</span><span class="p">(</span><span class="n">norm</span><span class="p">(</span><span class="n">vision_embedding</span><span class="p">),</span> <span class="n">norm</span><span class="p">(</span><span class="n">text_embedding</span><span class="p">))</span>
+
+        <span class="c1"># 3) 训练时加 Gumbel 噪声</span>
+        <span class="k">if</span> <span class="n">training</span><span class="p">:</span>
+            <span class="n">similarity</span> <span class="o">+=</span> <span class="n">Gumbel_noise</span><span class="p">(</span><span class="mf">0.1</span><span class="p">)</span>
+
+        <span class="c1"># 4) 按文本维度取平均 → Top-K 选取</span>
+        <span class="n">probs</span> <span class="o">=</span> <span class="n">similarity</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>           <span class="c1"># [B, N]</span>
+        <span class="n">selected_indices</span> <span class="o">=</span> <span class="n">topk</span><span class="p">(</span><span class="n">probs</span><span class="p">,</span> <span class="n">K</span><span class="o">=</span><span class="mi">32</span><span class="p">)</span>      <span class="c1"># 选取相似度最高的 32 个视觉 token</span>
+        <span class="k">return</span> <span class="n">gather</span><span class="p">(</span><span class="n">vision_embedding</span><span class="p">,</span> <span class="n">selected_indices</span><span class="p">)</span>
+</code></pre></div>
+
+<p><strong>与论文公式的对应</strong>：</p>
+<ul>
+<li>论文 eq. (6)：<span class="math inline">$s_{i,j} = \frac{\mathbf{z}_i^{\text{sem},j} (\mathbf{W_t \cdot t}^\top)}{||\mathbf{z}_i^{\text{sem},j}||_2 \cdot||\mathbf{W_t \cdot t}||_2}$</span></li>
+<li>代码：<code>cosine_sim(norm(vision), norm(text_projected))</code> → 本质一致</li>
+<li>论文的 <span class="math inline">$\mathbf{W_t}$</span> 映射矩阵在代码中对应 <code>text_post_projector</code>（MLP）</li>
+</ul>
+<h4 id="652-framefuserframe_fuserpy-single-fusion">6.5.2 FrameFuser（frame_fuser.py）—— Single-Fusion 的代码实现</h4>
+<div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">FrameFuser</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    逐帧融合：Q = 语义 token（SigLIP 输出），K/V = VGGT 3D 特征</span>
+<span class="sd">    config: hidden_size=1152, vggt_hidden_size=1024, num_hidden_layers=4, num_heads=16</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_features</span><span class="p">,</span> <span class="n">vggt_features</span><span class="p">):</span>
+        <span class="c1"># Q: input_features [B, N_siglip, 1152]</span>
+        <span class="c1"># K, V: vggt_features [B, N_vggt, 1024]</span>
+        <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="p">:</span>  <span class="c1"># 4 层 cross-attention</span>
+            <span class="n">hidden</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">self_attn</span><span class="p">(</span><span class="n">input_features</span><span class="o">=</span><span class="n">Q</span><span class="p">,</span> <span class="n">vggt_features</span><span class="o">=</span><span class="n">KV</span><span class="p">)</span>  <span class="c1"># Q 来自语义, KV 来自 VGGT</span>
+            <span class="n">hidden</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mlp</span><span class="p">(</span><span class="n">hidden</span><span class="p">)</span>
+            <span class="n">input_features</span> <span class="o">=</span> <span class="n">residual_add</span><span class="p">(</span><span class="n">input_features</span><span class="p">,</span> <span class="n">hidden</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">input_features</span><span class="p">)</span>
+</code></pre></div>
+
+<p><strong>这与论文的描述一致</strong>：论文 eq. (9) 描述 Single-Fusion 为逐帧地将 VGGT 的 3D 特征与语义 token 通过 cross-attention 融合，利用 VGGT 预训练的点跟踪能力建立跨视角物体身份关联。</p>
+<h4 id="653-film-eq-5">6.5.3 FiLM 调制（论文 eq. 5）</h4>
+<p>论文公式：<span class="math inline">$\tilde{\mathbf{z}}_{i,l}^{\text{sem}} = (\mathbf{1}+\gamma(\mathbf{t})) \odot \text{Self-Attn}(\mathbf{z}_{i,l}^{\text{sem}}) + \beta(\mathbf{t})$</span></p>
+<p>在代码中分为两部分实现：</p>
+<p><strong>SigLIP 端</strong>（<code>film_vit_wrapper.py</code>）：</p>
+<div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">FiLMedVisionTransformerBlock</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">language_embeddings</span><span class="p">):</span>
+        <span class="n">gamma</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">scale</span><span class="p">(</span><span class="n">language_embeddings</span><span class="p">)</span>  <span class="c1"># Linear(llm_dim → vision_dim)</span>
+        <span class="n">beta</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">shift</span><span class="p">(</span><span class="n">language_embeddings</span><span class="p">)</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">x</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">attn</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">norm1</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">x</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">gamma</span><span class="p">)</span> <span class="o">+</span> <span class="n">beta</span>                <span class="c1"># FiLM modulation</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">x</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">mlp</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">norm2</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+</code></pre></div>
+
+<p><strong>DINOv2 端</strong>（<code>vggt_dino.py:159-164</code>）：</p>
+<div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">VGGTDinoBlock</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">vggt_features</span><span class="p">,</span> <span class="n">vggt_proportion</span><span class="p">,</span> <span class="n">attn_mask</span><span class="p">,</span> <span class="n">average_language_embedding</span><span class="p">):</span>
+        <span class="c1"># 先融合 VGGT 特征（Group-Fusion）</span>
+        <span class="n">x_img</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">vggt_proportion</span><span class="p">)</span> <span class="o">*</span> <span class="n">x_img</span> <span class="o">+</span> <span class="n">vggt_proportion</span> <span class="o">*</span> <span class="n">vggt_features</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">concat</span><span class="p">([</span><span class="n">x_img</span><span class="p">,</span> <span class="n">x_agg</span><span class="p">])</span>
+
+        <span class="c1"># 再应用 FiLM</span>
+        <span class="n">gamma</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">scale</span><span class="p">(</span><span class="n">average_language_embedding</span><span class="p">)</span>
+        <span class="n">beta</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">shift</span><span class="p">(</span><span class="n">average_language_embedding</span><span class="p">)</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">x</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">drop_path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ls1</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">attn</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">norm1</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="n">attn_mask</span><span class="p">)))</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">x</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">gamma</span><span class="p">)</span> <span class="o">+</span> <span class="n">beta</span>                 <span class="c1"># FiLM modulation</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">x</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">mlp</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">norm2</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+</code></pre></div>
+
+<h3 id="66-co-fuser">6.6 CO-Fuser 实现细节</h3>
+<h4 id="661-group-fusion-eq-10-11">6.6.1 Group-Fusion —— 所有视角"成组"做逐元素特征混合（论文 eq. 10-11）</h4>
+<p><strong>Group-Fusion 是什么</strong>：将多个视角（M, L, R）的 DINOv2 图像和 VGGT 特征各自拼接成"一组"（Group），然后在 DINOv2 编码器的每一层执行 DINOv2 特征与 VGGT 特征的<strong>逐元素加权求和</strong>。与 CV-Aligner 的"Single-Fusion"（每视角独立做 Cross-Attn）形成对比——一个成组联合处理（Group），一个逐帧单独处理（Single）。</p>
+<p><strong>论文公式</strong>：</p>
+<ul>
+<li>eq. (10)：<span class="math inline">$\mathbf{z}_{l}^{\text{geo-3D}} = (1-{\alpha_l}) \odot \mathbf{z}_{l}^{\text{geo}} + {\alpha_l} \odot \mathbf{z}_l^{\text{3D}}$</span></li>
+<li>eq. (11)：<span class="math inline">$\alpha_l = \psi \cdot ( \delta + (1-\delta) \cdot \frac{1 + \cos( \frac{l\pi}{\mathcal{L}'} )}{2} )$</span></li>
+</ul>
+<p>其中 <span class="math inline">$\psi=0.2$</span>, <span class="math inline">$\delta=0.01/0.2=0.05$</span>, <span class="math inline">$\mathcal{L}'=24$</span>（附录 sec.A）。</p>
+<p><strong>"成组"的体现——多视角特征拼接</strong>（<code>vit_wrapper.py:465-466</code>）：</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># 将所有视角的 DINOv2 图像沿 patch 维度拼接成一个&quot;组&quot;</span>
+<span class="n">cached_img_regular</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">([</span><span class="n">img_M</span><span class="p">,</span> <span class="n">img_L</span><span class="p">,</span> <span class="n">img_R</span><span class="p">],</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="c1"># 将所有视角的 VGGT 特征也沿 patch 维度拼接</span>
+<span class="n">cached_vggt_patches</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">([</span><span class="n">vggt_M</span><span class="p">,</span> <span class="n">vggt_L</span><span class="p">,</span> <span class="n">vggt_R</span><span class="p">],</span> <span class="n">dim</span><span class="o">=-</span><span class="mi">2</span><span class="p">)</span>
+<span class="c1"># 拼接后一起送入 DINOv2</span>
+<span class="n">patches</span> <span class="o">=</span> <span class="n">dino_vit</span><span class="p">(</span><span class="n">cached_img_regular</span><span class="p">,</span> <span class="n">vggt_features</span><span class="o">=</span><span class="n">cached_vggt_patches</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
+</code></pre></div>
+
+<p><strong>每一层的加权求和</strong>（<code>vggt_dino.py:154-156</code>）：</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># VGGTDinoBlock.forward() 中的核心操作</span>
+<span class="n">x_img</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">vggt_proportion</span><span class="p">)</span> <span class="o">*</span> <span class="n">x_img</span> <span class="o">+</span> <span class="n">vggt_proportion</span> <span class="o">*</span> <span class="n">vggt_features</span>
+<span class="c1">#        ↑ DINOv2 几何特征             ↑ VGGT 3D 空间特征</span>
+</code></pre></div>
+
+<p><strong>α_l 的余弦衰减</strong>（<code>vggt_dino.py:320-321</code>）：</p>
+<div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">aggrator_num</span><span class="o">=</span><span class="mi">64</span><span class="p">):</span>
+    <span class="c1"># 24 层 DINOv2 ViT，α_l = vggt_proportion[l]</span>
+    <span class="c1"># 前 12 层：余弦衰减，α 从 0.2 降到 0</span>
+    <span class="c1"># 后 12 层：α = 0，VGGT 不再参与</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">vggt_proportion</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span>
+        <span class="mf">0.2</span> <span class="o">-</span> <span class="mf">0.01</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">blocks</span><span class="p">)</span> <span class="o">//</span> <span class="mi">2</span><span class="p">)))</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">blocks</span><span class="p">)</span> <span class="o">//</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="p">])</span>
+</code></pre></div>
+
+<p><strong>为什么这样设计</strong>（附录 sec.A <span class="math inline">$\alpha_l$</span> Setting）：</p>
+<ul>
+<li>浅层（<span class="math inline">$\alpha_l \approx 0.2$</span>，导数接近 0）：VGGT 的 3D 空间先验充分注入，为几何特征提供稳定的跨视角空间锚点</li>
+<li>中层（导数最大，<span class="math inline">$\alpha$</span> 快速下降）：几何先验快速退出，模型学习抽象几何关系</li>
+<li>深层（<span class="math inline">$\alpha_l = 0$</span>）：VGGT 完全不参与，DINOv2 自身的几何特征主导，不依赖外部先验</li>
+</ul>
+<p><strong>Single-Fusion vs Group-Fusion 对比</strong>：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Single-Fusion（CV-Aligner）</th>
+<th>Group-Fusion（CO-Fuser）</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>处理对象</td>
+<td>SigLIP 语义 token + VGGT 3D 特征</td>
+<td>DINOv2 几何特征 + VGGT 3D 特征</td>
+</tr>
+<tr>
+<td>视角处理</td>
+<td>逐帧/逐视角独立</td>
+<td>所有视角拼接后一起处理</td>
+</tr>
+<tr>
+<td>操作</td>
+<td>Cross-Attn（Q=语义, K/V=VGGT）</td>
+<td>逐元素加权求和</td>
+</tr>
+<tr>
+<td>融合位置</td>
+<td>SigLIP 输出后（后融合，4 层额外 Transformer）</td>
+<td>DINOv2 编码器内部（深层融合，每一层都做）</td>
+</tr>
+<tr>
+<td>论文公式</td>
+<td>eq. 9</td>
+<td>eq. 10-11</td>
+</tr>
+</tbody>
+</table>
+<h4 id="662-ig-aggregation-bc-attn-mask-eq-12-13">6.6.2 IG-Aggregation —— BC-Attn mask（论文 eq. 12-13）</h4>
+<p>论文描述：<span class="math inline">$\text{BC-Attn}(\cdot)$</span> = Block-wise causal self-attention，在 <span class="math inline">$\mathbf{z}^{\text{geo-3D}}$</span> 和 <span class="math inline">$\mathbf{z}^{\text{agg-3D}}$</span> 之间用 causal attention，各自内部用 bidirectional attention。</p>
+<p>代码实现（<code>vggt_dino.py:404-407</code>）：</p>
+<div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">_get_attn_mask</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+    <span class="c1"># x 是 DINOv2 的 patch token</span>
+    <span class="c1"># aggregator token 与 patch token 之间是 causal（aggregator 不能看 patch）</span>
+    <span class="n">mask</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="n">B</span><span class="p">,</span> <span class="n">N_patch</span> <span class="o">+</span> <span class="n">N_agg</span><span class="p">,</span> <span class="n">N_patch</span> <span class="o">+</span> <span class="n">N_agg</span><span class="p">])</span>
+    <span class="n">mask</span><span class="p">[:,</span> <span class="p">:</span><span class="n">N_patch</span><span class="p">,</span> <span class="n">N_patch</span><span class="p">:]</span> <span class="o">=</span> <span class="o">-</span><span class="n">inf</span>  <span class="c1"># patch token 不能 attend aggregator token</span>
+    <span class="k">return</span> <span class="n">mask</span>
+</code></pre></div>
+
+<p>注意：这里的 BC-Attn mask 设计是 patch token 不能看到 aggregator token，而 aggregator token 可以看到 patch token。这确保 aggregator 可以聚合全局几何信息，而其自身的因果关系（论文中的"causal attention between groups"）则通过 LLM 内部的序列排序来保证。</p>
+<h3 id="67-cs-thinker">6.7 CS-Thinker 实现细节</h3>
+<h4 id="671-dream-queries-modeling_prismaticpy370-376">6.7.1 Dream Queries 初始化（modeling_prismatic.py:370-376）</h4>
+<div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">init_dream_queries</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">num_images_in_input</span><span class="p">):</span>
+    <span class="c1"># dynamic queries: 每个视角一组，共 num_images_in_input 组</span>
+    <span class="c1"># depth queries: 所有视角共用一组</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">dream_queries</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">rand</span><span class="p">([</span>
+        <span class="n">num_dream_queries_per_image</span> <span class="o">*</span> <span class="p">(</span><span class="n">num_images_in_input</span> <span class="o">+</span> <span class="mi">1</span><span class="p">),</span>  <span class="c1"># +1 是 depth queries</span>
+        <span class="n">llm_dim</span>  <span class="c1"># 4096</span>
+    <span class="p">]))</span>
+</code></pre></div>
+
+<p>这些 dream queries 是论文中 <span class="math inline">$\mathbf{0}_{i}^{\text{dyn-4D}}$</span>（每视角独立初始化）和 <span class="math inline">$\mathbf{0}^{\text{dep-4D}}$</span>（所有视角共用）的代码实现。</p>
+<p>在 forward 时，dream queries 被拼接到 multimodal embedding 序列的特定位置（靠近 action token），由 LLM 的 SC-Attn 进行处理。</p>
+<h4 id="672-dynamicfeatdecoderfeats_decoderspy">6.7.2 DynamicFeatDecoder（feats_decoders.py）—— 动态物体和深度解码</h4>
+<div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">DynamicFeatDecoder</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    将 LLM 处理后的 dream token 解码为图像/深度图</span>
+
+<span class="sd">    配置（动态物体预测）:</span>
+
+<span class="sd">        - num_tokens_per_img = num_dream_queries_per_image (输入 Latent token 数)</span>
+<span class="sd">        - input_dim = 4096 (LLM hidden dim)</span>
+<span class="sd">        - decoder_hidden_dim = 1024</span>
+<span class="sd">        - decoder_depth = 8 (8 层 Transformer Block)</span>
+<span class="sd">        - pred_num = 1 (只预测固定视角)</span>
+<span class="sd">        - img_channel = 3 (输出 RGB)</span>
+<span class="sd">        - patch_size = 16 (与 ViT 一致)</span>
+
+<span class="sd">    配置（深度预测）:</span>
+
+<span class="sd">        - pred_num = num_images_in_input (预测所有视角)</span>
+<span class="sd">        - img_channel = 1 (输出单通道深度)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">latent</span><span class="p">):</span>
+        <span class="c1"># latent: LLM 最后一层的 dream token hidden states [B, num_tokens, 4096]</span>
+        <span class="c1"># 1) 投影到 decoder 空间</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">projector</span><span class="p">(</span><span class="n">latent</span><span class="p">)</span>  <span class="c1"># [B, num_tokens, 1024]</span>
+
+        <span class="c1"># 2) 与可学习的 mask_token + position embedding 拼接</span>
+        <span class="n">mask_tokens</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mask_token</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">B</span><span class="p">,</span> <span class="n">num_mask_token</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">concat</span><span class="p">([</span><span class="n">x</span><span class="p">,</span> <span class="n">mask_tokens</span><span class="p">])</span> <span class="o">+</span> <span class="n">position_embedding</span>
+
+        <span class="c1"># 3) 经过 8 层 ViT Block 解码</span>
+        <span class="k">for</span> <span class="n">blk</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">decoder</span><span class="p">:</span>  <span class="c1"># 8 个 Block(dim=1024, heads=16)</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">blk</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+
+        <span class="c1"># 4) 预测输出</span>
+        <span class="n">pred</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pred_head</span><span class="p">(</span><span class="n">x</span><span class="p">[:,</span> <span class="o">-</span><span class="n">num_mask_token</span><span class="p">:])</span>  <span class="c1"># [B, num_mask_token, patch_size²*C*pred_num]</span>
+        <span class="n">pred</span> <span class="o">=</span> <span class="n">pred</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">B</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">H</span><span class="o">/</span><span class="n">patch</span><span class="p">,</span> <span class="n">W</span><span class="o">/</span><span class="n">patch</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>  <span class="c1"># 重排为图像空间</span>
+        <span class="k">return</span> <span class="n">pred</span>
+</code></pre></div>
+
+<p><strong>与论文的对应</strong>：</p>
+<ul>
+<li>论文 <span class="math inline">$\mathcal{L}_{\text{dyn-4D}}$</span> 对应 <code>future_dynamic_decoder.seperate_query_forward_loss()</code></li>
+<li>论文 <span class="math inline">$\mathcal{L}_{\text{dep-4D}}$</span> 对应 <code>future_depth_decoder.fuse_query_forward_loss()</code></li>
+</ul>
+<h4 id="673-sc-attn-token">6.7.3 SC-Attn 的 token 排列</h4>
+<p>在 <code>modeling_prismatic.py:546-559</code> 中，token 被整齐地切分为：</p>
+<div class="codehilite"><pre><span></span><code>[&lt;BOS&gt; | SigLIP tokens (64) | DINOv2 tokens (64) | text tokens | dynamic queries (2*N) | depth queries (N) | action tokens | &lt;EOS&gt;]
+</code></pre></div>
+
+<p>其中 <code>token_slices</code> 记录了每个分段的起止位置，LLM 内部可以根据这些 slice 应用不同的注意力模式（组间 causal / 组内 bidirectional）。</p>
+<h3 id="68">6.8 训练流程详解</h3>
+<h4 id="681-vla-scriptsfinetunepy">6.8.1 训练入口（vla-scripts/finetune.py）</h4>
+<div class="codehilite"><pre><span></span><code><span class="c1"># 关键训练参数（scripts/finetune_libero.sh）</span>
+<span class="n">batch_size</span> <span class="o">=</span> <span class="mi">16</span>          <span class="c1"># 每卡 batch size，4 卡共 64</span>
+<span class="n">learning_rate</span> <span class="o">=</span> <span class="mf">5e-4</span>
+<span class="n">max_steps</span> <span class="o">=</span> <span class="mi">80000</span>
+<span class="n">lora_rank</span> <span class="o">=</span> <span class="mi">32</span>
+<span class="n">num_images_in_input</span> <span class="o">=</span> <span class="mi">2</span>  <span class="c1"># Main + Wrist 双视角</span>
+<span class="n">use_proprio</span> <span class="o">=</span> <span class="kc">True</span>        <span class="c1"># 使用本体感知</span>
+<span class="n">use_l1_regression</span> <span class="o">=</span> <span class="kc">True</span>  <span class="c1"># L1 回归预测动作</span>
+<span class="n">image_aug</span> <span class="o">=</span> <span class="kc">True</span>
+</code></pre></div>
+
+<h4 id="682-forward">6.8.2 完整 forward 流程</h4>
+<div class="codehilite"><pre><span></span><code><span class="n">Input</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">vision_backbone</span><span class="w"> </span><span class="p">(</span><span class="n">PrismaticHybridCompressionVisionBackbone</span><span class="p">)</span>
+<span class="w">      </span><span class="err">│</span>
+<span class="w">      </span><span class="err">├─</span><span class="w"> </span><span class="n">SigLIP</span><span class="w"> </span><span class="err">分支（每个视角独立）</span>
+<span class="w">      </span><span class="err">│</span><span class="w">   </span><span class="err">├─</span><span class="w"> </span><span class="n">SigLIP</span><span class="w"> </span><span class="n">ViT</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">FiLM</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="err">语义</span><span class="w"> </span><span class="n">patch</span><span class="w"> </span><span class="n">tokens</span>
+<span class="w">      </span><span class="err">│</span><span class="w">   </span><span class="err">├─</span><span class="w"> </span><span class="n">TextGuidedSampler</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">ES</span><span class="o">-</span><span class="n">Selection</span><span class="err">（</span><span class="mh">256</span><span class="err">→</span><span class="mh">32</span><span class="w"> </span><span class="n">token</span><span class="err">）</span>
+<span class="w">      </span><span class="err">│</span><span class="w">   </span><span class="err">├─</span><span class="w"> </span><span class="n">FrameFuser</span><span class="w"> </span><span class="p">(</span><span class="n">Cross</span><span class="o">-</span><span class="n">Attn</span><span class="p">)</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">Single</span><span class="o">-</span><span class="n">Fusion</span><span class="w"> </span><span class="n">with</span><span class="w"> </span><span class="n">VGGT</span>
+<span class="w">      </span><span class="err">│</span><span class="w">   </span><span class="err">└─</span><span class="w"> </span><span class="n">siglip_projector</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="mh">4096</span><span class="w"> </span><span class="err">维</span>
+<span class="w">      </span><span class="err">│</span>
+<span class="w">      </span><span class="err">├─</span><span class="w"> </span><span class="n">VGGT</span><span class="w"> </span><span class="err">分支（冻结，无梯度）</span>
+<span class="w">      </span><span class="err">│</span><span class="w">   </span><span class="err">└─</span><span class="w"> </span><span class="n">Aggregator</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="err">多层</span><span class="w"> </span><span class="mh">3</span><span class="n">D</span><span class="w"> </span><span class="n">patch</span><span class="w"> </span><span class="n">tokens</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="k">final</span><span class="w"> </span><span class="k">output</span>
+<span class="w">      </span><span class="err">│</span>
+<span class="w">      </span><span class="err">├─</span><span class="w"> </span><span class="n">DINOv2</span><span class="w"> </span><span class="err">分支（所有视角合并处理）</span>
+<span class="w">      </span><span class="err">│</span><span class="w">   </span><span class="err">├─</span><span class="w"> </span><span class="n">VGGTVisionTransformer</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="err">每层</span><span class="w"> </span><span class="n">Group</span><span class="o">-</span><span class="n">Fusion</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">FiLM</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">BC</span><span class="o">-</span><span class="n">Attn</span>
+<span class="w">      </span><span class="err">│</span><span class="w">   </span><span class="err">└─</span><span class="w"> </span><span class="n">dino_projector</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="mh">4096</span><span class="w"> </span><span class="err">维</span>
+<span class="w">      </span><span class="err">│</span>
+<span class="w">      </span><span class="err">└─</span><span class="w"> </span><span class="err">拼接：</span><span class="n">SigLIP</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">DINOv2</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">projected_patch_embeddings</span>
+<span class="w">            </span><span class="err">│</span>
+<span class="w">            </span><span class="err">↓</span>
+<span class="w">      </span><span class="n">LLM</span><span class="w"> </span><span class="n">forward</span><span class="w"> </span><span class="p">(</span><span class="n">LlamaForCausalLM</span><span class="w"> </span><span class="n">with</span><span class="w"> </span><span class="n">SC</span><span class="o">-</span><span class="n">Attn</span><span class="p">)</span>
+<span class="w">            </span><span class="err">│</span>
+<span class="w">            </span><span class="err">├─</span><span class="w"> </span><span class="n">Dream</span><span class="w"> </span><span class="n">Queries</span><span class="w"> </span><span class="p">(</span><span class="n">dynamic</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">depth</span><span class="p">)</span><span class="w"> </span><span class="err">参与</span><span class="w"> </span><span class="n">attention</span>
+<span class="w">            </span><span class="err">│</span>
+<span class="w">            </span><span class="err">├─</span><span class="w"> </span><span class="n">Action</span><span class="w"> </span><span class="n">tokens</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">L1RegressionActionHead</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="err">动作预测</span>
+<span class="w">            </span><span class="err">├─</span><span class="w"> </span><span class="n">Dynamic</span><span class="w"> </span><span class="n">dream</span><span class="w"> </span><span class="n">tokens</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">DynamicFeatDecoder</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="err">动态物体预测</span>
+<span class="w">            </span><span class="err">└─</span><span class="w"> </span><span class="n">Depth</span><span class="w"> </span><span class="n">dream</span><span class="w"> </span><span class="n">tokens</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">DynamicFeatDecoder</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="err">深度预测</span>
+<span class="w">            </span><span class="err">│</span>
+<span class="w">            </span><span class="err">↓</span>
+<span class="w">      </span><span class="n">Loss</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">L1</span><span class="p">(</span><span class="n">action</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">MSE</span><span class="p">(</span><span class="n">dynamic</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">MSE</span><span class="p">(</span><span class="n">depth</span><span class="p">)</span>
+</code></pre></div>
+
+<h4 id="683">6.8.3 训练策略</h4>
+<div class="codehilite"><pre><span></span><code><span class="c1"># finetune.py:675-708 — set_full_trainable()</span>
+<span class="c1"># 训练时冻结 VGGT encoder，只训练以下组件：</span>
+
+<span class="c1"># 1) LoRA 微调 LLM（target_modules 排除 projector/frame_fuser/text_encoder/vggt/decoder）</span>
+<span class="c1"># 2) 全参数训练：</span>
+<span class="c1">#    - siglip_frame_fuser（4 层 Cross-Attn）</span>
+<span class="c1">#    - siglip_projector（MLP: 1152 → 4096）</span>
+<span class="c1">#    - dino_projector（MLP: 1024 → 4096）</span>
+<span class="c1">#    - future_dynamic_decoder（8 层 ViT Decoder）</span>
+<span class="c1">#    - future_depth_decoder（8 层 ViT Decoder）</span>
+<span class="c1"># 3) DINOv2 ViT 的 FiLM scale/shift 参数</span>
+<span class="c1"># 4) SigLIP ViT 的 FiLM scale/shift 参数</span>
+<span class="c1"># 5) DINOv2 ViT 的 aggregator token（可学习的聚合 token）</span>
+<span class="c1"># 6) dream_queries（可学习的 dynamic/depth token）</span>
+</code></pre></div>
+
+<h4 id="684-vs">6.8.4 训练 vs 推理的差异</h4>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>训练</th>
+<th>推理</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>VGGT</td>
+<td><code>inference_mode</code>，冻结</td>
+<td><code>inference_mode</code>，冻结</td>
+</tr>
+<tr>
+<td>Dynamic/Depth Decoder</td>
+<td>前向 + 计算损失（用 CoTracker/Depth-Anything 监督）</td>
+<td><strong>不执行</strong>，仅依赖隐式知识</td>
+</tr>
+<tr>
+<td>Dream Queries</td>
+<td>更新参数</td>
+<td>前向传播但不解码</td>
+</tr>
+<tr>
+<td>FiLM scale/shift</td>
+<td>更新</td>
+<td>冻结（LoRA）</td>
+</tr>
+<tr>
+<td>视觉 token 压缩</td>
+<td>ES-Selection + IG-Aggregation</td>
+<td>同训练</td>
+</tr>
+<tr>
+<td>动作预测</td>
+<td>L1 回归（<code>L1RegressionActionHead</code>）</td>
+<td>同训练方式</td>
+</tr>
+</tbody>
+</table>
+<h3 id="69">6.9 关键技术细节补充</h3>
+<h4 id="691-action-tokenizerprismaticvlaaction_tokenizerpy">6.9.1 Action Tokenizer（prismatic/vla/action_tokenizer.py）</h4>
+<p>与 OpenVLA 一致，将连续动作离散化为 256 个 bin，使用 LLM 词汇表末尾的 256 个 token：</p>
+<div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">ActionTokenizer</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tokenizer</span><span class="p">,</span> <span class="n">bins</span><span class="o">=</span><span class="mi">256</span><span class="p">,</span> <span class="n">min_action</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">max_action</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bins</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">256</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bin_centers</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bins</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">bins</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span> <span class="o">/</span> <span class="mf">2.0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">action_token_begin_idx</span> <span class="o">=</span> <span class="n">tokenizer</span><span class="o">.</span><span class="n">vocab_size</span> <span class="o">-</span> <span class="mi">257</span>
+</code></pre></div>
+
+<p>当使用 L1 回归时（<code>use_l1_regression=True</code>），该 tokenizer 在训练时不直接使用；动作通过 <code>L1RegressionActionHead</code> 直接从 LLM 最后一层的 hidden states 预测，不使用离散化损失。</p>
+<h4 id="692">6.9.2 动作预测头</h4>
+<div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">L1RegressionActionHead</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    input_dim = 4096 (LLM hidden dim)</span>
+<span class="sd">    hidden_dim = 4096</span>
+<span class="sd">    action_dim = 7 (LIBERO: 6DoF pose + 1 gripper)</span>
+<span class="sd">    NUM_ACTIONS_CHUNK = 25 (真机) / 8 (仿真)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">predict_action</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">actions_hidden_states</span><span class="p">):</span>
+        <span class="c1"># actions_hidden_states: [B, chunk_len * action_dim, 4096]</span>
+        <span class="c1"># → reshape → [B, chunk_len, action_dim * 4096]</span>
+        <span class="c1"># → MLPResNet(2 blocks) → [B, action_dim]</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">(</span><span class="n">rearranged_hidden_states</span><span class="p">)</span>
+</code></pre></div>
+
+<h4 id="693">6.9.3 多编码器的像素空间对齐</h4>
+<p>三个编码器的输入图像分辨率可能不同，在 <code>vit_wrapper.py</code> 的 forward 中处理：</p>
+<ul>
+<li>SigLIP 输入：<code>pixel_values</code>（经过 <code>image_processor</code> 预处理）</li>
+<li>DINOv2 输入：与 SigLIP 共享 <code>pixel_values</code>，但通过 channel split 分离</li>
+<li>VGGT 输入：<code>vggt_pixel_values</code>（独立预处理）</li>
+</ul>
+<p>代码中 <code>pixel_values</code> 被组织为 <code>[B, 6 * num_images, H, W]</code>，其中每 6 个 channel 对应一个视角（前 3 个 channel → SigLIP，后 3 个 channel → DINOv2）。</p>
+<h4 id="694-embedding">6.9.4 各模型的 Embedding 维度汇总</h4>
+<table>
+<thead>
+<tr>
+<th>组件</th>
+<th>维度</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SigLIP ViT</td>
+<td>1152</td>
+<td>So400m 模型，224×224</td>
+</tr>
+<tr>
+<td>DINOv2 ViT-L</td>
+<td>1024</td>
+<td>14×14 patch，224×224</td>
+</tr>
+<tr>
+<td>VGGT-1B Aggregator</td>
+<td>1024</td>
+<td>与 DINOv2 对齐</td>
+</tr>
+<tr>
+<td>Llama-2 7B</td>
+<td>4096</td>
+<td>LLM hidden dim</td>
+</tr>
+<tr>
+<td>SigLIP → LLM Projector</td>
+<td>1152 → 2176 → 4096</td>
+<td>2 层 MLP</td>
+</tr>
+<tr>
+<td>DINOv2 → LLM Projector</td>
+<td>1024 → 2176 → 4096</td>
+<td>2 层 MLP</td>
+</tr>
+<tr>
+<td>FrameFuser</td>
+<td>Q:1152, K/V:1024</td>
+<td>4 层 Cross-Attn</td>
+</tr>
+<tr>
+<td>DynamicFeatDecoder</td>
+<td>4096 → 1024</td>
+<td>8 层 ViT Block</td>
+</tr>
+<tr>
+<td>ProprioProjector</td>
+<td>14 → 4096 → 4096</td>
+<td>2 层 MLP</td>
+</tr>
+<tr>
+<td>L1RegressionActionHead</td>
+<td>4096*7=28672 → 4096 → 7</td>
+<td>MLPResNet (2 blocks)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="610">6.10 数据集构造与监督信号构建</h3>
+<h4 id="6101">6.10.1 数据管线总览</h4>
+<p>整个数据管线基于 OpenVLA 的 RLDS（Reinforcement Learning Datasets）框架，分为以下几个阶段：</p>
+<div class="codehilite"><pre><span></span><code>原始 HDF5 数据 → HDF5 再生（消除 no-op） → RLDS 格式转换 → TFDS 数据加载 → 轨迹变换 → 帧变换 → PyTorch Batch
+</code></pre></div>
+
+<p>核心代码路径：</p>
+<ul>
+<li><code>prismatic/vla/datasets/rlds/dataset.py</code> — 数据加载与交织</li>
+<li><code>prismatic/vla/datasets/datasets.py</code> — <code>RLDSBatchTransform</code>：RLDS batch → PyTorch batch</li>
+<li><code>experiments/robot/libero/regenerate_libero_dataset.py</code> — LIBERO 原始数据再生</li>
+<li><code>prismatic/vla/datasets/rlds/oxe/transforms.py:827</code> — LIBERO 标准化变换</li>
+<li><code>prismatic/vla/datasets/rlds/utils/data_utils.py</code> — 动作归一化与统计</li>
+</ul>
+<h4 id="6102-libero-regenerate_libero_datasetpy">6.10.2 LIBERO 原始数据再生（regenerate_libero_dataset.py）</h4>
+<p><strong>目的</strong>：LIBERO 官方提供的 HDF5 演示数据有以下问题——</p>
+<ol>
+<li>包含大量 "no-op" 动作（机器人不移动，仅维持状态），对训练无益</li>
+<li>图像分辨率为 128×128，需要升采样到 256×256</li>
+<li>部分演示不成功（任务未完成），需要过滤</li>
+</ol>
+<p><strong>处理流程</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># 1) 在 LIBERO 仿真环境中重放原始动作序列</span>
+<span class="k">for</span> <span class="n">action</span> <span class="ow">in</span> <span class="n">orig_actions</span><span class="p">:</span>
+    <span class="c1"># 2) 过滤 no-op 动作（动作幅度 &lt; 1e-4 且 gripper 不变）</span>
+    <span class="k">if</span> <span class="n">is_noop</span><span class="p">(</span><span class="n">action</span><span class="p">,</span> <span class="n">prev_action</span><span class="p">):</span>
+        <span class="k">continue</span>  <span class="c1"># 跳过</span>
+    <span class="c1"># 3) 执行有效动作，以 256×256 分辨率记录观测</span>
+    <span class="n">obs</span><span class="p">,</span> <span class="n">reward</span><span class="p">,</span> <span class="n">done</span><span class="p">,</span> <span class="n">info</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">action</span><span class="o">.</span><span class="n">tolist</span><span class="p">())</span>
+    <span class="n">agentview_images</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;agentview_image&quot;</span><span class="p">])</span>      <span class="c1"># 主视角</span>
+    <span class="n">eye_in_hand_images</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;robot0_eye_in_hand_image&quot;</span><span class="p">])</span>  <span class="c1"># 腕部视角</span>
+
+<span class="c1"># 4) 仅保存成功（done=True）的轨迹</span>
+<span class="k">if</span> <span class="n">done</span><span class="p">:</span>
+    <span class="n">save_to_hdf5</span><span class="p">(</span><span class="n">states</span><span class="p">,</span> <span class="n">actions</span><span class="p">,</span> <span class="n">agentview_images</span><span class="p">,</span> <span class="n">eye_in_hand_images</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
+</code></pre></div>
+
+<p><strong>no-op 判定逻辑</strong>（<code>regenerate_libero_dataset.py:46-68</code>）：</p>
+<div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">is_noop</span><span class="p">(</span><span class="n">action</span><span class="p">,</span> <span class="n">prev_action</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="mf">1e-4</span><span class="p">):</span>
+    <span class="c1"># 条件1：除 gripper 外的所有动作维度接近零</span>
+    <span class="c1"># 条件2：gripper 动作与上一时间步相同</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">action</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="o">&lt;</span> <span class="n">threshold</span> <span class="ow">and</span> <span class="n">gripper_action</span> <span class="o">==</span> <span class="n">prev_gripper_action</span>
+</code></pre></div>
+
+<h4 id="6103-libero-transformspy827-841">6.10.3 LIBERO 标准化变换（transforms.py:827-841）</h4>
+<p>在 RLDS 加载时，通过 <code>libero_dataset_transform</code> 对每条轨迹进行标准化处理：</p>
+<div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">libero_dataset_transform</span><span class="p">(</span><span class="n">trajectory</span><span class="p">):</span>
+    <span class="c1"># 1) Gripper 动作处理：原为 -1(open)...1(close) → clip 到 0...1 → flip 为 +1=open, 0=close</span>
+    <span class="n">gripper_action</span> <span class="o">=</span> <span class="n">trajectory</span><span class="p">[</span><span class="s2">&quot;action&quot;</span><span class="p">][:,</span> <span class="o">-</span><span class="mi">1</span><span class="p">:]</span>
+    <span class="n">gripper_action</span> <span class="o">=</span> <span class="n">invert_gripper_actions</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">clip_by_value</span><span class="p">(</span><span class="n">gripper_action</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+
+    <span class="c1"># 2) 拼接：前 6 维（EEF delta XYZ + RPY）+ 后 1 维（gripper）</span>
+    <span class="n">trajectory</span><span class="p">[</span><span class="s2">&quot;action&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">trajectory</span><span class="p">[</span><span class="s2">&quot;action&quot;</span><span class="p">][:,</span> <span class="p">:</span><span class="mi">6</span><span class="p">],</span> <span class="n">gripper_action</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="c1"># 3) 从 state 中分离 EEF 状态和 gripper 状态</span>
+    <span class="n">trajectory</span><span class="p">[</span><span class="s2">&quot;observation&quot;</span><span class="p">][</span><span class="s2">&quot;EEF_state&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">trajectory</span><span class="p">[</span><span class="s2">&quot;observation&quot;</span><span class="p">][</span><span class="s2">&quot;state&quot;</span><span class="p">][:,</span> <span class="p">:</span><span class="mi">6</span><span class="p">]</span>
+    <span class="n">trajectory</span><span class="p">[</span><span class="s2">&quot;observation&quot;</span><span class="p">][</span><span class="s2">&quot;gripper_state&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">trajectory</span><span class="p">[</span><span class="s2">&quot;observation&quot;</span><span class="p">][</span><span class="s2">&quot;state&quot;</span><span class="p">][:,</span> <span class="o">-</span><span class="mi">2</span><span class="p">:]</span>
+</code></pre></div>
+
+<h4 id="6104-data_utilspy">6.10.4 动作归一化与统计信息计算（data_utils.py）</h4>
+<p>在 RLDS 加载过程中，自动计算或加载数据集的统计信息，用于动作归一化：</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># LIBERO 使用 BOUNDS_Q99 归一化方式</span>
+<span class="c1"># 对每个动作维度，计算 [q01, q99] 分位数，归一化到 [-1, 1]</span>
+<span class="n">normalized_action</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="n">action</span> <span class="o">-</span> <span class="n">q01</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">q99</span> <span class="o">-</span> <span class="n">q01</span> <span class="o">+</span> <span class="mf">1e-8</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
+<span class="c1"># 最终 clip 到 [-1, 1]</span>
+<span class="n">normalized_action</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">clip_by_value</span><span class="p">(</span><span class="n">normalized_action</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+</code></pre></div>
+
+<p><strong>统计信息内容</strong>（<code>get_dataset_statistics</code> 函数）：</p>
+<ul>
+<li><code>action</code>: mean, std, min, max, q01, q99（7 维，每维独立计算）</li>
+<li><code>proprio</code>: mean, std, min, max, q01, q99（8 维）</li>
+<li><code>num_transitions</code>: 总帧数</li>
+<li><code>num_trajectories</code>: 总轨迹数</li>
+</ul>
+<p>统计信息会被缓存到 <code>dataset_statistics_{hash}.json</code>，便于后续复用。</p>
+<h4 id="6105-rldsbatchtransformrlds-pytorch-batchdatasetspy33-197">6.10.5 RLDSBatchTransform：RLDS → PyTorch Batch（datasets.py:33-197）</h4>
+<p>这是 RLDS 管线和 PyTorch 训练之间的桥梁函数，<code>__call__</code> 方法将单个 RLDS batch 转换为训练所需的 PyTorch 张量：</p>
+<div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rlds_batch</span><span class="p">):</span>
+    <span class="c1"># === 1) Prompt 构造与 Tokenization ===</span>
+    <span class="n">instruction</span> <span class="o">=</span> <span class="s2">&quot;What action should the robot take to </span><span class="si">{language_instruction}</span><span class="s2">?&quot;</span>
+    <span class="c1"># 将当前动作 + 未来动作 chunk 用 ActionTokenizer 离散化</span>
+    <span class="n">action_chunk_string</span> <span class="o">=</span> <span class="n">action_tokenizer</span><span class="p">(</span><span class="n">current_action</span><span class="p">)</span> <span class="o">+</span> <span class="n">action_tokenizer</span><span class="p">(</span><span class="n">future_actions</span><span class="p">)</span>
+    <span class="c1"># 构造对话：Human: instruction, GPT: action_chunk_string</span>
+    <span class="n">prompt</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Human: </span><span class="si">{</span><span class="n">instruction</span><span class="si">}</span><span class="se">\n</span><span class="s2">Assistant: </span><span class="si">{</span><span class="n">action_chunk_string</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="n">input_ids</span> <span class="o">=</span> <span class="n">tokenizer</span><span class="p">(</span><span class="n">prompt</span><span class="p">)</span>
+
+    <span class="c1"># === 2) 图像预处理 ===</span>
+    <span class="n">pixel_values</span> <span class="o">=</span> <span class="n">image_transform</span><span class="p">(</span><span class="n">primary_image</span><span class="p">)</span>       <span class="c1"># SigLIP + DINOv2 共享</span>
+    <span class="n">vggt_pixel_values</span> <span class="o">=</span> <span class="n">preprocess_vggt</span><span class="p">(</span><span class="n">primary_image</span><span class="p">)</span>   <span class="c1"># VGGT 专用（224×224）</span>
+
+    <span class="c1"># === 3) 标签构造（关键：控制损失计算范围）===</span>
+    <span class="n">labels</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">input_ids</span><span class="p">)</span>
+    <span class="n">labels</span><span class="p">[:</span> <span class="o">-</span><span class="p">(</span><span class="n">action_chunk_len</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)]</span> <span class="o">=</span> <span class="n">IGNORE_INDEX</span>     <span class="c1"># ❗ 仅动作 token 计算损失</span>
+
+    <span class="c1"># === 4) 腕部图像（多视角）===</span>
+    <span class="k">if</span> <span class="n">use_wrist_image</span><span class="p">:</span>
+        <span class="n">pixel_values_wrist</span> <span class="o">=</span> <span class="n">image_transform</span><span class="p">(</span><span class="n">wrist_image</span><span class="p">)</span>
+        <span class="n">vggt_pixel_values_wrist</span> <span class="o">=</span> <span class="n">preprocess_vggt</span><span class="p">(</span><span class="n">wrist_image</span><span class="p">)</span>
+
+    <span class="c1"># === 5) 未来动态物体监督信号 ===</span>
+    <span class="k">if</span> <span class="n">use_dynamic</span><span class="p">:</span>
+        <span class="n">future_image</span> <span class="o">=</span> <span class="n">rlds_batch</span><span class="p">[</span><span class="s2">&quot;observation&quot;</span><span class="p">][</span><span class="s2">&quot;image_future&quot;</span><span class="p">]</span>       <span class="c1"># 动作后的场景图像</span>
+        <span class="n">future_dynamic_mask</span> <span class="o">=</span> <span class="n">interpolate</span><span class="p">(</span><span class="n">rlds_batch</span><span class="p">[</span><span class="s2">&quot;future_dynamic_mask&quot;</span><span class="p">],</span> <span class="mi">224</span><span class="err">×</span><span class="mi">224</span><span class="p">)</span>  <span class="c1"># 动态物体 mask</span>
+
+    <span class="c1"># === 6) 未来深度监督信号 ===</span>
+    <span class="k">if</span> <span class="n">use_depth</span><span class="p">:</span>
+        <span class="n">future_depth</span> <span class="o">=</span> <span class="n">interpolate</span><span class="p">(</span><span class="n">rlds_batch</span><span class="p">[</span><span class="s2">&quot;observation&quot;</span><span class="p">][</span><span class="s2">&quot;future_depth&quot;</span><span class="p">],</span> <span class="mi">224</span><span class="err">×</span><span class="mi">224</span><span class="p">)</span>
+        <span class="n">future_wrist_depth</span> <span class="o">=</span> <span class="n">interpolate</span><span class="p">(</span><span class="n">rlds_batch</span><span class="p">[</span><span class="s2">&quot;observation&quot;</span><span class="p">][</span><span class="s2">&quot;future_wrist_depth&quot;</span><span class="p">],</span> <span class="mi">224</span><span class="err">×</span><span class="mi">224</span><span class="p">)</span>
+
+    <span class="c1"># === 7) 原始图像（用于 Decoder 监督）===</span>
+    <span class="n">image_primary</span> <span class="o">=</span> <span class="n">rlds_batch</span><span class="p">[</span><span class="s2">&quot;observation&quot;</span><span class="p">][</span><span class="s2">&quot;image_primary&quot;</span><span class="p">]</span>  <span class="c1"># 当前主视角图像</span>
+    <span class="n">image_wrist</span> <span class="o">=</span> <span class="n">rlds_batch</span><span class="p">[</span><span class="s2">&quot;observation&quot;</span><span class="p">][</span><span class="s2">&quot;image_wrist&quot;</span><span class="p">]</span>      <span class="c1"># 当前腕部图像</span>
+
+    <span class="c1"># === 8) 损失权重 ===</span>
+    <span class="n">compute_future_loss</span> <span class="o">=</span> <span class="n">rlds_batch</span><span class="p">[</span><span class="s2">&quot;observation&quot;</span><span class="p">][</span><span class="s2">&quot;compute_future_loss&quot;</span><span class="p">]</span>  <span class="c1"># 是否计算未来损失</span>
+</code></pre></div>
+
+<h4 id="6106-gt">6.10.6 三条监督信号的 GT 来源与构建</h4>
+<p>ConsisVLA-4D 的三条损失中，后两条（<span class="math inline">$\mathcal{L}_{\text{dyn-4D}}$</span> 和 <span class="math inline">$\mathcal{L}_{\text{dep-4D}}$</span>）的 GT 标签是<strong>离线预计算</strong>并直接存储在 RLDS 数据集中的。训练时 dataloader 只是读取这些预存的标签，不涉及 CoTracker 或 Depth-Anything 的在线推理。</p>
+<h5 id="1splaceholder000061p-l1">（1）<span class="math inline">$\mathcal{L}_{\text{action}}$</span> —— 动作预测损失（L1 回归）</h5>
+<p><strong>GT 来源</strong>：人类遥操作采集的专家动作序列，存储在 RLDS 数据的 <code>action</code> 字段。</p>
+<p>论文公式（eq. 17）：<span class="math inline">$\mathcal{L}_{\text{total}} = \mathcal{L}_{\text{action}} + \mathcal{L}_{\text{dyn-4D}} + \mathcal{L}_{\text{dep-4D}}$</span></p>
+<p>代码中的 <span class="math inline">$\mathcal{L}_{\text{action}}$</span> 计算（<code>finetune.py:420-428</code>）：</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># 从 LLM 最后一层 hidden states 提取动作 token 对应的 hidden states</span>
+<span class="n">actions_hidden_states</span> <span class="o">=</span> <span class="n">text_hidden_states</span><span class="p">[</span><span class="n">current_action_mask</span> <span class="o">|</span> <span class="n">next_actions_mask</span><span class="p">]</span>
+<span class="n">actions_hidden_states</span> <span class="o">=</span> <span class="n">actions_hidden_states</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">B</span><span class="p">,</span> <span class="n">NUM_ACTIONS_CHUNK</span> <span class="o">*</span> <span class="n">ACTION_DIM</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+<span class="c1"># 通过 L1RegressionActionHead 预测动作 → 与 GT action 计算 L1</span>
+<span class="n">predicted_actions</span> <span class="o">=</span> <span class="n">action_head</span><span class="o">.</span><span class="n">predict_action</span><span class="p">(</span><span class="n">actions_hidden_states</span><span class="p">)</span>
+<span class="n">action_loss</span> <span class="o">=</span> <span class="n">L1Loss</span><span class="p">(</span><span class="n">ground_truth_actions</span><span class="p">,</span> <span class="n">predicted_actions</span><span class="p">)</span>
+</code></pre></div>
+
+<h5 id="2splaceholder000064p-cotracker">（2）<span class="math inline">$\mathcal{L}_{\text{dyn-4D}}$</span> —— 动态物体重建损失（CoTracker 监督）</h5>
+<p><strong>论文描述</strong>（sec. 4.3, eq. 14 + Fig. 4d caption）：</p>
+<ul>
+<li>CS-Thinker 从多视角物体 token 出发，预测动作执行后固定视角 <span class="math inline">$i^*$</span> 中的动态物体 <span class="math inline">$\hat{\mathbf{z}}_{i^*}^{\text{dyn-4D}}$</span></li>
+<li>GT <span class="math inline">$\mathbf{z}_{i^*}^{\text{dyn-4D}}$</span> 是动作后固定视角的真实动态物体表征</li>
+<li><span class="math inline">$\mathbf{m}_{i^*}^{\text{obj-3D}}$</span> 是定位物体位置的 mask，只对物体区域计算损失</li>
+<li>Fig. 4d caption 明确标注：<strong>"CoTracker supervision"</strong></li>
+</ul>
+<p><div class="math display">$$\mathcal{L}_{\text{dyn-4D}} = \| (\hat{\mathbf{z}}_{i^*}^{\text{dyn-4D}} \odot \mathbf{m}_{i^*}^{\text{obj-3D}}) - ({\mathbf{z}}_{i^*}^{\text{dyn-4D}} \odot \mathbf{m}_{i^*}^{\text{obj-3D}}) \|_2^2$$</div></p>
+<p><strong>GT 如何生成</strong>（离线预处理流水线，不在开源代码中）：</p>
+<ol>
+<li>对于轨迹中的每一帧 <span class="math inline">$t$</span>，取当前观测 <span class="math inline">$O_t$</span> 和动作执行后的未来帧 <span class="math inline">$O_{t+k}$</span>（间隔 <span class="math inline">$k$</span> 由动作 chunk 长度决定）</li>
+<li>用 <strong>CoTracker</strong> 在 <span class="math inline">$(O_t, O_{t+k})$</span> 图像对上运行点跟踪，识别哪些像素/物体发生了运动</li>
+<li>CoTracker 输出的运动区域被二值化为 <code>future_dynamic_mask</code>（1 = 该像素属于运动物体，0 = 背景/静止区域）</li>
+<li>未来帧 <span class="math inline">$O_{t+k}$</span> 本身存储为 <code>future_image</code></li>
+<li>这些标签写入 RLDS 数据集的每条轨迹中（作为 <code>observation</code> 的额外字段）</li>
+</ol>
+<p><strong>训练时的数据流</strong>（代码中只是读取，不运行 CoTracker）：</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># datasets.py:120-124 — 从 RLDS 直接读取预存的 GT</span>
+<span class="n">future_image</span> <span class="o">=</span> <span class="n">rlds_batch</span><span class="p">[</span><span class="s2">&quot;observation&quot;</span><span class="p">][</span><span class="s2">&quot;image_future&quot;</span><span class="p">]</span>         <span class="c1"># 动作后真实图像</span>
+<span class="n">future_dynamic_mask</span> <span class="o">=</span> <span class="n">rlds_batch</span><span class="p">[</span><span class="s2">&quot;observation&quot;</span><span class="p">][</span><span class="s2">&quot;future_dynamic_mask&quot;</span><span class="p">]</span>  <span class="c1"># CoTracker 生成的运动 mask</span>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code><span class="c1"># modeling_prismatic.py:729-741 + feats_decoders.py:231-255 — 计算损失</span>
+<span class="n">dynamic_dream_hidden</span> <span class="o">=</span> <span class="n">last_hidden_states</span><span class="p">[:,</span> <span class="n">dynamic_dream_start</span><span class="p">:</span><span class="n">dynamic_dream_end</span><span class="p">,</span> <span class="p">:]</span>
+<span class="c1"># 每个视角的 dynamic dream token 独立解码 → 预测固定视角的动作后动态物体图像</span>
+<span class="k">for</span> <span class="n">each</span> <span class="n">viewpoint</span><span class="p">:</span>
+    <span class="n">predicted_image</span> <span class="o">=</span> <span class="n">DynamicFeatDecoder</span><span class="p">(</span><span class="n">latent</span><span class="p">)</span>  <span class="c1"># 从 dream token 解码图像</span>
+    <span class="c1"># Masked MSE：只对 CoTracker 标注的动态区域计算损失</span>
+    <span class="n">loss_dyn</span> <span class="o">+=</span> <span class="n">MSE</span><span class="p">(</span><span class="n">predicted_image</span> <span class="o">*</span> <span class="n">future_dynamic_mask</span><span class="p">,</span> 
+                    <span class="n">future_image</span> <span class="o">*</span> <span class="n">future_dynamic_mask</span><span class="p">)</span>
+</code></pre></div>
+
+<p><strong>与论文公式的对应关系</strong>：</p>
+<ul>
+<li>论文 <span class="math inline">$\hat{\mathbf{z}}_{i^*}^{\text{dyn-4D}}$</span> → 代码中 <code>DynamicFeatDecoder</code> 的输出（预测的动态物体图像）</li>
+<li>论文 <span class="math inline">$\mathbf{z}_{i^*}^{\text{dyn-4D}}$</span> → 代码中 <code>future_image</code>（动作后的真实图像）</li>
+<li>论文 <span class="math inline">$\mathbf{m}_{i^*}^{\text{obj-3D}}$</span> → 代码中 <code>future_dynamic_mask</code>（CoTracker 离线生成的运动 mask）</li>
+</ul>
+<h5 id="3splaceholder000078p-depth-anything">（3）<span class="math inline">$\mathcal{L}_{\text{dep-4D}}$</span> —— 全局深度重建损失（Depth-Anything 监督）</h5>
+<p><strong>论文描述</strong>（sec. 4.3, eq. 15-16 + Fig. 4d caption）：</p>
+<ul>
+<li>CS-Thinker 从 CO-Fuser 的聚合几何 token <span class="math inline">$\mathbf{z}_{\mathcal{L}'}^{\text{agg-3D}}$</span> 出发，解码出各视角的全局深度 <span class="math inline">$\hat{\mathbf{z}}_{i}^{\text{dep-4D}}$</span></li>
+<li>GT <span class="math inline">$\mathbf{z}_{i}^{\text{dep-4D}}$</span> 是各视角的真实深度图</li>
+<li>Fig. 4d caption 明确标注：<strong>"Depth-Anything supervision"</strong></li>
+</ul>
+<p><div class="math display">$$\mathcal{L}_{\text{dep-4D}} = \sum_{i=1}^{N_i} \| \hat{\mathbf{z}}_{i}^{\text{dep-4D}} - {\mathbf{z}}_{i}^{\text{dep-4D}} \|_2^2$$</div></p>
+<p><strong>GT 如何生成</strong>（离线预处理流水线，不在开源代码中）：</p>
+<ol>
+<li>对于轨迹中的每一帧 <span class="math inline">$t$</span>，取动作执行后的未来帧 <span class="math inline">$O_{t+k}$</span></li>
+<li>用 <strong>Depth-Anything</strong> 模型对 <span class="math inline">$O_{t+k}$</span> 进行单目深度估计，生成深度图</li>
+<li>对每个视角（Main、Wrist 等）各自运行 Depth-Anything</li>
+<li>生成的深度图存储为 <code>future_depth</code>、<code>future_wrist_depth</code> 等字段</li>
+<li>写入 RLDS 数据集的每条轨迹中</li>
+</ol>
+<p><strong>训练时的数据流</strong>（代码中只是读取，不运行 Depth-Anything）：</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># datasets.py:126 — 从 RLDS 直接读取预存的 GT</span>
+<span class="n">future_depth</span> <span class="o">=</span> <span class="n">rlds_batch</span><span class="p">[</span><span class="s2">&quot;observation&quot;</span><span class="p">][</span><span class="s2">&quot;future_depth&quot;</span><span class="p">]</span>  <span class="c1"># Depth-Anything 生成的深度图</span>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code><span class="c1"># modeling_prismatic.py:743-756 + feats_decoders.py:209-229 — 计算损失</span>
+<span class="n">depth_dream_hidden</span> <span class="o">=</span> <span class="n">last_hidden_states</span><span class="p">[:,</span> <span class="n">depth_dream_start</span><span class="p">:</span><span class="n">depth_dream_end</span><span class="p">,</span> <span class="p">:]</span>
+<span class="c1"># 一组 depth dream token 同时解码所有视角的深度图</span>
+<span class="n">predicted_depths</span> <span class="o">=</span> <span class="n">DynamicFeatDecoder</span><span class="p">(</span><span class="n">depth_dream_hidden</span><span class="p">)</span>  <span class="c1"># pred_num=num_views, img_channel=1</span>
+<span class="c1"># 逐视角计算 MSE</span>
+<span class="k">for</span> <span class="n">each</span> <span class="n">viewpoint</span><span class="p">:</span>
+    <span class="n">loss_dep</span> <span class="o">+=</span> <span class="n">MSE</span><span class="p">(</span><span class="n">predicted_depth</span><span class="p">[</span><span class="n">viewpoint</span><span class="p">],</span> <span class="n">future_depth</span><span class="p">[</span><span class="n">viewpoint</span><span class="p">])</span>
+</code></pre></div>
+
+<p><strong>与论文公式的对应关系</strong>：</p>
+<ul>
+<li>论文 <span class="math inline">$\hat{\mathbf{z}}_{i}^{\text{dep-4D}}$</span> → 代码中 <code>DynamicFeatDecoder</code> 的输出（预测的深度图）</li>
+<li>论文 <span class="math inline">$\mathbf{z}_{i}^{\text{dep-4D}}$</span> → 代码中 <code>future_depth</code>（Depth-Anything 离线生成的深度图）</li>
+<li>论文中的 <span class="math inline">$\sum_{i=1}^{N_i}$</span> → 代码中逐视角循环累加 loss</li>
+</ul>
+<h5 id="gt">三条损失的 GT 来源总结</h5>
+<table>
+<thead>
+<tr>
+<th>损失</th>
+<th>论文公式</th>
+<th>模型预测</th>
+<th>GT 标签</th>
+<th>GT 来源</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><span class="math inline">$\mathcal{L}_{\text{action}}$</span></td>
+<td>eq. 17</td>
+<td><code>L1RegressionActionHead(dream token)</code></td>
+<td><code>actions</code>（7 维动作向量）</td>
+<td>人类遥操作采集的专家数据</td>
+</tr>
+<tr>
+<td><span class="math inline">$\mathcal{L}_{\text{dyn-4D}}$</span></td>
+<td>eq. 14</td>
+<td><code>DynamicFeatDecoder(dynamic dream token)</code> → 动作后图像</td>
+<td><code>future_image</code> + <code>future_dynamic_mask</code></td>
+<td><strong>CoTracker</strong> 离线处理：在 (当前帧, 未来帧) 对上运行点跟踪，产生运动物体 mask</td>
+</tr>
+<tr>
+<td><span class="math inline">$\mathcal{L}_{\text{dep-4D}}$</span></td>
+<td>eq. 15</td>
+<td><code>DynamicFeatDecoder(depth dream token)</code> → 深度图</td>
+<td><code>future_depth</code>, <code>future_wrist_depth</code></td>
+<td><strong>Depth-Anything</strong> 离线处理：对动作后的未来帧进行单目深度估计</td>
+</tr>
+</tbody>
+</table>
+<p><strong>关键理解</strong>：CoTracker 和 Depth-Anything <strong>不是训练循环的一部分</strong>，它们只在数据预处理阶段运行一次，将生成的 GT 标签写入 RLDS 数据集。训练时，dataloader 直接从 RLDS 数据中读取这些预存的 GT 标签。在目前已开源的代码中，这个离线预处理脚本并未包含在内（<code>future_*</code> 字段被假定为已存在于 RLDS 数据中）。</p>
+<h4 id="6107">6.10.7 数据增强策略</h4>
+<p>在 <code>RLDSDataset.__init__</code> 中配置（<code>datasets.py:254-268</code>）：</p>
+<div class="codehilite"><pre><span></span><code><span class="k">if</span> <span class="n">image_aug</span><span class="p">:</span>
+    <span class="n">image_augment_kwargs</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
+        <span class="n">random_resized_crop</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">scale</span><span class="o">=</span><span class="p">[</span><span class="mf">0.9</span><span class="p">,</span> <span class="mf">0.9</span><span class="p">],</span> <span class="n">ratio</span><span class="o">=</span><span class="p">[</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">]),</span>  <span class="c1"># 轻微缩放裁剪</span>
+        <span class="n">random_brightness</span><span class="o">=</span><span class="p">[</span><span class="mf">0.2</span><span class="p">],</span>
+        <span class="n">random_contrast</span><span class="o">=</span><span class="p">[</span><span class="mf">0.8</span><span class="p">,</span> <span class="mf">1.2</span><span class="p">],</span>
+        <span class="n">random_saturation</span><span class="o">=</span><span class="p">[</span><span class="mf">0.8</span><span class="p">,</span> <span class="mf">1.2</span><span class="p">],</span>
+        <span class="n">random_hue</span><span class="o">=</span><span class="p">[</span><span class="mf">0.05</span><span class="p">],</span>
+        <span class="n">augment_order</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;random_resized_crop&quot;</span><span class="p">,</span> <span class="s2">&quot;random_brightness&quot;</span><span class="p">,</span> 
+                       <span class="s2">&quot;random_contrast&quot;</span><span class="p">,</span> <span class="s2">&quot;random_saturation&quot;</span><span class="p">,</span> <span class="s2">&quot;random_hue&quot;</span><span class="p">],</span>
+    <span class="p">)</span>
+</code></pre></div>
+
+<p>增强在 TFDS 管线中通过 <code>dlimp.transforms.augment_image</code> 执行，使用相同种子保证不同视角的图像增强一致。</p>
+<h4 id="6108">6.10.8 轨迹变换管线的完整流程</h4>
+<p><code>apply_trajectory_transforms</code>（<code>dataset.py:269-366</code>）按顺序执行以下变换：</p>
+<div class="codehilite"><pre><span></span><code><span class="mf">1.</span><span class="w"> </span><span class="n">skip_unlabeled</span><span class="w">         </span><span class="err">→</span><span class="w"> </span><span class="n">过滤无语言标签的轨迹</span>
+<span class="mf">2.</span><span class="w"> </span><span class="n">max_action</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">max_proprio</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">过滤异常值轨迹</span>
+<span class="mf">3.</span><span class="w"> </span><span class="n">add_pad_mask_dict</span><span class="w">      </span><span class="err">→</span><span class="w"> </span><span class="n">标记各观测的填充状态</span>
+<span class="mf">4.</span><span class="w"> </span><span class="kr">go</span><span class="n">al_relabeling</span><span class="w">        </span><span class="err">→</span><span class="w"> </span><span class="n">目标重标记</span><span class="err">（</span><span class="n">LIBERO</span><span class="w"> </span><span class="n">使用</span><span class="w"> </span><span class="s">&quot;uniform&quot;</span><span class="w"> </span><span class="n">策略</span><span class="err">）</span>
+<span class="mf">5.</span><span class="w"> </span><span class="n">task_augmentation</span><span class="w">      </span><span class="err">→</span><span class="w"> </span><span class="n">任务增强</span><span class="err">（</span><span class="n">训练时可选</span><span class="err">，</span><span class="n">如随机丢弃部分观测键</span><span class="err">）</span>
+<span class="mf">6.</span><span class="w"> </span><span class="n">chunk_act_obs</span><span class="w">          </span><span class="err">→</span><span class="w"> </span><span class="n">动作分块</span><span class="err">（</span><span class="n">window_size</span><span class="o">=</span><span class="mf">1</span><span class="p">,</span><span class="w"> </span><span class="n">future_action_window_size</span><span class="o">=</span><span class="n">NUM_ACTIONS_CHUNK</span><span class="o">-</span><span class="mf">1</span><span class="err">）</span>
+<span class="mf">7.</span><span class="w"> </span><span class="n">subsample</span><span class="w">              </span><span class="err">→</span><span class="w"> </span><span class="n">轨迹下采样</span><span class="err">（</span><span class="n">若轨迹过长</span><span class="err">）</span>
+</code></pre></div>
+
+<p><strong>动作分块（chunk_act_obs）</strong>：以当前帧为中心，取前 <code>window_size-1</code> 帧到后 <code>future_action_window_size</code> 帧的动作组成动作块：</p>
+<ul>
+<li>仿真：<code>window_size=1, future_action_window_size=7</code> → 每个样本包含 8 个动作（当前 1 + 未来 7）</li>
+<li>真机：<code>window_size=1, future_action_window_size=24</code> → 每个样本包含 25 个动作</li>
+</ul>
+<h4 id="6109">6.10.9 完整的数据流总结</h4>
+<div class="codehilite"><pre><span></span><code><span class="n">LIBERO</span><span class="w"> </span><span class="n">仿真器</span><span class="o">/</span><span class="n">HDF5</span><span class="w"> </span><span class="n">原始数据</span>
+<span class="w">        </span><span class="err">│</span>
+<span class="w">        </span><span class="err">▼</span>
+<span class="n">regenerate_libero_dataset</span><span class="p">.</span><span class="n">py</span><span class="w">  </span><span class="err">←</span><span class="w"> </span><span class="n">重放演示</span><span class="err">，</span><span class="n">过滤</span><span class="w"> </span><span class="k">no</span><span class="o">-</span><span class="n">op</span><span class="w"> </span><span class="n">和失败轨迹</span>
+<span class="w">        </span><span class="err">│</span>
+<span class="w">        </span><span class="err">▼</span>
+<span class="n">RLDS</span><span class="w"> </span><span class="n">TFDS</span><span class="w"> </span><span class="n">格式</span><span class="err">（</span><span class="n">含</span><span class="w"> </span><span class="nc">image</span><span class="p">,</span><span class="w"> </span><span class="k">depth</span><span class="p">,</span><span class="w"> </span><span class="n">track</span><span class="p">,</span><span class="w"> </span><span class="n">future</span><span class="w"> </span><span class="n">等键</span><span class="err">）</span>
+<span class="w">        </span><span class="err">│</span>
+<span class="w">        </span><span class="err">▼</span>
+<span class="n">make_dataset_from_rlds</span><span class="p">()</span><span class="w">  </span><span class="err">←</span><span class="w"> </span><span class="n">加载</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">libero_dataset_transform</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">归一化</span>
+<span class="w">        </span><span class="err">│</span>
+<span class="w">        </span><span class="err">▼</span>
+<span class="n">apply_trajectory_transforms</span><span class="p">()</span><span class="w">  </span><span class="err">←</span><span class="w"> </span><span class="n">过滤</span><span class="err">、</span><span class="n">分块</span><span class="err">、</span><span class="n">下采样</span>
+<span class="w">        </span><span class="err">│</span>
+<span class="w">        </span><span class="err">▼</span>
+<span class="n">apply_frame_transforms</span><span class="p">()</span><span class="w">  </span><span class="err">←</span><span class="w"> </span><span class="n">解码</span><span class="err">、</span><span class="n">resize</span><span class="err">、</span><span class="n">数据增强</span>
+<span class="w">        </span><span class="err">│</span>
+<span class="w">        </span><span class="err">▼</span>
+<span class="n">RLDSBatchTransform</span><span class="p">.</span><span class="n">__call__</span><span class="p">()</span><span class="w">  </span><span class="err">←</span><span class="w"> </span><span class="n">构造</span><span class="w"> </span><span class="n">prompt</span><span class="err">、</span><span class="n">tokenize</span><span class="err">、</span><span class="n">组织</span><span class="w"> </span><span class="n">PyTorch</span><span class="w"> </span><span class="n">张量</span>
+<span class="w">        </span><span class="err">│</span>
+<span class="w">        </span><span class="err">▼</span>
+<span class="n">PaddedCollatorForActionPrediction</span><span class="w">  </span><span class="err">←</span><span class="w"> </span><span class="n">Padding</span><span class="w"> </span><span class="n">到</span><span class="w"> </span><span class="n">batch</span><span class="w"> </span><span class="n">内统一长度</span>
+<span class="w">        </span><span class="err">│</span>
+<span class="w">        </span><span class="err">▼</span>
+<span class="n">Training</span><span class="w"> </span><span class="n">Loop</span><span class="err">（</span><span class="n">finetune</span><span class="p">.</span><span class="n">py</span><span class="err">）</span>
+<span class="w">        </span><span class="err">│</span>
+<span class="w">        </span><span class="err">├──</span><span class="w"> </span><span class="n">LLM</span><span class="w"> </span><span class="n">forward</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">hidden</span><span class="w"> </span><span class="n">states</span>
+<span class="w">        </span><span class="err">├──</span><span class="w"> </span><span class="k">Action</span><span class="w"> </span><span class="n">Head</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">L1</span><span class="p">(</span><span class="k">action</span><span class="p">,</span><span class="w"> </span><span class="n">gt_action</span><span class="p">)</span><span class="w">          </span><span class="o">[</span><span class="n">L_action</span><span class="o">]</span>
+<span class="w">        </span><span class="err">├──</span><span class="w"> </span><span class="k">Dynamic</span><span class="w"> </span><span class="n">Decoder</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">MSE</span><span class="p">(</span><span class="n">pred_image</span><span class="p">,</span><span class="w"> </span><span class="n">future_image</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">mask</span><span class="p">)</span><span class="w">   </span><span class="o">[</span><span class="n">L_dyn-4D</span><span class="o">]</span>
+<span class="w">        </span><span class="err">└──</span><span class="w"> </span><span class="k">Depth</span><span class="w"> </span><span class="n">Decoder</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">MSE</span><span class="p">(</span><span class="n">pred_depth</span><span class="p">,</span><span class="w"> </span><span class="n">future_depth</span><span class="p">)</span><span class="w">  </span><span class="o">[</span><span class="n">L_dep-4D</span><span class="o">]</span>
+</code></pre></div>
+
+<hr />
+<h2 id="_7">七、局限性与思考</h2>
+<ul>
+<li>论文未讨论多视角输入的获取方式（需要多相机标定），在单相机平台上是否适用存疑</li>
+<li>VGGT 需要同一场景的多张 RGB 图像作为输入，对动态场景的适用性需要进一步验证</li>
+<li>训练使用了 CoTracker 和 Depth-Anything 作为监督信号，增加了训练流水线的复杂度</li>
+<li>模型增加了约 2B 参数（VGGT 等），虽然推理效率高，但参数量更大对部署内存有更高要求</li>
+<li>真机实验每个任务仅 15 次试验（归一化到 10 次），样本量偏小</li>
+<li><strong>代码层面</strong>：当前发布版本仅支持 LIBERO 示例，且部分路径为硬编码（如 VGGT checkpoint 路径 <code>/ConsisVLA_4D/ckpts/model.pt</code>）</li>
+</ul>
+<hr />
+<h2 id="_8">八、总结</h2>
+<p>ConsisVLA-4D 是一篇高质量的 VLA 改进工作。核心贡献在于：</p>
+<ol>
+<li><strong>范式升级</strong>：通过 CV-Aligner、CO-Fuser、CS-Thinker 三个模块的协同设计，在统一框架内实现了从 2D 观测 → 3D 感知 → 4D 推理的完整闭环</li>
+<li><strong>反直觉的效率</strong>：通过极致 token 压缩（1/8）实现"参数更多但速度更快"——推理延迟 2.3× 提升，吞吐量 2.4× 提升</li>
+<li><strong>训练-推理解耦</strong>：CS-Thinker 在训练时学习显式的动态物体和深度预测（隐式知识），推理时不增加额外开销</li>
+<li><strong>SOTA 性能</strong>：在 LIBERO（98.1% avg.）、ManiSkill2（94.3% avg.）、RoboTwin 2.0 以及真机平台（~69% avg.）上均取得最优结果</li>
+</ol>
+  </div>
+</main>
+
+
+<script>
+(function() {
+  const sidebar = document.getElementById('sidebar');
+  const links = sidebar.querySelectorAll('a');
+  const headings = document.querySelectorAll('h1[id], h2[id], h3[id], h4[id]');
+  if (headings.length === 0) return;
+
+  const linkMap = new Map();
+  links.forEach(function(a) {
+    const href = a.getAttribute('href');
+    if (href && href.startsWith('#')) linkMap.set(href.slice(1), a);
+  });
+
+  function onScroll() {
+    let currentId = null;
+    const scrollTop = window.scrollY + 80;
+    headings.forEach(function(h) { if (h.offsetTop <= scrollTop) currentId = h.id; });
+    links.forEach(function(a) { a.classList.remove('active'); });
+    if (currentId && linkMap.has(currentId)) {
+      const el = linkMap.get(currentId);
+      el.classList.add('active');
+      const sr = sidebar.getBoundingClientRect();
+      const er = el.getBoundingClientRect();
+      if (er.bottom > sr.bottom || er.top < sr.top) {
+        el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+    }
+  }
+
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+})();
+</script>
+
+</body>
+</html>
