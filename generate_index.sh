@@ -179,7 +179,7 @@ for date_dir in $(ls -d [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9] 2>/dev/null |
             done
             echo "</div>"
         fi
-        echo ""
+        echo "  </div>"
     done <<< "$html_files"
 
     echo "</div>"
