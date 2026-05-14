@@ -1,3 +1,12 @@
+#!/bin/bash
+# Generate index.html by scanning dated directories for HTML note files.
+# Run from repo root: ./generate_index.sh
+
+set -euo pipefail
+
+cd "$(dirname "$0")"
+
+cat <<'HEAD'
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -91,43 +100,37 @@
   <p>论文阅读笔记 · 图文详解 · 公式与图表</p>
 </header>
 
+HEAD
 
-<div class="date-group">
-  <div class="date-label">2026-05-14</div>
-  <div class="paper-card">
-    <a href="2026-05-14/MindVLA-U1.html">MindVLA-U1: VLA Beats VA with Unified Streaming Architecture for Autonomous Driving</a>
-  </div>
-</div>
+# Scan date dirs in descending order, find HTML notes, extract titles.
+for date_dir in $(ls -d [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9] 2>/dev/null | sort -r); do
+    # Find HTML files (skip arxiv dirs, code dirs, conda envs)
+    html_files=$(find "$date_dir" -maxdepth 1 -name "*.html" ! -name "index.html" 2>/dev/null | sort)
 
-<div class="date-group">
-  <div class="date-label">2026-05-13</div>
-  <div class="paper-card">
-    <a href="2026-05-13/LingBot-VA_Causal_World_Modeling_笔记.html">LingBot-VA: Causal World Modeling for Robot Control</a>
-  </div>
-  <div class="paper-card">
-    <a href="2026-05-13/OA-WAM_笔记.html">OA-WAM: Object-Addressable World Action Model for Robust Robot Manipulation</a>
-  </div>
-  <div class="paper-card">
-    <a href="2026-05-13/OneVL：一步式隐式推理与规划，视觉-语言双重解释.html">OneVL: One-Step Latent Reasoning and Planning with Vision-Language Explanations</a>
-  </div>
-</div>
+    if [ -z "$html_files" ]; then
+        continue
+    fi
 
-<div class="date-group">
-  <div class="date-label">2026-05-10</div>
-  <div class="paper-card">
-    <a href="2026-05-10/ConsisVLA-4D_阅读笔记.html">ConsisVLA-4D 论文阅读笔记</a>
-  </div>
-</div>
+    echo ""
+    echo "<div class=\"date-group\">"
+    echo "  <div class=\"date-label\">$date_dir</div>"
 
-<div class="date-group">
-  <div class="date-label">2026-05-08</div>
-  <div class="paper-card">
-    <a href="2026-05-08/LaST-R1论文分享简明笔记.html">LaST-R1 论文分享简明笔记</a>
-  </div>
-  <div class="paper-card">
-    <a href="2026-05-08/LaST-R1论文与代码笔记.html">LaST-R1 论文与代码笔记</a>
-  </div>
-</div>
+    while IFS= read -r f; do
+        title=$(grep -o '<title>[^<]*</title>' "$f" 2>/dev/null | head -1 | sed 's|<title>||;s|</title>||')
+        if [ -z "$title" ]; then
+            title=$(basename "$f" .html)
+        fi
+        # Escape HTML entities in title
+        title=$(echo "$title" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g')
+        echo "  <div class=\"paper-card\">"
+        echo "    <a href=\"$f\">$title</a>"
+        echo "  </div>"
+    done <<< "$html_files"
+
+    echo "</div>"
+done
+
+cat <<'FOOT'
 
 <footer>
   Powered by <a href="https://github.com/fx-hit/PaperNotes">GitHub Pages</a>
@@ -138,3 +141,4 @@
 </div>
 </body>
 </html>
+FOOT
