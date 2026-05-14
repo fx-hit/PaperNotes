@@ -20,7 +20,7 @@
 
 本文的核心洞察是：**压缩语言描述不等于压缩场景动力学。** 自然语言对驾驶场景的描述本质上是抽象的——它编码的是语义标签而非物理因果结构。因此，纯粹的语言隐式表征压缩的是"世界的符号抽象"，而非"世界本身的因果动力学"。
 
-![图1：核心对比——三种 CoT 范式与准确率/延迟对比](arXiv-2604.18486v3/figs_jpg/comparison.jpg)
+![图1：核心对比——三种 CoT 范式与准确率/延迟对比](assets/onevl/comparison.jpg)
 
 *图1：三种 Chain-of-Thought 范式对比与四个 benchmark 的综合表现。*
 
@@ -44,7 +44,7 @@ OneVL 在 Qwen3-VL-4B-Instruct 基础上增加：
   - 语言辅助解码器 $\mathcal{D}_l$：从语言隐 token 重建 CoT 推理文本
   - 视觉辅助解码器 $\mathcal{D}_v$：从视觉隐 token 预测未来帧的视觉 token（世界模型监督）
 
-![图2：OneVL 整体架构](arXiv-2604.18486v3/figs_jpg/framework.jpg)
+![图2：OneVL 整体架构](assets/onevl/framework.jpg)
 
 *图2：OneVL 完整架构图。*
 
@@ -262,7 +262,7 @@ OneVL 的语言辅助解码器恢复了 AR CoT 约 97% 的解释质量（76.13 v
 - 视觉辅助解码器贡献 +0.87 PDM-score（88.84 - 87.97），远超语言解码器的 +0.31。反映了视觉世界模型监督的本质价值：轨迹预测是空间预测任务，未来帧重建提供的是与几何推理天然对齐的监督信号。
 - 分阶段训练是必需的——跳过它导致 21.71 分的灾难性下降。直接端到端训练在初始化时发生梯度爆炸（grad norm 378.22 vs 三阶段的 0.28），且最终轨迹预测损失更高（0.186 vs 0.136）。
 
-![图3：消融实验——视觉 CoT 质量对比](arXiv-2604.18486v3/figs_jpg/ablations/ablation_comparison.jpg)
+![图3：消融实验——视觉 CoT 质量对比](assets/onevl/ablations/ablation_comparison.jpg)
 
 *图3：完整训练配方 vs 无分阶段训练——视觉辅助解码器输出对比。*
 

@@ -8,11 +8,12 @@
 **/arXiv-*/
 
 # Known code directories (add new ones here)
-**/last_r1_code/
-**/LaST-R1/
-**/lingbot-va/
-**/onevl/
-**/CVPR26-ConsisVLA-4D/
+# Use */<name>/ to match only at date-directory level, not inside assets/
+*/last_r1_code/
+*/LaST-R1/
+*/lingbot-va/
+*/onevl/
+*/CVPR26-ConsisVLA-4D/
 
 # PDF papers
 *.pdf

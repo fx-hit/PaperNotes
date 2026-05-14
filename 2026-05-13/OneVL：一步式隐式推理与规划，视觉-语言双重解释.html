@@ -267,7 +267,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <p>自动驾驶 VLA（Vision-Language-Action）模型的一个重要进展是在输出轨迹前先生成 Chain-of-Thought（CoT）推理文本，显著提升了预测质量。然而，标准自回归（AR）CoT 需要在生成每个推理 token 之后才能产生轨迹，导致<strong>推理延迟与 CoT 长度成正比</strong>——在安全关键的实时场景中不可接受。</p>
 <p>一类称为 <strong>Latent CoT（隐式思维链）</strong> 的工作试图将推理压缩为连续隐向量而非离散 token，从而消除逐 token 生成的开销。但已有的隐式 CoT 方法（COCONUT、CODI、SIM-CoT）在自动驾驶 VLA 任务上<strong>全部失败</strong>——不仅不如显式 CoT，甚至不如无推理的纯答案预测（AR Answer）。</p>
 <p>本文的核心洞察是：<strong>压缩语言描述不等于压缩场景动力学。</strong> 自然语言对驾驶场景的描述本质上是抽象的——它编码的是语义标签而非物理因果结构。因此，纯粹的语言隐式表征压缩的是"世界的符号抽象"，而非"世界本身的因果动力学"。</p>
-<p><img alt="图1：核心对比——三种 CoT 范式与准确率/延迟对比" src="arXiv-2604.18486v3/figs_jpg/comparison.jpg" /></p>
+<p><img alt="图1：核心对比——三种 CoT 范式与准确率/延迟对比" src="assets/onevl/comparison.jpg" /></p>
 <p><em>图1：三种 Chain-of-Thought 范式对比与四个 benchmark 的综合表现。</em></p>
 <p><strong>子图 (a) 显式 CoT：</strong> 模型自回归地生成完整的离散推理 token 序列，再生成轨迹答案。优点是推理过程可读、可审计；缺点是延迟随推理链长度线性增长，例如 NAVSIM 上 AR CoT+Answer 的延迟为 6.58s。</p>
 <p><strong>子图 (b) 隐式 CoT（COCONUT/CODI/SIM-CoT）：</strong> 将推理压缩为少量连续的隐向量 Z，理论上更快。但在自动驾驶任务上全面崩溃——COCONUT 在 NAVSIM 上的 PDM-score 仅 84.84，远低于 AR Answer 的 87.47。原因在于这些方法源自纯文本推理，缺少视觉世界模型监督，隐空间坍塌为仅编码语言层面抽象，丢失了几何精度。</p>
@@ -285,7 +285,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </ul>
 </li>
 </ul>
-<p><img alt="图2：OneVL 整体架构" src="arXiv-2604.18486v3/figs_jpg/framework.jpg" /></p>
+<p><img alt="图2：OneVL 整体架构" src="assets/onevl/framework.jpg" /></p>
 <p><em>图2：OneVL 完整架构图。</em></p>
 <p><strong>输入层（上部）：</strong> 前视摄像头图像 + 结构化文本 prompt（ego 状态、导航指令、历史轨迹）送入 VLM 主干（Qwen3-VL ViT + MLP Aligner + LLM）。</p>
 <p><strong>隐 Token 序列（中部 VLM 输出 hidden states 下方）：</strong> 从 LLM 的输出 hidden states 中提取五个部分——图像 token（T_v）、文本 token（T_l）、视觉隐 token（Z_v，4 个）、语言隐 token（Z_l，2 个）、轨迹答案 token（T_y）。关键设计：视觉隐 token 放在语言隐 token 之前，两者均位于 assistant 回复中 trajectory answer 之前的位置。</p>
@@ -840,7 +840,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <li>视觉辅助解码器贡献 +0.87 PDM-score（88.84 - 87.97），远超语言解码器的 +0.31。反映了视觉世界模型监督的本质价值：轨迹预测是空间预测任务，未来帧重建提供的是与几何推理天然对齐的监督信号。</li>
 <li>分阶段训练是必需的——跳过它导致 21.71 分的灾难性下降。直接端到端训练在初始化时发生梯度爆炸（grad norm 378.22 vs 三阶段的 0.28），且最终轨迹预测损失更高（0.186 vs 0.136）。</li>
 </ul>
-<p><img alt="图3：消融实验——视觉 CoT 质量对比" src="arXiv-2604.18486v3/figs_jpg/ablations/ablation_comparison.jpg" /></p>
+<p><img alt="图3：消融实验——视觉 CoT 质量对比" src="assets/onevl/ablations/ablation_comparison.jpg" /></p>
 <p><em>图3：完整训练配方 vs 无分阶段训练——视觉辅助解码器输出对比。</em></p>
 <p><strong>子图 (a) 完整三阶段训练：</strong> 上半部分展示使用完整训练配方的结果。视觉辅助解码器从同一输入图像解码出的 t+1 和 t+2 未来帧保持场景一致性——道路布局、车辆位置、车道线结构与输入图像在空间上连贯，证明视觉隐 token 确实编码了有意义的场景动力学。这构成了一个"视觉思维链"：模型不仅能告诉你它打算做什么，还能展示它预期看到的场景演变。</p>
 <p><strong>子图 (b) 无分阶段训练（直接端到端）：</strong> 下半部分展示跳过三阶段 curriculum 的结果。解码出的"未来帧"与输入图像完全无关——表现为抽象的、模式化的伪影，而非合理的场景演变。这说明没有渐进式训练，视觉辅助解码器过拟合——走捷径记忆训练数据模式，而非学习泛化的场景动力学。此时语言 CoT 推理也是错误的（论文报告了类似退化）。最关键的是，这种失效的监督信号不仅无用，反而引入噪声，使整体性能从 88.84 暴跌至 67.13。</p>

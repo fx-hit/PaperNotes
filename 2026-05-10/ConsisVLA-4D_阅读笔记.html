@@ -332,7 +332,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <li><strong>4D 时空推理薄弱</strong>：现有方法最多做到预测未来帧图像，缺少与指令相关场景的对齐，导致时空一致性差，动作生成不稳定。</li>
 </ol>
 <hr />
-<p><img alt="intro：与现有范式对比" src="arXiv-2605.05126v1/fig/intro.png" /></p>
+<p><img alt="intro：与现有范式对比" src="assets/consisvla-4d/intro.png" /></p>
 <p><em>图1：ConsisVLA-4D 与现有 VLA 范式对比总览。左侧展示了四种 VLA 范式从 2D 观测到动作生成的演进路径，右侧展示了 ConsisVLA-4D 在四个长时序真机任务上的执行效果。</em></p>
 <p><strong>左侧——四种 VLA 范式的演进：</strong></p>
 <ul>
@@ -387,7 +387,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </ul>
 </li>
 </ul>
-<p><img alt="supp_1：BC-Attn 块级因果注意力" src="arXiv-2605.05126v1/fig/supp_1.png" /></p>
+<p><img alt="supp_1：BC-Attn 块级因果注意力" src="assets/consisvla-4d/supp_1.png" /></p>
 <p><em>图8：BC-Attn（块级因果自注意力）机制示意图，展示 CO-Fuser 中 IG-Aggregation 的核心注意力设计。</em></p>
 <p><strong>注意力 mask 设计：</strong> 图中展示三视角（Main/Left/Right）的 patch token（蓝色方块）与可学习的 Aggregation Token（橙色方块，用 A 标记）之间的注意力模式。关键设计是：</p>
 <ul>
@@ -416,14 +416,14 @@ document.addEventListener('DOMContentLoaded', function() {
 </li>
 <li><strong>推理时</strong>：不生成动态物体和深度图，仅靠训练中学习到的隐式知识进行高效动作生成。这些隐式知识 token 占序列的不到 10%。</li>
 </ul>
-<p><img alt="pipline：从 3D 感知到 4D 推理的机制" src="arXiv-2605.05126v1/fig/pipline.png" /></p>
+<p><img alt="pipline：从 3D 感知到 4D 推理的机制" src="assets/consisvla-4d/pipline.png" /></p>
 <p><em>图2：3D 感知→4D 推理完整流水线。该图从机制层面揭示 CV-Aligner 和 CO-Fuser 如何将各自的 3D 一致性拓展到 4D 时空域。</em></p>
 <p><strong>上半部分（CV-Aligner → 4D 推理）—— 从跨视角物体到动态物体预测：</strong></p>
 <p>CV-Aligner 在多视角（Main/Left/Right）图像中通过 ES-Selection + Single-Fusion 识别并匹配同一物体在不同视角下的身份，产生跨视角一致的物体表示 <span class="math inline">$\mathbf{z}_{\{M,L,R\}}^{\text{obj-3D}}$</span>。进入 4D 推理阶段后，CS-Thinker 从多视角物体 token 出发，预测动作执行后固定视角（如 Main）中的动态物体——即回答"这个物体在动作后会变成什么样、出现在什么位置"。例如，从 Main 视角看到碗在桌上、Left 视角看到碗在微波炉旁，4D 推理预测碗放入微波炉后的状态。这里的关键是从"当前多视角静态物体"到"未来单视角动态物体"的推理跨越。</p>
 <p><strong>下半部分（CO-Fuser → 4D 推理）—— 从聚合几何关系到全局深度预测：</strong></p>
 <p>CO-Fuser 通过 Group-Fusion + IG-Aggregation 聚合多视角的空间几何关系，消除单视角的尺度歧义和遮挡误差，产生紧凑的聚合几何表示 <span class="math inline">$\mathbf{z}_{\mathcal{L}'}^{\text{agg-3D}}$</span>。进入 4D 推理阶段后，CS-Thinker 从同一组几何表示出发，解码出所有视角的全局深度图——即回答"动作后整个场景的 3D 结构是什么样的"。这里的关键是从"抽象几何关系"到"具体深度图"的推理跨越。</p>
 <p><strong>整体意义：</strong> 3D 感知确保了空间一致性（物体身份跨视角一致 + 几何关系跨物体一致），4D 推理在此基础上扩展为时空一致性——既预测局部物体动态，又预测全局场景深度，两者共同作为动作生成的中间视觉推理支撑。*</p>
-<p><img alt="3d：高效 3D 感知" src="arXiv-2605.05126v1/fig/3d.png" /></p>
+<p><img alt="3d：高效 3D 感知" src="assets/consisvla-4d/3d.png" /></p>
 <p><em>图3：高效 3D 感知保证空间一致性。该图详细展示 CV-Aligner（红色）和 CO-Fuser（橙色）的内部结构，以及三个视觉编码器（SigLIP/DINOv2/VGGT）的分工协作。</em></p>
 <p><strong>子图 (a) CV-Aligner（红色）—— 跨视角物体语义一致性：</strong></p>
 <p>CV-Aligner 的输入来自 SigLIP（语义编码器，输出 256 个 patch token/视角）和 VGGT（空间编码器，输出 3D 特征）。流程分为三步：</p>
@@ -455,7 +455,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <li><span class="math inline">$\mathcal{L}_{\text{dep-4D}}$</span>：全局深度重建损失（Depth-Anything 监督）</li>
 </ul>
 <hr />
-<p><img alt="4d：高效 4D 推理" src="arXiv-2605.05126v1/fig/4d.png" /></p>
+<p><img alt="4d：高效 4D 推理" src="assets/consisvla-4d/4d.png" /></p>
 <p><em>图4：高效 4D 推理。CS-Thinker 配合 SC-Attn 在统一上下文窗口内并行实现三件事：动态物体预测、全局深度预测、动作生成。训练时三者同时学习（动态物体和深度有监督信号），推理时仅执行动作生成（依赖隐式知识 IK）。</em></p>
 <p><strong>子图 (a) 整体结构 —— SC-Attn 统一上下文窗口：</strong></p>
 <p>CS-Thinker 的输入 token 序列被组织为：<code>[语义token(64) | 几何token(64) | 文本token | Dynamic Queries(2N) | Depth Queries(N) | Action Queries]</code>。所有 token 在 SC-Attn 的统一上下文窗口内并行处理，不同类型的 token 遵循不同的注意力模式（组内双向 + 组间因果）。其中 Dynamic Queries 和 Depth Queries 是可学习的隐式知识 token，占序列不到 10%。</p>
@@ -537,7 +537,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <li>相比 CoT-VLA（专攻视觉推理）平均提升 <strong>14.2%</strong></li>
 <li>在 Long 任务上表现尤为突出（95.6%），说明时空一致性对长时序任务至关重要</li>
 </ul>
-<p><img alt="vis2：LIBERO 观测可视化与注意力" src="arXiv-2605.05126v1/fig/vis2.png" /></p>
+<p><img alt="vis2：LIBERO 观测可视化与注意力" src="assets/consisvla-4d/vis2.png" /></p>
 <p><em>图5：LIBERO 观测示例与 CV-Aligner/CO-Fuser 注意力可视化。该图直观展示 ConsisVLA-4D 的两个核心模块在实际任务中分别关注什么，以及这种分工如何支撑仅用 1/8 token 就达到 SOTA 性能。</em></p>
 <p><strong>第 1 行（观测视图）—— 原始输入：</strong> 展示四个 LIBERO 任务的 Main View（主视角，M）和 Wrist View（腕部视角，W）观测图像。四个任务分别为：将碗放到饼干盒上/旁、从木柜顶层抽屉取出碗、打开微波炉（stove 场景）、将盘子放到托盘上。M 视角提供全局场景上下文（物体相对位置、桌面布局），W 视角提供近距离操作细节（夹爪与物体的精确空间关系）。</p>
 <p><strong>第 2 行（橙色标记 M/W）—— CV-Aligner 提取的指令相关物体 token：</strong> 橙色标记显示 CV-Aligner 选出的 Top-K（K=32）语义 token 在原图中的对应位置。可以看到，CV-Aligner 精准定位了任务指令涉及的关键物体——饼干盒上的碗、抽屉中的碗、炉灶、盘子——而过滤掉了背景、桌面纹理、无关物体。注意 M 和 W 视角下同一物体的标记位置不同但语义一致，验证了跨视角物体身份关联的有效性。</p>
@@ -608,7 +608,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </table>
 <p>† 表示在与 ConsisVLA-4D 相同条件下复现的结果。ManiSkill2 的三个任务侧重测试精细空间感知能力（PickCube 考察抓取精度、StackCube 考察堆叠空间推理、PushCube 考察推动轨迹规划），ConsisVLA-4D 在三个任务上均达到或接近最优。</p>
 <p><strong>RoboTwin 2.0 结果（7 个 ALOHA 双臂任务）：</strong></p>
-<p><img alt="vis0：RoboTwin 2.0 仿真结果" src="arXiv-2605.05126v1/fig/vis0.png" /></p>
+<p><img alt="vis0：RoboTwin 2.0 仿真结果" src="assets/consisvla-4d/vis0.png" /></p>
 <p><em>图7：RoboTwin 2.0 基准上的双臂仿真结果。7 个任务涵盖点击闹钟、翻转开关、放瓶子进垃圾桶、打开笔记本、按压订书机、放空杯到杯垫、按 RGB 顺序排列方块等多样化场景，每个任务进行 100 次试验。ConsisVLA-4D（蓝色柱）在所有任务上均取得最优或接近最优的成功率，验证了时空一致性设计对双臂协调操作的普适优势。RoboTwin 2.0 基于 ALOHA 双臂平台，任务需要双臂精确配合，对 3D 空间感知（物体相对位置）和 4D 推理（双臂动作协调的时序同步）都有很高要求。</em></p>
 <h3 id="42">4.2 效率对比</h3>
 <table>
@@ -709,7 +709,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <li>相比 OpenVLA 提升 <strong>41.5%</strong>，相比 OpenVLA-OFT 提升 <strong>18.2%</strong></li>
 <li>跨平台波动仅 ±1.7%，sim-to-real 迁移能力稳定</li>
 </ul>
-<p><img alt="vis1v2：真机长时序任务执行" src="arXiv-2605.05126v1/fig/vis1v2.png" /></p>
+<p><img alt="vis1v2：真机长时序任务执行" src="assets/consisvla-4d/vis1v2.png" /></p>
 <p><em>图6：ConsisVLA-4D 在 Galaxea R1 Lite 平台上执行四个长时序双臂任务的完整过程。每个任务展示 4–5 个关键执行阶段，红色圆圈标注精细夹爪操作。该图验证了时空一致性设计对长时序操作稳定性的关键作用。</em></p>
 <p><strong>任务 1 —— 微波炉操作（3 阶段）：</strong>
 指令："Put the bread into a bowl and heat it in the microwave."</p>

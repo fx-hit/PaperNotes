@@ -8,7 +8,7 @@
 
 ---
 
-![图1：OA-WAM 总览](arXiv-2605.06481v1/figures_png/fig1.jpg)
+![图1：OA-WAM 总览](assets/oa-wam/fig1.jpg)
 
 *图1：OA-WAM 总览图，对比整体 WAM 与 OA-WAM 在场景扰动下的行为差异。*
 
@@ -53,7 +53,7 @@ $$\mathbf{s}_k^t = [\underbrace{\mathbf{addr}_k}_{32} \| \underbrace{\mathbf{cnt
 - **$\boldsymbol{\pi}^t$**（16 维）：帧索引的正弦位置编码
 - **$\boldsymbol{\rho}_k$**（16 维）：可学习的角色标签查表（robot / object / padding）
 
-![图2：OA-WAM 架构总览](arXiv-2605.06481v1/figures_png/fig2.jpg)
+![图2：OA-WAM 架构总览](assets/oa-wam/fig2.jpg)
 
 *图2：OA-WAM 完整架构图，展示从多模态输入到动作/世界预测输出的端到端前向流程。*
 
@@ -121,7 +121,7 @@ $$[\text{BOS}; \mathbf{x}^{\text{T2}}; \mathbf{x}^{\text{S}}; [\mathsf{F_{BOS}};
 - **`[ACT_Q]` 可见全部**
 - **槽内共享 RoPE 位置索引**：保证排列等变性
 
-![图3：OA 注意力掩码](arXiv-2605.06481v1/figures_png/fig3.jpg)
+![图3：OA 注意力掩码](assets/oa-wam/fig3.jpg)
 
 *图3：OA 注意力掩码矩阵可视化，展示跨帧块因果 + 帧内槽双向的混合注意力模式。*
 
@@ -182,7 +182,7 @@ $$\mathcal{L} = \mathcal{L}_\mathrm{act} + \lambda_w\mathcal{L}_\mathrm{world} +
 
 ## 3. 实验结果
 
-![图4：主要结果](arXiv-2605.06481v1/figures_png/fig4_results.jpg)
+![图4：主要结果](assets/oa-wam/fig4_results.jpg)
 
 *图4：OA-WAM 主要实验结果，由两个子图组成——左为 LIBERO-Plus 鲁棒性雷达图，右为 SimplerEnv WidowX 逐任务柱状图。*
 
@@ -255,7 +255,7 @@ $$\mathcal{L} = \mathcal{L}_\mathrm{act} + \lambda_w\mathcal{L}_\mathrm{world} +
 
 直接行为证据：目标选择确实锚定在显式地址子空间中。
 
-![图5：机制诊断](arXiv-2605.06481v1/figures_png/fig5_mechanism.jpg)
+![图5：机制诊断](assets/oa-wam/fig5_mechanism.jpg)
 
 *图5：机制诊断图——从三个互补角度验证 OA-WAM 的对象可寻址性。*
 

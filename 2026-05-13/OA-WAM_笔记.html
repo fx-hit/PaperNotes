@@ -261,7 +261,7 @@ document.addEventListener('DOMContentLoaded', function() {
 - arXiv: 2605.06481v1</p>
 </blockquote>
 <hr />
-<p><img alt="图1：OA-WAM 总览" src="arXiv-2605.06481v1/figures_png/fig1.jpg" /></p>
+<p><img alt="图1：OA-WAM 总览" src="assets/oa-wam/fig1.jpg" /></p>
 <p><em>图1：OA-WAM 总览图，对比整体 WAM 与 OA-WAM 在场景扰动下的行为差异。</em></p>
 <p><strong>左侧——六个典型扰动轴：</strong> 展示了机器人操作中常见的六种场景扰动类型：Camera（相机视角偏移）、Layout（物体布局重排）、Robot Init（机器人初始位姿变化）、Light（光照条件改变）、Background（背景纹理替换）、Sensor Noise（传感器噪声注入）。这些扰动模拟了从模拟器到真实世界部署时的典型分布偏移。</p>
 <p><strong>右上——整体 WAM 失败模式：</strong> 当场景发生扰动（如相机视角变化）时，整体 WAM 将目标物体的身份信息（"它是哪个物体"）与场景上下文（背景、邻近物体外观）一起编码进全局 token 中。结果显示，目标物体（红色框标记的 mug）仍然可见，但动作解码器"找错对象"——末端执行器轨迹偏向背景中的另一个物体而非指令指定的目标。这是对象身份与场景上下文在 token 级别纠缠的直接可视化证据。</p>
@@ -292,7 +292,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <li><strong><span class="math inline">$\boldsymbol{\pi}^t$</span></strong>（16 维）：帧索引的正弦位置编码</li>
 <li><strong><span class="math inline">$\boldsymbol{\rho}_k$</span></strong>（16 维）：可学习的角色标签查表（robot / object / padding）</li>
 </ul>
-<p><img alt="图2：OA-WAM 架构总览" src="arXiv-2605.06481v1/figures_png/fig2.jpg" /></p>
+<p><img alt="图2：OA-WAM 架构总览" src="assets/oa-wam/fig2.jpg" /></p>
 <p><em>图2：OA-WAM 完整架构图，展示从多模态输入到动作/世界预测输出的端到端前向流程。</em></p>
 <p><strong>子图 (a) 上部——多模态 Tokenization（六路编码）：</strong> 架构顶部展示了六条并行的 token 化路径：(T1) Qwen3-VL-4B 将语言指令解析为名词短语，仅作为 SAM3 提示不入 trunk；(T2) Chameleon BPE tokenizer 对指令文本做标准 BPE 嵌入；(I-A) Chameleon VQ-GAN 将 RGB 图像编码为 <span class="math inline">$16\times16=256$</span> 个离散视觉 token；(I-B) 每帧经过 SAM3 分割 + DINOv3 特征提取 + 姿态估计后，形成 <span class="math inline">$N+1$</span> 个对象槽（每个槽拼接 <span class="math inline">$\mathbf{addr}_k$</span> 身份地址 + <span class="math inline">$\mathbf{cnt}_k^t$</span> 时变内容 + <span class="math inline">$\boldsymbol{\pi}^t$</span> 帧位置编码 + <span class="math inline">$\boldsymbol{\rho}_k$</span> 角色标签），由可学习的 Slot Adapter（两层 MLP，<span class="math inline">$320\to4096$</span>）投影到 trunk 隐藏维度；(S) 7 维末端执行器姿态经 256-bin 离散化；(A-d) 7 维历史动作同样经 256-bin 离散化。仅 I-B 槽流引入可学习参数（~23.8M），其余五路复用 Chameleon 的冻结嵌入表。</p>
 <p><strong>子图 (b) 中部——块因果序列组装与 Slot-Aware Trunk：</strong> 各 token 流通过 LLaVA 风格的 <code>masked_scatter</code> 替换占位符，组装为固定模板序列：<code>[BOS; T2文本; S本体感知; [F_BOS; I-A视觉码; S_BOS; I-B对象槽; S_EOS; A-d过去动作; F_EOS]_{t=0}^{T-1}; [ACT_Q]]</code>。<span class="math inline">$T=4$</span> 个历史帧，总长约 1200 tokens。序列由 7B Chameleon 风格的多模态 Transformer（32 层、隐藏维 4096、32 注意力头）处理，在 slot 位置启用 OA 约束：<span class="math inline">$W_K$</span> 仅从 <span class="math inline">$\mathbf{addr}_k$</span>（前 32 维）投影键，每层后通过 forward hook 重置残差流的前 32 维为冻结地址。</p>
@@ -385,7 +385,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <li><strong><code>[ACT_Q]</code> 可见全部</strong></li>
 <li><strong>槽内共享 RoPE 位置索引</strong>：保证排列等变性</li>
 </ul>
-<p><img alt="图3：OA 注意力掩码" src="arXiv-2605.06481v1/figures_png/fig3.jpg" /></p>
+<p><img alt="图3：OA 注意力掩码" src="assets/oa-wam/fig3.jpg" /></p>
 <p><em>图3：OA 注意力掩码矩阵可视化，展示跨帧块因果 + 帧内槽双向的混合注意力模式。</em></p>
 <p><strong>矩阵结构：</strong> 图中展示了一个 <span class="math inline">$T=4$</span> 帧的注意力掩码矩阵。横轴为 Key（被注意的 token），纵轴为 Query（发出注意的 token）。矩阵被划分为 4 个帧组 block（对应 <span class="math inline">$t=0,1,2,3$</span>），每个块内包含该帧的多种 token 类型：文本 token、本体感知 token、VQ 图像 token、对象槽 token、过去动作 token，以及序列末尾的 <code>[ACT_Q]</code> 动作查询 token。</p>
 <p><strong>跨帧块因果（Block-causal）：</strong> 每帧的 token 只能关注当前帧及更早帧的 token（左下三角区域允许，右上三角区域禁止）。这意味着模型在 <span class="math inline">$t$</span> 时刻不能"窥视"未来帧的信息，保证了时序因果性。帧组之间的边界（白色分隔线）清晰标记了这一约束。</p>
@@ -493,7 +493,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </ul>
 <hr />
 <h2 id="3">3. 实验结果</h2>
-<p><img alt="图4：主要结果" src="arXiv-2605.06481v1/figures_png/fig4_results.jpg" /></p>
+<p><img alt="图4：主要结果" src="assets/oa-wam/fig4_results.jpg" /></p>
 <p><em>图4：OA-WAM 主要实验结果，由两个子图组成——左为 LIBERO-Plus 鲁棒性雷达图，右为 SimplerEnv WidowX 逐任务柱状图。</em></p>
 <p><strong>子图 (a) 左——LIBERO-Plus 七轴雷达图：</strong> </p>
 <ul>
@@ -696,7 +696,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </tbody>
 </table>
 <p>直接行为证据：目标选择确实锚定在显式地址子空间中。</p>
-<p><img alt="图5：机制诊断" src="arXiv-2605.06481v1/figures_png/fig5_mechanism.jpg" /></p>
+<p><img alt="图5：机制诊断" src="assets/oa-wam/fig5_mechanism.jpg" /></p>
 <p><em>图5：机制诊断图——从三个互补角度验证 OA-WAM 的对象可寻址性。</em></p>
 <p><strong>子图 (a) 左——LP-Camera 成功率 vs 相机偏移角 <span class="math inline">$\Delta\theta$</span>：</strong></p>
 <ul>

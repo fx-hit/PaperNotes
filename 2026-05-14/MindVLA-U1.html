@@ -277,7 +277,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <li><strong>共享权重、单次前向</strong>：视觉、自车状态、语言、记忆、噪声动作 token 流经同一个 transformer 的所有 self-attention 和 FFN</li>
 <li><strong>两路梯度在该共享骨干上同时反向传播</strong>：<span class="math inline">$\mathcal{L} = \mathcal{L}_{\mathrm{AR}} + \mathcal{L}_{\mathrm{FM}}$</span></li>
 </ul>
-<p><img alt="图1：MindVLA-U1 总体架构" src="arXiv-2605.12624v1/figure/Framework6.jpg" /></p>
+<p><img alt="图1：MindVLA-U1 总体架构" src="assets/mindvla-u1/figure/Framework6.jpg" /></p>
 <p><em>图1：MindVLA-U1 总体架构图，展示从输入到输出的完整数据流和训练/推理机制。以下解析基于论文 caption 原文和 §2.1、§2.5 正文描述。</em></p>
 <p><strong>五类 Token 统一入网（论文 caption："Vision, ego-state, language, memory, and noisy action tokens flow through a shared VLM backbone in one forward pass"）：</strong></p>
 <ul>
@@ -314,7 +314,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <blockquote>
 <p><strong>关键洞察</strong>：离散 AR cross-entropy 和连续 flow-matching MSE 在共享骨干参数上训练是稳定的，因为两者作用在<strong>不同输出位置、不同读出头</strong>——共享梯度但不共享目标，场景特征相互补充而非竞争。</p>
 </blockquote>
-<p><img alt="图2a：Step 1" src="arXiv-2605.12624v1/exp_results/diffusion_step_1.png" /> <img alt="图2b：Step 2" src="arXiv-2605.12624v1/exp_results/diffusion_step_2.png" /> <img alt="图2c：Step 3" src="arXiv-2605.12624v1/exp_results/diffusion_step_3.png" /> <img alt="图2d：Step 4" src="arXiv-2605.12624v1/exp_results/diffusion_step_4.png" /> <img alt="图2e：Step 5" src="arXiv-2605.12624v1/exp_results/diffusion_step_5.png" /></p>
+<p><img alt="图2a：Step 1" src="assets/mindvla-u1/exp_results/diffusion_step_1.png" /> <img alt="图2b：Step 2" src="assets/mindvla-u1/exp_results/diffusion_step_2.png" /> <img alt="图2c：Step 3" src="assets/mindvla-u1/exp_results/diffusion_step_3.png" /> <img alt="图2d：Step 4" src="assets/mindvla-u1/exp_results/diffusion_step_4.png" /> <img alt="图2e：Step 5" src="assets/mindvla-u1/exp_results/diffusion_step_5.png" /></p>
 <p><em>图2(a-e)：Flow-matching 动作头在 5 步 Euler 积分下的去噪过程可视化（BEV 视图：自车前进方向为 +X，横向为 +Y）。论文推理仅需 2 步，这里用 5 步展示完整的去噪动力学。5 张子图从左到右分别对应去噪步骤 1 至 5。</em></p>
 <p><em>图中各元素含义（依据论文 caption 和正文描述）：</em><em>绿色轨迹</em><em>为 GT ground truth（自车未来 5 秒真实行驶轨迹），</em><em>灰色轨迹</em><em>为过去已行驶路径，</em><em>蓝色轨迹</em><em>为当前去噪步骤预测的轨迹（20 个 waypoints，4Hz 采样）。坐标原点为自车当前位置。</em></p>
 <p><em>逐步骤解析：</em></p>
@@ -337,8 +337,8 @@ document.addEventListener('DOMContentLoaded', function() {
    <div class="math display">$$v_{\mathrm{cfg}} = v_\theta(\emptyset) + s(v_\theta(z) - v_\theta(\emptyset))$$</div>
    其中 guidance scale <span class="math inline">$s = 1.5$</span></li>
 </ol>
-<p><img alt="图3a：WOD-E2E 3-class intent + unconditional" src="arXiv-2605.12624v1/exp_results/0075c28f1f1a68c4c1c8dcf37958046b-149.png" /></p>
-<p><img alt="图3b：MindLabel 20-class intent + unconditional" src="arXiv-2605.12624v1/exp_results/0081c482170156ee7aedf36157d4ff21-149.png" /></p>
+<p><img alt="图3a：WOD-E2E 3-class intent + unconditional" src="assets/mindvla-u1/exp_results/0075c28f1f1a68c4c1c8dcf37958046b-149.png" /></p>
+<p><img alt="图3b：MindLabel 20-class intent + unconditional" src="assets/mindvla-u1/exp_results/0081c482170156ee7aedf36157d4ff21-149.png" /></p>
 <p><em>图3(a-b)：Intent-CFG 作为结构化多模态机制——从同一个 MindVLA-U1 checkpoint，在同一帧 WOD-E2E 场景上，通过变化 intent conditioning token 生成的轨迹集。该图是论文最核心的可视化证据之一。</em></p>
 <p><strong>子图 (a) WOD-E2E 官方 3 类 intent + unconditional baseline：</strong>
 使用 WOD-E2E 原生 3 类 GT intent（straight / left / right）和 unconditional baseline（CFG 中使用 ∅ token）。论文正文将该可视化描述为：左侧 BEV 总览显示绿色 GT 轨迹；右侧排列各 intent 条件下的预测轨迹。关键结果——Unconditional baseline 产生接近 GT 的默认轨迹；<code>straight</code> 条件接近 unconditional（该场景 GT 为直行）；<code>left</code> / <code>right</code> 条件分别向左/右偏移——<strong>证明 intent token 改变了动作扩散的去噪方向</strong>。CFG guidance scale s=1.5。</p>
@@ -437,7 +437,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </code></pre></div>
 
 <p><em>示意图（ASCII）：流式记忆更新机制。帧 <span class="math inline">$i$</span> 的前向传播消费当前帧和从 FIFO 通道读出的运动对齐记忆 token <span class="math inline">$\mathbf{m}_i$</span>；前向完成后，Q-Former 风格的传播 transformer 将骨干输出压缩为新记忆写入通道，最旧条目被驱逐。梯度通过传播 transformer 跨帧流动。</em></p>
-<p><img alt="图4：流式推理逐帧可视化" src="arXiv-2605.12624v1/exp_results/sample_1407.png" /></p>
+<p><img alt="图4：流式推理逐帧可视化" src="assets/mindvla-u1/exp_results/sample_1407.png" /></p>
 <p><em>图4：流式推理在连续 6 帧上的逐帧可视化输出，展示 MindVLA-U1 流式范式的实际推理行为。图中 6 列对应流中的连续 6 个帧步（约 1.5 秒实际时间窗口，4Hz 处理频率），每列从上到下分为 5 行。</em></p>
 <p><strong>各行含义与行间关系：</strong></p>
 <ul>
@@ -455,7 +455,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <li><em>Frame 6（最右列）</em>：轨迹已稳定在新曲率上，waypoint 排列平滑。与 Frame 1 对比可以看出：6 帧之内轨迹从直行平滑过渡为弯道，没有 chunk 边界跳跃、没有 stale waypoint 残留。置信度热力图维持空间平滑——即使在弯曲段也没有置信度断层</li>
 </ul>
 <p><strong>该图支持的核心论点：</strong> 流式范式在实际推理中产生连续、平滑、无 chunk 边界的轨迹序列——6 帧跨度内轨迹从直行演变为弯道的过程是渐进式的。这直接回应了"chunk-wise VLA 在 chunk 边界产生不连续"这一已知问题，证明了流式+记忆的设计在定量（+0.14 RFS）和定性上均优于 chunk-wise。*</p>
-<p><img alt="图5：Streaming Memory 通道详细示意图" src="arXiv-2605.12624v1/figure/MemoryBank4.jpg" /></p>
+<p><img alt="图5：Streaming Memory 通道详细示意图" src="assets/mindvla-u1/figure/MemoryBank4.jpg" /></p>
 <p><em>图5：Streaming Memory 通道的详细工作流程。该图从单帧视角展示了记忆通道的 read→forward→write 三步循环，是理解 MindVLA-U1 流式范式的关键图。</em></p>
 <p><strong>图的上半部分——当前帧 i 的 forward pass：</strong>
 帧 i 的输入由三部分组成：(1) 当前多视图图像（经过 frozen vision encoder + visual merger）；(2) 从 FIFO 通道读出的记忆 token 集合 <span class="math inline">$\mathbf{m}_i$</span>（经过运动对齐）；(3) 语言 query / 噪声动作 token。这些 token 联合送入共享 VLM 骨干做单次前向传播。注意与之前 VLA 方法的关键区别：<strong>每步只处理当前帧，不把多帧视频 token 塞进 VLM</strong>——多帧冗余视觉 token 被压缩记忆取代。</p>
@@ -474,7 +474,7 @@ FIFO 通道存储 <span class="math inline">$N_g=2$</span> 个帧步条目，每
 <li><strong>轨迹评估 QA</strong>：CoT 推理评价 dreamed trajectory 质量</li>
 <li><strong>20 类细粒度 intent 标签</strong>（vs. WOD-E2E 官方 3 类）</li>
 </ol>
-<p><img alt="图6：MindLabel 标注管线概览" src="arXiv-2605.12624v1/figure/MindLabel1.jpg" /></p>
+<p><img alt="图6：MindLabel 标注管线概览" src="assets/mindvla-u1/figure/MindLabel1.jpg" /></p>
 <p><em>图6：MindLabel 自动标注管线架构总览。该管线解决的核心问题是：驾驶日志只有轨迹没有语言——需要自动生成场景理解和轨迹评估的语言标注。管线分为三个并行/串行阶段：</em></p>
 <p><strong>左支——Scene Understanding Question Generation（场景理解问题生成）：</strong>
 该阶段分三步。Step 1 Scene Grounding：融合当前帧的静态空间布局与前 4 秒动态历史窗口，生成一段自然语言场景描述（有意不含 metric 坐标和结构化物体列表）。Step 2 General Cognition QA：基于场景叙事，在 4 个认知维度生成问题——Common（事实感知，如"前方红绿灯什么颜色？"）、Spatial（相对位置和距离）、Temporal（时序变化和因果推理）、Motion（安全分析和规划决策，如"自车应该前进、让行还是停车？"）。每个问题独立标注难度（Easy/Medium/Hard）和 CoT 标志。Step 3 Object-Centric QA：对当前帧做统一检测（车辆、行人、骑行者、交通标志、信号灯），为每个检测实例生成以自然语言描述（如"左车道约 15 米前的红色卡车"）锚定的问题。</p>
