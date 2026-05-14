@@ -80,6 +80,35 @@ cat <<'HEAD'
     text-decoration: none;
   }
   .paper-card a:hover { color: var(--accent-hover); }
+  .paper-meta {
+    margin-top: 6px;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+  }
+  .paper-meta a {
+    font-size: 0.85rem;
+    font-weight: 400;
+  }
+  .paper-tag {
+    display: inline-block;
+    background: var(--tag-bg);
+    color: var(--tag-text);
+    font-size: 0.75rem;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-left: 6px;
+    font-weight: 500;
+  }
+  .paper-venue {
+    display: inline-block;
+    background: #fef3c7;
+    color: #92400e;
+    font-size: 0.75rem;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-left: 6px;
+    font-weight: 600;
+  }
 
   footer {
     text-align: center;
@@ -122,9 +151,35 @@ for date_dir in $(ls -d [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9] 2>/dev/null |
         fi
         # Escape HTML entities in title
         title=$(echo "$title" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g')
+
+        # Extract arxiv id, venue, and tags from HTML comments
+        arxiv=$(grep -o '<!-- arxiv: [^ ]* -->' "$f" 2>/dev/null | head -1 | sed 's/<!-- arxiv: //;s/ -->//' || true)
+        venue=$(grep -o '<!-- venue: [^ ]*.* -->' "$f" 2>/dev/null | head -1 | sed 's/<!-- venue: //;s/ -->//' || true)
+        tags=$(grep -o '<!-- tags: [^ ]*.* -->' "$f" 2>/dev/null | head -1 | sed 's/<!-- tags: //;s/ -->//' || true)
+
         echo "  <div class=\"paper-card\">"
         echo "    <a href=\"$f\">$title</a>"
-        echo "  </div>"
+        if [ -n "$arxiv" ] || [ -n "$venue" ]; then
+            echo -n "    <div class=\"paper-meta\">"
+            if [ -n "$arxiv" ]; then
+                echo -n "arXiv: $arxiv"
+            fi
+            if [ -n "$venue" ]; then
+                echo -n "<span class=\"paper-venue\">$venue</span>"
+            fi
+            echo "</div>"
+        fi
+        if [ -n "$tags" ]; then
+            echo ""
+            echo -n "    <div>"
+            IFS=',' read -ra TAG_ARRAY <<< "$tags"
+            for tag in "${TAG_ARRAY[@]}"; do
+                tag=$(echo "$tag" | sed 's/^ *//;s/ *$//')
+                echo -n "<span class=\"paper-tag\">$tag</span>"
+            done
+            echo "</div>"
+        fi
+        echo ""
     done <<< "$html_files"
 
     echo "</div>"
