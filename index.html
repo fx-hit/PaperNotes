@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PaperNotes — 论文阅读笔记</title>
+<style>
+  :root {
+    --bg: #fafafa;
+    --card-bg: #ffffff;
+    --text: #1a1a1a;
+    --text-secondary: #6b7280;
+    --border: #e5e7eb;
+    --accent: #2563eb;
+    --accent-hover: #1d4ed8;
+    --tag-bg: #eff6ff;
+    --tag-text: #1e40af;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans SC", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+  }
+  .container { max-width: 840px; margin: 0 auto; padding: 48px 24px 80px; }
+
+  header {
+    text-align: center;
+    padding: 60px 0 48px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 48px;
+  }
+  header h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-bottom: 8px;
+  }
+  header p {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+  }
+
+  .date-group { margin-bottom: 40px; }
+  .date-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 12px;
+    padding-left: 4px;
+  }
+  .paper-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin-bottom: 10px;
+    transition: box-shadow 0.15s ease, border-color 0.15s ease;
+  }
+  .paper-card:hover {
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    border-color: #c7d2fe;
+  }
+  .paper-card a {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--accent);
+    text-decoration: none;
+  }
+  .paper-card a:hover { color: var(--accent-hover); }
+  .paper-meta {
+    margin-top: 6px;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+  }
+  .paper-tag {
+    display: inline-block;
+    background: var(--tag-bg);
+    color: var(--tag-text);
+    font-size: 0.75rem;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-left: 8px;
+    font-weight: 500;
+  }
+
+  footer {
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    padding: 32px 0;
+    border-top: 1px solid var(--border);
+    margin-top: 48px;
+  }
+  footer a { color: var(--accent); text-decoration: none; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<header>
+  <h1>PaperNotes</h1>
+  <p>论文阅读笔记 · 图文详解 · 可交互公式与图表</p>
+</header>
+
+<div class="date-group">
+  <div class="date-label">2026-05-14</div>
+  <div class="paper-card">
+    <a href="2026-05-14/MindVLA-U1.html">MindVLA-U1: VLA Beats VA with Unified Streaming Architecture for Autonomous Driving</a>
+    <div class="paper-meta">arXiv: 2605.12624 <span class="paper-tag">自动驾驶</span><span class="paper-tag">VLA</span></div>
+  </div>
+</div>
+
+<div class="date-group">
+  <div class="date-label">2026-05-13</div>
+  <div class="paper-card">
+    <a href="2026-05-13/OneVL：一步式隐式推理与规划，视觉-语言双重解释.html">OneVL: One-Step Latent Reasoning and Planning with Vision-Language Explanations</a>
+    <div class="paper-meta">arXiv: 2604.18486 <span class="paper-tag">多模态</span><span class="paper-tag">推理</span></div>
+  </div>
+  <div class="paper-card">
+    <a href="2026-05-13/OA-WAM_笔记.html">OA-WAM: Object-Addressable World Action Model for Robust Robot Manipulation</a>
+    <div class="paper-meta">arXiv: 2605.06481 <span class="paper-tag">机器人</span><span class="paper-tag">世界模型</span></div>
+  </div>
+  <div class="paper-card">
+    <a href="2026-05-13/LingBot-VA_Causal_World_Modeling_笔记.html">LingBot-VA: Causal World Modeling for Robot Control</a>
+    <div class="paper-meta">arXiv: 2601.21998 <span class="paper-tag">机器人</span><span class="paper-tag">因果推理</span></div>
+  </div>
+</div>
+
+<div class="date-group">
+  <div class="date-label">2026-05-10</div>
+  <div class="paper-card">
+    <a href="2026-05-10/ConsisVLA-4D_阅读笔记.html">ConsisVLA-4D: 从 3D 感知到 4D 推理的一致性视觉-语言-动作模型</a>
+    <div class="paper-meta">CVPR 2026 · arXiv: 2605.05126 <span class="paper-tag">具身智能</span><span class="paper-tag">VLA</span></div>
+  </div>
+</div>
+
+<div class="date-group">
+  <div class="date-label">2026-05-08</div>
+  <div class="paper-card">
+    <a href="2026-05-08/LaST-R1论文与代码笔记.html">LaST-R1 论文与代码笔记</a>
+    <div class="paper-meta">arXiv: 2604.28192 <span class="paper-tag">强化学习</span><span class="paper-tag">推理</span></div>
+  </div>
+  <div class="paper-card">
+    <a href="2026-05-08/LaST-R1论文分享简明笔记.html">LaST-R1 论文分享简明笔记</a>
+    <div class="paper-meta">arXiv: 2604.28192 <span class="paper-tag">强化学习</span><span class="paper-tag">推理</span></div>
+  </div>
+</div>
+
+<footer>
+  Powered by <a href="https://github.com/fx-hit/PaperNotes">GitHub Pages</a>
+  &nbsp;·&nbsp;
+  Generated with Claude Code
+</footer>
+
+</div>
+</body>
+</html>
