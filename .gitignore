@@ -1,0 +1,44 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Arxiv TeX source directories
+**/arXiv-*/
+
+# Known code directories (add new ones here)
+**/last_r1_code/
+**/LaST-R1/
+**/lingbot-va/
+**/onevl/
+**/CVPR26-ConsisVLA-4D/
+
+# PDF papers
+*.pdf
+
+# Conda environments
+**/.conda/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.so
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Binaries / archives
+*.tar
+*.tar.gz
+*.tgz
+*.zip
+*.7z
+*.dmg
+*.pkg
+
+# Media (non-asset)
+*.mov
+*.mp4
+*.avi
