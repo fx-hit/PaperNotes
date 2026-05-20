@@ -109,6 +109,11 @@ cat <<'HEAD'
     margin-left: 6px;
     font-weight: 600;
   }
+  .paper-updated {
+    font-size: 0.75rem;
+    color: #9ca3af;
+    margin-left: 8px;
+  }
 
   footer {
     text-align: center;
@@ -157,18 +162,22 @@ for date_dir in $(ls -d [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9] 2>/dev/null |
         venue=$(grep -o '<!-- venue: [^ ]*.* -->' "$f" 2>/dev/null | head -1 | sed 's/<!-- venue: //;s/ -->//' || true)
         tags=$(grep -o '<!-- tags: [^ ]*.* -->' "$f" 2>/dev/null | head -1 | sed 's/<!-- tags: //;s/ -->//' || true)
 
+        # Get last update time from git log
+        updated=$(git log -1 --format="%cs" -- "$f" 2>/dev/null)
+
         echo "  <div class=\"paper-card\">"
         echo "    <a href=\"$f\">$title</a>"
-        if [ -n "$arxiv" ] || [ -n "$venue" ]; then
-            echo -n "    <div class=\"paper-meta\">"
-            if [ -n "$arxiv" ]; then
-                echo -n "arXiv: $arxiv"
-            fi
-            if [ -n "$venue" ]; then
-                echo -n "<span class=\"paper-venue\">$venue</span>"
-            fi
-            echo "</div>"
+        echo -n "    <div class=\"paper-meta\">"
+        if [ -n "$arxiv" ]; then
+            echo -n "arXiv: $arxiv"
         fi
+        if [ -n "$venue" ]; then
+            echo -n "<span class=\"paper-venue\">$venue</span>"
+        fi
+        if [ -n "$updated" ]; then
+            echo -n "<span class=\"paper-updated\">更新于 $updated</span>"
+        fi
+        echo "</div>"
         if [ -n "$tags" ]; then
             echo ""
             echo -n "    <div>"
