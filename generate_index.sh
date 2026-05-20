@@ -162,6 +162,11 @@ for date_dir in $(ls -d [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9] 2>/dev/null |
         venue=$(grep -o '<!-- venue: [^ ]*.* -->' "$f" 2>/dev/null | head -1 | sed 's/<!-- venue: //;s/ -->//' || true)
         tags=$(grep -o '<!-- tags: [^ ]*.* -->' "$f" 2>/dev/null | head -1 | sed 's/<!-- tags: //;s/ -->//' || true)
 
+        # Extract word count and reading time from HTML comments
+        words_zh=$(grep -o '<!-- words-zh: [0-9]* -->' "$f" 2>/dev/null | head -1 | sed 's/<!-- words-zh: //;s/ -->//' || true)
+        words_en=$(grep -o '<!-- words-en: [0-9]* -->' "$f" 2>/dev/null | head -1 | sed 's/<!-- words-en: //;s/ -->//' || true)
+        reading_time=$(grep -o '<!-- reading-time: [0-9]* -->' "$f" 2>/dev/null | head -1 | sed 's/<!-- reading-time: //;s/ -->//' || true)
+
         # Get last update time from git log
         updated=$(git log -1 --format="%cs" -- "$f" 2>/dev/null)
 
@@ -173,6 +178,17 @@ for date_dir in $(ls -d [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9] 2>/dev/null |
         fi
         if [ -n "$venue" ]; then
             echo -n "<span class=\"paper-venue\">$venue</span>"
+        fi
+        if [ -n "$reading_time" ]; then
+            echo -n " · "
+            if [ -n "$words_zh" ] && [ "$words_zh" -gt 0 ] 2>/dev/null; then
+                echo -n "${words_zh} 字"
+            fi
+            if [ -n "$words_en" ] && [ "$words_en" -gt 0 ] 2>/dev/null; then
+                [ -n "$words_zh" ] && [ "$words_zh" -gt 0 ] 2>/dev/null && echo -n " / "
+                echo -n "English ${words_en} 词"
+            fi
+            echo -n " · 约 ${reading_time} 分钟"
         fi
         if [ -n "$updated" ]; then
             echo -n "<span class=\"paper-updated\">更新于 $updated</span>"

@@ -125,6 +125,87 @@ def restore_special_blocks(html_text, placeholders):
     return html_text
 
 
+# ── word count & reading time stats ──────────────────────────────────────────
+
+def compute_stats(html_body):
+    """Count Chinese characters, English words, and estimate reading time.
+
+    Strips script/math/code blocks so only visible prose contributes.
+    Chinese: ~350 chars/min, English: ~200 words/min.
+    """
+    text = html_body
+
+    # Remove script blocks
+    text = re.sub(r'<script[^>]*>.*?</script>', '', text, flags=re.DOTALL)
+    # Remove mermaid diagrams
+    text = re.sub(r'<pre class="mermaid">.*?</pre>', '', text, flags=re.DOTALL)
+    # Remove math display
+    text = re.sub(r'<div class="math display">.*?</div>', '', text, flags=re.DOTALL)
+    # Remove math inline
+    text = re.sub(r'<span class="math inline">.*?</span>', '', text, flags=re.DOTALL)
+    # Remove codehilite blocks
+    text = re.sub(r'<div class="codehilite">.*?</div>', '', text, flags=re.DOTALL)
+    # Remove generic pre blocks
+    text = re.sub(r'<pre[^>]*>.*?</pre>', '', text, flags=re.DOTALL)
+    # Remove inline code
+    text = re.sub(r'<code[^>]*>.*?</code>', '', text, flags=re.DOTALL)
+
+    # Strip remaining HTML tags
+    text = re.sub(r'<[^>]+>', '', text)
+
+    # Decode HTML entities
+    text = text.replace('&amp;', '&').replace('&lt;', '<').replace('&gt;', '>')
+    text = text.replace('&quot;', '"').replace('&#39;', "'")
+    text = re.sub(r'&#\d+;', '', text)
+
+    # Collapse whitespace
+    text = re.sub(r'\s+', ' ', text).strip()
+
+    # Count Chinese chars (CJK Unified Ideographs + Extension A)
+    chinese_chars = len(re.findall(r'[一-鿿㐀-䶿]', text))
+
+    # Count English words (letter sequences >= 2 chars)
+    english_words = len(re.findall(r'\b[a-zA-Z]{2,}\b', text))
+
+    # Reading time: Chinese 350 chars/min, English 200 words/min, floor 1 minute
+    minutes = max(1, round(chinese_chars / 350 + english_words / 200))
+
+    return {'zh': chinese_chars, 'en': english_words, 'minutes': minutes}
+
+
+def format_stats_html(stats):
+    """Visible stats bar for the article page, placed after h1."""
+    parts = []
+    if stats['zh'] > 0:
+        parts.append(f'{stats["zh"]:,} 字')
+    if stats['en'] > 0:
+        parts.append(f'English {stats["en"]:,} 词')
+    if not parts:
+        return ''
+    parts.append(f'约 {stats["minutes"]} 分钟阅读')
+    return '<div class="article-stats">' + ' · '.join(parts) + '</div>\n'
+
+
+def format_stats_comment(stats):
+    """HTML comments consumed by generate_index.sh."""
+    lines = []
+    if stats['zh'] > 0 or stats['en'] > 0:
+        lines.append(f'<!-- words-zh: {stats["zh"]} -->')
+        lines.append(f'<!-- words-en: {stats["en"]} -->')
+        lines.append(f'<!-- reading-time: {stats["minutes"]} -->')
+    return '\n'.join(lines)
+
+
+def insert_stats_into_body(body, stats_html):
+    """Insert stats_html right after the first h1 in body."""
+    if not stats_html:
+        return body
+    m = re.search(r'(<h1[^>]*>.*?</h1>)', body, re.DOTALL)
+    if m:
+        return body[:m.end()] + '\n' + stats_html + body[m.end():]
+    return stats_html + body
+
+
 # ── heading / TOC ──────────────────────────────────────────────────────────
 
 def extract_headings(html_body):
@@ -299,6 +380,11 @@ CSS = r"""
   p:has(img) { text-align: center; }
   p:has(img) + p { text-align: center; font-size: 0.9em; color: var(--text-secondary); }
   .mermaid { text-align: center; margin: 1.5em 0; background: #fafbfc; border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+  .article-stats {
+    font-size: 0.85rem; color: var(--text-secondary);
+    padding: 10px 18px; margin-bottom: 28px;
+    background: #f8f9fa; border: 1px solid var(--border); border-radius: 8px;
+  }
 
   @media (max-width: 1024px) {
     .sidebar { position: static; width: 100%; height: auto; max-height: 35vh; border-right: none; border-bottom: 1px solid var(--border); }
@@ -360,13 +446,14 @@ TOC_SCROLL_JS = r"""
 """
 
 
-def build_page(body, toc_html, title):
+def build_page(body, toc_html, title, stats_comment=""):
     return f"""<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{title}</title>
+{stats_comment}
 <style>{CSS}</style>
 {JS}
 </head>
@@ -404,6 +491,12 @@ def convert_file(md_path):
     body = md.convert(text)
     body = restore_special_blocks(body, placeholders)
 
+    # Compute stats and inject into body
+    stats = compute_stats(body)
+    stats_html = format_stats_html(stats)
+    stats_comment = format_stats_comment(stats)
+    body = insert_stats_into_body(body, stats_html)
+
     # Inject heading IDs
     heading_pattern = re.compile(r'<(h[1-4])([^>]*)>(.*?)</\1>', re.DOTALL)
     used_ids = set()
@@ -424,7 +517,7 @@ def convert_file(md_path):
     body = heading_pattern.sub(add_id, body)
 
     toc_html = build_toc_html(extract_headings(body))
-    full_html = build_page(body, toc_html, title)
+    full_html = build_page(body, toc_html, title, stats_comment=stats_comment)
 
     html_path = os.path.splitext(md_path)[0] + '.html'
     with open(html_path, 'w', encoding='utf-8') as f:
