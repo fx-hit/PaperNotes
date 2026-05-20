@@ -21,7 +21,14 @@ PaperNotes/
 
 1. **读论文做笔记** — 对包含 arxiv TeX 源码的目录使用 `paper2notes` skill，生成带有插图的 markdown 笔记。
 2. **导出 HTML** — 使用 `md2html` skill 将 markdown 笔记转换为独立 HTML 页面，包含 MathJax、Mermaid 图表、代码高亮和侧边栏目录。
-3. **提交** — 按 commit 规范提交笔记文件。
+3. **添加元数据** — 在 HTML 页面的 `<title>` 后添加 HTML 注释格式的元数据，以便首页自动提取：
+   ```html
+   <!-- arxiv: XXXX.XXXXX -->
+   <!-- venue: 会议/期刊 年份 -->
+   <!-- tags: 标签1, 标签2, 标签3 -->
+   ```
+4. **更新首页** — 运行 `./generate_index.sh` 重新生成 `index.html`。
+5. **提交** — 按 commit 规范提交笔记文件。
 
 ## Commit 规范
 
