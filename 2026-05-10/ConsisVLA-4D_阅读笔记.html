@@ -4,9 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ConsisVLA-4D 论文阅读笔记</title>
-<!-- venue: CVPR 2026 -->
-<!-- arxiv: 2605.05126 -->
-<!-- tags: 具身智能, VLA, 3D感知 -->
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
@@ -341,12 +338,19 @@ document.addEventListener('DOMContentLoaded', function() {
 <ul>
 <li><strong>范式 A（显式 3D/4D 输入）</strong>：直接使用点云、深度图、历史帧等 3D/4D 数据作为输入。代表方法如 PointVLA、GeoVLA。优点是信息丰富，缺点是需要额外传感器（深度相机、LiDAR），硬件成本和计算开销大。</li>
 <li><strong>范式 B（2D→3D 投影）</strong>：在 2D 特征基础上通过投影矩阵映射到 3D 空间。代表方法如 SpatialVLA、Evo。问题是投影偏差和遮挡误差难以消除，缺乏跨视角几何一致性。</li>
-<li><strong>范式 C（从 2D 预测 3D）</strong>：从 2D 观测中预测 3D 表示（如深度图），再用于动作生成。代表方法如 CoT-VLA。预测出的 3D 表示存在尺度歧义，且缺少时间维度的推理。</li>
+<li><strong>范式 C（从 2D 预测 3D）</strong>：从 2D 观测中预测 3D 表示（如深度图），再用于动作生成。代表方法如 DepthVLA。预测出的 3D 表示存在尺度歧义，且缺少时间维度的推理。</li>
 <li><strong>范式 D（ConsisVLA-4D，本文提出）</strong>：在统一框架内实现 3D 感知→4D 推理的完整闭环。CV-Aligner 提取指令相关的跨视角物体；CO-Fuser 聚合多视角几何关系；CS-Thinker 基于未来动态物体和全局深度的隐式知识进行动作推理。仅使用原始视觉 token 的 <strong>1/8</strong>，实现时空一致性动作生成。</li>
 </ul>
 <p><strong>右侧——四个真机长时序任务示例：</strong> 展示了 ConsisVLA-4D 在微波炉操作（放面包→加热→关门）、剥香蕉（抓起→剥皮→放盘）、抽屉整理（拉开→放入→推回）、T恤折叠等任务上的执行效果，印证了时空一致性对长时序操作的关键支撑作用。*</p>
 <h2 id="_2">二、核心思路</h2>
 <p>受人类操控行为启发（双眼视觉保持空间感知一致性 + 在稳定空间感知基础上预测未来状态），提出 <strong>ConsisVLA-4D</strong>，在一个统一框架内实现高效的 3D 感知 + 4D 推理，包含三个紧密耦合的模块：</p>
+<p><img alt="pipline：从 3D 感知到 4D 推理的机制" src="assets/consisvla-4d/pipline.png" /></p>
+<p><em>图2：3D 感知→4D 推理完整流水线。该图从机制层面揭示 CV-Aligner 和 CO-Fuser 如何将各自的 3D 一致性拓展到 4D 时空域。</em></p>
+<p><strong>上半部分（CV-Aligner → 4D 推理）—— 从跨视角物体到动态物体预测：</strong></p>
+<p>CV-Aligner 在多视角（Main/Left/Right）图像中通过 ES-Selection + Single-Fusion 识别并匹配同一物体在不同视角下的身份，产生跨视角一致的物体表示 <span class="math inline">$\mathbf{z}_{\{M,L,R\}}^{\text{obj-3D}}$</span>。进入 4D 推理阶段后，CS-Thinker 从多视角物体 token 出发，预测动作执行后固定视角（如 Main）中的动态物体——即回答”这个物体在动作后会变成什么样、出现在什么位置”。例如，从 Main 视角看到碗在桌上、Left 视角看到碗在微波炉旁，4D 推理预测碗放入微波炉后的状态。这里的关键是从”当前多视角静态物体”到”未来单视角动态物体”的推理跨越。</p>
+<p><strong>下半部分（CO-Fuser → 4D 推理）—— 从聚合几何关系到全局深度预测：</strong></p>
+<p>CO-Fuser 通过 Group-Fusion + IG-Aggregation 聚合多视角的空间几何关系，消除单视角的尺度歧义和遮挡误差，产生紧凑的聚合几何表示 <span class="math inline">$\mathbf{z}_{\mathcal{L}'}^{\text{agg-3D}}$</span>。进入 4D 推理阶段后，CS-Thinker 从同一组几何表示出发，解码出所有视角的全局深度图——即回答”动作后整个场景的 3D 结构是什么样的”。这里的关键是从”抽象几何关系”到”具体深度图”的推理跨越。</p>
+<p><strong>整体意义：</strong> 3D 感知确保了空间一致性（物体身份跨视角一致 + 几何关系跨物体一致），4D 推理在此基础上扩展为时空一致性——既预测局部物体动态，又预测全局场景深度，两者共同作为动作生成的中间视觉推理支撑。*</p>
 <h3 id="21-cv-aligner">2.1 CV-Aligner（跨视角对齐器）—— 保证跨视角物体语义一致性</h3>
 <ul>
 <li><strong>Explicit Semantic Object Selection（显式语义物体选择）</strong>：<ul>
@@ -375,14 +379,14 @@ document.addEventListener('DOMContentLoaded', function() {
   cached_vggt_patches = torch.cat([vggt_M, vggt_L, vggt_R], dim=-2)  # 所有视角的 VGGT 特征拼接</code></p>
 </li>
 <li>
-<p>然后这“一组”（Group）拼接后的特征一起进入 DINOv2，在每个 Block 里和同样拼接后的 VGGT
+<p>然后这”一组”（Group）拼接后的特征一起进入 DINOv2，在每个 Block 里和同样拼接后的 VGGT
   特征做加权求和。这就是 Group-Fusion：
   <span class="math inline">$\mathbf{z}_{l}^{\text{geo-3D}} = (1-{\alpha_l}) \odot \mathbf{z}_{l}^{\text{geo}} + {\alpha_l} \odot \mathbf{z}_l^{\text{3D}}$</span></p>
 </li>
 <li>
 <p>权重 <span class="math inline">$\alpha_l$</span> 随层深余弦衰减（浅层 VGGT 3D 空间先验占 ~20% → 深层 VGGT 退出，DINOv2 自身几何特征主导）</p>
 </li>
-<li>与 CV-Aligner 的 Single-Fusion（每视角独立做 Cross-Attn）对应：Group-Fusion 是所有视角"成组"一起做特征混合</li>
+<li>与 CV-Aligner 的 Single-Fusion（每视角独立做 Cross-Attn）对应：Group-Fusion 是所有视角”成组”一起做特征混合</li>
 <li><strong>Implicit Geometric Relation Aggregation（隐式几何关系聚合）</strong>：</li>
 <li>用块级因果自注意力（BC-Attn）对融合特征与可学习的聚合 token 进行建模</li>
 <li>组内双向注意力 + 组间因果注意力</li>
@@ -390,42 +394,6 @@ document.addEventListener('DOMContentLoaded', function() {
 </ul>
 </li>
 </ul>
-<p><img alt="supp_1：BC-Attn 块级因果注意力" src="assets/consisvla-4d/supp_1.png" /></p>
-<p><em>图8：BC-Attn（块级因果自注意力）机制示意图，展示 CO-Fuser 中 IG-Aggregation 的核心注意力设计。</em></p>
-<p><strong>注意力 mask 设计：</strong> 图中展示三视角（Main/Left/Right）的 patch token（蓝色方块）与可学习的 Aggregation Token（橙色方块，用 A 标记）之间的注意力模式。关键设计是：</p>
-<ul>
-<li><strong>组内双向注意力</strong>：同一视角（如同一行 Main）的所有 patch token 之间可以互相看到（蓝色方块之间全连接），保留视角内的完整空间上下文。</li>
-<li><strong>组间因果注意力</strong>：Aggregation Token 可以看到所有视角的 patch token（向上聚合信息），但 patch token 不能看到 Aggregation Token（防止信息从聚合 token 回流到原始 token）。不同视角的 patch token 之间也不能直接互相关注（视角间不直接通信，所有跨视角信息必须通过 Aggregation Token 中转）。</li>
-<li><strong>压缩比 1/12</strong>：三视角共 3×256=768 个 patch token，最终仅保留 64 个 Aggregation Token，压缩比 ≈1/12。</li>
-</ul>
-<p><strong>设计意图：</strong> 这种非对称的注意力设计确保 Aggregation Token 成为跨视角几何信息的唯一汇聚点——它"看"到了所有视角的空间信息但不能"告诉"任何 patch token，迫使模型将所有跨视角的空间几何关系压缩到这 64 个 token 中。推理时只使用这 64 个 Aggregation Token，丢弃所有原始 patch token，实现从 768→64 的高效压缩。*</p>
-<h3 id="23-cs-thinker">2.3 CS-Thinker（跨场景思考器）—— 保证跨场景时空一致性</h3>
-<p>核心创新：将 3D 感知拓展到 4D 推理，<strong>训练时学习隐式知识，推理时不显式生成中间表示</strong>。</p>
-<ul>
-<li><strong>多视角物体 → 单视角动态物体预测</strong>：<ul>
-<li>初始化可学习的动态 token，在 SC-Attn 中由对应视角的物体特征 + 指令引导</li>
-<li>预测固定视角的动作后动态物体，用 CoTracker 监督（<span class="math inline">$\mathcal{L}_{\text{dyn-4D}}$</span>）</li>
-</ul>
-</li>
-<li><strong>抽象关系 → 具体全局深度预测</strong>：<ul>
-<li>初始化可学习的深度 token，由 CO-Fuser 的聚合几何关系 + 指令引导</li>
-<li>解码为各视角的全局深度，用 Depth-Anything 监督（<span class="math inline">$\mathcal{L}_{\text{dep-4D}}$</span>）</li>
-</ul>
-</li>
-<li><strong>SC-Attn（时空一致性注意力）</strong>：<ul>
-<li>同时处理物体 token、几何 token、指令、动态 token、深度 token、动作 token</li>
-<li>动态物体预测和深度预测作为动作生成的<strong>中间视觉推理</strong>，并行解码</li>
-</ul>
-</li>
-<li><strong>推理时</strong>：不生成动态物体和深度图，仅靠训练中学习到的隐式知识进行高效动作生成。这些隐式知识 token 占序列的不到 10%。</li>
-</ul>
-<p><img alt="pipline：从 3D 感知到 4D 推理的机制" src="assets/consisvla-4d/pipline.png" /></p>
-<p><em>图2：3D 感知→4D 推理完整流水线。该图从机制层面揭示 CV-Aligner 和 CO-Fuser 如何将各自的 3D 一致性拓展到 4D 时空域。</em></p>
-<p><strong>上半部分（CV-Aligner → 4D 推理）—— 从跨视角物体到动态物体预测：</strong></p>
-<p>CV-Aligner 在多视角（Main/Left/Right）图像中通过 ES-Selection + Single-Fusion 识别并匹配同一物体在不同视角下的身份，产生跨视角一致的物体表示 <span class="math inline">$\mathbf{z}_{\{M,L,R\}}^{\text{obj-3D}}$</span>。进入 4D 推理阶段后，CS-Thinker 从多视角物体 token 出发，预测动作执行后固定视角（如 Main）中的动态物体——即回答"这个物体在动作后会变成什么样、出现在什么位置"。例如，从 Main 视角看到碗在桌上、Left 视角看到碗在微波炉旁，4D 推理预测碗放入微波炉后的状态。这里的关键是从"当前多视角静态物体"到"未来单视角动态物体"的推理跨越。</p>
-<p><strong>下半部分（CO-Fuser → 4D 推理）—— 从聚合几何关系到全局深度预测：</strong></p>
-<p>CO-Fuser 通过 Group-Fusion + IG-Aggregation 聚合多视角的空间几何关系，消除单视角的尺度歧义和遮挡误差，产生紧凑的聚合几何表示 <span class="math inline">$\mathbf{z}_{\mathcal{L}'}^{\text{agg-3D}}$</span>。进入 4D 推理阶段后，CS-Thinker 从同一组几何表示出发，解码出所有视角的全局深度图——即回答"动作后整个场景的 3D 结构是什么样的"。这里的关键是从"抽象几何关系"到"具体深度图"的推理跨越。</p>
-<p><strong>整体意义：</strong> 3D 感知确保了空间一致性（物体身份跨视角一致 + 几何关系跨物体一致），4D 推理在此基础上扩展为时空一致性——既预测局部物体动态，又预测全局场景深度，两者共同作为动作生成的中间视觉推理支撑。*</p>
 <p><img alt="3d：高效 3D 感知" src="assets/consisvla-4d/3d.png" /></p>
 <p><em>图3：高效 3D 感知保证空间一致性。该图详细展示 CV-Aligner（红色）和 CO-Fuser（橙色）的内部结构，以及三个视觉编码器（SigLIP/DINOv2/VGGT）的分工协作。</em></p>
 <p><strong>子图 (a) CV-Aligner（红色）—— 跨视角物体语义一致性：</strong></p>
@@ -449,6 +417,48 @@ document.addEventListener('DOMContentLoaded', function() {
 <li><strong>DINOv2</strong>（ViT-L, 1024 维）→ 几何特征，自监督的几何一致性</li>
 <li><strong>VGGT</strong>（1B, 1024 维）→ 空间特征，深度/点云/点跟踪先验，冻结不参与梯度更新*</li>
 </ul>
+<p><img alt="supp_1：BC-Attn 块级因果注意力" src="assets/consisvla-4d/supp_1.png" /></p>
+<p><em>图4：BC-Attn（块级因果自注意力）机制示意图，展示 CO-Fuser 中 IG-Aggregation 的核心注意力设计。</em></p>
+<p><strong>注意力 mask 设计：</strong> 图中展示三视角（Main/Left/Right）的 patch token（蓝色方块）与可学习的 Aggregation Token（橙色方块，用 A 标记）之间的注意力模式。关键设计是：</p>
+<ul>
+<li><strong>组内双向注意力</strong>：同一视角（如同一行 Main）的所有 patch token 之间可以互相看到（蓝色方块之间全连接），保留视角内的完整空间上下文。</li>
+<li><strong>组间因果注意力</strong>：Aggregation Token 可以看到所有视角的 patch token（向上聚合信息），但 patch token 不能看到 Aggregation Token（防止信息从聚合 token 回流到原始 token）。不同视角的 patch token 之间也不能直接互相关注（视角间不直接通信，所有跨视角信息必须通过 Aggregation Token 中转）。</li>
+<li><strong>压缩比 1/12</strong>：三视角共 3×256=768 个 patch token，最终仅保留 64 个 Aggregation Token，压缩比 ≈1/12。</li>
+</ul>
+<p><strong>设计意图：</strong> 这种非对称的注意力设计确保 Aggregation Token 成为跨视角几何信息的唯一汇聚点——它”看”到了所有视角的空间信息但不能”告诉”任何 patch token，迫使模型将所有跨视角的空间几何关系压缩到这 64 个 token 中。推理时只使用这 64 个 Aggregation Token，丢弃所有原始 patch token，实现从 768→64 的高效压缩。*</p>
+<h3 id="23-cs-thinker">2.3 CS-Thinker（跨场景思考器）—— 保证跨场景时空一致性</h3>
+<p>核心创新：将 3D 感知拓展到 4D 推理，<strong>训练时学习隐式知识，推理时不显式生成中间表示</strong>。</p>
+<ul>
+<li><strong>多视角物体 → 单视角动态物体预测</strong>：<ul>
+<li>初始化可学习的动态 token，在 SC-Attn 中由对应视角的物体特征 + 指令引导</li>
+<li>预测固定视角的动作后动态物体，用 CoTracker 监督（<span class="math inline">$\mathcal{L}_{\text{dyn-4D}}$</span>）</li>
+</ul>
+</li>
+<li><strong>抽象关系 → 具体全局深度预测</strong>：<ul>
+<li>初始化可学习的深度 token，由 CO-Fuser 的聚合几何关系 + 指令引导</li>
+<li>解码为各视角的全局深度，用 Depth-Anything 监督（<span class="math inline">$\mathcal{L}_{\text{dep-4D}}$</span>）</li>
+</ul>
+</li>
+<li><strong>SC-Attn（时空一致性注意力）</strong>：<ul>
+<li>同时处理物体 token、几何 token、指令、动态 token、深度 token、动作 token</li>
+<li>动态物体预测和深度预测作为动作生成的<strong>中间视觉推理</strong>，并行解码</li>
+</ul>
+</li>
+<li><strong>推理时</strong>：不生成动态物体和深度图，仅靠训练中学习到的隐式知识进行高效动作生成。这些隐式知识 token 占序列的不到 10%。</li>
+</ul>
+<p><img alt="4d：高效 4D 推理" src="assets/consisvla-4d/4d.png" /></p>
+<p><em>图5：高效 4D 推理。CS-Thinker 配合 SC-Attn 在统一上下文窗口内并行实现三件事：动态物体预测、全局深度预测、动作生成。训练时三者同时学习（动态物体和深度有监督信号），推理时仅执行动作生成（依赖隐式知识 IK）。</em></p>
+<p><strong>子图 (a) 整体结构 —— SC-Attn 统一上下文窗口：</strong></p>
+<p>CS-Thinker 的输入 token 序列被组织为：<code>[语义token(64) | 几何token(64) | 文本token | Dynamic Queries(2N) | Depth Queries(N) | Action Queries]</code>。所有 token 在 SC-Attn 的统一上下文窗口内并行处理，不同类型的 token 遵循不同的注意力模式（组内双向 + 组间因果）。其中 Dynamic Queries 和 Depth Queries 是可学习的隐式知识 token，占序列不到 10%。</p>
+<p><strong>子图 (b) 多视角物体 → 单视角动态物体预测（CoTracker 监督）：</strong></p>
+<p>为每个视角 <span class="math inline">$i$</span> 初始化一组可学习的 dynamic token <span class="math inline">$\mathbf{0}_{i}^{\text{dyn-4D}}$</span>（3 视角 × 4 token/组 = 12 token）。在 SC-Attn 中，每个 <span class="math inline">$\mathbf{0}_{i}^{\text{dyn-4D}}$</span> 由对应视角的物体特征 <span class="math inline">$\mathbf{z}_{i}^{\text{obj-3D}}$</span> 和指令 <span class="math inline">$\mathbf{t}$</span> 独立引导。经过 LLM 处理后，dynamic token 的 hidden states 被送入 DynamicFeatDecoder（8 层 ViT Block，1024 维），解码出固定视角 <span class="math inline">$i^*$</span> 中动作后的动态物体图像 <span class="math inline">$\hat{\mathbf{z}}_{i^*}^{\text{dyn-4D}}$</span>。</p>
+<p>损失函数 <span class="math inline">$\mathcal{L}_{\text{dyn-4D}}$</span>：仅对 CoTracker 离线标注的运动区域（<span class="math inline">$\mathbf{m}_{i^*}^{\text{obj-3D}}$</span>）计算 MSE，避免背景干扰。这确保模型学到的是”物体因动作发生了怎样的变化”，而非”整个画面变成了什么样”。</p>
+<p><strong>子图 (c) 抽象关系 → 具体全局深度预测（Depth-Anything 监督）：</strong></p>
+<p>初始化一组可学习的 depth token <span class="math inline">$\mathbf{0}^{\text{dep-4D}}$</span>（1 组 × 4 token = 4 token）。在 SC-Attn 中，这些 token 由 CO-Fuser 的聚合几何关系 <span class="math inline">$\mathbf{z}_{\mathcal{L}'}^{\text{agg-3D}}$</span> 和指令 <span class="math inline">$\mathbf{t}$</span> 共同引导，但与 dynamic token 的学习过程隔离。经过 LLM 处理后，depth token 的 hidden states 被送入另一组 DynamicFeatDecoder（<code>img_channel=1</code>, <code>pred_num</code>=视角数），解码出所有视角的全局深度图。</p>
+<p>损失函数 <span class="math inline">$\mathcal{L}_{\text{dep-4D}}$</span>：逐视角计算预测深度与 Depth-Anything 生成的真实深度的 MSE。注意 dynamic 和 depth 的解码器结构相同但参数独立——dynamic decoder 每个视角一个，depth decoder 单个解码器同时输出所有视角。</p>
+<p><strong>子图 (d) 并行动作解码：</strong></p>
+<p>动作 token <span class="math inline">$\mathbf{0}^A$</span> 在 SC-Attn 中与上述所有 visual reasoning token 及指令交互。训练时，LLM 最后一层的动作 token hidden states 通过 L1RegressionActionHead 预测连续动作，与 GT 动作计算 L1 损失 <span class="math inline">$\mathcal{L}_{\text{action}}$</span>。三组损失联合优化：总损失 <span class="math inline">$= \mathcal{L}_{\text{action}} + \mathcal{L}_{\text{dyn-4D}} + \mathcal{L}_{\text{dep-4D}}$</span>。</p>
+<p><strong>推理时（关键设计）：</strong> DynamicFeatDecoder 和 DepthFeatDecoder 不执行，不生成中间表示。模型仅依靠训练中学会的隐式知识（dynamic/depth dream token 在 LLM 中的 hidden states）辅助动作生成——这解释了为什么引入 2B 参数后推理反而更快 2.3 倍。*</p>
 <hr />
 <h2 id="_3">三、训练目标</h2>
 <p><div class="math display">$$\mathcal{L}_{\text{total}} = \mathcal{L}_{\text{action}} + \mathcal{L}_{\text{dyn-4D}} + \mathcal{L}_{\text{dep-4D}}$$</div></p>
@@ -458,19 +468,6 @@ document.addEventListener('DOMContentLoaded', function() {
 <li><span class="math inline">$\mathcal{L}_{\text{dep-4D}}$</span>：全局深度重建损失（Depth-Anything 监督）</li>
 </ul>
 <hr />
-<p><img alt="4d：高效 4D 推理" src="assets/consisvla-4d/4d.png" /></p>
-<p><em>图4：高效 4D 推理。CS-Thinker 配合 SC-Attn 在统一上下文窗口内并行实现三件事：动态物体预测、全局深度预测、动作生成。训练时三者同时学习（动态物体和深度有监督信号），推理时仅执行动作生成（依赖隐式知识 IK）。</em></p>
-<p><strong>子图 (a) 整体结构 —— SC-Attn 统一上下文窗口：</strong></p>
-<p>CS-Thinker 的输入 token 序列被组织为：<code>[语义token(64) | 几何token(64) | 文本token | Dynamic Queries(2N) | Depth Queries(N) | Action Queries]</code>。所有 token 在 SC-Attn 的统一上下文窗口内并行处理，不同类型的 token 遵循不同的注意力模式（组内双向 + 组间因果）。其中 Dynamic Queries 和 Depth Queries 是可学习的隐式知识 token，占序列不到 10%。</p>
-<p><strong>子图 (b) 多视角物体 → 单视角动态物体预测（CoTracker 监督）：</strong></p>
-<p>为每个视角 <span class="math inline">$i$</span> 初始化一组可学习的 dynamic token <span class="math inline">$\mathbf{0}_{i}^{\text{dyn-4D}}$</span>（3 视角 × 4 token/组 = 12 token）。在 SC-Attn 中，每个 <span class="math inline">$\mathbf{0}_{i}^{\text{dyn-4D}}$</span> 由对应视角的物体特征 <span class="math inline">$\mathbf{z}_{i}^{\text{obj-3D}}$</span> 和指令 <span class="math inline">$\mathbf{t}$</span> 独立引导。经过 LLM 处理后，dynamic token 的 hidden states 被送入 DynamicFeatDecoder（8 层 ViT Block，1024 维），解码出固定视角 <span class="math inline">$i^*$</span> 中动作后的动态物体图像 <span class="math inline">$\hat{\mathbf{z}}_{i^*}^{\text{dyn-4D}}$</span>。</p>
-<p>损失函数 <span class="math inline">$\mathcal{L}_{\text{dyn-4D}}$</span>：仅对 CoTracker 离线标注的运动区域（<span class="math inline">$\mathbf{m}_{i^*}^{\text{obj-3D}}$</span>）计算 MSE，避免背景干扰。这确保模型学到的是"物体因动作发生了怎样的变化"，而非"整个画面变成了什么样"。</p>
-<p><strong>子图 (c) 抽象关系 → 具体全局深度预测（Depth-Anything 监督）：</strong></p>
-<p>初始化一组可学习的 depth token <span class="math inline">$\mathbf{0}^{\text{dep-4D}}$</span>（1 组 × 4 token = 4 token）。在 SC-Attn 中，这些 token 由 CO-Fuser 的聚合几何关系 <span class="math inline">$\mathbf{z}_{\mathcal{L}'}^{\text{agg-3D}}$</span> 和指令 <span class="math inline">$\mathbf{t}$</span> 共同引导，但与 dynamic token 的学习过程隔离。经过 LLM 处理后，depth token 的 hidden states 被送入另一组 DynamicFeatDecoder（<code>img_channel=1</code>, <code>pred_num</code>=视角数），解码出所有视角的全局深度图。</p>
-<p>损失函数 <span class="math inline">$\mathcal{L}_{\text{dep-4D}}$</span>：逐视角计算预测深度与 Depth-Anything 生成的真实深度的 MSE。注意 dynamic 和 depth 的解码器结构相同但参数独立——dynamic decoder 每个视角一个，depth decoder 单个解码器同时输出所有视角。</p>
-<p><strong>子图 (d) 并行动作解码：</strong></p>
-<p>动作 token <span class="math inline">$\mathbf{0}^A$</span> 在 SC-Attn 中与上述所有 visual reasoning token 及指令交互。训练时，LLM 最后一层的动作 token hidden states 通过 L1RegressionActionHead 预测连续动作，与 GT 动作计算 L1 损失 <span class="math inline">$\mathcal{L}_{\text{action}}$</span>。三组损失联合优化：总损失 <span class="math inline">$= \mathcal{L}_{\text{action}} + \mathcal{L}_{\text{dyn-4D}} + \mathcal{L}_{\text{dep-4D}}$</span>。</p>
-<p><strong>推理时（关键设计）：</strong> DynamicFeatDecoder 和 DepthFeatDecoder 不执行，不生成中间表示。模型仅依靠训练中学会的隐式知识（dynamic/depth dream token 在 LLM 中的 hidden states）辅助动作生成——这解释了为什么引入 2B 参数后推理反而更快 2.3 倍。*</p>
 <h2 id="_4">四、实验与结果</h2>
 <h3 id="41-libero">4.1 仿真实验（LIBERO 基准）</h3>
 <table>
@@ -541,7 +538,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <li>在 Long 任务上表现尤为突出（95.6%），说明时空一致性对长时序任务至关重要</li>
 </ul>
 <p><img alt="vis2：LIBERO 观测可视化与注意力" src="assets/consisvla-4d/vis2.png" /></p>
-<p><em>图5：LIBERO 观测示例与 CV-Aligner/CO-Fuser 注意力可视化。该图直观展示 ConsisVLA-4D 的两个核心模块在实际任务中分别关注什么，以及这种分工如何支撑仅用 1/8 token 就达到 SOTA 性能。</em></p>
+<p><em>图6：LIBERO 观测示例与 CV-Aligner/CO-Fuser 注意力可视化。该图直观展示 ConsisVLA-4D 的两个核心模块在实际任务中分别关注什么，以及这种分工如何支撑仅用 1/8 token 就达到 SOTA 性能。</em></p>
 <p><strong>第 1 行（观测视图）—— 原始输入：</strong> 展示四个 LIBERO 任务的 Main View（主视角，M）和 Wrist View（腕部视角，W）观测图像。四个任务分别为：将碗放到饼干盒上/旁、从木柜顶层抽屉取出碗、打开微波炉（stove 场景）、将盘子放到托盘上。M 视角提供全局场景上下文（物体相对位置、桌面布局），W 视角提供近距离操作细节（夹爪与物体的精确空间关系）。</p>
 <p><strong>第 2 行（橙色标记 M/W）—— CV-Aligner 提取的指令相关物体 token：</strong> 橙色标记显示 CV-Aligner 选出的 Top-K（K=32）语义 token 在原图中的对应位置。可以看到，CV-Aligner 精准定位了任务指令涉及的关键物体——饼干盒上的碗、抽屉中的碗、炉灶、盘子——而过滤掉了背景、桌面纹理、无关物体。注意 M 和 W 视角下同一物体的标记位置不同但语义一致，验证了跨视角物体身份关联的有效性。</p>
 <p><strong>第 3 行（蓝色标记 R）—— CO-Fuser 捕获的聚合几何关系 token：</strong> 蓝色标记显示 CO-Fuser 的 64 个 aggregator token 如何分布注意力到原始 patch token 上。与 CV-Aligner 的"点状聚焦"（只关注指令相关物体）不同，CO-Fuser 呈现"分布式注意力"——同时覆盖任务相关的多个空间节点（物体、容器、桌面边缘）。这反映了 CO-Fuser 关注的是物体之间的空间几何关系（"碗在饼干盒上方""抽屉的几何结构"）而非物体语义本身。</p>
@@ -713,7 +710,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <li>跨平台波动仅 ±1.7%，sim-to-real 迁移能力稳定</li>
 </ul>
 <p><img alt="vis1v2：真机长时序任务执行" src="assets/consisvla-4d/vis1v2.png" /></p>
-<p><em>图6：ConsisVLA-4D 在 Galaxea R1 Lite 平台上执行四个长时序双臂任务的完整过程。每个任务展示 4–5 个关键执行阶段，红色圆圈标注精细夹爪操作。该图验证了时空一致性设计对长时序操作稳定性的关键作用。</em></p>
+<p><em>图8：ConsisVLA-4D 在 Galaxea R1 Lite 平台上执行四个长时序双臂任务的完整过程。每个任务展示 4–5 个关键执行阶段，红色圆圈标注精细夹爪操作。该图验证了时空一致性设计对长时序操作稳定性的关键作用。</em></p>
 <p><strong>任务 1 —— 微波炉操作（3 阶段）：</strong>
 指令："Put the bread into a bowl and heat it in the microwave."</p>
 <ul>

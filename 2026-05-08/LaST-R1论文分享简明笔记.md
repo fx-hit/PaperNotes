@@ -248,7 +248,17 @@ LIBERO 仿真里，LaST-R1 使用 LAPO 做在线交互：
 - advantage 用 GAE，`gamma = 0.99`，`lambda = 0.95`；
 - policy loss 包含 action loss、latent loss、value loss，以及 adaptive 版本里的 `<latent_end>` loss。
 
-真实机器人实验的 RL 细节和 LIBERO 不完全一样。论文附录描述真实世界采用异步 actor-learner、LoRA 更新、BC + Q-guided policy improvement、one-step TD target，以及人工确认成功奖励。
+### 7.4 训练资源
+
+| 阶段 | 数据量 | GPU | 训练量 | 关键配置 |
+|---|---|---|---|---|
+| 预训练 | 400K 轨迹, 28M 帧 | 未明确（推测 8×H20） | 未明确 | OXE + DROID + RoboMIND，DINOv3 latent 离线预计算 |
+| LIBERO SFT warm-up | 1 trajectory/task（one-shot） | 8× H20 | 10K iterations/suite | bf16 + DeepSpeed, batch=64, lr=1e-5, cosine decay |
+| LIBERO RL (LAPO) | 在线交互采集 | 1 节点 8× H20, FSDP + Ray | ~50–150 RL steps 收敛 | 每步 512 rollout, 4 mini-batch × 4 epoch, actor lr=3e-5, value lr=3e-4 |
+| 真机 SFT warm-up | 30 trajectories/task | 8× H20 | 1K iterations | 固定 latent 长度 8 |
+| 真机 RL | 在线交互 + 人工干预 | 单卡 RTX 4090 | 在线持续训练 | LoRA r=32, 异步 actor-learner, 500 transitions 后启动 |
+
+注：论文未给出各阶段的 wall-clock 训练时间。从 LIBERO 学习曲线看，LaST-R1 + LAPO 通常在 50–100 RL steps 内收敛，而 Action-Only + PPO 需要更多步数且最终性能更低。
 
 ## 8. 实验结论
 
@@ -355,6 +365,85 @@ Long suite 上的曲线差距直接证明了 latent reasoning 对长任务不是
 - LaST-R1 只用 30 条 SFT 数据加在线 RL，超过用 100 条 full SFT 的 π₀.₅，数据效率提升 ~3×。
 - π₀.₅ 遇到 unseen object 时 SR 断崖式下跌（如 Open bag zipper 从 75% 掉到 30%），而 LaST-R1 仍保持高成功率。
 
+#### 真机 RL 是怎么做的
+
+真机 RL 的训练流程和 LIBERO 仿真 RL（PPO/LAPO + GAE）完全不同，是一个异步 actor-learner 架构，核心思路是：**机器人一边在真实环境里跑，后台一边用混合数据在线更新模型**。
+
+**硬件配置**：
+
+- 双臂 Franka Research 3，配 3D 打印 UMI 夹爪
+- 1 个 Intel RealSense D455 第三人称相机 + 2 个 D435 腕部相机
+- 推理用单张 NVIDIA RTX 4090
+- 数据采集和人工干预都通过 3D SpaceMouse 操作
+
+**整体架构：异步 actor-learner**
+
+```
+Actor（机器人端）                  Learner（训练端）
+─────────────────                ─────────────────
+持续执行策略                      从混合 buffer 采样训练
+↓                                ↓
+采集 transition tuples           更新 LoRA 参数
+↓                                ↓
+遇到失败 → 人工干预纠正           定期广播新权重给 Actor
+↓                                ↓
+干预轨迹写入专用 buffer           Actor 热加载新权重继续跑
+```
+
+Actor 和 Learner 是并发的——Actor 不等待 Learner 更新完才继续跑，Learner 也不阻塞 Actor 采集数据。
+
+**人工在环（Human-in-the-Loop）**：
+
+真机 RL 不是全自动的。当策略执行失败或即将出错时，操作员通过 SpaceMouse 介入纠正。这些人工干预轨迹会被专门存入一个 demonstration buffer，和自动 rollout buffer 分开保存。Learner 训练时从两个 buffer 混合采样（mixed mini-batch），确保模型不会遗忘正确的行为模式。
+
+**为什么用 LoRA 而不是全参数更新**：
+
+真机 RL 只更新 LoRA 参数（rank r=32，注入所有 attention 层），冻结 base model。原因有三：
+
+1. **计算效率**：单张 4090 上做全参数 RL 训练不现实，LoRA 大幅降低显存和计算量；
+2. **稳定更新**：真机数据量少且噪声大，全参数更新容易导致策略崩溃，LoRA 约束了更新空间；
+3. **热加载**：Learner 完成更新后把 LoRA 权重广播给 Actor，Actor 可以无缝切换新权重而不中断执行。
+
+**训练目标：BC + Q-guided policy improvement**
+
+这也是和 LIBERO 仿真 RL 最大的区别——真机不用 PPO/GAE。
+
+LIBERO 仿真 RL 用的是 PPO 风格的 clipped objective + GAE 算 advantage，优化的是"新旧策略的概率比值"。真机 RL 用的是完全不同的组合：
+
+- **Behavior Cloning（λ_BC = 1.0）**：对 demonstration buffer 里的样本做模仿学习，让模型保持在正确行为附近；
+- **Q-guided policy improvement（λ_Q = 0.5）**：用学到的 Q 函数引导策略向高价值方向改进，类似 DDPG 风格的确定型策略优化。
+
+Critic 用 one-step TD target（γ=0.98），target value 软更新（τ=0.005）。Critic 更新频率是 Actor 的 2 倍（2:1 更新比）。
+
+**奖励设计**：
+
+真机没有仿真里自动判断任务成功的 verifier，所以奖励是人工给的：
+
+- **终端奖励**：操作员确认任务完成时给 `+10`
+- **步数惩罚**：每一步 `-0.05`，鼓励模型走更高效的轨迹
+
+**训练启动和超参**：
+
+- 收集满 500 条 transition 后才开始在线优化
+- 学习率 1e-5，AdamW，weight decay=0，梯度裁剪 norm=1.0
+- 梯度累积 16 步，每路 micro-batch=2，等效 batch size ≈ 32
+- SFT warm-up：每个任务 30 条专家轨迹，1K iterations，固定 latent 长度 8
+
+**真机 RL vs LIBERO 仿真 RL 对比**：
+
+| 维度 | LIBERO 仿真 RL | 真机 RL |
+|---|---|---|
+| 更新方式 | 同步（collect → train 循环） | 异步 actor-learner |
+| 参数更新 | 全参数 | 仅 LoRA（r=32） |
+| 训练目标 | PPO clipped + GAE + latent/transition loss | BC + Q-guided policy improvement |
+| Advantage 计算 | GAE（γ=0.99, λ=0.95） | One-step TD（γ=0.98） |
+| 奖励信号 | 仿真自动判断（稀疏 0/1） | 人工确认（+10 成功 / -0.05 步数） |
+| 干预机制 | 无 | 人工 SpaceMouse 干预，存入专用 buffer |
+| 数据量 | 1 trajectory/task warm-up | 30 trajectories/task SFT warm-up |
+| Latent 长度 | 多任务随机 {2,4,6,8} | 单任务固定 8 |
+
+关键洞察：仿真 RL 追求的是"从极少量数据快速探索"（one-shot + 稀疏奖励），所以用 PPO 做保守的策略更新来防止探索崩溃。真机 RL 面对的是完全不同的挑战——物理噪声、视觉域差、安全约束——所以走的是"少量 SFT 打底 + BC 保持行为锚 + Q 函数引导改进"的稳健路线，外加人工干预兜底。
+
 ### 8.4 泛化和执行效率
 
 论文还从两个角度解释为什么 latent reasoning 有帮助：
@@ -365,6 +454,12 @@ Long suite 上的曲线差距直接证明了 latent reasoning 对长任务不是
 ![Generalization analysis (detailed)](assets/last-r1-share/appd_gen.jpg)
 
 *附录图 10：LIBERO OOD 泛化曲线详情（论文附录 §Additional Generalization Analysis）。每个 LIBERO suite 展示 2 个代表性 held-out task，共 8 个子图。横轴是 RL 训练步数，纵轴是 held-out task 上的成功率 SR。红色 = LaST-R1 + LAPO，蓝色 = Action-Only + PPO。*
+
+> **Figure 10: Generalization analysis on LIBERO.** For each task suite, models are warmed up with one trajectory per task, followed by online RL training on 9 tasks, with the remaining 1 task for evaluation. While the out-of-distribution performance of the Action-Only PPO baseline (blue) stagnates, our LaST-R1 with LAPO (red) demonstrates continuous generalization improvements across all task suites.
+
+这张图的核心问题是：**在线 RL 训练会不会只把训练任务刷高，还是能真正提升对未见任务的泛化？** 它不是普通的"训练集成功率曲线"，而是 OOD generalization 曲线。
+
+**实验设置**：LIBERO 每个 suite 有 10 个任务（Spatial: 10 个空间操作任务、Object: 10 个物体操作任务、Goal: 10 个目标导向任务、Long: 10 个长程任务）。每个 suite 中选 9 个任务做 online RL 训练，剩下 1 个任务完全不参与 RL 训练，用这个 held-out task 测试 OOD 成功率。也就是说，**图上测试的是：模型在训练 9 个任务的过程中，对第 10 个没训练过的任务表现有没有变好。**
 
 上图列出了每个 suite 的 2 个 held-out task，其关键趋势如下：
 
