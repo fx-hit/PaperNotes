@@ -1,0 +1,1014 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VGGT-Ω: Scaling Feed-Forward Reconstruction Models</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #ffffff;
+    --text: #1a1a2e;
+    --text-secondary: #555;
+    --border: #e1e4e8;
+    --link: #0969da;
+    --table-stripe: #f6f8fa;
+    --heading: #0d1117;
+    --blockquote-border: #0969da;
+    --blockquote-bg: #f0f6ff;
+    --inline-code: #d73a49;
+    --inline-code-bg: #f6f8fa;
+    --sidebar-width: 260px;
+    --toc-active: #0969da;
+    --content-max-width: 900px;
+    --content-padding: 48px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "Inter", "Noto Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 16px;
+    line-height: 1.75;
+    color: var(--text);
+    background: var(--bg);
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    width: var(--sidebar-width);
+    overflow-y: auto;
+    padding: 28px 20px 40px;
+    background: #fafbfc;
+    border-right: 1px solid var(--border);
+    z-index: 10;
+    scrollbar-width: thin;
+  }
+  .sidebar-title {
+    font-size: 13px; font-weight: 700; color: var(--text-secondary);
+    margin-bottom: 16px; letter-spacing: 0.06em; text-transform: uppercase;
+  }
+  .toc-list { list-style: none; padding: 0; margin: 0; }
+  .toc-list ul { list-style: none; padding-left: 14px; }
+  .toc-list li { margin: 1px 0; }
+  .toc-list a {
+    display: block; padding: 4px 12px; font-size: 13.5px; line-height: 1.45;
+    color: var(--text-secondary); text-decoration: none; border-radius: 4px;
+    border-left: 2px solid transparent; transition: all 0.15s;
+  }
+  .toc-list a:hover { color: var(--link); background: #e8f0fe; }
+  .toc-list a.active {
+    color: var(--toc-active); font-weight: 600;
+    border-left-color: var(--toc-active); background: #e8f0fe;
+  }
+  .toc-h1 a { font-weight: 600; color: var(--heading); font-size: 14px; }
+  .toc-h3 a { padding-left: 24px; font-size: 13px; }
+  .toc-h4 a { padding-left: 36px; font-size: 12.5px; }
+  .toc-empty { color: var(--text-secondary); font-size: 13px; font-style: italic; }
+
+  .main-wrapper {
+    margin-left: var(--sidebar-width);
+    min-height: 100vh;
+    display: flex; justify-content: center;
+  }
+  .content-inner {
+    width: 100%;
+    max-width: var(--content-max-width);
+    padding: 40px var(--content-padding) 80px;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    color: var(--heading); font-weight: 700; line-height: 1.3;
+    margin-top: 2em; margin-bottom: 0.6em; scroll-margin-top: 24px;
+  }
+  h1 { font-size: 2em; border-bottom: 2px solid var(--border); padding-bottom: 0.3em; margin-top: 0; }
+  h2 { font-size: 1.5em; border-bottom: 1px solid var(--border); padding-bottom: 0.25em; }
+  h3 { font-size: 1.25em; }
+  h4 { font-size: 1.1em; }
+  p { margin-bottom: 1em; }
+  a { color: var(--link); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  strong { font-weight: 600; }
+
+  blockquote {
+    border-left: 4px solid var(--blockquote-border);
+    background: var(--blockquote-bg);
+    padding: 12px 20px; margin: 1em 0;
+    border-radius: 0 6px 6px 0; color: var(--text-secondary);
+  }
+  blockquote p:last-child { margin-bottom: 0; }
+
+  code {
+    font-family: "JetBrains Mono", "SF Mono", "Fira Code", monospace;
+    font-size: 0.875em; background: var(--inline-code-bg);
+    padding: 2px 6px; border-radius: 4px; color: var(--inline-code);
+  }
+  pre {
+    background: #1e1e2e; color: #cdd6f4;
+    border-radius: 8px; padding: 16px 20px; overflow-x: auto;
+    margin: 1em 0; font-size: 14px; line-height: 1.55;
+  }
+  pre code { background: none; padding: 0; border-radius: 0; color: inherit; font-size: inherit; }
+
+  .codehilite { background: #1e1e2e; border-radius: 8px; padding: 16px 20px; overflow-x: auto; margin: 1em 0; }
+  .codehilite pre { background: none; padding: 0; margin: 0; border-radius: 0; }
+  .codehilite .hll { background-color: #2a2a3e; }
+  .codehilite .c  { color: #6c7086; font-style: italic; }
+  .codehilite .k  { color: #cba6f7; }
+  .codehilite .o  { color: #89b4fa; }
+  .codehilite .s  { color: #a6e3a1; }
+  .codehilite .n  { color: #cdd6f4; }
+  .codehilite .p  { color: #bac2de; }
+  .codehilite .mi { color: #fab387; }
+  .codehilite .nf { color: #89b4fa; }
+  .codehilite .nb { color: #f38ba8; }
+  .codehilite .nc { color: #f9e2af; }
+  .codehilite .bp { color: #f38ba8; }
+
+  table { width: 100%; border-collapse: collapse; margin: 1em 0; font-size: 0.925em; }
+  th, td { border: 1px solid var(--border); padding: 10px 14px; text-align: left; }
+  th { background: var(--table-stripe); font-weight: 600; color: var(--heading); }
+  tr:nth-child(even) td { background: var(--table-stripe); }
+
+  .math.display { display: block; overflow-x: auto; padding: 12px 0; margin: 1em 0; }
+  ul, ol { padding-left: 1.5em; margin-bottom: 1em; }
+  li { margin-bottom: 0.3em; }
+  hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+  img { max-width: 100%; height: auto; border-radius: 6px; margin: 0.5em 0; }
+  p:has(img) { text-align: center; }
+  p:has(img) + p { text-align: center; font-size: 0.9em; color: var(--text-secondary); }
+  .mermaid { text-align: center; margin: 1.5em 0; background: #fafbfc; border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+
+  @media (max-width: 1024px) {
+    .sidebar { position: static; width: 100%; height: auto; max-height: 35vh; border-right: none; border-bottom: 1px solid var(--border); }
+    .main-wrapper { margin-left: 0; display: block; }
+    .content-inner { max-width: none; padding: 24px 20px 60px; }
+  }
+</style>
+
+<script>
+MathJax = {
+  tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']], processEscapes: true, tags: 'none' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] }
+};
+</script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  mermaid.initialize({ startOnLoad: true, theme: 'neutral', securityLevel: 'loose' });
+});
+</script>
+
+</head>
+<body>
+
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-title">目录</div>
+  <ul class="toc-list">
+<li class="toc-h1"><a href="#vggt-scaling-feed-forward-reconstruction-models">VGGT-Ω: Scaling Feed-Forward Reconstruction Models</a>
+<ul>
+</li>
+<li class="toc-h2"><a href="#_1">一、核心问题</a>
+</li>
+<li class="toc-h2"><a href="#_2">二、核心思路 / 方法</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#21-register-attention">2.1 架构改进：Register Attention（寄存器注意力）</a>
+</li>
+<li class="toc-h3"><a href="#22">2.2 解码头简化</a>
+</li>
+<li class="toc-h3"><a href="#23">2.3 动态场景支持</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_3">三、训练目标与数据</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#31">3.1 多任务损失</a>
+</li>
+<li class="toc-h3"><a href="#32">3.2 标注管线</a>
+</li>
+<li class="toc-h3"><a href="#33">3.3 自监督训练</a>
+</li>
+<li class="toc-h3"><a href="#34">3.4 数据质量的重要性</a>
+</li>
+<li class="toc-h3"><a href="#35">3.5 动态场景处理策略</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_4">四、实验与结果</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#41-scaling">4.1 Scaling 行为</a>
+</li>
+<li class="toc-h3"><a href="#42">4.2 相机位姿估计</a>
+</li>
+<li class="toc-h3"><a href="#43">4.3 深度估计</a>
+</li>
+<li class="toc-h3"><a href="#44">4.4 推理效率</a>
+</li>
+<li class="toc-h3"><a href="#45-ablation-studies">4.5 Ablation Studies</a>
+</li>
+<li class="toc-h3"><a href="#46">4.6 定性对比</a>
+</li>
+<li class="toc-h3"><a href="#47-registers">4.7 Registers 的下游应用</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_5">五、关键洞察与技术亮点</a>
+</li>
+<li class="toc-h2"><a href="#_6">六、代码实现解读</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#61">6.1 整体架构</a>
+</li>
+<li class="toc-h3"><a href="#62">6.2 关键代码映射</a>
+</li>
+<li class="toc-h3"><a href="#63">6.3 推理流程</a>
+</li>
+<li class="toc-h3"><a href="#64">6.4 代码设计要点</a>
+</li>
+<li class="toc-h3"><a href="#65">6.5 模型变体配置</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_7">七、局限性</a>
+</li>
+<li class="toc-h2"><a href="#_8">八、关键概念速查</a>
+</li>
+<li class="toc-h2"><a href="#_9">训练配置速查</a>
+</ul></li>
+</li></ul>
+</nav>
+
+<main class="main-wrapper">
+  <div class="content-inner" id="main-content">
+<h1 id="vggt-scaling-feed-forward-reconstruction-models">VGGT-Ω: Scaling Feed-Forward Reconstruction Models</h1>
+<blockquote>
+<p><strong>论文信息</strong>
+- 作者：Jianyuan Wang, Minghao Chen, Shangzhan Zhang, Nikita Karaev, Johannes Schönberger, Patrick Labatut, Piotr Bojanowski, David Novotny, Andrea Vedaldi, Christian Rupprecht
+- 通讯作者：Jianyuan Wang（VGG, University of Oxford / Meta AI）
+- 投稿方向：CVPR 2026 <strong>Oral</strong>
+- arXiv ID：2605.15195
+- 代码：https://github.com/facebookresearch/vggt-omega
+- 项目页：http://vggt-omega.github.io/</p>
+</blockquote>
+<hr />
+<h2 id="_1">一、核心问题</h2>
+<p>前馈重建模型（feed-forward reconstruction models）如 VGGT 已证明可以在许多场景下匹敌甚至超越传统 SfM 管线，但它们能否像语言/2D 视觉基础模型一样通过<strong>扩大模型和数据规模</strong>获得可预测的性能提升？这个问题在 3D 视觉中尚未被充分探索。</p>
+<p>本文的核心问题是：<strong>多视图前馈重建模型是否可以 scaling？以及 scaling 能带来什么好处？</strong></p>
+<h2 id="_2">二、核心思路 / 方法</h2>
+<p>VGGT-Ω 在 VGGT 基础上做了三个层面的改进：</p>
+<h3 id="21-register-attention">2.1 架构改进：Register Attention（寄存器注意力）</h3>
+<p><strong>核心设计</strong>：为每帧图像引入 16 个可学习的"寄存器"（register / scene token），在部分全局注意力层（默认 25%）中，跨帧信息交换<strong>仅通过寄存器进行</strong>。Camera token 和 Register tokens 在 register attention 层中进行跨帧交互，聚合全局场景信息；随后在 frame attention 层中，更新后的寄存器将信息重新分配给每帧的 patch tokens。Patch tokens 本身不参与跨帧 attention，大幅节省计算量。</p>
+<p><img alt="图1：架构总览" src="assets/architecture_v8.jpg" /></p>
+<p><em>图1：VGGT-Ω 整体架构总览。输入图像先通过 DINOv3 编码为 patch tokens，每帧附加 1 个 camera token 和 16 个 register（scene）tokens。交替使用 global attention（或 register attention）和 frame attention 进行特征聚合。最终通过 Camera Head 预测 9D 相机编码，通过 Dense Head（DPT 低分辨率卷积 + MLP + Pixel Shuffle）预测深度和置信度。相比 VGGT，去除了多个冗余密集预测头，仅保留训练损失的多任务监督。</em></p>
+<p>两个关键好处：</p>
+<ol>
+<li><strong>效率提升</strong>：替换 25% 的全局注意力层为 register attention，训练 GPU 内存节省约 70%（相比原 VGGT），FLOPs 减少约 23%</li>
+<li><strong>学到有用的全局表征</strong>：寄存器自然地聚合了场景级信息，且未经显式监督就能用于 VLA 模型和语言对齐</li>
+</ol>
+<h3 id="22">2.2 解码头简化</h3>
+<p>VGGT 原来有多个密集预测头（depth、point map、tracking features），其中的高分辨率卷积层（DPT）虽然参数量不大，但需要保存大量前向激活值，内存开销巨大。VGGT-Ω 做了三项简化：</p>
+<ul>
+<li><strong>单密集头 + 多任务损失</strong>：只保留一个 depth 预测头，但通过 unprojection 间接监督 point map 和 matching loss</li>
+<li><strong>MLP + Pixel Shuffle 替代高分辨率卷积</strong>：1/4 分辨率以上的卷积层被替换为单个 MLP + pixel shuffle 上采样</li>
+<li><strong>Camera head 单次预测</strong>：不再迭代优化，一次前向直接输出 camera parameters</li>
+</ul>
+<h3 id="23">2.3 动态场景支持</h3>
+<p>VGGT-Ω 通过只预测 depth + camera（不预测显式的动态输出如 motion mask），将动态场景处理内化到模型的数据驱动先验中。这避免了需要分割运动像素或引入动态点图的复杂性，同时解锁了海量互联网视频数据。</p>
+<p><img alt="图2：Global Attention 稀疏性" src="assets/vgg_visualization.jpg" /></p>
+<p><em>图2：VGGT 中 Global Attention 的稀疏性可视化。</em></p>
+<p><strong>子图 (a)</strong>：输入的多帧图像。</p>
+<p><strong>子图 (b)</strong>：第 13 层全局注意力矩阵的可视化。横轴和纵轴分别代表所有帧的所有 tokens，颜色深浅表示注意力权重大小。可以看到注意力矩阵整体非常稀疏——大部分 token 对之间的注意力权重接近于零，只有少数 token 对（亮度较高的点）存在显著的信息交换。这说明全量全局注意力中大量计算是冗余的。</p>
+<p><strong>子图 (c)</strong>：注意力值的分布直方图。横轴为注意力值，纵轴为频率。分布高度集中在接近零的区域，进一步量化了稀疏性：绝大多数 token 间的注意力权重极小。</p>
+<p><strong>子图 (d)</strong>：空间注意力热力图。将特定 query token 对所有 key tokens 的注意力权重重映射回图像空间，高亮区域表示该 query 关注的位置。可以看到注意力集中在少数几个显著区域，而非均匀分布。</p>
+<p><em>这一观察直接启发了 register attention 的设计：既然只有少量 tokens 需要跨帧交换信息，不如显式地通过 register tokens 来集中这些信息交换。</em></p>
+<hr />
+<h2 id="_3">三、训练目标与数据</h2>
+<h3 id="31">3.1 多任务损失</h3>
+<p>虽然模型只输出 depth 和 camera，但训练时使用四个损失：</p>
+<p><div class="math display">$$\mathcal{L} = \lambda_{\text{cam}} \mathcal{L}_{\text{cam}} + \lambda_{\text{depth}} \mathcal{L}_{\text{depth}} + \lambda_{\text{point}} \mathcal{L}_{\text{point}} + \lambda_{\text{match}} \mathcal{L}_{\text{match}}$$</div></p>
+<ul>
+<li><strong>Camera loss</strong>：L1 loss（比 Huber loss 更稳定），权重 5.0</li>
+<li><strong>Depth loss</strong>：带 aleatoric uncertainty + 梯度一致性的 loss，权重 1.0</li>
+<li><strong>Point loss</strong>：通过 unprojection 从 depth + camera 推导 point map 进行监督，权重 0.5</li>
+<li><strong>Matching loss</strong>：对最后层 token 做对比学习（cosine similarity + BCE），权重 0.1</li>
+</ul>
+<h3 id="32">3.2 标注管线</h3>
+<p>为了处理动态内容，设计了一套高质量标注管线：</p>
+<div class="codehilite"><pre><span></span><code> 40M Internet Videos
+        │
+        ▼
+  ┌──────────────────┐
+  │ VLM 预过滤        │ → 保留 ~10% 可重建的视频
+  │ (过滤水印/转场等)  │
+  └──────┬───────────┘
+         ▼
+  ┌──────────────────┐
+  │ 动态 Mask 提取     │ → Grounding DINO 检测人/车等
+  │ (排除动态区域)     │
+  └──────┬───────────┘
+         ▼
+  ┌──────────────────┐
+  │ 特征匹配 &amp; 追踪    │ → SIFT + SuperPoint/SuperGlue
+  │ (多方法集成)       │   + ALIKED/LightGlue + VGGSfM
+  └──────┬───────────┘
+         ▼
+  ┌──────────────────┐
+  │ VGGT 初始化 +      │ → RANSAC → VGGT 初始化位姿
+  │ COLMAP BA         │   → COLMAP 迭代优化
+  └──────┬───────────┘
+         ▼
+  ┌──────────────────┐
+  │ 多视角一致性检查   │ → 深度投影验证，&lt;5% 有效像素则丢弃
+  └──────┬───────────┘
+         ▼
+  ┌──────────────────┐
+  │ 监督几何过滤       │ → XGBoost + RandomForest + CatBoost
+  │ (分类器去除低质量) │   用500静态+500动态人工标注训练
+  └──────┬───────────┘
+         ▼
+  ~0.8M 高质量序列（1/3 动态，2/3 静态）
+  + ~3M 公开数据集序列 = 总共 ~4M 序列
+</code></pre></div>
+
+<p><em>训练数据标注管线流程。从 40M 互联网视频中经过 VLM 预过滤、动态 mask、多方法匹配、COLMAP 优化、多视角验证和分类器过滤，最终保留约 0.8M 高质量序列。标注管线优先质量而非数量。</em></p>
+<h3 id="33">3.3 自监督训练</h3>
+<p>受 DINO 启发，采用 teacher-student 动量蒸馏方案：</p>
+<ul>
+<li>Teacher 和 student 都以监督训练后的 VGGT-Ω checkpoint 初始化</li>
+<li>同一视频序列，不同 augmentation（color jitter、随机 90° 旋转、patch masking、帧重排）</li>
+<li>Student 匹配 teacher 的 token 特征和 depth/camera 预测</li>
+<li>Teacher 通过 EMA（decay=0.999）更新</li>
+<li>Camera 和 depth head <strong>冻结</strong>，防止坍缩</li>
+<li>在 18M 未标注视频上训练</li>
+</ul>
+<h3 id="34">3.4 数据质量的重要性</h3>
+<p>论文特别强调了标注数据质量的关键性。噪音数据会导致训练中的特定 failure mode：</p>
+<ul>
+<li><strong>传感器数据的前景-背景泄漏</strong>：ScanNet++ 中椅子背部被标注为墙壁深度</li>
+<li><strong>合成数据中的"假背景"</strong>：Kubric 等数据集中背景深度对应 HDRI 穹顶而非实际几何</li>
+<li><strong>BA 的穹顶效应（doming effect）</strong>：弱全局约束下 BA 产生全局弯曲的重建</li>
+<li><strong>细薄结构标注不完整</strong>：栅栏等细结构的渲染深度可能被误标为背后的墙壁</li>
+</ul>
+<p><img alt="图3：常见数据质量问题" src="assets/data_v3.jpg" /></p>
+<p><em>图3：训练数据中四类常见的标注质量问题。</em></p>
+<p><strong>第一行—传感器数据的前景-背景泄漏（ScanNet++）</strong>：椅子背部的深度被标注为背景地板或墙壁的深度值，而非椅子本身。吊灯周围的碎片化前景结构也表明传感器在过曝和半透明物体附近的捕获不可靠。此类数据在训练后期被排除。</p>
+<p><strong>第二行—合成数据中的细薄结构标注不完整（Hypersim）</strong>：栅栏等仅占几个像素的细薄结构，其渲染深度可能缺失、过度平滑或错位，导致标注将栅栏的深度赋给背后的墙壁、窗户或地面。这使模型倾向于忽略细薄物体或将其深度"冲刷"到附近大表面上。</p>
+<p><strong>第三行—合成数据中的"假背景"（Kubric/PointOdyssey）</strong>：背景深度对应 HDRI 渲染用的代理穹顶或地面几何，而非背景外观所暗示的真实 3D 结构。对于前景和背景有明显边界的（如 BEDLAM），通过阈值过滤；其余直接排除。</p>
+<p><strong>第四行—BA 的穹顶效应（Doming Effect）</strong>：当图像集合缺乏足够的全局约束时（如近平行拍摄方向、缺少回环、三角化角度小、径向畸变误差），BA 可能收敛到全局弯曲的退化解。虽然重投影误差低，但相机和场景的整体几何是扭曲的。通过监督几何分类器过滤。</p>
+<h3 id="35">3.5 动态场景处理策略</h3>
+<p>动态场景训练的关键设计选择：</p>
+<ul>
+<li>只预测 <strong>depth + camera</strong>，不预测 point map 或 motion mask</li>
+<li>动态区域的深度标注在管线中<strong>被丢弃</strong>，模型从合成数据中学习动态区域的深度</li>
+<li>通过构造 challenging 的训练子集（从局部时间窗口采样帧），增强泛化能力</li>
+</ul>
+<hr />
+<h2 id="_4">四、实验与结果</h2>
+<h3 id="41-scaling">4.1 Scaling 行为</h3>
+<p><img alt="图4：Scaling" src="assets/scale_v5_vector.jpg" /></p>
+<p><em>图4：模型和数据规模的 scaling 曲线（以 point error 为指标）。</em></p>
+<p><strong>子图 (a) 模型规模 scaling</strong>：在固定数据量下，将模型从 0.2B 扩展到 10B 参数（12→24 层、384→4096 隐层维度），point error 从约 0.25 单调下降至约 0.07。符合幂律规律。</p>
+<p><strong>子图 (b) 数据规模 scaling</strong>：在固定模型大小下，训练序列从几千扩展到 2M，point error 从 0.275 单调下降至 0.073。每增加 10× 数据都带来显著提升，同样符合幂律规律。</p>
+<h3 id="42">4.2 相机位姿估计</h3>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th style="text-align: center;">7 Scenes AUC@3°</th>
+<th style="text-align: center;">NRGBD AUC@3°</th>
+<th style="text-align: center;">ETH3D AUC@3°</th>
+<th style="text-align: center;">DyCheck AUC@3°</th>
+<th style="text-align: center;">Sintel AUC@3°</th>
+<th style="text-align: center;">TUM-Dyn AUC@3°</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>MonST3R</td>
+<td style="text-align: center;">9.0</td>
+<td style="text-align: center;">13.9</td>
+<td style="text-align: center;">1.7</td>
+<td style="text-align: center;">11.5</td>
+<td style="text-align: center;">4.3</td>
+<td style="text-align: center;">7.7</td>
+</tr>
+<tr>
+<td>MapAnything</td>
+<td style="text-align: center;">5.8</td>
+<td style="text-align: center;">35.2</td>
+<td style="text-align: center;">13.2</td>
+<td style="text-align: center;">6.1</td>
+<td style="text-align: center;">2.9</td>
+<td style="text-align: center;">4.3</td>
+</tr>
+<tr>
+<td>MegaSaM</td>
+<td style="text-align: center;">10.6</td>
+<td style="text-align: center;">17.2</td>
+<td style="text-align: center;">5.9</td>
+<td style="text-align: center;">26.8</td>
+<td style="text-align: center;">22.5</td>
+<td style="text-align: center;">15.4</td>
+</tr>
+<tr>
+<td>VGGT</td>
+<td style="text-align: center;">10.9</td>
+<td style="text-align: center;">81.7</td>
+<td style="text-align: center;">18.8</td>
+<td style="text-align: center;">21.0</td>
+<td style="text-align: center;">15.0</td>
+<td style="text-align: center;">16.6</td>
+</tr>
+<tr>
+<td>PI3</td>
+<td style="text-align: center;">13.3</td>
+<td style="text-align: center;">83.8</td>
+<td style="text-align: center;">35.3</td>
+<td style="text-align: center;">23.3</td>
+<td style="text-align: center;">14.8</td>
+<td style="text-align: center;">16.1</td>
+</tr>
+<tr>
+<td>DA3</td>
+<td style="text-align: center;">18.7</td>
+<td style="text-align: center;">86.4</td>
+<td style="text-align: center;">46.1</td>
+<td style="text-align: center;">32.1</td>
+<td style="text-align: center;">16.2</td>
+<td style="text-align: center;">20.8</td>
+</tr>
+<tr>
+<td><strong>Ours-1B</strong></td>
+<td style="text-align: center;"><strong>29.6</strong></td>
+<td style="text-align: center;"><strong>89.7</strong></td>
+<td style="text-align: center;"><strong>49.8</strong></td>
+<td style="text-align: center;"><strong>38.4</strong></td>
+<td style="text-align: center;"><strong>35.3</strong></td>
+<td style="text-align: center;"><strong>30.2</strong></td>
+</tr>
+<tr>
+<td><strong>Ours-10B</strong></td>
+<td style="text-align: center;"><strong>36.4</strong></td>
+<td style="text-align: center;"><strong>92.5</strong></td>
+<td style="text-align: center;"><strong>56.3</strong></td>
+<td style="text-align: center;"><strong>43.7</strong></td>
+<td style="text-align: center;"><strong>40.0</strong></td>
+<td style="text-align: center;"><strong>36.4</strong></td>
+</tr>
+</tbody>
+</table>
+<p>关键发现：</p>
+<ul>
+<li>在 Sintel 上，AUC@3° 从 MegaSaM 的 22.5 → 40.0（<strong>+77%</strong>），AUC@30° 从 58.3 → 79.1（<strong>+35%</strong>）</li>
+<li>在所有静态和动态 benchmark 上均大幅领先</li>
+<li>Optimization-based 方法（MegaSaM）在 Sintel 严格阈值上较有竞争力，但在宽基线场景（ETH3D）严重退化</li>
+<li>10B 模型始终优于 1B 模型，scaling 直接转化为精度提升</li>
+</ul>
+<h3 id="43">4.3 深度估计</h3>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th style="text-align: center;">Sintel δ₁.₂₅</th>
+<th style="text-align: center;">Sintel AbsRel</th>
+<th style="text-align: center;">ETH3D δ₁.₂₅</th>
+<th style="text-align: center;">ETH3D AbsRel</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>VGGT</td>
+<td style="text-align: center;">79.2</td>
+<td style="text-align: center;">0.189</td>
+<td style="text-align: center;">97.4</td>
+<td style="text-align: center;">0.036</td>
+</tr>
+<tr>
+<td>MegaSaM</td>
+<td style="text-align: center;">74.1</td>
+<td style="text-align: center;">0.207</td>
+<td style="text-align: center;">94.8</td>
+<td style="text-align: center;">0.083</td>
+</tr>
+<tr>
+<td>DA3</td>
+<td style="text-align: center;">86.1</td>
+<td style="text-align: center;">0.118</td>
+<td style="text-align: center;">99.6</td>
+<td style="text-align: center;">0.015</td>
+</tr>
+<tr>
+<td><strong>Ours-1B</strong></td>
+<td style="text-align: center;"><strong>89.5</strong></td>
+<td style="text-align: center;"><strong>0.097</strong></td>
+<td style="text-align: center;"><strong>99.8</strong></td>
+<td style="text-align: center;"><strong>0.012</strong></td>
+</tr>
+<tr>
+<td><strong>Ours-10B</strong></td>
+<td style="text-align: center;"><strong>93.5</strong></td>
+<td style="text-align: center;"><strong>0.081</strong></td>
+<td style="text-align: center;"><strong>99.8</strong></td>
+<td style="text-align: center;"><strong>0.009</strong></td>
+</tr>
+</tbody>
+</table>
+<p>关键发现：</p>
+<ul>
+<li>Sintel 上 δ₁.₂₅ 从 DA3 的 86.1 → 93.5（<strong>+8.6%</strong>）</li>
+<li>静态数据集上已经在天花板附近（ETH3D δ₁.₂₅ 99.8%），动态数据集上仍有显著提升</li>
+</ul>
+<h3 id="44">4.4 推理效率</h3>
+<p><img alt="图5：Memory/Speed" src="assets/mem_speed_v2_vector.jpg" /></p>
+<p><em>图5：VGGT、DA3 和 VGGT-Ω 的推理内存和速度对比（单张 A100 80GB）。</em></p>
+<p><strong>子图 (a) GPU 内存</strong>：VGGT（修正后）和 VGGT-Ω 内存使用相似，均可处理超过 1,000 帧（单卡 A100）。DA3 在约 750 帧时 OOM。关键洞察：Flash Attention v2 不会显式存储完整 attention 矩阵，内存峰值主要由与帧数和 token 数成正比的 tensor（frame-attention 激活值和 FFN 中间结果）决定。内存随帧数<strong>近似线性</strong>增长。</p>
+<p><strong>子图 (b) 推理速度</strong>：VGGT-Ω 比 VGGT 快 20–25%，主要得益于：(1) DINOv3 的 patch_size=16（vs DINOv2 的 14），token 数减少约 25%；(2) 25% 全局注意力替换为 register attention。全 register attention 变体在 1000 帧上的推理时间从 240.2s 降至 11.7s（速度提升约 20×），但精度会显著下降。</p>
+<h3 id="45-ablation-studies">4.5 Ablation Studies</h3>
+<table>
+<thead>
+<tr>
+<th>实验配置</th>
+<th style="text-align: center;">Point Error</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>全全局注意力（无 register attention）</td>
+<td style="text-align: center;">0.071</td>
+</tr>
+<tr>
+<td>25% register attention（<strong>默认</strong>）</td>
+<td style="text-align: center;">0.073</td>
+</tr>
+<tr>
+<td>移除 point + matching loss</td>
+<td style="text-align: center;">0.078</td>
+</tr>
+<tr>
+<td>VGGT 原版多任务多头（reference）</td>
+<td style="text-align: center;">0.070</td>
+</tr>
+<tr>
+<td>添加 10% 自监督训练步</td>
+<td style="text-align: center;">0.070</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>Register attention 替代 25% 全局注意力几乎无损（+0.002）</li>
+<li>Multi-task losses（即使无对应 head）仍有明显收益（0.073 → 0.078）</li>
+<li>自监督训练略微提升 + 改善 OOD 泛化</li>
+</ul>
+<h3 id="46">4.6 定性对比</h3>
+<p><img alt="图6：定性结果" src="assets/qual_v6.jpg" /></p>
+<p><em>图6：VGGT-Ω 在多样场景上的定性重建结果（每个场景标注了所用帧数）。</em></p>
+<p><strong>子图 (a) 交通场景（64 帧）</strong>：叠加的车流轨迹展示了模型对动态内容的高质量处理——移动的车辆被正确重建为独立的 3D 结构，未被吸收到静态背景中。注意模型仅预测 depth 和 camera，不预测 motion mask，但仍能自然地处理运动物体。</p>
+<p><strong>子图 (b) 网球比赛（4 帧）</strong>：尽管只有 4 帧输入，运动员轨迹和球场结构的空间关系保持一致。模型对快速人体运动的几何先验来自大规模动态数据训练。</p>
+<p><strong>子图 (c) 自然景观（9 帧）</strong>：在充满重复纹理的山地场景中保持全局几何一致性，未出现纹理重复导致的匹配错误。</p>
+<p><strong>子图 (d) 水下珊瑚礁（16 帧）</strong>：极端非自然光照和复杂几何条件下，模型仍恢复出连贯的 3D 结构。此类场景在训练数据中极为罕见，体现了强泛化能力。</p>
+<p><strong>子图 (e) 室内场景（32 帧）</strong>：大场景下恢复出合理的全局结构，无尺度漂移或全局弯曲。</p>
+<p><img alt="图7：与 DA3 对比" src="assets/qual_comp_to_da3.jpg" /></p>
+<p><em>图7：与 Depth Anything 3（DA3）在困难场景上的定性对比。</em></p>
+<p><strong>左侧—雪地缆车序列</strong>：白雪覆盖的田野形成大量重复纹理，DA3 因此几乎无法估计相机运动（将其误判为静止场景），重建结果表现为一簇混乱的 3D 点。VGGT-Ω 正确恢复了相机的前向运动轨迹和缆车的 3D 结构。这体现了 VGGT-Ω 的几何先验对纹理歧义的鲁棒性。</p>
+<p><strong>右侧—无人机环绕塔楼序列</strong>：无人机在飞行过程中发生大幅相机旋转（roll）。在这种强视角变化下，DA3 产生了严重的"鬼影"效应——将同一座塔楼重复重建为多个重叠副本，全局几何完全崩溃。VGGT-Ω 的重建保持全局一致，塔楼结构完整无重复。这表明 VGGT-Ω 的 camera estimation 在极端旋转条件下比 DA3 更可靠。</p>
+<p><img alt="图8：与 MegaSaM 定性对比" src="assets/qual_supp_v10.jpg" /></p>
+<p><em>图8：与 MegaSaM 在困难场景上的定性对比。</em></p>
+<p><strong>左列—航拍场景</strong>：MegaSaM 在航拍序列中呈现严重的几何漂移和纹理涂抹（texture smearing），地面纹理被重复拉伸、全局布局扭曲。VGGT-Ω 保持了全局一致的地面重建。</p>
+<p><strong>右上—稀疏室内场景（第二帧非 upright）</strong>：该场景的第二帧相机存在明显倾斜（非 upright），使位姿估计极具挑战。MegaSaM 在缺乏纹理的墙壁区域产生不连贯的平面结构。VGGT-Ω 凭借强大的几何先验维持了合理的全局重建。</p>
+<p><strong>右下—室内纹理缺失场景</strong>：大面积白墙和弱纹理区域使 MegaSaM 的优化难以收敛，表现为错位或断裂的墙面。VGGT-Ω 的前馈推断避免了优化过程中的局部最小值问题。</p>
+<h3 id="47-registers">4.7 Registers 的下游应用</h3>
+<p><strong>VLA（Vision-Language-Action）</strong>：将冻结的 VGGT-Ω 的 scene tokens 拼接给 OpenVLA-OFT，在 LIBERO 四个子任务上均有提升：</p>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th style="text-align: center;">Spatial</th>
+<th style="text-align: center;">Object</th>
+<th style="text-align: center;">Goal</th>
+<th style="text-align: center;">Long</th>
+<th style="text-align: center;">Average</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>OpenVLA-OFT</td>
+<td style="text-align: center;">97.6</td>
+<td style="text-align: center;">98.4</td>
+<td style="text-align: center;">97.9</td>
+<td style="text-align: center;">94.5</td>
+<td style="text-align: center;">97.1</td>
+</tr>
+<tr>
+<td><strong>+ Scene Tokens</strong></td>
+<td style="text-align: center;"><strong>99.3</strong></td>
+<td style="text-align: center;"><strong>99.2</strong></td>
+<td style="text-align: center;"><strong>99.0</strong></td>
+<td style="text-align: center;"><strong>96.7</strong></td>
+<td style="text-align: center;"><strong>98.5</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>语言对齐</strong>：通过一个小的 self-attention stack + 可学习 language token 读取 registers，使用对比学习与 VLM 文本嵌入对齐。训练只需 10K iterations 即取得良好效果：</p>
+<ul>
+<li>与训练时所用 VLM 嵌入做 retrieval：Top-1 76.8%，Top-3 97.0%</li>
+<li>Zero-shot transfer 到纯文本 LLM（Qwen3）：Top-1 47.5%，Top-3 77.8%</li>
+</ul>
+<p><img alt="图9：语言对齐" src="assets/text_alignment.jpg" /></p>
+<p><em>图9：语言对齐流程。VLM 观察多帧图像生成场景描述文本，其隐藏状态被池化为语言嵌入。VGGT-Ω 侧通过可学习的 language token 从 registers 中读取信息，投影后与语言嵌入做对比学习。关键约束：language token 不能直接访问 image patch tokens，只能通过 registers 获取信息。对齐成功意味着 registers 确实携带了场景级语义信息。</em></p>
+<hr />
+<h2 id="_5">五、关键洞察与技术亮点</h2>
+<ol>
+<li>
+<p><strong>Register Attention 是一种高效的信息瓶颈</strong>：限制跨帧信息交换只通过 16 个 register tokens，既是计算优化，也是在强迫模型学习紧凑的全局场景表征。这与 ViT 中观察到的 "high-norm outlier tokens 自然携带全局信息" 现象一致。</p>
+</li>
+<li>
+<p><strong>"单头多损失" 设计是高效 scaling 的关键</strong>：虽然最终模型只输出 depth，但通过 unprojection 可以从 depth + camera 推导 point map 并施加损失。这种方式几乎保留了原 VGGT 多任务训练的好处，同时节省了一个 dense head 的内存。</p>
+</li>
+<li>
+<p><strong>Scaling 遵循幂律规律</strong>：无论是模型规模还是数据规模，point error 都呈现出可预测的幂律下降。这对未来更大规模的训练具有指导意义。</p>
+</li>
+<li>
+<p><strong>训练效率 vs 推理效率是不同的问题</strong>：论文明确指出 Flash Attention v2 使得推理时的内存瓶颈不再是 attention 矩阵（不需要显式存储），而是与帧数成正比的激活值。因此 register attention 主要<strong>加速推理</strong>而非节省推理内存。</p>
+</li>
+<li>
+<p><strong>数据质量 &gt; 数据数量</strong>：标注管线故意保守——宁可丢弃可能不准确的序列/像素，也不注入噪音监督。小批高精度伪真值优于大噪数据集。</p>
+</li>
+<li>
+<p><strong>运动感知是无监督涌现的</strong>：无需光流或运动标签，仅通过 reconstruction 目标，模型的中间层 features 通过 PCA + k-means 就能自动分离运动区域和背景。</p>
+</li>
+</ol>
+<p><img alt="图10：运动感知" src="assets/motion.jpg" /></p>
+<p><em>图10：运动感知的涌现。对中间层 tokens 做 PCA 降维 + k-means 聚类（无任何运动标签），浅层（layer 4）的一个聚类可以精确追踪移动的舞者，深层（layer 23）则同时高亮所有人。这说明模型自动学会了区分运动区域——即使它从不知道帧的时间顺序。</em></p>
+<ol>
+<li><strong>模型汤（Model Souping）揭示了信息存储的位置</strong>：通过融合 VGGT 和 VGGT-Ω 的部分权重，发现 depth/FoV 信息主要存储在 frame attention block 的 FFN 中，camera extrinsic 信息存储在更高层。</li>
+</ol>
+<hr />
+<h2 id="_6">六、代码实现解读</h2>
+<h3 id="61">6.1 整体架构</h3>
+<div class="codehilite"><pre><span></span><code><span class="w"> </span><span class="err">┌─────────────────────────────────────────────────────────────┐</span>
+<span class="w"> </span><span class="err">│</span><span class="w">                      </span><span class="nx">VGGTOmega</span><span class="w"> </span><span class="p">(</span><span class="nx">nn</span><span class="p">.</span><span class="nx">Module</span><span class="p">)</span><span class="w">                  </span><span class="err">│</span>
+<span class="w"> </span><span class="err">│</span><span class="w">                                                             </span><span class="err">│</span>
+<span class="w"> </span><span class="err">│</span><span class="w">  </span><span class="nx">images</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="nx">B</span><span class="p">,</span><span class="w"> </span><span class="nx">N</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="nx">H</span><span class="p">,</span><span class="w"> </span><span class="nx">W</span><span class="p">]</span><span class="w">                                    </span><span class="err">│</span>
+<span class="w"> </span><span class="err">│</span><span class="w">       </span><span class="err">│</span><span class="w">                                                     </span><span class="err">│</span>
+<span class="w"> </span><span class="err">│</span><span class="w">       </span><span class="err">▼</span><span class="w">                                                     </span><span class="err">│</span>
+<span class="w"> </span><span class="err">│</span><span class="w">  </span><span class="err">┌──────────────────────────────────────────────────────┐</span><span class="w">   </span><span class="err">│</span>
+<span class="w"> </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">              </span><span class="nx">Aggregator</span><span class="w"> </span><span class="p">(</span><span class="nx">核心编码器</span><span class="p">)</span><span class="w">                    </span><span class="err">│</span><span class="w">   </span><span class="err">│</span>
+<span class="w"> </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">                                                      </span><span class="err">│</span><span class="w">   </span><span class="err">│</span>
+<span class="w"> </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">┌──────────────────────┐</span><span class="w">                            </span><span class="err">│</span><span class="w">   </span><span class="err">│</span>
+<span class="w"> </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="nx">DINOv3</span><span class="w"> </span><span class="nx">Patch</span><span class="w"> </span><span class="nx">Embed</span><span class="w">   </span><span class="err">│</span><span class="w">  </span><span class="p">(</span><span class="nx">vggt_omega</span><span class="o">/</span><span class="nx">models</span><span class="o">/</span><span class="w">       </span><span class="err">│</span><span class="w">   </span><span class="err">│</span>
+<span class="w"> </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nx">RoPE</span><span class="w"> </span><span class="nx">Position</span><span class="w"> </span><span class="nx">Enc</span><span class="w">  </span><span class="err">│</span><span class="w">   </span><span class="nx">layers</span><span class="o">/</span><span class="nx">vision_</span><span class="w">           </span><span class="err">│</span><span class="w">   </span><span class="err">│</span>
+<span class="w"> </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">└──────────┬───────────┘</span><span class="w">   </span><span class="nx">transformer</span><span class="p">.</span><span class="nx">py</span><span class="p">)</span><span class="w">          </span><span class="err">│</span><span class="w">   </span><span class="err">│</span>
+<span class="w"> </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">             </span><span class="err">│</span><span class="w">                                        </span><span class="err">│</span><span class="w">   </span><span class="err">│</span>
+<span class="w"> </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">┌──────────▼──────────────────────────────────┐</span><span class="w">    </span><span class="err">│</span><span class="w">   </span><span class="err">│</span>
+<span class="w"> </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="p">[</span><span class="nx">CAM</span><span class="o">|</span><span class="mi">1</span><span class="p">]</span><span class="w"> </span><span class="p">[</span><span class="nx">REG</span><span class="o">|</span><span class="mi">16</span><span class="p">]</span><span class="w"> </span><span class="p">[</span><span class="nx">PATCH_TOKENS</span><span class="o">|</span><span class="nx">HW</span><span class="o">/</span><span class="nx">p²</span><span class="p">]</span><span class="w">      </span><span class="err">│</span><span class="w">    </span><span class="err">│</span><span class="w">   </span><span class="err">│</span>
+<span class="w"> </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">└──────────┬──────────────────────────────────┘</span><span class="w">    </span><span class="err">│</span><span class="w">   </span><span class="err">│</span>
+<span class="w"> </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">             </span><span class="err">│</span><span class="w">                                        </span><span class="err">│</span><span class="w">   </span><span class="err">│</span>
+<span class="w"> </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">    </span><span class="err">┌────────▼──────────────────────────┐</span><span class="w">            </span><span class="err">│</span><span class="w">   </span><span class="err">│</span>
+<span class="w"> </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">    </span><span class="err">│</span><span class="w">  </span><span class="nx">Alternating</span><span class="w"> </span><span class="nx">Attention</span><span class="w"> </span><span class="err">×</span><span class="w"> </span><span class="mi">24</span><span class="w"> </span><span class="nx">blocks</span><span class="w"> </span><span class="err">│</span><span class="w">            </span><span class="err">│</span><span class="w">   </span><span class="err">│</span>
+<span class="w"> </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">    </span><span class="err">│</span><span class="w">  </span><span class="err">┌─────────────────────────────┐</span><span class="w">   </span><span class="err">│</span><span class="w">            </span><span class="err">│</span><span class="w">   </span><span class="err">│</span>
+<span class="w"> </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">    </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="nx">Frame</span><span class="w"> </span><span class="nx">Attention</span><span class="w"> </span><span class="p">(</span><span class="nx">per</span><span class="w"> </span><span class="nx">frame</span><span class="p">)</span><span class="w"> </span><span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">            </span><span class="err">│</span><span class="w">   </span><span class="err">│</span>
+<span class="w"> </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">    </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">   </span><span class="err">→</span><span class="w"> </span><span class="nx">SelfAttention</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nx">FFN</span><span class="w">     </span><span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">            </span><span class="err">│</span><span class="w">   </span><span class="err">│</span>
+<span class="w"> </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">    </span><span class="err">│</span><span class="w">  </span><span class="err">└─────────────┬───────────────┘</span><span class="w">   </span><span class="err">│</span><span class="w">            </span><span class="err">│</span><span class="w">   </span><span class="err">│</span>
+<span class="w"> </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">    </span><span class="err">│</span><span class="w">                </span><span class="err">▼</span><span class="w">                    </span><span class="err">│</span><span class="w">            </span><span class="err">│</span><span class="w">   </span><span class="err">│</span>
+<span class="w"> </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">    </span><span class="err">│</span><span class="w">  </span><span class="err">┌─────────────────────────────┐</span><span class="w">   </span><span class="err">│</span><span class="w">            </span><span class="err">│</span><span class="w">   </span><span class="err">│</span>
+<span class="w"> </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">    </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="nx">Inter</span><span class="o">-</span><span class="nx">Frame</span><span class="w"> </span><span class="nx">Attention</span><span class="w">       </span><span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">            </span><span class="err">│</span><span class="w">   </span><span class="err">│</span>
+<span class="w"> </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">    </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">   </span><span class="nx">global</span><span class="p">:</span><span class="w"> </span><span class="nx">all</span><span class="w"> </span><span class="nx">tokens</span><span class="w"> </span><span class="nx">交互</span><span class="w">    </span><span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">            </span><span class="err">│</span><span class="w">   </span><span class="err">│</span>
+<span class="w"> </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">    </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">   </span><span class="nx">register</span><span class="p">:</span><span class="w"> </span><span class="nx">仅</span><span class="w"> </span><span class="nx">CAM</span><span class="o">+</span><span class="nx">REG</span><span class="w"> </span><span class="nx">交互</span><span class="w">  </span><span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">            </span><span class="err">│</span><span class="w">   </span><span class="err">│</span>
+<span class="w"> </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">    </span><span class="err">│</span><span class="w">  </span><span class="err">└─────────────────────────────┘</span><span class="w">   </span><span class="err">│</span><span class="w">            </span><span class="err">│</span><span class="w">   </span><span class="err">│</span>
+<span class="w"> </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">    </span><span class="err">└────────────────────────────────────┘</span><span class="w">            </span><span class="err">│</span><span class="w">   </span><span class="err">│</span>
+<span class="w"> </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">                                                      </span><span class="err">│</span><span class="w">   </span><span class="err">│</span>
+<span class="w"> </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="nx">输出</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="w"> </span><span class="nx">个中间层</span><span class="w"> </span><span class="nx">features</span><span class="w"> </span><span class="p">[</span><span class="nx">B</span><span class="p">,</span><span class="nx">N</span><span class="p">,</span><span class="nx">H</span><span class="sc">&#39;W&#39;</span><span class="o">+</span><span class="mi">17</span><span class="p">,</span><span class="mi">2</span><span class="nx">C</span><span class="p">]</span><span class="w">           </span><span class="err">│</span><span class="w">   </span><span class="err">│</span>
+<span class="w"> </span><span class="err">│</span><span class="w">  </span><span class="err">└──────────────────────────────────────────────────────┘</span><span class="w">   </span><span class="err">│</span>
+<span class="w"> </span><span class="err">│</span><span class="w">       </span><span class="err">│</span><span class="w">                                                     </span><span class="err">│</span>
+<span class="w"> </span><span class="err">│</span><span class="w">       </span><span class="err">├──→</span><span class="w"> </span><span class="nx">CameraHead</span><span class="p">:</span><span class="w"> </span><span class="nx">最终层</span><span class="w"> </span><span class="nx">CAM</span><span class="o">+</span><span class="nx">REG</span><span class="w"> </span><span class="nx">tokens</span><span class="w">                </span><span class="err">│</span>
+<span class="w"> </span><span class="err">│</span><span class="w">       </span><span class="err">│</span><span class="w">    </span><span class="err">└─→</span><span class="w"> </span><span class="mi">4</span><span class="err">×</span><span class="w"> </span><span class="nx">SelfAttentionBlock</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="nx">MLP</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="p">[</span><span class="nx">T</span><span class="p">,</span><span class="nx">quat</span><span class="p">,</span><span class="nx">FoV</span><span class="p">]</span><span class="w">  </span><span class="err">│</span>
+<span class="w"> </span><span class="err">│</span><span class="w">       </span><span class="err">│</span><span class="w">                                                     </span><span class="err">│</span>
+<span class="w"> </span><span class="err">│</span><span class="w">       </span><span class="err">├──→</span><span class="w"> </span><span class="nx">DenseHead</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="w"> </span><span class="nx">层</span><span class="w"> </span><span class="nx">patch</span><span class="w"> </span><span class="nx">tokens</span><span class="w">                    </span><span class="err">│</span>
+<span class="w"> </span><span class="err">│</span><span class="w">       </span><span class="err">│</span><span class="w">    </span><span class="err">└─→</span><span class="w"> </span><span class="nx">DPT</span><span class="p">(</span><span class="nx">低分辨率CNN</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nx">MLP</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nx">PixelShuffle</span><span class="w">        </span><span class="err">│</span>
+<span class="w"> </span><span class="err">│</span><span class="w">       </span><span class="err">│</span><span class="w">       </span><span class="err">→</span><span class="w"> </span><span class="nx">depth</span><span class="w"> </span><span class="p">[</span><span class="nx">B</span><span class="p">,</span><span class="nx">N</span><span class="p">,</span><span class="nx">H</span><span class="p">,</span><span class="nx">W</span><span class="p">],</span><span class="w"> </span><span class="nx">depth_conf</span><span class="w"> </span><span class="p">[</span><span class="nx">B</span><span class="p">,</span><span class="nx">N</span><span class="p">,</span><span class="nx">H</span><span class="p">,</span><span class="nx">W</span><span class="p">]</span><span class="w">      </span><span class="err">│</span>
+<span class="w"> </span><span class="err">│</span><span class="w">       </span><span class="err">│</span><span class="w">                                                     </span><span class="err">│</span>
+<span class="w"> </span><span class="err">│</span><span class="w">       </span><span class="err">└──→</span><span class="w"> </span><span class="nx">TextAlignmentHead</span><span class="w"> </span><span class="p">(</span><span class="nx">可选</span><span class="p">):</span><span class="w"> </span><span class="nx">最终层</span><span class="w"> </span><span class="nx">CAM</span><span class="o">+</span><span class="nx">REG</span><span class="w"> </span><span class="nx">tokens</span><span class="w">  </span><span class="err">│</span>
+<span class="w"> </span><span class="err">│</span><span class="w">            </span><span class="err">└─→</span><span class="w"> </span><span class="nx">learnable</span><span class="w"> </span><span class="nx">language</span><span class="w"> </span><span class="nx">token</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">4</span><span class="err">×</span><span class="w"> </span><span class="nx">attention</span><span class="w">      </span><span class="err">│</span>
+<span class="w"> </span><span class="err">│</span><span class="w">               </span><span class="err">→</span><span class="w"> </span><span class="nx">text_alignment_embedding</span><span class="w"> </span><span class="p">[</span><span class="nx">B</span><span class="p">,</span><span class="w"> </span><span class="nx">D</span><span class="p">]</span><span class="w">             </span><span class="err">│</span>
+<span class="w"> </span><span class="err">└─────────────────────────────────────────────────────────────┘</span>
+</code></pre></div>
+
+<p><em>图11：VGGT-Ω 整体架构代码映射。核心实现在 <code>vggt_omega/models/vggt_omega.py:16</code>。</em></p>
+<h3 id="62">6.2 关键代码映射</h3>
+<table>
+<thead>
+<tr>
+<th>论文概念</th>
+<th>代码位置</th>
+<th>关键细节</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>DINOv3 初始化</td>
+<td><code>aggregator.py:220</code> <code>_build_patch_embed()</code></td>
+<td><code>DinoVisionTransformer</code>，patch_size=16, 24层</td>
+</tr>
+<tr>
+<td>Register tokens</td>
+<td><code>aggregator.py:82</code></td>
+<td><code>nn.Parameter(1, 2, 16, embed_dim)</code>，2=参考帧/非参考帧两种</td>
+</tr>
+<tr>
+<td>Camera token</td>
+<td><code>aggregator.py:81</code></td>
+<td><code>nn.Parameter(1, 2, 1, embed_dim)</code></td>
+</tr>
+<tr>
+<td>Register attention indices</td>
+<td><code>aggregator.py:29</code></td>
+<td>默认 <code>[2, 6, 9, 14, 20]</code>（24层中的5层）</td>
+</tr>
+<tr>
+<td>Register attention 实现</td>
+<td><code>aggregator.py:187-217</code></td>
+<td>只让 <code>[:, :, :patch_token_start]</code> tokens 做 self-attention</td>
+</tr>
+<tr>
+<td>Frame attention</td>
+<td><code>aggregator.py:156-168</code></td>
+<td><code>reshape → frame_blocks[block_idx] → reshape</code></td>
+</tr>
+<tr>
+<td>Global attention</td>
+<td><code>aggregator.py:182-185</code></td>
+<td>全 tokens 展平 → <code>inter_frame_blocks[block_idx]</code></td>
+</tr>
+<tr>
+<td>Camera head 单次预测</td>
+<td><code>camera_head.py:44-73</code></td>
+<td>4× SelfAttentionBlock → MLP → 9D encoding</td>
+</tr>
+<tr>
+<td>DenseHead (DPT + MLP)</td>
+<td><code>dense_head.py:19-180</code></td>
+<td>4个中间层 → Conv2d projection → DPT fusion → MLP → PixelShuffle</td>
+</tr>
+<tr>
+<td>Text alignment head</td>
+<td><code>text_alignment_head.py:48-79</code></td>
+<td>learnable language token + 4× attention → projector</td>
+</tr>
+<tr>
+<td>Pose encoding</td>
+<td><code>pose_enc.py:12-26</code></td>
+<td>translation(3) + quaternion(4) + FoV_h(1) + FoV_w(1) = 9D</td>
+</tr>
+</tbody>
+</table>
+<h3 id="63">6.3 推理流程</h3>
+<div class="codehilite"><pre><span></span><code><span class="w">  </span><span class="n">Image</span><span class="w"> </span><span class="n">Paths</span>
+<span class="w">       </span><span class="err">│</span>
+<span class="w">       </span><span class="err">▼</span>
+<span class="w">  </span><span class="n">load_and_preprocess_images</span><span class="p">()</span><span class="w">          </span><span class="c1"># load_fn.py:15</span>
+<span class="w">  </span><span class="err">├─</span><span class="w"> </span><span class="n">center</span><span class="o">-</span><span class="n">crop</span><span class="w"> </span><span class="n">to</span><span class="w"> </span><span class="p">[</span><span class="mf">0.5</span><span class="p">,</span><span class="w"> </span><span class="mf">2.0</span><span class="p">]</span><span class="w"> </span><span class="err">宽高比</span>
+<span class="w">  </span><span class="err">├─</span><span class="w"> </span><span class="n">resize</span><span class="w"> </span><span class="p">(</span><span class="n">balanced</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">max_size</span><span class="w"> </span><span class="n">mode</span><span class="p">)</span>
+<span class="w">  </span><span class="err">└─</span><span class="w"> </span><span class="n">padding</span><span class="w"> </span><span class="n">to</span><span class="w"> </span><span class="n">common</span><span class="w"> </span><span class="n">size</span>
+<span class="w">       </span><span class="err">│</span>
+<span class="w">       </span><span class="err">▼</span>
+<span class="w">  </span><span class="n">model</span><span class="p">(</span><span class="n">images</span><span class="p">)</span><span class="w">                         </span><span class="c1"># vggt_omega.py:35</span>
+<span class="w">  </span><span class="err">├─</span><span class="w"> </span><span class="n">bfloat16</span><span class="w"> </span><span class="n">autocast</span>
+<span class="w">  </span><span class="err">│</span><span class="w">   </span><span class="err">└─</span><span class="w"> </span><span class="n">aggregator</span><span class="p">(</span><span class="n">images</span><span class="p">)</span><span class="w">             </span><span class="c1"># aggregator.py:100</span>
+<span class="w">  </span><span class="err">│</span><span class="w">       </span><span class="err">├─</span><span class="w"> </span><span class="n">normalize</span><span class="w"> </span><span class="p">(</span><span class="n">ResNet</span><span class="w"> </span><span class="n">mean</span><span class="o">/</span><span class="n">std</span><span class="p">)</span>
+<span class="w">  </span><span class="err">│</span><span class="w">       </span><span class="err">├─</span><span class="w"> </span><span class="n">patch_embed</span><span class="w"> </span><span class="p">(</span><span class="n">DINOv3</span><span class="p">)</span>
+<span class="w">  </span><span class="err">│</span><span class="w">       </span><span class="err">├─</span><span class="w"> </span><span class="n">concat</span><span class="w"> </span><span class="p">[</span><span class="n">CAM</span><span class="p">,</span><span class="w"> </span><span class="n">REG</span><span class="p">,</span><span class="w"> </span><span class="n">PATCH</span><span class="p">]</span>
+<span class="w">  </span><span class="err">│</span><span class="w">       </span><span class="err">├─</span><span class="w"> </span><span class="mi">24</span><span class="w"> </span><span class="err">×</span><span class="w"> </span><span class="p">(</span><span class="n">frame_block</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">inter_frame_block</span><span class="p">)</span>
+<span class="w">  </span><span class="err">│</span><span class="w">       </span><span class="err">└─</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="p">[</span><span class="mi">4</span><span class="w"> </span><span class="n">cached</span><span class="w"> </span><span class="n">layers</span><span class="p">,</span><span class="w"> </span><span class="n">patch_token_start</span><span class="p">]</span>
+<span class="w">  </span><span class="err">│</span>
+<span class="w">  </span><span class="err">├─</span><span class="w"> </span><span class="n">CameraHead</span><span class="w"> </span><span class="p">(</span><span class="n">float32</span><span class="p">)</span><span class="w">               </span><span class="c1"># camera_head.py:45</span>
+<span class="w">  </span><span class="err">│</span><span class="w">   </span><span class="err">└─</span><span class="w"> </span><span class="err">最终层</span><span class="w"> </span><span class="n">cam</span><span class="o">+</span><span class="n">reg</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="mi">4</span><span class="err">×</span><span class="w"> </span><span class="n">attn</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">MLP</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="p">[</span><span class="n">B</span><span class="p">,</span><span class="n">N</span><span class="p">,</span><span class="mi">9</span><span class="p">]</span>
+<span class="w">  </span><span class="err">│</span>
+<span class="w">  </span><span class="err">├─</span><span class="w"> </span><span class="n">DenseHead</span><span class="w"> </span><span class="p">(</span><span class="n">float32</span><span class="p">)</span><span class="w">                </span><span class="c1"># dense_head.py:72</span>
+<span class="w">  </span><span class="err">│</span><span class="w">   </span><span class="err">└─</span><span class="w"> </span><span class="mi">4</span><span class="w"> </span><span class="err">层</span><span class="w"> </span><span class="n">patch</span><span class="w"> </span><span class="n">tokens</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">DPT</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">MLP</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">PixelShuffle</span>
+<span class="w">  </span><span class="err">│</span><span class="w">       </span><span class="err">→</span><span class="w"> </span><span class="n">depth</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">exp</span><span class="p">(</span><span class="n">logits</span><span class="p">),</span><span class="w"> </span><span class="n">conf</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nb">exp</span><span class="p">(</span><span class="n">conf_logits</span><span class="p">)</span>
+<span class="w">  </span><span class="err">│</span>
+<span class="w">  </span><span class="err">└─</span><span class="w"> </span><span class="n">TextAlignmentHead</span><span class="w"> </span><span class="p">(</span><span class="err">可选</span><span class="p">,</span><span class="w"> </span><span class="n">float32</span><span class="p">)</span><span class="w">   </span><span class="c1"># text_alignment_head.py:48</span>
+<span class="w">      </span><span class="err">└─</span><span class="w"> </span><span class="n">language_token</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">cam</span><span class="o">+</span><span class="n">reg</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="mi">4</span><span class="err">×</span><span class="w"> </span><span class="n">attn</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">projector</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">L2</span><span class="w"> </span><span class="n">norm</span>
+<span class="w">       </span><span class="err">│</span>
+<span class="w">       </span><span class="err">▼</span>
+<span class="w">  </span><span class="n">encoding_to_camera</span><span class="p">()</span><span class="w">                  </span><span class="c1"># pose_enc.py:29</span>
+<span class="w">  </span><span class="err">├─</span><span class="w"> </span><span class="n">translation</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">pose_enc</span><span class="p">[</span><span class="o">...</span><span class="p">,</span><span class="w"> </span><span class="p">:</span><span class="mi">3</span><span class="p">]</span>
+<span class="w">  </span><span class="err">├─</span><span class="w"> </span><span class="n">R</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">quat_to_mat</span><span class="p">(</span><span class="n">pose_enc</span><span class="p">[</span><span class="o">...</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">:</span><span class="mi">7</span><span class="p">])</span>
+<span class="w">  </span><span class="err">├─</span><span class="w"> </span><span class="n">fx</span><span class="p">,</span><span class="w"> </span><span class="n">fy</span><span class="w"> </span><span class="n">from</span><span class="w"> </span><span class="n">FoV</span>
+<span class="w">  </span><span class="err">└─</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">extrinsics</span><span class="w"> </span><span class="p">[</span><span class="n">B</span><span class="p">,</span><span class="n">N</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">],</span><span class="w"> </span><span class="n">intrinsics</span><span class="w"> </span><span class="p">[</span><span class="n">B</span><span class="p">,</span><span class="n">N</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">3</span><span class="p">]</span>
+</code></pre></div>
+
+<p><em>图12：VGGT-Ω 推理流程。从图像加载到最终相机参数和深度图的完整数据流。</em></p>
+<h3 id="64">6.4 代码设计要点</h3>
+<ul>
+<li><strong>Memory chunking</strong>：DenseHead 支持 <code>frames_chunk_size</code> 参数（默认 8），将多帧分块处理以控制峰值内存</li>
+<li><strong>Custom interpolate</strong>：<code>custom_interpolate()</code> 将超大张量分块执行 <code>F.interpolate</code>，避免超过 2^31 元素限制</li>
+<li><strong>QK normalization</strong>：attention 层中可选 <code>use_qk_norm=True</code>（aggregator blocks），稳定训练</li>
+<li><strong>Masked K bias</strong>：<code>LinearKMaskedBias</code> 将 K 的 bias 掩码为 NaN，防止 K 的 bias 被优化（训练稳定性技巧）</li>
+<li><strong>LayerScale</strong>：每个 attention 和 FFN block 后使用 LayerScale，<code>init_values=1e-5</code>（小初始化，渐进学习）</li>
+<li><strong>Confidence init</strong>：<code>proj_conf</code> 的 bias 初始化为 <code>ln(0.05)</code>，使得初始 confidence ≈ 1.05</li>
+</ul>
+<h3 id="65">6.5 模型变体配置</h3>
+<table>
+<thead>
+<tr>
+<th>变体</th>
+<th style="text-align: center;">层数</th>
+<th style="text-align: center;">隐层维度</th>
+<th style="text-align: center;">注意力头数</th>
+<th style="text-align: center;">参数量</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>VGGT-Ω-200M</td>
+<td style="text-align: center;">12</td>
+<td style="text-align: center;">384</td>
+<td style="text-align: center;">-</td>
+<td style="text-align: center;">~200M</td>
+</tr>
+<tr>
+<td>VGGT-Ω-500M</td>
+<td style="text-align: center;">12</td>
+<td style="text-align: center;">768</td>
+<td style="text-align: center;">-</td>
+<td style="text-align: center;">~500M</td>
+</tr>
+<tr>
+<td>VGGT-Ω-1B</td>
+<td style="text-align: center;">24</td>
+<td style="text-align: center;">1024</td>
+<td style="text-align: center;">16</td>
+<td style="text-align: center;">~1B</td>
+</tr>
+<tr>
+<td>VGGT-Ω-10B</td>
+<td style="text-align: center;">16</td>
+<td style="text-align: center;">4096</td>
+<td style="text-align: center;">-</td>
+<td style="text-align: center;">~10B</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="_7">七、局限性</h2>
+<ol>
+<li><strong>强运动模糊</strong>：性能显著下降</li>
+<li><strong>视场角剧烈变化</strong>：如几秒内从 10° 变到 160°</li>
+<li><strong>高度畸变的相机</strong></li>
+<li><strong>特定场景不稳定</strong>：如办公室中大量显示器的场景（因训练数据中有 ScanNet++ 的噪声标注）</li>
+<li><strong>隐私内容区域</strong>：人脸和商标被 mask 处理，可能导致对应区域深度预测不稳定</li>
+<li><strong>细薄结构</strong>：栅栏等细结构的深度预测容易被附近大表面淹没</li>
+<li><strong>"人在墙里"现象</strong>：街景视频中的行人偶尔会被吸收到背景建筑中（源于 MegaDepth 的边界像素歧义标注）</li>
+<li><strong>MLP-only 解码头的块状伪影</strong>：论文尝试了纯 MLP 解码头以减少内存，但会产生可见的 patch 块状伪影（尤其在室外远景场景），最终保留了低分辨率卷积层作为折中</li>
+</ol>
+<hr />
+<h2 id="_8">八、关键概念速查</h2>
+<table>
+<thead>
+<tr>
+<th>概念</th>
+<th>解释</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Feed-forward reconstruction</strong></td>
+<td>直接从图像通过神经网络推断深度和相机参数，无需 BA 等迭代优化</td>
+</tr>
+<tr>
+<td><strong>Register tokens</strong></td>
+<td>可学习的额外 token，不绑定任何图像 patch，用于聚合和交换全局信息</td>
+</tr>
+<tr>
+<td><strong>Register attention</strong></td>
+<td>仅在 register tokens 之间做跨帧 attention，patch tokens 不参与</td>
+</tr>
+<tr>
+<td><strong>Alternating attention</strong></td>
+<td>在 frame attention（帧内）和 inter-frame attention（帧间）之间交替</td>
+</tr>
+<tr>
+<td><strong>Scene tokens</strong></td>
+<td>即 register tokens，因为聚合了场景级信息</td>
+</tr>
+<tr>
+<td><strong>Camera token</strong></td>
+<td>每帧一个的特殊 token，最终用于预测相机参数</td>
+</tr>
+<tr>
+<td><strong>Point error</strong></td>
+<td>用预测的 depth + camera unproject 得到的 3D 点与 GT 之间的 L2 距离</td>
+</tr>
+<tr>
+<td><strong>Doming effect</strong></td>
+<td>BA 在弱全局约束下产生的全局弯曲重建伪影</td>
+</tr>
+<tr>
+<td><strong>Pixel shuffle</strong></td>
+<td>将通道维度重排为空间维度的高效上采样算子</td>
+</tr>
+<tr>
+<td><strong>Model souping</strong></td>
+<td>直接平均不同模型的部分权重进行融合，无需额外训练</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="_9">训练配置速查</h2>
+<table>
+<thead>
+<tr>
+<th>项目</th>
+<th>配置</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>优化器</td>
+<td>AdamW</td>
+</tr>
+<tr>
+<td>峰值学习率</td>
+<td>2×10⁻⁴（监督），1×10⁻⁴（自监督）</td>
+</tr>
+<tr>
+<td>学习率调度</td>
+<td>5% warmup + cosine decay</td>
+</tr>
+<tr>
+<td>总迭代数</td>
+<td>240K（160K 监督 + 50K 自监督 + 30K 监督）</td>
+</tr>
+<tr>
+<td>帧数/样本</td>
+<td>[1, 24] 均匀随机采样</td>
+</tr>
+<tr>
+<td>输入分辨率</td>
+<td>~512×512（保持面积，宽高比随机在 [0.33, 1.33]）</td>
+</tr>
+<tr>
+<td>硬件</td>
+<td>128× H100 96GB</td>
+</tr>
+<tr>
+<td>精度</td>
+<td>bfloat16 mixed precision</td>
+</tr>
+<tr>
+<td>并行策略</td>
+<td>FSDP + gradient checkpointing</td>
+</tr>
+<tr>
+<td>合成:真实数据比例</td>
+<td>约 80%:20%（推荐）</td>
+</tr>
+<tr>
+<td>梯度裁剪</td>
+<td>阈值 1.0</td>
+</tr>
+</tbody>
+</table>
+  </div>
+</main>
+
+
+<script>
+(function() {
+  const sidebar = document.getElementById('sidebar');
+  const links = sidebar.querySelectorAll('a');
+  const headings = document.querySelectorAll('h1[id], h2[id], h3[id], h4[id]');
+  if (headings.length === 0) return;
+
+  const linkMap = new Map();
+  links.forEach(function(a) {
+    const href = a.getAttribute('href');
+    if (href && href.startsWith('#')) linkMap.set(href.slice(1), a);
+  });
+
+  function onScroll() {
+    let currentId = null;
+    const scrollTop = window.scrollY + 80;
+    headings.forEach(function(h) { if (h.offsetTop <= scrollTop) currentId = h.id; });
+    links.forEach(function(a) { a.classList.remove('active'); });
+    if (currentId && linkMap.has(currentId)) {
+      const el = linkMap.get(currentId);
+      el.classList.add('active');
+      const sr = sidebar.getBoundingClientRect();
+      const er = el.getBoundingClientRect();
+      if (er.bottom > sr.bottom || er.top < sr.top) {
+        el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+    }
+  }
+
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+})();
+</script>
+
+</body>
+</html>
