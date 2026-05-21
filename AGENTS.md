@@ -16,6 +16,9 @@ PaperNotes/
 │   └── paper_notes.html         # 独立 HTML 页面（提交）
 ├── .gitignore
 ├── AGENTS.md
+├── generate_index.sh            # 生成 index.html 和 tags.html
+├── index.html                   # GitHub Pages 默认首页：按时间倒序浏览（生成物）
+├── tags.html                    # 标签浏览页：按标签分组浏览（生成物）
 └── .claude/                     # Claude Code 配置
 ```
 
@@ -58,11 +61,14 @@ PaperNotes/
    <!-- tags: 标签1, 标签2, 标签3 -->
    ```
    - **venue 格式**：已发表写 `会议 年份`（如 `CVPR 2026 Oral`、`ICML 2026 Spotlight`），投稿中写 `会议 年份（投稿中）`（如 `NeurIPS 2026（投稿中）`），技术报告写 `机构/公司 技术报告`（如 `NVIDIA Tech Report 2026`、`蚂蚁灵波技术报告`）。每个 HTML 必须有 venue，禁止缺失。
-4. **更新首页** — 运行 `./generate_index.sh` 重新生成 `index.html`。
-   - `generate_index.sh` 仅扫描日期目录**顶层**（`find YYYY-MM-DD/ -maxdepth 1 -name "*.html"`），因此笔记 HTML 必须放在 `YYYY-MM-DD/` 目录下，不能放在子目录中。
-   - 首页从 HTML 注释中提取元数据（`<!-- arxiv: -->`、`<!-- venue: -->`、`<!-- tags: -->`），"更新于" 日期则通过 `git log -1 --format="%cs"` 取该文件的最后提交日期。因此即使只修改了图片路径等非内容变更，commit 时该文件的时间戳也会刷新。
-   - **重要**：`git log` 只能查到已提交的文件，因此生成 `index.html` 的时机必须在 `git commit` 笔记文件**之后**（或 commit 后重新生成再 amend）。推荐流程：`git add 笔记 → git commit → bash generate_index.sh > index.html → git add index.html → git commit --amend` 或分两次 commit。
-   - 首页不依赖任何外部构建工具或静态站点生成器，每次新增或修改笔记后重新运行脚本并 commit 生成的 `index.html` 即可。
+4. **更新站点入口** — 运行 `./generate_index.sh --site` 自动重新生成 `index.html` 和 `tags.html`。
+   - GitHub Pages 默认打开根目录 `index.html`，该页按日期倒序浏览论文；页面顶部提供"按时间 / 按标签"导航，可切换到 `tags.html`。
+   - `tags.html` 按 `<!-- tags: -->` 元数据自动分组，标签导航按论文数量降序排列；不要手工维护标签计数、分组或论文列表。
+   - `generate_index.sh` 仅扫描日期目录**顶层**（`20??-??-??/*.html`），因此笔记 HTML 必须放在 `YYYY-MM-DD/` 目录下，不能放在子目录中。
+   - 两个入口页都从 HTML 注释中提取元数据（`<!-- arxiv: -->`、`<!-- venue: -->`、`<!-- tags: -->`）。每篇笔记必须提供 `venue` 和 `tags`，否则首页/标签页信息会缺失。
+   - 首页的"更新于"日期通过 `git log -1 --format="%cs"` 取笔记 HTML 的最后提交日期；`git log` 只能查到已提交文件。因此新增或修改笔记后，先提交笔记文件，再运行 `./generate_index.sh --site`，然后把生成的 `index.html` 和 `tags.html` amend 到同一个 commit，或单独再提交一次入口页更新。
+   - `generate_index.sh` 兼容旧用法：`./generate_index.sh` 或 `./generate_index.sh --index` 输出按时间首页到 stdout，`./generate_index.sh --tags` 输出标签页到 stdout；日常维护统一使用 `./generate_index.sh --site`。
+   - 首页和标签页不依赖任何外部构建工具或静态站点生成器，每次新增或修改笔记后重新运行脚本并 commit 生成的 `index.html`、`tags.html` 即可。
 5. **提交** — 按 commit 规范提交笔记文件。
 
 ## Commit 规范
