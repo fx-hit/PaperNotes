@@ -4,7 +4,7 @@
 > - 作者：Tianyuan Yuan, Zibin Dong, Yicheng Liu, Hang Zhao
 > - 通讯作者：Hang Zhao（赵行）
 > - 单位：IIIS, Tsinghua University（清华大学交叉信息研究院）& Galaxea AI
-> - 投稿方向：NeurIPS 2026（main track）
+> - 投稿方向：NeurIPS 2026（投稿中，under review）
 > - arXiv ID：2603.16666
 > - 代码：https://github.com/yuantianyuan01/FastWAM（含 LIBERO/RoboTwin 训练和评估代码）
 > - 项目主页：https://yuantianyuan01.github.io/FastWAM/
