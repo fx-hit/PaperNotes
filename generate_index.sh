@@ -341,17 +341,27 @@ TAGS_EXTRA_STYLE = """
     margin-left: 2px;
     font-size: 0.75rem;
   }
-  .tag-group { margin-bottom: 40px; }
+  .tag-group { margin-bottom: 10px; }
+  .tag-group[open] { margin-bottom: 28px; }
   .tag-group:target { scroll-margin-top: 24px; }
   .tag-label {
     font-size: 0.95rem;
     font-weight: 700;
     color: var(--text);
-    margin-bottom: 12px;
     padding: 8px 12px;
     background: var(--tag-bg);
     border-radius: 6px;
     display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
+  }
+  .tag-label::-webkit-details-marker { display: none; }
+  .tag-label::marker { content: ""; }
+  .tag-heading {
+    display: inline-flex;
     align-items: center;
     gap: 8px;
   }
@@ -363,14 +373,28 @@ TAGS_EXTRA_STYLE = """
     padding: 2px 8px;
     border-radius: 10px;
   }
-  .tag-label .back-top {
+  .tag-toggle {
     margin-left: auto;
+    font-size: 0.75rem;
+    font-weight: 400;
+    color: var(--accent);
+  }
+  .tag-toggle::after { content: "展开"; }
+  .tag-group[open] .tag-toggle::after { content: "收起"; }
+  .tag-panel {
+    padding-top: 12px;
+  }
+  .tag-panel-actions {
+    text-align: right;
+    margin-bottom: 8px;
+  }
+  .back-top {
     font-size: 0.75rem;
     font-weight: 400;
     color: var(--accent);
     text-decoration: none;
   }
-  .tag-label .back-top:hover { text-decoration: underline; }
+  .back-top:hover { text-decoration: underline; }
   .paper-card {
     padding: 16px 24px;
     margin-bottom: 8px;
@@ -430,6 +454,33 @@ def footer() -> list[str]:
         "</div>",
         "</body>",
         "</html>",
+    ]
+
+
+def tag_page_script() -> list[str]:
+    return [
+        "<script>",
+        "  function openTagGroupFromHash() {",
+        "    const id = decodeURIComponent(window.location.hash.slice(1));",
+        "    if (!id || id === 'top') return;",
+        "    const target = document.getElementById(id);",
+        "    if (target && target.tagName.toLowerCase() === 'details') {",
+        "      target.open = true;",
+        "      target.scrollIntoView({ block: 'start' });",
+        "    }",
+        "  }",
+        "  document.querySelectorAll('.tag-nav a').forEach((link) => {",
+        "    link.addEventListener('click', () => {",
+        "      const id = decodeURIComponent(link.hash.slice(1));",
+        "      const target = document.getElementById(id);",
+        "      if (target && target.tagName.toLowerCase() === 'details') {",
+        "        target.open = true;",
+        "      }",
+        "    });",
+        "  });",
+        "  window.addEventListener('hashchange', openTagGroupFromHash);",
+        "  openTagGroupFromHash();",
+        "</script>",
     ]
 
 
@@ -516,21 +567,27 @@ def render_tags(notes: list[Note]) -> str:
             [
                 "",
                 f'<!-- ====== {e(tag)} ({counts[tag]}) ====== -->',
-                f'<div class="tag-group" id="{e(anchors[tag])}">',
-                f'  <div class="tag-label">{icon} {e(tag)} <span class="tag-count">{counts[tag]} 篇</span><a class="back-top" href="#top">↑ 回到标签列表</a></div>',
+                f'<details class="tag-group" id="{e(anchors[tag])}">',
+                '  <summary class="tag-label">',
+                f'    <span class="tag-heading">{icon} {e(tag)} <span class="tag-count">{counts[tag]} 篇</span></span>',
+                '    <span class="tag-toggle" aria-hidden="true"></span>',
+                "  </summary>",
+                '  <div class="tag-panel">',
+                '    <div class="tag-panel-actions"><a class="back-top" href="#top">↑ 回到标签列表</a></div>',
             ]
         )
         for note in by_tag[tag]:
             lines.extend(
                 [
-                    '  <div class="paper-card">',
-                    f'    <a href="{e(note.path)}">{e(note.title)}</a>',
-                    f'    <div class="paper-meta">{note_meta(note, include_reading=False, include_updated=False)}<span class="paper-date">{e(note.date)}</span></div>',
-                    "  </div>",
+                    '    <div class="paper-card">',
+                    f'      <a href="{e(note.path)}">{e(note.title)}</a>',
+                    f'      <div class="paper-meta">{note_meta(note, include_reading=False, include_updated=False)}<span class="paper-date">{e(note.date)}</span></div>',
+                    "    </div>",
                 ]
             )
-        lines.append("</div>")
+        lines.extend(["  </div>", "</details>"])
 
+    lines += tag_page_script()
     lines += footer()
     return "\n".join(lines) + "\n"
 
