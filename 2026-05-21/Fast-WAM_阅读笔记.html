@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fast-WAM: Do World Action Models Need Test-time Future Imagination?</title>
+<!-- arxiv: 2603.16666 -->
+<!-- venue: NeurIPS 2026 -->
+<!-- tags: WAM, 具身智能, 机器人, 视频生成, 世界模型, Flow Matching -->
+<!-- words-zh: 2484 -->
+<!-- words-en: 518 -->
+<!-- reading-time: 10 -->
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #ffffff;
+    --text: #1a1a2e;
+    --text-secondary: #555;
+    --border: #e1e4e8;
+    --link: #0969da;
+    --table-stripe: #f6f8fa;
+    --heading: #0d1117;
+    --blockquote-border: #0969da;
+    --blockquote-bg: #f0f6ff;
+    --inline-code: #d73a49;
+    --inline-code-bg: #f6f8fa;
+    --sidebar-width: 260px;
+    --toc-active: #0969da;
+    --content-max-width: 900px;
+    --content-padding: 48px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "Inter", "Noto Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 16px;
+    line-height: 1.75;
+    color: var(--text);
+    background: var(--bg);
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    width: var(--sidebar-width);
+    overflow-y: auto;
+    padding: 28px 20px 40px;
+    background: #fafbfc;
+    border-right: 1px solid var(--border);
+    z-index: 10;
+    scrollbar-width: thin;
+  }
+  .sidebar-title {
+    font-size: 13px; font-weight: 700; color: var(--text-secondary);
+    margin-bottom: 16px; letter-spacing: 0.06em; text-transform: uppercase;
+  }
+  .toc-list { list-style: none; padding: 0; margin: 0; }
+  .toc-list ul { list-style: none; padding-left: 14px; }
+  .toc-list li { margin: 1px 0; }
+  .toc-list a {
+    display: block; padding: 4px 12px; font-size: 13.5px; line-height: 1.45;
+    color: var(--text-secondary); text-decoration: none; border-radius: 4px;
+    border-left: 2px solid transparent; transition: all 0.15s;
+  }
+  .toc-list a:hover { color: var(--link); background: #e8f0fe; }
+  .toc-list a.active {
+    color: var(--toc-active); font-weight: 600;
+    border-left-color: var(--toc-active); background: #e8f0fe;
+  }
+  .toc-h1 a { font-weight: 600; color: var(--heading); font-size: 14px; }
+  .toc-h3 a { padding-left: 24px; font-size: 13px; }
+  .toc-h4 a { padding-left: 36px; font-size: 12.5px; }
+  .toc-empty { color: var(--text-secondary); font-size: 13px; font-style: italic; }
+
+  .main-wrapper {
+    margin-left: var(--sidebar-width);
+    min-height: 100vh;
+    display: flex; justify-content: center;
+  }
+  .content-inner {
+    width: 100%;
+    max-width: var(--content-max-width);
+    padding: 40px var(--content-padding) 80px;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    color: var(--heading); font-weight: 700; line-height: 1.3;
+    margin-top: 2em; margin-bottom: 0.6em; scroll-margin-top: 24px;
+  }
+  h1 { font-size: 2em; border-bottom: 2px solid var(--border); padding-bottom: 0.3em; margin-top: 0; }
+  h2 { font-size: 1.5em; border-bottom: 1px solid var(--border); padding-bottom: 0.25em; }
+  h3 { font-size: 1.25em; }
+  h4 { font-size: 1.1em; }
+  p { margin-bottom: 1em; }
+  a { color: var(--link); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  strong { font-weight: 600; }
+
+  blockquote {
+    border-left: 4px solid var(--blockquote-border);
+    background: var(--blockquote-bg);
+    padding: 12px 20px; margin: 1em 0;
+    border-radius: 0 6px 6px 0; color: var(--text-secondary);
+  }
+  blockquote p:last-child { margin-bottom: 0; }
+
+  code {
+    font-family: "JetBrains Mono", "SF Mono", "Fira Code", monospace;
+    font-size: 0.875em; background: var(--inline-code-bg);
+    padding: 2px 6px; border-radius: 4px; color: var(--inline-code);
+  }
+  pre {
+    background: #1e1e2e; color: #cdd6f4;
+    border-radius: 8px; padding: 16px 20px; overflow-x: auto;
+    margin: 1em 0; font-size: 14px; line-height: 1.55;
+  }
+  pre code { background: none; padding: 0; border-radius: 0; color: inherit; font-size: inherit; }
+
+  .codehilite { background: #1e1e2e; border-radius: 8px; padding: 16px 20px; overflow-x: auto; margin: 1em 0; }
+  .codehilite pre { background: none; padding: 0; margin: 0; border-radius: 0; }
+  .codehilite .hll { background-color: #2a2a3e; }
+  .codehilite .c  { color: #6c7086; font-style: italic; }
+  .codehilite .k  { color: #cba6f7; }
+  .codehilite .o  { color: #89b4fa; }
+  .codehilite .s  { color: #a6e3a1; }
+  .codehilite .n  { color: #cdd6f4; }
+  .codehilite .p  { color: #bac2de; }
+  .codehilite .mi { color: #fab387; }
+  .codehilite .nf { color: #89b4fa; }
+  .codehilite .nb { color: #f38ba8; }
+  .codehilite .nc { color: #f9e2af; }
+  .codehilite .bp { color: #f38ba8; }
+
+  table { width: 100%; border-collapse: collapse; margin: 1em 0; font-size: 0.925em; }
+  th, td { border: 1px solid var(--border); padding: 10px 14px; text-align: left; }
+  th { background: var(--table-stripe); font-weight: 600; color: var(--heading); }
+  tr:nth-child(even) td { background: var(--table-stripe); }
+
+  .math.display { display: block; overflow-x: auto; padding: 12px 0; margin: 1em 0; }
+  ul, ol { padding-left: 1.5em; margin-bottom: 1em; }
+  li { margin-bottom: 0.3em; }
+  hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+  img { max-width: 100%; height: auto; border-radius: 6px; margin: 0.5em 0; }
+  p:has(img) { text-align: center; }
+  p:has(img) + p { text-align: center; font-size: 0.9em; color: var(--text-secondary); }
+  .mermaid { text-align: center; margin: 1.5em 0; background: #fafbfc; border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+  .article-stats {
+    font-size: 0.85rem; color: var(--text-secondary);
+    padding: 10px 18px; margin-bottom: 28px;
+    background: #f8f9fa; border: 1px solid var(--border); border-radius: 8px;
+  }
+
+  @media (max-width: 1024px) {
+    .sidebar { position: static; width: 100%; height: auto; max-height: 35vh; border-right: none; border-bottom: 1px solid var(--border); }
+    .main-wrapper { margin-left: 0; display: block; }
+    .content-inner { max-width: none; padding: 24px 20px 60px; }
+  }
+</style>
+
+<script>
+MathJax = {
+  tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']], processEscapes: true, tags: 'none' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] }
+};
+</script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  mermaid.initialize({ startOnLoad: true, theme: 'neutral', securityLevel: 'loose' });
+});
+</script>
+
+</head>
+<body>
+
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-title">目录</div>
+  <ul class="toc-list">
+<li class="toc-h1"><a href="#fast-wam-do-world-action-models-need-test-time-future-imagination">Fast-WAM: Do World Action Models Need Test-time Future Imagination?</a>
+<ul>
+</li>
+<li class="toc-h2"><a href="#_1">一、核心问题</a>
+</li>
+<li class="toc-h2"><a href="#_2">二、核心思路 / 方法</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#21">2.1 关键设计：解耦训练与推理</a>
+</li>
+<li class="toc-h3"><a href="#22-mixture-of-transformer-mot">2.2 架构：Mixture-of-Transformer (MoT)</a>
+</li>
+<li class="toc-h3"><a href="#23">2.3 受控变体设计</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_3">三、训练目标</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#31-flow-matching">3.1 Flow Matching 公式</a>
+</li>
+<li class="toc-h3"><a href="#32">3.2 联合目标</a>
+</li>
+<li class="toc-h3"><a href="#33">3.3 训练细节</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_4">四、实验与结果</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#41-libero-robotwin">4.1 仿真基准：LIBERO 和 RoboTwin</a>
+</li>
+<li class="toc-h3"><a href="#42">4.2 真机实验：毛巾折叠</a>
+</li>
+<li class="toc-h3"><a href="#43">4.3 核心结论</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_5">五、关键洞察与技术亮点</a>
+</li>
+<li class="toc-h2"><a href="#_6">六、代码实现解读</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#61">6.1 整体架构数据流</a>
+</li>
+<li class="toc-h3"><a href="#62">6.2 关键代码文件映射</a>
+</li>
+<li class="toc-h3"><a href="#63-fastwamtraining_loss">6.3 训练流程（FastWAM.training_loss）</a>
+</li>
+<li class="toc-h3"><a href="#64-fastwaminfer_action-fast-path">6.4 推理流程（FastWAM.infer_action —— 核心 Fast Path）</a>
+</li>
+<li class="toc-h3"><a href="#65-structured-attention-mask">6.5 Structured Attention Mask 实现</a>
+</li>
+<li class="toc-h3"><a href="#66-teacher-forcing-in-fast-wam-idm">6.6 Teacher-Forcing in Fast-WAM-IDM</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_7">七、局限性</a>
+</li>
+<li class="toc-h2"><a href="#_8">八、关键概念速查</a>
+</ul></li>
+</li></ul>
+</nav>
+
+<main class="main-wrapper">
+  <div class="content-inner" id="main-content">
+<h1 id="fast-wam-do-world-action-models-need-test-time-future-imagination">Fast-WAM: Do World Action Models Need Test-time Future Imagination?</h1>
+<div class="article-stats">2,484 字 · English 518 词 · 约 10 分钟阅读</div>
+
+<blockquote>
+<p><strong>论文信息</strong>
+- 作者：Tianyuan Yuan, Zibin Dong, Yicheng Liu, Hang Zhao
+- 通讯作者：Hang Zhao（赵行）
+- 单位：IIIS, Tsinghua University（清华大学交叉信息研究院）&amp; Galaxea AI
+- 投稿方向：NeurIPS 2026（main track）
+- arXiv ID：2603.16666
+- 代码：https://github.com/yuantianyuan01/FastWAM（含 LIBERO/RoboTwin 训练和评估代码）
+- 项目主页：https://yuantianyuan01.github.io/FastWAM/
+- 模型权重：https://huggingface.co/yuanty/fastwam</p>
+</blockquote>
+<hr />
+<h2 id="_1">一、核心问题</h2>
+<p>World Action Models（WAM）通过同时建模未来视觉观测和动作预测，在具身控制中展现出了超越传统 Vision-Language-Action（VLA）模型的潜力。然而，几乎所有现有 WAM 都遵循 <strong>"想象再执行"（imagine-then-execute）</strong> 范式：先通过迭代视频去噪生成未来观测，再基于想象的未来预测动作。这带来了严重的测试时延迟问题（通常 &gt;800ms），但从未有人系统研究过：<strong>显式的未来想象是否真的必要？</strong></p>
+<p>本文提出了一个根本性的问题：WAM 的收益究竟来自 <strong>(1)</strong> 训练时的视频建模目标（帮助学习更好的世界表征），还是来自 <strong>(2)</strong> 推理时的显式未来生成（提供额外的预见信息）？现有 WAM 将这两个因素耦合在一起，无法区分。</p>
+<hr />
+<h2 id="_2">二、核心思路 / 方法</h2>
+<h3 id="21">2.1 关键设计：解耦训练与推理</h3>
+<p>Fast-WAM 的核心思想是：<strong>训练时保留视频联合训练（video co-training），推理时跳过未来预测，直接从世界表征中生成动作</strong>。</p>
+<p><img alt="图1：三种代表性 WAM 范式对比" src="assets/fastwam/teaser_main_new.jpg" /></p>
+<p><em>图1：三种代表性 WAM 范式对比。</em></p>
+<p><strong>子图 (A) Joint-modeling WAM（联合建模）：</strong> 未来视频 token 和动作 token 在共享模型中被一起去噪。Action token 和 video token 通过共享注意力交互，动作生成与未来视频建模在整个去噪过程中耦合。代表工作：Motus、Unified World Models。</p>
+<p><strong>子图 (B) Causal WAM（因果式）：</strong> 先独立生成未来视频（第一阶段去噪），再将生成的未来表征作为条件输入给动作预测模块（第二阶段去噪）。动作预测以冻结的去噪视频为条件。代表工作：LingBot-VA、Vidar。</p>
+<p><strong>子图 (C) Fast-WAM（本文方法）：</strong> 训练时保留视频去噪和动作去噪两个分支（通过 Mixure-of-Transformer 架构共享注意力），但推理时完全移除未来视频分支。仅保留第一帧观测的干净 latent token，通过 video DiT 进行一次前向编码，产生世界表征 <span class="math inline">$z(o, l)$</span>，然后仅对 action token 进行去噪生成动作。推理延迟从 810ms 降至 190ms。</p>
+<h3 id="22-mixture-of-transformer-mot">2.2 架构：Mixture-of-Transformer (MoT)</h3>
+<p><img alt="图2：Fast-WAM 模型架构和注意力掩码" src="assets/fastwam/model_arch.jpg" /></p>
+<p><em>图2：Fast-WAM 模型架构（左）与结构化注意力掩码（右）。</em></p>
+<p><strong>架构组件（图2 左）：</strong></p>
+<ul>
+<li><strong>Video VAE（冻结）：</strong> 将视觉观测编码为 latent token。多相机图像在输入 VAE 之前沿空间维度拼接为单张图像。时间维度进行 4× 下采样，结果 9 帧视频对应 <span class="math inline">$\sim$</span>3 个 latent 时间步。</li>
+<li><strong>T5 文本编码器（冻结）：</strong> 编码任务指令，通过 cross-attention 注入所有 token。</li>
+<li><strong>Video DiT（Wan2.2-5B）：</strong> 世界建模骨干，30 层，hidden_dim=3072，24 头注意力，作为 MoT 的 "video expert"。</li>
+<li><strong>Action DiT（1B）：</strong> 动作专家，30 层但 hidden_dim 缩减为 1024，作为 MoT 的 "action expert"。与 video DiT 共享注意力头数和每头维度，确保可以拼接做 mixed attention。</li>
+<li><strong>Proprio 编码器：</strong> 可选的单层线性层，将本体感知状态投影到文本维度后拼接到 context 中。</li>
+</ul>
+<p><strong>注意力掩码（图2 右）：</strong></p>
+<p>训练时（Training Mask）的 token 分组和交互规则：</p>
+<ul>
+<li><strong>Clean first-frame tokens（C）：</strong> 不 attend 任何其他 token（防止未来信息泄漏），仅作为视觉锚点被其他 token attend</li>
+<li><strong>Noisy future video tokens（N）：</strong> 双向 attend 视频内所有 token，可访问 clean first-frame tokens，不可访问 action tokens</li>
+<li><strong>Action tokens（A）：</strong> 双向 attend action 内所有 token，可访问 clean first-frame tokens，<strong>不可访问未来视频 token</strong>（关键设计——防止动作分支窥探未来）</li>
+</ul>
+<p>推理时（Inference Mask）：未来视频分支完全移除，仅保留 clean first-frame tokens。Action tokens 仅 attend 自己和 first-frame tokens。</p>
+<h3 id="23">2.3 受控变体设计</h3>
+<p>为了回答核心问题，作者在同一框架下实现了三种受控变体：</p>
+<table>
+<thead>
+<tr>
+<th>变体</th>
+<th>训练</th>
+<th>推理</th>
+<th>映射到现有工作</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Fast-WAM</strong></td>
+<td>视频 + 动作联合训练</td>
+<td>仅动作去噪（first-frame 编码）</td>
+<td>本文提出</td>
+</tr>
+<tr>
+<td><strong>Fast-WAM-Joint</strong></td>
+<td>视频 + 动作联合训练，action 可 attend 全部 video tokens</td>
+<td>视频 + 动作联合去噪</td>
+<td>Motus 等</td>
+</tr>
+<tr>
+<td><strong>Fast-WAM-IDM</strong></td>
+<td>视频 + 动作联合训练，teacher-forcing（50% 概率对 cond-video 加噪）</td>
+<td>先视频去噪，再基于冻结视频做动作去噪</td>
+<td>LingBot-VA 等</td>
+</tr>
+<tr>
+<td><strong>Fast-WAM w.o. video co-train</strong></td>
+<td>仅动作训练（架构不变，去掉 <span class="math inline">$\mathcal{L}_{\text{vid}}$</span>）</td>
+<td>仅动作去噪</td>
+<td>消融对照</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="_3">三、训练目标</h2>
+<p>Fast-WAM 使用 <strong>Flow Matching</strong> 目标联合训练动作和视频分支。</p>
+<h3 id="31-flow-matching">3.1 Flow Matching 公式</h3>
+<p>给定目标变量 <span class="math inline">$y$</span>（动作 chunk 或未来视频 latent），从高斯噪声 <span class="math inline">$\epsilon \sim \mathcal{N}(0, I)$</span> 和时间步 <span class="math inline">$t \in (0,1)$</span> 构造插值样本：</p>
+<p><div class="math display">$$y_t = (1-t) y + t \epsilon$$</div></p>
+<p>模型预测速度场（velocity field）：</p>
+<p><div class="math display">$$\mathcal{L}_{\text{FM}}(y) = \mathbb{E}_{y, \epsilon, t} \left[ \| f_\theta(y_t, t, o, l) - (\epsilon - y) \|_2^2 \right]$$</div></p>
+<h3 id="32">3.2 联合目标</h3>
+<ul>
+<li><strong>动作损失：</strong> <span class="math inline">$\mathcal{L}_{\text{act}} = \mathcal{L}_{\text{FM}}(a_{1:H})$</span>，其中 <span class="math inline">$H=32$</span> 为动作 chunk 长度</li>
+<li><strong>视频损失：</strong> <span class="math inline">$\mathcal{L}_{\text{vid}} = \mathcal{L}_{\text{FM}}(z_{1:T})$</span>，其中 <span class="math inline">$z_{1:T}$</span> 为 VAE 编码的未来帧 latent（每 chunk 9 帧）</li>
+<li><strong>总损失：</strong> <span class="math inline">$\mathcal{L} = \mathcal{L}_{\text{act}} + \lambda \mathcal{L}_{\text{vid}}$</span></li>
+</ul>
+<h3 id="33">3.3 训练细节</h3>
+<ul>
+<li>骨干：Wan2.2-5B video DiT（30 层，hidden_dim=3072，24 头，attn_head_dim=128）</li>
+<li>Action expert：相同架构但 hidden_dim=1024（1B 参数），总模型 6B</li>
+<li>优化器：AdamW，lr=1e-4，weight decay=0.01，cosine annealing</li>
+<li>推理：10 步去噪，CFG scale=1.0（实际不使用 CFG）</li>
+<li>噪声调度：logit-normal 分布（遵循 Wan2.2）</li>
+<li>延迟测量：单张 NVIDIA RTX 5090D V2 32GB</li>
+</ul>
+<hr />
+<h2 id="_4">四、实验与结果</h2>
+<h3 id="41-libero-robotwin">4.1 仿真基准：LIBERO 和 RoboTwin</h3>
+<p><strong>LIBERO 结果（4 个 suite，40 个任务，2000 次评估试验）：</strong></p>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th style="text-align: center;">Embodied PT.</th>
+<th>Spatial</th>
+<th>Object</th>
+<th>Goal</th>
+<th>Long</th>
+<th><strong>Average</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>OpenVLA</td>
+<td style="text-align: center;">✓</td>
+<td>84.7</td>
+<td>88.4</td>
+<td>79.2</td>
+<td>53.7</td>
+<td>76.5</td>
+</tr>
+<tr>
+<td>π₀</td>
+<td style="text-align: center;">✓</td>
+<td>96.8</td>
+<td>98.8</td>
+<td>95.8</td>
+<td>85.2</td>
+<td>94.1</td>
+</tr>
+<tr>
+<td>π₀.₅</td>
+<td style="text-align: center;">✓</td>
+<td>98.8</td>
+<td>98.2</td>
+<td>98.0</td>
+<td>92.4</td>
+<td>96.9</td>
+</tr>
+<tr>
+<td>LingBot-VA</td>
+<td style="text-align: center;">✓</td>
+<td>98.5</td>
+<td>99.6</td>
+<td>97.2</td>
+<td>98.5</td>
+<td><strong>98.5</strong></td>
+</tr>
+<tr>
+<td>Motus</td>
+<td style="text-align: center;">✓</td>
+<td>96.8</td>
+<td>99.8</td>
+<td>96.6</td>
+<td>97.6</td>
+<td>97.7</td>
+</tr>
+<tr>
+<td><strong>Fast-WAM</strong></td>
+<td style="text-align: center;">✗</td>
+<td>98.2</td>
+<td>100.0</td>
+<td>97.0</td>
+<td>95.2</td>
+<td>97.6</td>
+</tr>
+<tr>
+<td>Fast-WAM-Joint</td>
+<td style="text-align: center;">✗</td>
+<td>99.6</td>
+<td>99.4</td>
+<td>98.2</td>
+<td>96.8</td>
+<td><strong>98.5</strong></td>
+</tr>
+<tr>
+<td>Fast-WAM-IDM</td>
+<td style="text-align: center;">✗</td>
+<td>98.8</td>
+<td>97.8</td>
+<td>97.8</td>
+<td>97.6</td>
+<td>98.0</td>
+</tr>
+<tr>
+<td>Fast-WAM w.o. co-train</td>
+<td style="text-align: center;">✗</td>
+<td>89.2</td>
+<td>99.2</td>
+<td>95.4</td>
+<td>90.0</td>
+<td>93.5</td>
+</tr>
+</tbody>
+</table>
+<p>关键发现：</p>
+<ul>
+<li>Fast-WAM（97.6%）在无 embodied pretraining 条件下与预训练的 Motus（97.7%）持平，显著优于同为无预训练的 WAM 基线</li>
+<li>Fast-WAM vs Fast-WAM-Joint（98.5%）差距仅 0.9 个百分点，说明跳过推理时未来想象的成本很小</li>
+<li><strong>去掉 video co-training 后掉到 93.5%（-4.1pp），尤其在 Spatial（-9pp）和 Long（-5.2pp）子集上退化严重</strong></li>
+</ul>
+<p><strong>RoboTwin 结果（50+ 双手机器人任务，100 次试验/任务）：</strong></p>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th style="text-align: center;">Embodied PT.</th>
+<th>Clean</th>
+<th>Rand.</th>
+<th><strong>Average</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>π₀</td>
+<td style="text-align: center;">✓</td>
+<td>65.92</td>
+<td>58.40</td>
+<td>62.2</td>
+</tr>
+<tr>
+<td>π₀.₅</td>
+<td style="text-align: center;">✓</td>
+<td>82.74</td>
+<td>76.76</td>
+<td>79.8</td>
+</tr>
+<tr>
+<td>Motus</td>
+<td style="text-align: center;">✓</td>
+<td>88.66</td>
+<td>87.02</td>
+<td>87.8</td>
+</tr>
+<tr>
+<td>Motus (from WAN2.2)</td>
+<td style="text-align: center;">✗</td>
+<td>77.56</td>
+<td>77.00</td>
+<td>77.3</td>
+</tr>
+<tr>
+<td>LingBot-VA</td>
+<td style="text-align: center;">✓</td>
+<td>92.90</td>
+<td>91.50</td>
+<td><strong>92.2</strong></td>
+</tr>
+<tr>
+<td>LingBot-VA (from WAN2.2)</td>
+<td style="text-align: center;">✗</td>
+<td>80.60</td>
+<td>--</td>
+<td>80.6</td>
+</tr>
+<tr>
+<td><strong>Fast-WAM</strong></td>
+<td style="text-align: center;">✗</td>
+<td>91.88</td>
+<td>91.78</td>
+<td><strong>91.8</strong></td>
+</tr>
+<tr>
+<td>Fast-WAM-Joint</td>
+<td style="text-align: center;">✗</td>
+<td>90.84</td>
+<td>90.32</td>
+<td>90.6</td>
+</tr>
+<tr>
+<td>Fast-WAM-IDM</td>
+<td style="text-align: center;">✗</td>
+<td>91.16</td>
+<td>91.34</td>
+<td>91.3</td>
+</tr>
+<tr>
+<td>Fast-WAM w.o. co-train</td>
+<td style="text-align: center;">✗</td>
+<td>82.76</td>
+<td>84.80</td>
+<td>83.8</td>
+</tr>
+</tbody>
+</table>
+<p>关键发现：</p>
+<ul>
+<li>Fast-WAM（91.8%）大幅超越同无预训练的 Motus（77.3%）和 LingBot-VA（80.6%），并接近预训练的 LingBot-VA（92.2%）</li>
+<li>三个有 video co-training 的变体性能高度接近（90.6%~91.8%），差距在 1.2pp 以内</li>
+<li>去掉 video co-training 导致 8pp 的大幅下降（91.8% → 83.8%）</li>
+</ul>
+<h3 id="42">4.2 真机实验：毛巾折叠</h3>
+<p><img alt="图3：真机毛巾折叠任务" src="assets/fastwam/bench_grid_2560x720.jpg" /></p>
+<p><em>图3：真机毛巾折叠任务（Galaxea R1 Lite 平台）。任务要求双臂协调操作柔性物体（毛巾），需要长期规划（长 horizon）和精确的闭环操控。演示数据量：60 小时遥操作数据。</em></p>
+<p><strong>真机结果：</strong></p>
+<p><img alt="图4：真机实验结果——成功率 vs 完成时间 + 推理延迟对比" src="assets/fastwam/method_scatter_latency.jpg" /></p>
+<p><em>图4：真机实验结果，左图为成功率 vs 平均完成时间散点图（越靠左上越好），右图为推理延迟对比。</em></p>
+<p><strong>左图解读（成功率 vs 完成时间）：</strong></p>
+<ul>
+<li>预训练的 π₀.₅ 表现最优（成功率最高 + 完成时间最短），这符合预期——它有大规模式 embodied 预训练数据</li>
+<li>在 Fast-WAM 家族中，Fast-WAM-IDM 成功率最高（约 55%），但 Fast-WAM 完成时间更短（约 35s vs 约 45s），说明去掉了未来生成后执行效率更高</li>
+<li>去掉 video co-training 的变体成功率骤降至仅 10%，且完成时间最长。这一退化幅度远超三个有 co-training 变体之间的差异</li>
+<li>所有带 video co-training 的 Fast-WAM 变体均大幅优于无预训练的 π₀.₅，验证了 WAM 式视频联合训练在数据效率上的优势</li>
+</ul>
+<p><strong>右图解读（推理延迟）：</strong></p>
+<ul>
+<li>Fast-WAM：190ms（实时级别，&gt;20Hz）</li>
+<li>Fast-WAM-Joint：约 410ms（联合去噪，需同时维护 video+action 两组 token）</li>
+<li>Fast-WAM-IDM：810ms（两阶段推理：先视频去噪再动作去噪）</li>
+<li>Fast-WAM 比 imagine-then-execute 变体快 4×+，是实现真机实时部署的关键优势</li>
+</ul>
+<h3 id="43">4.3 核心结论</h3>
+<blockquote>
+<p>三组实验（LIBERO、RoboTwin、真机）一致表明：<strong>去掉 video co-training 导致的性能退化远大于在推理时跳过未来想象</strong>。WAM 的主要价值在于训练时通过视频预测目标塑造更好的世界表征，而非推理时的显式未来生成。</p>
+</blockquote>
+<hr />
+<h2 id="_5">五、关键洞察与技术亮点</h2>
+<ol>
+<li>
+<p><strong>"预训练"来自视频模型而非具身数据：</strong> Fast-WAM 无需任何 embodied pretraining 即达到 SOTA 水平。其世界建模能力继承自 Wan2.2-5B 的视频生成预训练权重，通过 video co-training 将这些知识迁移到具身控制任务。</p>
+</li>
+<li>
+<p><strong>Structured Attention Mask 是关键设计：</strong> 通过精确控制 token 间的注意力流（action token 不能看未来 video token，clean first-frame 不 attend 任何 token），确保动作分支确实在"预测"而非"窥探"，同时让两个分支共享视觉锚点。</p>
+</li>
+<li>
+<p><strong>KV-Cache 推理优化：</strong> Fast-WAM 推理时使用 <code>prefill_video_cache</code> 将 first-frame 的 video DiT 编码结果缓存为逐层 K/V，action 去噪的每一步只需计算 action token 的 attention（以缓存 video K/V 为条件），避免重复编码视频。</p>
+</li>
+<li>
+<p><strong>Flow Matching 统一框架：</strong> Action 和 video 使用相同的 flow matching 公式和 logit-normal 噪声调度，简化了实现和超参调优。</p>
+</li>
+<li>
+<p><strong>Action Chunk = 32 的设计：</strong> 每 32 步 action 对应 9 帧视频（4× 时间下采样后），action 维度与 video 时间维度对齐，确保时间一致性。</p>
+</li>
+</ol>
+<hr />
+<h2 id="_6">六、代码实现解读</h2>
+<h3 id="61">6.1 整体架构数据流</h3>
+<div class="codehilite"><pre><span></span><code>                          ┌─────────────────────────────────┐
+                          │        FastWAM (6B total)        │
+                          │                                  │
+   Observation ──────────►│  Video VAE (frozen)              │
+   (multi-cam)            │  ├─ encode → video latents       │
+                          │  └─ first-frame latents ─────────┼──► prefill_video_cache()
+                          │                                  │        │
+   Language ─────────────►│  T5 Encoder (frozen)             │        │
+   Instruction            │  └─ text embeddings ─────────────┼── cross-attn ──┐
+                          │                                  │        │        │
+                          │  ┌───────────────────────────────┘        │        │
+                          │  │  Video DiT (30 layers, dim=3072)       │        │
+                          │  │  └─ pre_dit() → tokens + freqs         │        │
+                          │  │                                        ▼        │
+                          │  │           ┌─────────────────────────────────┐   │
+                          │  │           │       MoT (30 layers)           │   │
+                          │  │           │  ┌───────────┬───────────────┐  │   │
+                          │  │           │  │Layer i:   │               │  │   │
+                          │  │           │  │ Q/K/V_cat │ Mixed Attn    │  │   │
+                          │  │  ───────► │  │ [video+   │ (structured   │  │   │
+                          │  │           │  │  action]  │  mask)        │  │   │
+                          │  └─ kv_cache │  │   ──► split → post_block  │  │   │
+                          │              │  └───────────┴───────────────┘  │   │
+                          │              └─────────────────────────────────┘   │
+                          │                                  │                 │
+   Action Chunk (H=32) ──►│  Action DiT (30 layers, dim=1024)                  │
+                          │  ├─ pre_dit() → action tokens + freqs              │
+                          │  └─ post_dit() ← action_tokens ─────────────────────┘
+                          │
+                          │  Training only (┅┅┅):
+                          │  ┌─ Video denoising loss (future frames)
+                          │  └─ Action denoising loss (Flow Matching)
+                          └─────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="62">6.2 关键代码文件映射</h3>
+<table>
+<thead>
+<tr>
+<th>论文概念</th>
+<th>代码位置</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Fast-WAM 主模型</td>
+<td><code>src/fastwam/models/wan22/fastwam.py</code></td>
+<td><code>FastWAM</code> 类，包含训练/推理全流程</td>
+</tr>
+<tr>
+<td>MoT 混合注意力</td>
+<td><code>src/fastwam/models/wan22/mot.py</code></td>
+<td><code>MoT</code> 类，实现逐层 video+action 混合注意力</td>
+</tr>
+<tr>
+<td>Action DiT</td>
+<td><code>src/fastwam/models/wan22/action_dit.py</code></td>
+<td><code>ActionDiT</code> 类，1B 动作专家</td>
+</tr>
+<tr>
+<td>Fast-WAM-Joint</td>
+<td><code>src/fastwam/models/wan22/fastwam_joint.py</code></td>
+<td>Joint modeling 变体（action attend 全部 video）</td>
+</tr>
+<tr>
+<td>Fast-WAM-IDM</td>
+<td><code>src/fastwam/models/wan22/fastwam_idm.py</code></td>
+<td>IDM 变体（teacher-forcing + 两阶段推理）</td>
+</tr>
+<tr>
+<td>Video DiT</td>
+<td><code>src/fastwam/models/wan22/wan_video_dit.py</code></td>
+<td>Wan2.2 DiT 骨干</td>
+</tr>
+<tr>
+<td>训练器</td>
+<td><code>src/fastwam/trainer.py</code></td>
+<td>训练循环、DeepSpeed 集成</td>
+</tr>
+<tr>
+<td>数据处理</td>
+<td><code>src/fastwam/datasets/lerobot/</code></td>
+<td>LeRobot 格式数据集加载和预处理</td>
+</tr>
+<tr>
+<td>模型配置</td>
+<td><code>configs/model/fastwam.yaml</code></td>
+<td>模型超参、scheduler、loss 权重</td>
+</tr>
+<tr>
+<td>运行时工厂</td>
+<td><code>src/fastwam/runtime.py</code></td>
+<td><code>create_fastwam()</code> 从配置构建模型</td>
+</tr>
+</tbody>
+</table>
+<h3 id="63-fastwamtraining_loss">6.3 训练流程（<code>FastWAM.training_loss</code>）</h3>
+<div class="codehilite"><pre><span></span><code><span class="nv">training_loss</span><span class="ss">(</span><span class="nv">sample</span><span class="ss">)</span>
+│
+├─<span class="w"> </span><span class="nv">build_inputs</span><span class="ss">(</span><span class="nv">sample</span><span class="ss">)</span>
+│<span class="w">  </span>├─<span class="w"> </span><span class="nv">VAE</span>.<span class="nv">encode</span><span class="ss">(</span><span class="nv">video</span><span class="ss">)</span><span class="w"> </span>→<span class="w"> </span><span class="nv">input_latents</span><span class="w"> </span>[<span class="nv">B</span>,<span class="w"> </span><span class="nv">C</span>,<span class="w"> </span><span class="nv">T_latent</span>,<span class="w"> </span><span class="nv">H_lat</span>,<span class="w"> </span><span class="nv">W_lat</span>]
+│<span class="w">  </span>├─<span class="w"> </span><span class="nv">extract</span><span class="w"> </span><span class="nv">first_frame_latents</span><span class="w"> </span><span class="ss">(</span><span class="k">if</span><span class="w"> </span><span class="nv">fuse_vae</span><span class="ss">)</span>
+│<span class="w">  </span>├─<span class="w"> </span><span class="nv">T5</span><span class="w"> </span><span class="nv">context</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nv">optional</span><span class="w"> </span><span class="nv">proprio</span><span class="w"> </span><span class="nv">encoding</span>
+│<span class="w">  </span>└─<span class="w"> </span><span class="nv">action</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nv">action_is_pad</span>
+│
+├─<span class="w"> </span><span class="nv">Video</span><span class="w"> </span><span class="nv">branch</span>:
+│<span class="w">  </span>├─<span class="w"> </span><span class="nv">sample</span><span class="w"> </span><span class="nv">noise_video</span>,<span class="w"> </span><span class="nv">timestep_video</span>
+│<span class="w">  </span>├─<span class="w"> </span><span class="nv">add_noise</span><span class="ss">(</span><span class="nv">input_latents</span><span class="ss">)</span><span class="w"> </span>→<span class="w"> </span><span class="nv">noisy_latents</span>
+│<span class="w">  </span>├─<span class="w"> </span><span class="nv">replace</span><span class="w"> </span><span class="nv">first</span><span class="w"> </span><span class="nv">frame</span><span class="w"> </span><span class="nv">with</span><span class="w"> </span><span class="nv">clean</span><span class="w"> </span><span class="nv">latents</span>
+│<span class="w">  </span>└─<span class="w"> </span><span class="nv">target_video</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nv">scheduler</span>.<span class="nv">training_target</span><span class="ss">(</span><span class="nv">input_latents</span>,<span class="w"> </span><span class="nv">noise</span><span class="ss">)</span>
+│
+├─<span class="w"> </span><span class="nv">Action</span><span class="w"> </span><span class="nv">branch</span>:
+│<span class="w">  </span>├─<span class="w"> </span><span class="nv">sample</span><span class="w"> </span><span class="nv">noise_action</span>,<span class="w"> </span><span class="nv">timestep_action</span>
+│<span class="w">  </span>├─<span class="w"> </span><span class="nv">add_noise</span><span class="ss">(</span><span class="nv">action</span><span class="ss">)</span><span class="w"> </span>→<span class="w"> </span><span class="nv">noisy_action</span>
+│<span class="w">  </span>└─<span class="w"> </span><span class="nv">target_action</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nv">scheduler</span>.<span class="nv">training_target</span><span class="ss">(</span><span class="nv">action</span>,<span class="w"> </span><span class="nv">noise</span><span class="ss">)</span>
+│
+├─<span class="w"> </span><span class="nv">pre_dit</span><span class="w"> </span><span class="ss">(</span><span class="nv">video</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nv">action</span><span class="ss">)</span>:
+│<span class="w">  </span>├─<span class="w"> </span><span class="nv">video_expert</span>.<span class="nv">pre_dit</span><span class="ss">(</span><span class="nv">noisy_latents</span><span class="ss">)</span><span class="w"> </span>→<span class="w"> </span><span class="nv">tokens</span>,<span class="w"> </span><span class="nv">freqs</span>,<span class="w"> </span><span class="nv">t_mod</span>,<span class="w"> </span><span class="nv">context</span>
+│<span class="w">  </span>└─<span class="w"> </span><span class="nv">action_expert</span>.<span class="nv">pre_dit</span><span class="ss">(</span><span class="nv">noisy_action</span><span class="ss">)</span><span class="w">  </span>→<span class="w"> </span><span class="nv">tokens</span>,<span class="w"> </span><span class="nv">freqs</span>,<span class="w"> </span><span class="nv">t_mod</span>,<span class="w"> </span><span class="nv">context</span>
+│
+├─<span class="w"> </span><span class="nv">MoT</span><span class="w"> </span><span class="nv">forward</span><span class="w"> </span><span class="ss">(</span><span class="mi">30</span><span class="w"> </span><span class="nv">layers</span><span class="ss">)</span>:
+│<span class="w">  </span><span class="k">for</span><span class="w"> </span><span class="nv">each</span><span class="w"> </span><span class="nv">layer</span>:
+│<span class="w">    </span><span class="nv">build</span><span class="w"> </span><span class="nv">Q</span><span class="o">/</span><span class="nv">K</span><span class="o">/</span><span class="nv">V</span><span class="w"> </span><span class="nv">per</span><span class="w"> </span><span class="nv">expert</span><span class="w"> </span>→<span class="w"> </span><span class="nv">concat</span><span class="w"> </span>→<span class="w"> </span><span class="nv">mixed_attention</span><span class="ss">(</span><span class="nv">structured_mask</span><span class="ss">)</span>
+│<span class="w">    </span>→<span class="w"> </span><span class="nv">split</span><span class="w"> </span>→<span class="w"> </span><span class="nv">post_block</span><span class="w"> </span><span class="ss">(</span><span class="nv">self</span><span class="o">-</span><span class="nv">attn</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nv">cross</span><span class="o">-</span><span class="nv">attn</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nv">MLP</span><span class="ss">)</span><span class="w"> </span><span class="nv">per</span><span class="w"> </span><span class="nv">expert</span>
+│
+├─<span class="w"> </span><span class="nv">post_dit</span>:
+│<span class="w">  </span>├─<span class="w"> </span><span class="nv">video_expert</span>.<span class="nv">post_dit</span><span class="ss">(</span><span class="nv">tokens_out</span>[<span class="s2">&quot;video&quot;</span>]<span class="ss">)</span><span class="w"> </span>→<span class="w"> </span><span class="nv">pred_video</span>
+│<span class="w">  </span>└─<span class="w"> </span><span class="nv">action_expert</span>.<span class="nv">post_dit</span><span class="ss">(</span><span class="nv">tokens_out</span>[<span class="s2">&quot;action&quot;</span>]<span class="ss">)</span><span class="w"> </span>→<span class="w"> </span><span class="nv">pred_action</span>
+│
+└─<span class="w"> </span><span class="nv">Loss</span>:
+<span class="w">   </span>├─<span class="w"> </span><span class="nv">loss_video</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nv">MSE</span><span class="ss">(</span><span class="nv">pred_video</span>,<span class="w"> </span><span class="nv">target_video</span><span class="ss">)</span><span class="w"> </span>[<span class="nv">masked</span><span class="w"> </span><span class="nv">by</span><span class="w"> </span><span class="nv">image_is_pad</span>]
+<span class="w">   </span>├─<span class="w"> </span><span class="nv">loss_action</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nv">MSE</span><span class="ss">(</span><span class="nv">pred_action</span>,<span class="w"> </span><span class="nv">target_action</span><span class="ss">)</span><span class="w"> </span>[<span class="nv">masked</span><span class="w"> </span><span class="nv">by</span><span class="w"> </span><span class="nv">action_is_pad</span>]
+<span class="w">   </span>└─<span class="w"> </span><span class="nv">loss_total</span><span class="w"> </span><span class="o">=</span><span class="w"> </span>λ<span class="nv">_video</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nv">loss_video</span><span class="w"> </span><span class="o">+</span><span class="w"> </span>λ<span class="nv">_action</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nv">loss_action</span>
+</code></pre></div>
+
+<h3 id="64-fastwaminfer_action-fast-path">6.4 推理流程（<code>FastWAM.infer_action</code> —— 核心 Fast Path）</h3>
+<div class="codehilite"><pre><span></span><code><span class="n">infer_action</span><span class="p">(</span><span class="n">obs_image</span><span class="p">,</span><span class="w"> </span><span class="n">instruction</span><span class="p">)</span>
+<span class="err">│</span>
+<span class="err">├─</span><span class="w"> </span><span class="n">VAE</span><span class="p">.</span><span class="n">encode</span><span class="p">(</span><span class="n">first_frame</span><span class="p">)</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">first_frame_latents</span>
+<span class="err">├─</span><span class="w"> </span><span class="n">random</span><span class="w"> </span><span class="n">init</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">latents_action</span><span class="w"> </span><span class="o">[</span><span class="n">1, 32, action_dim</span><span class="o">]</span>
+<span class="err">│</span>
+<span class="err">├─</span><span class="w"> </span><span class="n">video_expert</span><span class="p">.</span><span class="n">pre_dit</span><span class="p">(</span><span class="n">first_frame_latents</span><span class="p">,</span><span class="w"> </span><span class="n">t</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="err">│</span><span class="w">  </span><span class="err">└─</span><span class="w"> </span><span class="n">返回</span><span class="w"> </span><span class="n">video</span><span class="w"> </span><span class="n">tokens</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">freqs</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">t_mod</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">context</span>
+<span class="err">│</span>
+<span class="err">├─</span><span class="w"> </span><span class="n">mot</span><span class="p">.</span><span class="n">prefill_video_cache</span><span class="p">(</span><span class="n">video_tokens</span><span class="p">,</span><span class="w"> </span><span class="p">...)</span>
+<span class="err">│</span><span class="w">  </span><span class="err">└─</span><span class="w"> </span><span class="n">逐层计算</span><span class="w"> </span><span class="n">video</span><span class="w"> </span><span class="n">K</span><span class="o">/</span><span class="n">V</span><span class="err">，</span><span class="n">存入</span><span class="w"> </span><span class="n">kv_cache</span><span class="w"> </span><span class="p">(</span><span class="mi">30</span><span class="w"> </span><span class="n">层</span><span class="p">)</span>
+<span class="err">│</span><span class="w">     </span><span class="k">for</span><span class="w"> </span><span class="k">each</span><span class="w"> </span><span class="nl">layer</span><span class="p">:</span>
+<span class="err">│</span><span class="w">       </span><span class="n">Q_video</span><span class="p">,</span><span class="w"> </span><span class="n">K_video</span><span class="p">,</span><span class="w"> </span><span class="n">V_video</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">build</span><span class="p">(</span><span class="n">video_tokens</span><span class="p">)</span>
+<span class="err">│</span><span class="w">       </span><span class="n">mixed</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">flash_attention</span><span class="p">(</span><span class="n">Q_video</span><span class="p">,</span><span class="w"> </span><span class="n">K_video</span><span class="p">,</span><span class="w"> </span><span class="n">V_video</span><span class="p">,</span><span class="w"> </span><span class="n">self_mask</span><span class="p">)</span>
+<span class="err">│</span><span class="w">       </span><span class="n">video_tokens</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">post_block</span><span class="p">(</span><span class="n">video_tokens</span><span class="p">,</span><span class="w"> </span><span class="n">mixed</span><span class="p">)</span>
+<span class="err">│</span><span class="w">       </span><span class="n">kv_cache</span><span class="o">[</span><span class="n">layer</span><span class="o">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="err">{</span><span class="nl">k</span><span class="p">:</span><span class="w"> </span><span class="n">K_video</span><span class="p">,</span><span class="w"> </span><span class="nl">v</span><span class="p">:</span><span class="w"> </span><span class="n">V_video</span><span class="err">}</span>
+<span class="err">│</span>
+<span class="err">├─</span><span class="w"> </span><span class="n">Denoising</span><span class="w"> </span><span class="n">loop</span><span class="w"> </span><span class="p">(</span><span class="mi">10</span><span class="w"> </span><span class="n">steps</span><span class="p">)</span><span class="err">:</span>
+<span class="err">│</span><span class="w">  </span><span class="k">for</span><span class="w"> </span><span class="k">each</span><span class="w"> </span><span class="nl">step</span><span class="p">:</span>
+<span class="err">│</span><span class="w">    </span><span class="n">timestep_action</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">schedule</span><span class="o">[</span><span class="n">t</span><span class="o">]</span>
+<span class="err">│</span><span class="w">    </span><span class="n">action_pre</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">action_expert</span><span class="p">.</span><span class="n">pre_dit</span><span class="p">(</span><span class="n">latents_action</span><span class="p">,</span><span class="w"> </span><span class="n">t</span><span class="p">)</span>
+<span class="err">│</span><span class="w">    </span><span class="err">└─</span><span class="w"> </span><span class="n">返回</span><span class="w"> </span><span class="k">action</span><span class="w"> </span><span class="n">tokens</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">freqs</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">t_mod</span>
+<span class="err">│</span>
+<span class="err">│</span><span class="w">    </span><span class="n">mot</span><span class="p">.</span><span class="n">forward_action_with_video_cache</span><span class="p">(</span>
+<span class="err">│</span><span class="w">      </span><span class="n">action_tokens</span><span class="p">,</span><span class="w"> </span><span class="n">kv_cache</span><span class="p">,</span><span class="w"> </span><span class="n">joint_attention_mask</span>
+<span class="err">│</span><span class="w">    </span><span class="p">)</span>
+<span class="err">│</span><span class="w">    </span><span class="err">└─</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="k">each</span><span class="w"> </span><span class="nl">layer</span><span class="p">:</span>
+<span class="err">│</span><span class="w">         </span><span class="n">Q_act</span><span class="p">,</span><span class="w"> </span><span class="n">K_act</span><span class="p">,</span><span class="w"> </span><span class="n">V_act</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">build</span><span class="p">(</span><span class="n">action_tokens</span><span class="p">)</span>
+<span class="err">│</span><span class="w">         </span><span class="n">K_cat</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">concat</span><span class="p">(</span><span class="o">[</span><span class="n">kv_cache[layer</span><span class="o">]</span><span class="p">.</span><span class="n">k</span><span class="p">,</span><span class="w"> </span><span class="n">K_act</span><span class="err">]</span><span class="p">)</span>
+<span class="err">│</span><span class="w">         </span><span class="n">V_cat</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">concat</span><span class="p">(</span><span class="o">[</span><span class="n">kv_cache[layer</span><span class="o">]</span><span class="p">.</span><span class="n">v</span><span class="p">,</span><span class="w"> </span><span class="n">V_act</span><span class="err">]</span><span class="p">)</span>
+<span class="err">│</span><span class="w">         </span><span class="n">mixed</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">flash_attention</span><span class="p">(</span><span class="n">Q_act</span><span class="p">,</span><span class="w"> </span><span class="n">K_cat</span><span class="p">,</span><span class="w"> </span><span class="n">V_cat</span><span class="p">,</span><span class="w"> </span><span class="n">action_rows_of_joint_mask</span><span class="p">)</span>
+<span class="err">│</span><span class="w">         </span><span class="n">action_tokens</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">post_block</span><span class="p">(</span><span class="n">action_tokens</span><span class="p">,</span><span class="w"> </span><span class="n">mixed</span><span class="p">)</span>
+<span class="err">│</span>
+<span class="err">│</span><span class="w">    </span><span class="n">pred_action</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">action_expert</span><span class="p">.</span><span class="n">post_dit</span><span class="p">(</span><span class="n">action_tokens</span><span class="p">)</span>
+<span class="err">│</span><span class="w">    </span><span class="n">latents_action</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">scheduler</span><span class="p">.</span><span class="n">step</span><span class="p">(</span><span class="n">pred_action</span><span class="p">,</span><span class="w"> </span><span class="n">delta</span><span class="p">,</span><span class="w"> </span><span class="n">latents_action</span><span class="p">)</span>
+<span class="err">│</span>
+<span class="err">└─</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="n">latents_action</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="k">action</span><span class="w"> </span><span class="n">chunk</span><span class="w"> </span><span class="p">(</span><span class="mi">32</span><span class="w"> </span><span class="n">steps</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="65-structured-attention-mask">6.5 Structured Attention Mask 实现</h3>
+<div class="codehilite"><pre><span></span><code><span class="c1"># fastwam.py:_build_mot_attention_mask()</span>
+<span class="k">def</span> <span class="nf">_build_mot_attention_mask</span><span class="p">(</span><span class="n">video_seq_len</span><span class="p">,</span> <span class="n">action_seq_len</span><span class="p">,</span> <span class="n">video_tokens_per_frame</span><span class="p">):</span>
+    <span class="n">mask</span> <span class="o">=</span> <span class="n">zeros</span><span class="p">(</span><span class="n">total_seq</span><span class="p">,</span> <span class="n">total_seq</span><span class="p">)</span>  <span class="c1"># 全零 = 不可见</span>
+
+    <span class="c1"># video → video: 由 video_expert 的配置决定</span>
+    <span class="c1">#   &quot;first_frame_causal&quot; 模式: first-frame 双向，后续帧因果</span>
+    <span class="n">mask</span><span class="p">[:</span><span class="n">video_seq_len</span><span class="p">,</span> <span class="p">:</span><span class="n">video_seq_len</span><span class="p">]</span> <span class="o">=</span> <span class="n">video_mask</span>
+
+    <span class="c1"># action → action: 双向（action chunk 内部完全可见）</span>
+    <span class="n">mask</span><span class="p">[</span><span class="n">video_seq_len</span><span class="p">:,</span> <span class="n">video_seq_len</span><span class="p">:]</span> <span class="o">=</span> <span class="kc">True</span>
+
+    <span class="c1"># action → first-frame video: 可访问视觉锚点</span>
+    <span class="n">mask</span><span class="p">[</span><span class="n">video_seq_len</span><span class="p">:,</span> <span class="p">:</span><span class="n">video_tokens_per_frame</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+
+    <span class="c1"># action → future video: 不可见！（关键解耦设计）</span>
+    <span class="c1"># 这一行被刻意留为 False</span>
+
+    <span class="k">return</span> <span class="n">mask</span>
+</code></pre></div>
+
+<p>Fast-WAM-Joint 的关键区别：<code>mask[video_seq_len:, :video_seq_len] = True</code> —— action 可访问全部 video token（包括未来帧），形成联合建模。</p>
+<h3 id="66-teacher-forcing-in-fast-wam-idm">6.6 Teacher-Forcing in Fast-WAM-IDM</h3>
+<p>Fast-WAM-IDM 训练时引入了第三个分支（cond-video），以 50% 概率对其加噪：</p>
+<div class="codehilite"><pre><span></span><code><span class="n">training_loss</span><span class="w"> </span><span class="p">(</span><span class="n">IDM</span><span class="w"> </span><span class="n">variant</span><span class="p">):</span>
+<span class="err">├─</span><span class="w"> </span><span class="n">Branch</span><span class="w"> </span><span class="n">A</span><span class="p">:</span><span class="w"> </span><span class="n">noisy</span><span class="w"> </span><span class="n">video</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">video</span><span class="w"> </span><span class="n">denoising</span><span class="w"> </span><span class="n">loss</span>
+<span class="err">├─</span><span class="w"> </span><span class="n">Branch</span><span class="w"> </span><span class="n">B</span><span class="p">:</span><span class="w"> </span><span class="n">noisy</span><span class="w"> </span><span class="n">action</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">action</span><span class="w"> </span><span class="n">denoising</span><span class="w"> </span><span class="n">loss</span>
+<span class="err">├─</span><span class="w"> </span><span class="n">Branch</span><span class="w"> </span><span class="n">C</span><span class="p">:</span><span class="w"> </span><span class="n">cond</span><span class="w"> </span><span class="n">video</span><span class="w"> </span><span class="p">(</span><span class="mi">50</span><span class="o">%</span><span class="w"> </span><span class="n">noisy</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">50</span><span class="o">%</span><span class="w"> </span><span class="n">clean</span><span class="p">)</span>
+<span class="err">│</span>
+<span class="err">├─</span><span class="w"> </span><span class="err">拼接</span><span class="w"> </span><span class="p">[</span><span class="n">noisy_video</span><span class="p">,</span><span class="w"> </span><span class="n">cond_video</span><span class="p">]</span><span class="w"> </span><span class="err">作为</span><span class="w"> </span><span class="n">video</span><span class="w"> </span><span class="n">expert</span><span class="w"> </span><span class="err">输入</span>
+<span class="err">├─</span><span class="w"> </span><span class="n">Action</span><span class="w"> </span><span class="err">仅</span><span class="w"> </span><span class="n">attend</span><span class="w"> </span><span class="n">cond_video</span><span class="err">（不</span><span class="w"> </span><span class="n">attend</span><span class="w"> </span><span class="n">noisy_video</span><span class="err">）</span>
+<span class="err">└─</span><span class="w"> </span><span class="err">推理时两阶段：先去噪</span><span class="w"> </span><span class="n">video</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="err">冻结</span><span class="w"> </span><span class="n">cond</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="err">去噪</span><span class="w"> </span><span class="n">action</span>
+</code></pre></div>
+
+<hr />
+<h2 id="_7">七、局限性</h2>
+<ol>
+<li><strong>仅研究单步 action chunk：</strong> 论文为简化控制实验，省略了外层的自回归 rollout 循环。真实部署中需要滑动窗口式的 chunk 执行，外层 rollout 的影响未被研究。</li>
+<li><strong>未探索更大规模预训练：</strong> Fast-WAM 使用 Wan2.2-5B 作为骨干，未测试更大视频模型（如 Wan2.2-14B）或更多预训练数据下的 scaling 行为。</li>
+<li><strong>单任务毛巾折叠的真机实验范围有限：</strong> 真机仅测试了一个任务（毛巾折叠），虽然该任务有代表性（长 horizon + 柔性物体），但更多样化的真机任务（如灵巧操作、移动操作）的验证仍缺乏。</li>
+<li><strong>Flow Matching 与 action 的兼容性未深入探讨：</strong> Action 是低维连续向量（通常 &lt;20 维），与高维视频 latent（48 通道 × 空间 × 时间）在 flow matching 中的行为差异未被分析，可能存在更适合 action 的替代训练目标。</li>
+</ol>
+<hr />
+<h2 id="_8">八、关键概念速查</h2>
+<table>
+<thead>
+<tr>
+<th>概念</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>WAM (World Action Model)</strong></td>
+<td>同时建模未来视觉观测和动作生成的具身策略模型</td>
+</tr>
+<tr>
+<td><strong>VLA (Vision-Language-Action)</strong></td>
+<td>直接从视觉+语言映射到动作的策略模型，不显式建模未来</td>
+</tr>
+<tr>
+<td><strong>Imagine-then-Execute</strong></td>
+<td>先想象未来 → 再基于想象执行动作的 WAM 推理范式</td>
+</tr>
+<tr>
+<td><strong>Video Co-training</strong></td>
+<td>训练时额外的视频预测/去噪目标，作为动作学习的辅助信号</td>
+</tr>
+<tr>
+<td><strong>MoT (Mixture-of-Transformer)</strong></td>
+<td>多个专家 DiT 共享混合注意力的架构</td>
+</tr>
+<tr>
+<td><strong>Flow Matching</strong></td>
+<td>通过预测速度场从噪声到数据的生成模型训练方法，替代 DDPM</td>
+</tr>
+<tr>
+<td><strong>Logit-normal Schedule</strong></td>
+<td>Wan2.2 使用的噪声调度策略，从 logit-normal 分布采样时间步 t</td>
+</tr>
+<tr>
+<td><strong>KV-Cache</strong></td>
+<td>推理时将视频编码的逐层 K/V 缓存，供 action 去噪多步复用</td>
+</tr>
+<tr>
+<td><strong>Teacher Forcing</strong></td>
+<td>IDM 变体中：训练时以一定概率对 cond-video 加噪，使 action 分支学会利用不同质量的视频条件</td>
+</tr>
+<tr>
+<td><strong>LIBERO</strong></td>
+<td>机器人操作仿真基准，含 4 个 suite（Spatial/Object/Goal/Long）共 40 个任务</td>
+</tr>
+<tr>
+<td><strong>RoboTwin 2.0</strong></td>
+<td>双臂协调操作仿真基准，50+ 任务，含 clean 和 randomized 两种场景</td>
+</tr>
+</tbody>
+</table>
+  </div>
+</main>
+
+
+<script>
+(function() {
+  const sidebar = document.getElementById('sidebar');
+  const links = sidebar.querySelectorAll('a');
+  const headings = document.querySelectorAll('h1[id], h2[id], h3[id], h4[id]');
+  if (headings.length === 0) return;
+
+  const linkMap = new Map();
+  links.forEach(function(a) {
+    const href = a.getAttribute('href');
+    if (href && href.startsWith('#')) linkMap.set(href.slice(1), a);
+  });
+
+  function onScroll() {
+    let currentId = null;
+    const scrollTop = window.scrollY + 80;
+    headings.forEach(function(h) { if (h.offsetTop <= scrollTop) currentId = h.id; });
+    links.forEach(function(a) { a.classList.remove('active'); });
+    if (currentId && linkMap.has(currentId)) {
+      const el = linkMap.get(currentId);
+      el.classList.add('active');
+      const sr = sidebar.getBoundingClientRect();
+      const er = el.getBoundingClientRect();
+      if (er.bottom > sr.bottom || er.top < sr.top) {
+        el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+    }
+  }
+
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+})();
+</script>
+
+</body>
+</html>
