@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AttenA+: Rectifying Action Inequality in Robotic Foundation Models</title>
+<!-- arxiv: 2605.13548 -->
+<!-- venue: NeurIPS 2026（投稿中） -->
+<!-- tags: VLA, WAM, 动作注意力, 速度场, 机器人基础模型, 机器人操作 -->
+<!-- words-zh: 3381 -->
+<!-- words-en: 257 -->
+<!-- reading-time: 11 -->
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #ffffff;
+    --text: #1a1a2e;
+    --text-secondary: #555;
+    --border: #e1e4e8;
+    --link: #0969da;
+    --table-stripe: #f6f8fa;
+    --heading: #0d1117;
+    --blockquote-border: #0969da;
+    --blockquote-bg: #f0f6ff;
+    --inline-code: #d73a49;
+    --inline-code-bg: #f6f8fa;
+    --sidebar-width: 260px;
+    --toc-active: #0969da;
+    --content-max-width: 900px;
+    --content-padding: 48px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "Inter", "Noto Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 16px;
+    line-height: 1.75;
+    color: var(--text);
+    background: var(--bg);
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    width: var(--sidebar-width);
+    overflow-y: auto;
+    padding: 28px 20px 40px;
+    background: #fafbfc;
+    border-right: 1px solid var(--border);
+    z-index: 10;
+    scrollbar-width: thin;
+  }
+  .sidebar-title {
+    font-size: 13px; font-weight: 700; color: var(--text-secondary);
+    margin-bottom: 16px; letter-spacing: 0.06em; text-transform: uppercase;
+  }
+  .toc-list { list-style: none; padding: 0; margin: 0; }
+  .toc-list ul { list-style: none; padding-left: 14px; }
+  .toc-list li { margin: 1px 0; }
+  .toc-list a {
+    display: block; padding: 4px 12px; font-size: 13.5px; line-height: 1.45;
+    color: var(--text-secondary); text-decoration: none; border-radius: 4px;
+    border-left: 2px solid transparent; transition: all 0.15s;
+  }
+  .toc-list a:hover { color: var(--link); background: #e8f0fe; }
+  .toc-list a.active {
+    color: var(--toc-active); font-weight: 600;
+    border-left-color: var(--toc-active); background: #e8f0fe;
+  }
+  .toc-h1 a { font-weight: 600; color: var(--heading); font-size: 14px; }
+  .toc-h3 a { padding-left: 24px; font-size: 13px; }
+  .toc-h4 a { padding-left: 36px; font-size: 12.5px; }
+  .toc-empty { color: var(--text-secondary); font-size: 13px; font-style: italic; }
+
+  .main-wrapper {
+    margin-left: var(--sidebar-width);
+    min-height: 100vh;
+    display: flex; justify-content: center;
+  }
+  .content-inner {
+    width: 100%;
+    max-width: var(--content-max-width);
+    padding: 40px var(--content-padding) 80px;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    color: var(--heading); font-weight: 700; line-height: 1.3;
+    margin-top: 2em; margin-bottom: 0.6em; scroll-margin-top: 24px;
+  }
+  h1 { font-size: 2em; border-bottom: 2px solid var(--border); padding-bottom: 0.3em; margin-top: 0; }
+  h2 { font-size: 1.5em; border-bottom: 1px solid var(--border); padding-bottom: 0.25em; }
+  h3 { font-size: 1.25em; }
+  h4 { font-size: 1.1em; }
+  p { margin-bottom: 1em; }
+  a { color: var(--link); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  strong { font-weight: 600; }
+
+  blockquote {
+    border-left: 4px solid var(--blockquote-border);
+    background: var(--blockquote-bg);
+    padding: 12px 20px; margin: 1em 0;
+    border-radius: 0 6px 6px 0; color: var(--text-secondary);
+  }
+  blockquote p:last-child { margin-bottom: 0; }
+
+  code {
+    font-family: "JetBrains Mono", "SF Mono", "Fira Code", monospace;
+    font-size: 0.875em; background: var(--inline-code-bg);
+    padding: 2px 6px; border-radius: 4px; color: var(--inline-code);
+  }
+  pre {
+    background: #1e1e2e; color: #cdd6f4;
+    border-radius: 8px; padding: 16px 20px; overflow-x: auto;
+    margin: 1em 0; font-size: 14px; line-height: 1.55;
+  }
+  pre code { background: none; padding: 0; border-radius: 0; color: inherit; font-size: inherit; }
+
+  .codehilite { background: #1e1e2e; border-radius: 8px; padding: 16px 20px; overflow-x: auto; margin: 1em 0; }
+  .codehilite pre { background: none; padding: 0; margin: 0; border-radius: 0; }
+  .codehilite .hll { background-color: #2a2a3e; }
+  .codehilite .c  { color: #6c7086; font-style: italic; }
+  .codehilite .k  { color: #cba6f7; }
+  .codehilite .o  { color: #89b4fa; }
+  .codehilite .s  { color: #a6e3a1; }
+  .codehilite .n  { color: #cdd6f4; }
+  .codehilite .p  { color: #bac2de; }
+  .codehilite .mi { color: #fab387; }
+  .codehilite .nf { color: #89b4fa; }
+  .codehilite .nb { color: #f38ba8; }
+  .codehilite .nc { color: #f9e2af; }
+  .codehilite .bp { color: #f38ba8; }
+
+  table { width: 100%; border-collapse: collapse; margin: 1em 0; font-size: 0.925em; }
+  th, td { border: 1px solid var(--border); padding: 10px 14px; text-align: left; }
+  th { background: var(--table-stripe); font-weight: 600; color: var(--heading); }
+  tr:nth-child(even) td { background: var(--table-stripe); }
+
+  .math.display { display: block; overflow-x: auto; padding: 12px 0; margin: 1em 0; }
+  ul, ol { padding-left: 1.5em; margin-bottom: 1em; }
+  li { margin-bottom: 0.3em; }
+  hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+  img { max-width: 100%; height: auto; border-radius: 6px; margin: 0.5em 0; }
+  p:has(img) { text-align: center; }
+  p:has(img) + p { text-align: center; font-size: 0.9em; color: var(--text-secondary); }
+  .mermaid { text-align: center; margin: 1.5em 0; background: #fafbfc; border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+  .article-stats {
+    font-size: 0.85rem; color: var(--text-secondary);
+    padding: 10px 18px; margin-bottom: 28px;
+    background: #f8f9fa; border: 1px solid var(--border); border-radius: 8px;
+  }
+
+  @media (max-width: 1024px) {
+    .sidebar { position: static; width: 100%; height: auto; max-height: 35vh; border-right: none; border-bottom: 1px solid var(--border); }
+    .main-wrapper { margin-left: 0; display: block; }
+    .content-inner { max-width: none; padding: 24px 20px 60px; }
+  }
+</style>
+
+<script>
+MathJax = {
+  tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']], processEscapes: true, tags: 'none' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] }
+};
+</script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  mermaid.initialize({ startOnLoad: true, theme: 'neutral', securityLevel: 'loose' });
+});
+</script>
+
+</head>
+<body>
+
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-title">目录</div>
+  <ul class="toc-list">
+<li class="toc-h1"><a href="#attena-rectifying-action-inequality-in-robotic-foundation-models">AttenA+: Rectifying Action Inequality in Robotic Foundation Models</a>
+<ul>
+</li>
+<li class="toc-h2"><a href="#_1">一、核心问题</a>
+</li>
+<li class="toc-h2"><a href="#_2">二、核心思路 / 方法</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#21">2.1 速度场分析：低速 = 关键</a>
+</li>
+<li class="toc-h3"><a href="#22-attena">2.2 AttenA+：基于速度场的动作注意力</a>
+<ul>
+</li>
+<li class="toc-h4"><a href="#_3">速度计算</a>
+</li>
+<li class="toc-h4"><a href="#_4">权重映射</a>
+</li>
+<li class="toc-h4"><a href="#_5">正则化</a>
+</ul></li>
+</li>
+<li class="toc-h3"><a href="#23">2.3 范式无关的优化目标</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_6">三、实验与结果</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#31">3.1 评估指标</a>
+</li>
+<li class="toc-h3"><a href="#32-libero">3.2 LIBERO 基准结果</a>
+</li>
+<li class="toc-h3"><a href="#33">3.3 不同基线的改进对比</a>
+</li>
+<li class="toc-h3"><a href="#34-robotwin-20">3.4 RoboTwin 2.0 基准结果</a>
+</li>
+<li class="toc-h3"><a href="#35">3.5 消融实验：权重策略与裁剪阈值</a>
+</li>
+<li class="toc-h3"><a href="#36">3.6 真机实验</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_7">四、关键洞察与技术亮点</a>
+</li>
+<li class="toc-h2"><a href="#_8">五、局限性</a>
+</li>
+<li class="toc-h2"><a href="#_9">六、关键概念速查</a>
+</ul></li>
+</li></ul>
+</nav>
+
+<main class="main-wrapper">
+  <div class="content-inner" id="main-content">
+<h1 id="attena-rectifying-action-inequality-in-robotic-foundation-models">AttenA+: Rectifying Action Inequality in Robotic Foundation Models</h1>
+<div class="article-stats">3,381 字 · English 257 词 · 约 11 分钟阅读</div>
+
+<blockquote>
+<p><strong>论文信息</strong>
+- 作者：Daojie Peng<em>, Fulong Ma</em>, Jiahang Cao<em>, Qiang Zhang, Xupeng Xie, Jian Guo, Ping Luo, Andrew F. Luo, Boyu Zhou, Jun Ma†（</em>同等贡献，†通讯作者）
+- 机构：HKUST(GZ), HKU, USTC, IDEA Research, SUSTech, X-Humanoid
+- 投稿方向：NeurIPS 2026（投稿中）
+- arXiv ID：2605.13548v1
+- 代码：https://github.com/AttenA-Plus/AttenA-Plus</p>
+</blockquote>
+<hr />
+<h2 id="_1">一、核心问题</h2>
+<p>当前机器人基础模型（VLA 和 WAM）在训练时对所有时间步的动作一视同仁，赋予相同的 loss 权重。这一做法继承自 NLP 的"所有 token 同等重要"假设，但忽略了机器人操作轨迹的<strong>物理异构性</strong>：</p>
+<ul>
+<li><strong>低速动作</strong>（如抓取、精细对准、放置）是任务成败的关键，对精度要求极高</li>
+<li><strong>高速动作</strong>（如自由空间移动、粗定位）是容错率高的过渡性运动</li>
+</ul>
+<p>这种"平坦"的训练范式导致模型将表示能力浪费在冗余的过渡段上，而对真正决定任务成败的低速精密动作优化不足。论文将这一现象形式化为 <strong>Action Inequality（动作不平等）</strong> 问题。</p>
+<blockquote>
+<p>换句话说：模型花了同样的力气去学"快速移动到目标附近"和"精确抓取物体"，但后者才是决定成败的关键。AttenA+ 的核心思想就是让模型把更多注意力放在低速精密动作上。</p>
+</blockquote>
+<hr />
+<h2 id="_2">二、核心思路 / 方法</h2>
+<h3 id="21">2.1 速度场分析：低速 = 关键</h3>
+<p>论文首先对多个任务数据集的末端执行器速度分布进行了可视化分析（图1）。发现：</p>
+<ul>
+<li><strong>高速区（暖色）</strong>：对应自由空间中的接近/过渡阶段，误差容忍度高</li>
+<li><strong>低速区（冷色）</strong>：对应物体交互阶段（抓取、对准、放置），微小的预测误差就可能导致任务失败</li>
+</ul>
+<p>因此，<strong>瞬时速度 <span class="math inline">$v_t$</span> 可以作为动作重要性的天然无监督代理指标</strong>——速度越低，精度要求越高，动作越关键。</p>
+<h3 id="22-attena">2.2 AttenA+：基于速度场的动作注意力</h3>
+<p>AttenA+ 是一个<strong>架构无关的即插即用增强框架</strong>，核心思想是用速度场的倒数作为权重，重新缩放训练 loss。</p>
+<h4 id="_3">速度计算</h4>
+<p>对每个时间步 <span class="math inline">$t$</span> 的真值动作 <span class="math inline">$\boldsymbol{a}_t^{gt}$</span>，计算其瞬时速度幅值：</p>
+<p><div class="math display">$$v_t = \|\boldsymbol{a}_t^{gt}\|_2 = \sqrt{\sum_{d=1}^{D_{pos}} (a_{t,d}^{gt})^2}$$</div></p>
+<p>其中 <span class="math inline">$D_{pos}$</span> 为动作的平移/旋转自由度。以 LIBERO 数据集（<span class="math inline">$D=7$</span>：6 个关节速度 + 1 个夹爪状态）为例，仅使用前 6 维（关节速度）计算速度，忽略二值夹爪状态。</p>
+<h4 id="_4">权重映射</h4>
+<p>定义注意力权重函数 <span class="math inline">$w_t = F_A(v_t)$</span>，设计四种可配置的映射策略：</p>
+<table>
+<thead>
+<tr>
+<th>策略</th>
+<th>公式</th>
+<th>特点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Inverse</strong></td>
+<td><span class="math inline">$w_t = \frac{1}{v_t}$</span></td>
+<td>温和的反比加权</td>
+</tr>
+<tr>
+<td><strong>Inverse Squared</strong></td>
+<td><span class="math inline">$w_t = \frac{1}{v_t^2}$</span></td>
+<td>强力放大低速动作权重差（默认）</td>
+</tr>
+<tr>
+<td><strong>Exponential Decay</strong></td>
+<td><span class="math inline">$w_t = e^{-\alpha \cdot v_t}$</span></td>
+<td>快速衰减高速动作，<span class="math inline">$\alpha=5.0$</span></td>
+</tr>
+<tr>
+<td><strong>Logarithmic</strong></td>
+<td><span class="math inline">$w_t = \frac{1}{\log(1+v_t)}$</span></td>
+<td>平滑稳定，对噪声不敏感</td>
+</tr>
+</tbody>
+</table>
+<h4 id="_5">正则化</h4>
+<p>为确保训练稳定性，AttenA+ 引入两个正则化步骤：</p>
+<ol>
+<li><strong>权重裁剪</strong>：将权重限制在 <span class="math inline">$[1/\text{clip}_{\text{max}}, \text{clip}_{\text{max}}]$</span> 范围内，防止极低速时间步主导梯度</li>
+<li><strong>损失归一化</strong>（可选）：将权重均值归一化到约 1，保持与原始基线一致的全局学习率</li>
+</ol>
+<h3 id="23">2.3 范式无关的优化目标</h3>
+<p>AttenA+ 可以无缝集成到不同范式的模型中：</p>
+<p><strong>判别式模型（AttenA+Disc）</strong>：将标准 <span class="math inline">$L_1$</span> 回归 loss 改为加权版本</p>
+<p><div class="math display">$$\theta^* = \arg\min_\theta \mathbb{E}_{(\mathcal{I}, L, \mathcal{A}^{gt}) \sim \mathcal{D}} \left[ \frac{1}{T \cdot D} \sum_{t=1}^T \sum_{d=1}^D w_t \cdot | a_{t,d}^{\text{pred}} - a_{t,d}^{gt} | \right]$$</div></p>
+<p><strong>流匹配模型（AttenA+FM）</strong>：将 <span class="math inline">$\pi_0$</span>/<span class="math inline">$\pi_{0.5}$</span> 的流匹配 loss 改为加权版本</p>
+<p><div class="math display">$$\phi^* = \arg\min_\phi \mathbb{E}_{\substack{(\mathcal{I}, L, \mathcal{A}^{gt}) \sim \mathcal{D} \\ \epsilon \sim \mathcal{N}(0, I)}} \left[ \frac{1}{T \cdot D} \sum_{t=1}^T \sum_{d=1}^D w_t \cdot \| u_t(\epsilon; \mathcal{I}, L) - (a_{t,d}^{gt} - \epsilon_d) \|_2^2 \right]$$</div></p>
+<p><strong>扩散策略模型（AttenA+Diff）</strong>：同样将去噪 loss 改为加权版本。</p>
+<p><img alt="图1：AttenA+ 概览。展示了 AttenA+ 如何通过速度场为不同动作时间步分配差异化权重，并作为即插即用模块集成到判别式（OpenVLA-OFT）、生成式（π₀、π₀.₅）和世界-动作模型（WAM）等主流机器人基础模型中。" src="assets/attena-plus/main_plot2.jpg" /></p>
+<p><em>图1：AttenA+ 整体框架概览。该图从宏观层面展示了 AttenA+ 的设计哲学和适用范围。</em></p>
+<p><strong>上半部分</strong>展示了 AttenA+ 的核心洞察：机器人操作轨迹中，低速精密动作（如精确抓取、对准放置）才是任务成败的决定性因素，而高速过渡运动（如自由空间移动）容错率很高。现有的"平坦"训练范式对所有时间步一视同仁，导致优化效率低下。AttenA+ 通过速度场（Velocity Field）发现这一物理层次结构，用速度的倒数作为注意力权重，优先优化低速关键动作。</p>
+<p><strong>下半部分</strong>展示了 AttenA+ 的范式通用性：它不修改任何骨干网络结构，只需在 loss 计算时乘以速度导出的权重矩阵即可。图中列出了支持的模型范围——从判别式的 OpenVLA-OFT，到生成式的 π₀/π₀.₅/Diffusion Policy，再到新兴的世界-动作模型 Fast-WAM——覆盖了当前机器人基础模型的所有主流范式。在 LIBERO（4 类任务）和 RoboTwin 2.0（50 个双臂任务）两个基准上的实验结果（柱状图）显示，AttenA+ 一致提升了各基线的成功率。</p>
+<hr />
+<p><img alt="图2：速度场可视化——揭示动作不平等现象。" src="assets/attena-plus/object_speed_vis_demo1.jpg" /></p>
+<p><em>图2：速度场分析揭示动作不平等。该图通过对多个专家演示轨迹的速度分布进行可视化，直观展示了论文的核心发现。</em></p>
+<p>图中包含多条专家演示轨迹的速度曲线，横轴为时间步，纵轴为末端执行器瞬时速度幅值。暖色（红/橙）区域表示高速动作，冷色（蓝/深蓝）区域表示低速动作。每个子图对应一个具体的操作任务（如抓取、放置、推拉等）。</p>
+<p>关键观察：</p>
+<ul>
+<li><strong>低速段与任务关键阶段高度重合</strong>：速度曲线在任务开始（机器人初始化）、接近物体（精细对准）、抓取瞬间、放置瞬间和任务完成时都出现明显的"低谷"——这些正是精度敏感、容错率低的关键动作。</li>
+<li><strong>高速段对应容错过渡</strong>：自由空间移动、粗定位、抓取后的重新定位等阶段速度较高，即使有一定预测误差也不会导致任务失败。</li>
+<li><strong>跨任务一致性</strong>：不同任务的速度分布模式虽然有差异，但"低速=精密交互、高速=容错过渡"的规律普遍成立。这验证了速度作为动作重要性代理指标的跨任务泛化性。</li>
+</ul>
+<hr />
+<p><img alt="图3：AttenA+ 工作流程与核心机制。" src="assets/attena-plus/workflow1.jpg" /></p>
+<p><em>图3：AttenA+ 的端到端工作流程。该图具体展示了从原始数据到加权训练的实现过程。</em></p>
+<p><strong>左侧（数据流）</strong>：给定视觉观测和语言指令，从数据集中提取真值动作序列 <span class="math inline">$\mathcal{A}^{gt}$</span>，计算每个时间步的速度幅值 <span class="math inline">$v_t$</span>，通过注意力权重函数 <span class="math inline">$F_A$</span> 将速度映射为权重 <span class="math inline">$w_t \propto 1/v_t$</span>（速度越低，权重越高）。</p>
+<p><strong>中间（权重分配可视化）</strong>：图中以柱状图或曲线形式展示了不同时间步的权重分布。低速精密动作段（如抓取、对准）获得更高的注意权重（更长的柱子），而高速过渡段权重较低。</p>
+<p><strong>右侧（损失计算）</strong>：将权重 <span class="math inline">$w_t$</span> 融入加权损失函数 <span class="math inline">$\mathcal{L}_{\text{AttenA+}} = \sum_t w_t \cdot \mathcal{L}_t$</span>。这等价于在优化地形中"加深"低速动作区域的梯度盆地，使模型在训练时自动将更多优化能力分配给精密操控阶段。</p>
+<hr />
+<h2 id="_6">三、实验与结果</h2>
+<h3 id="31">3.1 评估指标</h3>
+<ul>
+<li><strong>SR（Success Rate）</strong>：任务成功率（%）</li>
+<li><strong><span class="math inline">$\overline{\text{SR}}$</span></strong>：平均成功率</li>
+<li><strong><span class="math inline">$\overline{\text{ER}}$</span></strong>：平均错误率</li>
+<li><strong><span class="math inline">$\overline{\text{SR-I}}$</span></strong>：平均成功率绝对提升</li>
+<li><strong><span class="math inline">$\overline{\text{RER-R}}$</span></strong>：平均相对错误率降低，公式为 <span class="math inline">$\overline{\text{RER-R}} = (1 - \frac{\overline{\text{ER}}_{\text{AttenA+}}}{\overline{\text{ER}}_{\text{other}}}) \times 100$</span></li>
+</ul>
+<h3 id="32-libero">3.2 LIBERO 基准结果</h3>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th>Spatial</th>
+<th>Object</th>
+<th>Goal</th>
+<th>Long(10)</th>
+<th><span class="math inline">$\overline{\text{SR}}$</span></th>
+<th><span class="math inline">$\overline{\text{ER}}$</span></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>OpenVLA</td>
+<td>84.7</td>
+<td>88.4</td>
+<td>79.2</td>
+<td>53.7</td>
+<td>76.50</td>
+<td>23.50</td>
+</tr>
+<tr>
+<td><span class="math inline">$\pi_{0.5}$</span></td>
+<td>98.8</td>
+<td>98.2</td>
+<td>98.0</td>
+<td>92.4</td>
+<td>96.85</td>
+<td>3.15</td>
+</tr>
+<tr>
+<td>OpenVLA-OFT</td>
+<td>97.6</td>
+<td>98.4</td>
+<td>97.9</td>
+<td>94.5</td>
+<td>97.10</td>
+<td>2.90</td>
+</tr>
+<tr>
+<td><strong>AttenA+OFT (ours)</strong></td>
+<td><strong>99.0</strong></td>
+<td><strong>100</strong></td>
+<td><strong>98.8</strong></td>
+<td><strong>96.6</strong></td>
+<td><strong>98.60</strong></td>
+<td><strong>1.40</strong></td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>AttenA+OFT 以 98.6% 的平均成功率位列第一，比 OpenVLA-OFT 提升 1.5%</li>
+<li>在 Long-horizon（10 个长序列任务）上提升最大（+2.1%），说明动作注意力对复杂长时任务尤为有效</li>
+<li>Object 子集达到 100% 完美成功率</li>
+<li>报告了 4 个随机种子的均值和标准差（如 <span class="math inline">$99.0 \pm 0.16$</span>）</li>
+</ul>
+<h3 id="33">3.3 不同基线的改进对比</h3>
+<table>
+<thead>
+<tr>
+<th>范式</th>
+<th>基模型</th>
+<th>基模型 SR</th>
+<th>AttenA+ SR</th>
+<th>提升</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>生成式</td>
+<td><span class="math inline">$\pi_{0.5}$</span></td>
+<td>96.85</td>
+<td>97.95</td>
+<td>+1.10</td>
+</tr>
+<tr>
+<td>判别式</td>
+<td>OpenVLA-OFT</td>
+<td>97.10</td>
+<td>98.60</td>
+<td>+1.50</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>两个范式的基线上都有稳定提升</li>
+<li>Long-horizon 任务上生成式提升 +1.8%，判别式提升 +2.1%——长序列任务受益最大</li>
+</ul>
+<h3 id="34-robotwin-20">3.4 RoboTwin 2.0 基准结果</h3>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th>Embodied PT.</th>
+<th>Clean SR</th>
+<th>Random SR</th>
+<th><span class="math inline">$\overline{\text{SR}}$</span></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><span class="math inline">$\pi_0$</span></td>
+<td>Yes</td>
+<td>65.92</td>
+<td>58.40</td>
+<td>62.20</td>
+</tr>
+<tr>
+<td><span class="math inline">$\pi_{0.5}$</span></td>
+<td>Yes</td>
+<td>82.74</td>
+<td>76.76</td>
+<td>79.75</td>
+</tr>
+<tr>
+<td>LingBot-VA</td>
+<td>Yes</td>
+<td>92.90</td>
+<td>91.50</td>
+<td>92.20</td>
+</tr>
+<tr>
+<td>Fast-WAM</td>
+<td>No</td>
+<td>91.88</td>
+<td>91.78</td>
+<td>91.80</td>
+</tr>
+<tr>
+<td><strong>AttenA+WAM (ours)</strong></td>
+<td>No</td>
+<td><strong>93.06</strong></td>
+<td><strong>91.86</strong></td>
+<td><strong>92.46</strong></td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>基于 Fast-WAM 的 AttenA+WAM 无需 embodied pre-training 即达到 92.46% 的平均成功率</li>
+<li>超越 LingBot-VA（92.2%）成为新的 SOTA，且不需要 embodied pre-training</li>
+<li>在 Clean 环境下表现尤为突出（93.06% vs Fast-WAM 91.88%）</li>
+</ul>
+<h3 id="35">3.5 消融实验：权重策略与裁剪阈值</h3>
+<p>在 LIBERO 各子集上对四种权重策略和三种裁剪阈值进行消融：</p>
+<table>
+<thead>
+<tr>
+<th>策略 / <span class="math inline">$\text{clip}_{\text{max}}$</span></th>
+<th style="text-align: center;">Spatial (2.0)</th>
+<th style="text-align: center;">Object (2.0)</th>
+<th style="text-align: center;">Long (2.0)</th>
+<th style="text-align: center;">Goal (2.0)</th>
+<th style="text-align: center;">Goal (3.0)</th>
+<th style="text-align: center;">Goal (5.0)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>baseline (OpenVLA-OFT)</td>
+<td style="text-align: center;">97.6</td>
+<td style="text-align: center;">98.4</td>
+<td style="text-align: center;">94.5</td>
+<td style="text-align: center;">97.9</td>
+<td style="text-align: center;">97.9</td>
+<td style="text-align: center;">97.9</td>
+</tr>
+<tr>
+<td>exp_decay</td>
+<td style="text-align: center;">99.2</td>
+<td style="text-align: center;">99.8</td>
+<td style="text-align: center;"><strong>96.8</strong></td>
+<td style="text-align: center;"><strong>99.0</strong></td>
+<td style="text-align: center;">95.4</td>
+<td style="text-align: center;">97.4</td>
+</tr>
+<tr>
+<td>inverse_squared</td>
+<td style="text-align: center;"><strong>99.4</strong></td>
+<td style="text-align: center;">99.8</td>
+<td style="text-align: center;">94.2</td>
+<td style="text-align: center;">98.8</td>
+<td style="text-align: center;">97.9</td>
+<td style="text-align: center;">97.6</td>
+</tr>
+<tr>
+<td>inverse</td>
+<td style="text-align: center;">98.6</td>
+<td style="text-align: center;"><strong>100.0</strong></td>
+<td style="text-align: center;">95.8</td>
+<td style="text-align: center;">98.0</td>
+<td style="text-align: center;"><strong>98.2</strong></td>
+<td style="text-align: center;">95.6</td>
+</tr>
+<tr>
+<td>log</td>
+<td style="text-align: center;">98.2</td>
+<td style="text-align: center;">99.6</td>
+<td style="text-align: center;">88.8</td>
+<td style="text-align: center;"><strong>99.0</strong></td>
+<td style="text-align: center;">97.8</td>
+<td style="text-align: center;">97.8</td>
+</tr>
+</tbody>
+</table>
+<p>关键发现：</p>
+<ol>
+<li><strong>没有单一策略在所有任务上最优</strong>：不同任务有不同的最优策略，反映了不同任务的速度分布特征差异</li>
+<li><strong>clip_max = 1.0 时等价于基线</strong>（所有权重退化为 1），clip_max 增大到 2.0~3.0 时一致提升，但 clip_max = 5.0 时性能下降——过度强调极低速步会引入训练不稳定</li>
+<li><strong>inverse_squared 在 Spatial 上最优（99.4%）</strong>，<strong>inverse 在 Object 上达到 100%</strong></li>
+<li><strong>log 在 Long 上表现最差（88.8%）</strong>，因为其平滑特性可能不足以区分类似的长序列任务中的动作重要性</li>
+</ol>
+<h3 id="36">3.6 真机实验</h3>
+<p>在 Franka Panda 机械臂上进行 4 类任务的真实世界验证：</p>
+<p><img alt="图4：真机实验结果。" src="assets/attena-plus/real_bins2.jpg" /></p>
+<p><em>图4：Franka 真机实验结果。左侧表格为定量成功率对比（每个任务测试 50 次），右侧为定性可视化。</em></p>
+<ul>
+<li><strong>Close Draw（关闭抽屉）</strong>：两项均为 100%（50/50），这是个简单任务，基线已饱和</li>
+<li><strong>Put Cube（放方块）</strong>：AttenA+OFT 达 100%（50/50），基线为 96%（48/50），提升 4%</li>
+<li><strong>Multi-object（多物体操作）</strong>：AttenA+OFT 达 98%（49/50），基线为 90%（45/50），提升 8%——这是提升最大的任务</li>
+<li><strong>Long（长序列操作）</strong>：AttenA+OFT 达 90%（45/50），基线为 84%（42/50），提升 6%</li>
+<li>平均成功率从 92.5% 提升到 97.0%（+4.5%）</li>
+</ul>
+<p><strong>关键趋势</strong>：任务复杂度越高（从简单的单步操作到多物体、长序列），AttenA+ 的提升幅度越大。这与论文的核心论点一致——越复杂的任务中，区分关键动作和过渡动作越重要。</p>
+<hr />
+<h2 id="_7">四、关键洞察与技术亮点</h2>
+<ol>
+<li>
+<p><strong>从"关注输入"到"关注输出"</strong>：现有工作将注意力机制局限于视觉和语言输入，AttenA+ 首次将注意力直接施加于输出动作序列，扩展了 attention 在机器人学习中的设计空间。</p>
+</li>
+<li>
+<p><strong>物理先验比盲目扩展更高效</strong>：在 LIBERO 上 AttenA+ 仅通过改变 loss 权重就带来 +1.5% 提升，而无需增加数据量或模型参数量。这为数据受限场景提供了高性价比的替代方案。</p>
+</li>
+<li>
+<p><strong>速度是天然的精度需求代理</strong>：不需要额外标注或监督信号，仅从真值动作序列中计算速度幅值就能获得高质量的动作重要性权重——零额外标注成本。</p>
+</li>
+<li>
+<p><strong>范式无关的即插即用</strong>：同一套权重机制在判别式（OpenVLA-OFT）、生成式（π₀.₅、Diffusion Policy）和 WAM（Fast-WAM）三个范式中均有效，说明速度场是机器人操作的通用物理先验。</p>
+</li>
+<li>
+<p><strong>长序列任务受益最大</strong>：无论是 LIBERO-Long（+2.1%）还是真机的 Long 任务（+6%），AttenA+ 在需要长时间序列决策的任务上提升最大——这正是"区分关键动作"最有用武之地的地方。</p>
+</li>
+</ol>
+<p><img alt="图5：定性对比——有无 AttenA+ 的任务执行差异。" src="assets/attena-plus/compare_demo.jpg" /></p>
+<p><em>图5：基线模型与 AttenA+ 增强模型在同一任务上的定性对比。通过关键帧序列展示任务执行过程的差异。</em></p>
+<p><strong>子图 (a) 基线模型失败案例</strong>：展示了原始 OpenVLA-OFT 在某个精密操作任务中的关键帧。在低速关键动作阶段（如夹爪对准、物体释放），基线模型因对所有时间步均等优化，关键步骤的预测精度不足，误差累积导致最终任务失败。图中标注了具体的失败点。</p>
+<p><strong>子图 (b) AttenA+ 成功案例</strong>：同样的任务在 AttenA+ 增强后，低速精密段获得更高的注意权重，模型在这些关键步骤的预测更准确，成功完成任务。注意图中低速动作段（对准、释放）的注意力权重更高（可能以颜色深浅或边框粗细表示），表明模型在这些阶段投入了更多优化资源。</p>
+<p>这一对比直观验证了 AttenA+ 的核心主张：不是所有动作都同等重要，通过速度场区分关键动作可以显著提升精密操作的成功率。</p>
+<hr />
+<p><img alt="图6：实验任务概览。" src="assets/attena-plus/sim_real_experiments1.jpg" /></p>
+<p><em>图6：仿真与真机实验任务概览。该图以网格形式展示了论文中所有实验任务的代表性场景。</em></p>
+<p><strong>I. 仿真实验</strong>：</p>
+<ul>
+<li><strong>(a) LIBERO 基准</strong>：展示 LIBERO 四个子集的代表性任务——Spatial（空间推理）、Object（物体交互）、Goal（目标导向）、Long（10 个长序列任务）。每个子集包含多个不同场景，如堆叠积木、放置物品、开关抽屉等。</li>
+<li><strong>(b) RoboTwin 2.0</strong>：展示双臂操作平台的 50 个任务中的代表性场景（如双手协作抓取、传递物体、放置物品等）。Clean 和 Randomized 两种难度分别对应固定初始布局和随机布局，后者对泛化能力要求更高。</li>
+</ul>
+<p><strong>II. 真机实验（Franka Panda）</strong>：(a) 关闭抽屉、(b) 将绿色方块放入绿色碗中、(c) 多物体操作（将物体 A 放入 XXX，再将物体 B 放入 XXX）、(d) 长序列操作。图中展示了 AttenA+ 增强策略执行过程中的关键帧，标注了低速精密动作发生的阶段。</p>
+<hr />
+<h2 id="_8">五、局限性</h2>
+<ol>
+<li>
+<p><strong>依赖手工启发式规则</strong>：当前的速度权重映射是手工设计的（四种固定函数），假设"低速 = 关键"。这不适用于高速动态任务（如打乒乓球、高速抓取），其中关键动作反而是快速爆发的。</p>
+</li>
+<li>
+<p><strong>仅利用速度信息</strong>：忽略了力/力矩、接触状态、加速度变化率（jerk）等其他物理信号，这些信号同样可以表征动作重要性。</p>
+</li>
+<li>
+<p><strong>速度-重要性关系可能不单调</strong>：在某些任务中，中速动作也可能很关键，当前的反比映射无法捕获这种非单调关系。</p>
+</li>
+</ol>
+<hr />
+<h2 id="_9">六、关键概念速查</h2>
+<table>
+<thead>
+<tr>
+<th>概念</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Action Inequality</strong></td>
+<td>机器人轨迹中不同时间步的动作物理重要性不同，低速精密动作远大于高速过渡动作</td>
+</tr>
+<tr>
+<td><strong>Velocity-Field Attention</strong></td>
+<td>用速度场倒数作为注意力权重，优先优化低速关键动作</td>
+</tr>
+<tr>
+<td><strong>Kinematic Criticality</strong></td>
+<td>动作的运动学关键度，以速度幅值作为代理指标</td>
+</tr>
+<tr>
+<td><strong>AttenA+Disc</strong></td>
+<td>用于判别式模型（如 OpenVLA-OFT）的加权 L1 loss 版本</td>
+</tr>
+<tr>
+<td><strong>AttenA+FM</strong></td>
+<td>用于流匹配模型（如 π₀/π₀.₅）的加权流匹配 loss 版本</td>
+</tr>
+<tr>
+<td><strong>AttenA+Diff</strong></td>
+<td>用于扩散策略的加权去噪 loss 版本</td>
+</tr>
+<tr>
+<td><strong>Weight Clipping</strong></td>
+<td>权重裁剪，防止极低速步主导梯度</td>
+</tr>
+<tr>
+<td><strong><span class="math inline">$\text{clip}_{\text{max}}$</span></strong></td>
+<td>权重裁剪上限，2.0~3.0 为推荐范围</td>
+</tr>
+<tr>
+<td><strong>LIBERO</strong></td>
+<td>机器人操作基准，含 Spatial/Object/Goal/Long 四个子集</td>
+</tr>
+<tr>
+<td><strong>RoboTwin 2.0</strong></td>
+<td>双臂操作基准，50 个任务，含 Clean 和 Randomized 两种难度</td>
+</tr>
+</tbody>
+</table>
+  </div>
+</main>
+
+
+<script>
+(function() {
+  const sidebar = document.getElementById('sidebar');
+  const links = sidebar.querySelectorAll('a');
+  const headings = document.querySelectorAll('h1[id], h2[id], h3[id], h4[id]');
+  if (headings.length === 0) return;
+
+  const linkMap = new Map();
+  links.forEach(function(a) {
+    const href = a.getAttribute('href');
+    if (href && href.startsWith('#')) linkMap.set(href.slice(1), a);
+  });
+
+  function onScroll() {
+    let currentId = null;
+    const scrollTop = window.scrollY + 80;
+    headings.forEach(function(h) { if (h.offsetTop <= scrollTop) currentId = h.id; });
+    links.forEach(function(a) { a.classList.remove('active'); });
+    if (currentId && linkMap.has(currentId)) {
+      const el = linkMap.get(currentId);
+      el.classList.add('active');
+      const sr = sidebar.getBoundingClientRect();
+      const er = el.getBoundingClientRect();
+      if (er.bottom > sr.bottom || er.top < sr.top) {
+        el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+    }
+  }
+
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+})();
+</script>
+
+</body>
+</html>

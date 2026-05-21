@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>When to Trust Imagination: Adaptive Action Execution for World Action Models</title>
+<!-- arxiv: 2605.06222 -->
+<!-- venue: NeurIPS 2026（投稿中） -->
+<!-- tags: World Action Model, 自适应执行, 机器人操控, FFDC, Future-Reality Verification -->
+<!-- words-zh: 3022 -->
+<!-- words-en: 389 -->
+<!-- reading-time: 11 -->
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #ffffff;
+    --text: #1a1a2e;
+    --text-secondary: #555;
+    --border: #e1e4e8;
+    --link: #0969da;
+    --table-stripe: #f6f8fa;
+    --heading: #0d1117;
+    --blockquote-border: #0969da;
+    --blockquote-bg: #f0f6ff;
+    --inline-code: #d73a49;
+    --inline-code-bg: #f6f8fa;
+    --sidebar-width: 260px;
+    --toc-active: #0969da;
+    --content-max-width: 900px;
+    --content-padding: 48px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "Inter", "Noto Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 16px;
+    line-height: 1.75;
+    color: var(--text);
+    background: var(--bg);
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    width: var(--sidebar-width);
+    overflow-y: auto;
+    padding: 28px 20px 40px;
+    background: #fafbfc;
+    border-right: 1px solid var(--border);
+    z-index: 10;
+    scrollbar-width: thin;
+  }
+  .sidebar-title {
+    font-size: 13px; font-weight: 700; color: var(--text-secondary);
+    margin-bottom: 16px; letter-spacing: 0.06em; text-transform: uppercase;
+  }
+  .toc-list { list-style: none; padding: 0; margin: 0; }
+  .toc-list ul { list-style: none; padding-left: 14px; }
+  .toc-list li { margin: 1px 0; }
+  .toc-list a {
+    display: block; padding: 4px 12px; font-size: 13.5px; line-height: 1.45;
+    color: var(--text-secondary); text-decoration: none; border-radius: 4px;
+    border-left: 2px solid transparent; transition: all 0.15s;
+  }
+  .toc-list a:hover { color: var(--link); background: #e8f0fe; }
+  .toc-list a.active {
+    color: var(--toc-active); font-weight: 600;
+    border-left-color: var(--toc-active); background: #e8f0fe;
+  }
+  .toc-h1 a { font-weight: 600; color: var(--heading); font-size: 14px; }
+  .toc-h3 a { padding-left: 24px; font-size: 13px; }
+  .toc-h4 a { padding-left: 36px; font-size: 12.5px; }
+  .toc-empty { color: var(--text-secondary); font-size: 13px; font-style: italic; }
+
+  .main-wrapper {
+    margin-left: var(--sidebar-width);
+    min-height: 100vh;
+    display: flex; justify-content: center;
+  }
+  .content-inner {
+    width: 100%;
+    max-width: var(--content-max-width);
+    padding: 40px var(--content-padding) 80px;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    color: var(--heading); font-weight: 700; line-height: 1.3;
+    margin-top: 2em; margin-bottom: 0.6em; scroll-margin-top: 24px;
+  }
+  h1 { font-size: 2em; border-bottom: 2px solid var(--border); padding-bottom: 0.3em; margin-top: 0; }
+  h2 { font-size: 1.5em; border-bottom: 1px solid var(--border); padding-bottom: 0.25em; }
+  h3 { font-size: 1.25em; }
+  h4 { font-size: 1.1em; }
+  p { margin-bottom: 1em; }
+  a { color: var(--link); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  strong { font-weight: 600; }
+
+  blockquote {
+    border-left: 4px solid var(--blockquote-border);
+    background: var(--blockquote-bg);
+    padding: 12px 20px; margin: 1em 0;
+    border-radius: 0 6px 6px 0; color: var(--text-secondary);
+  }
+  blockquote p:last-child { margin-bottom: 0; }
+
+  code {
+    font-family: "JetBrains Mono", "SF Mono", "Fira Code", monospace;
+    font-size: 0.875em; background: var(--inline-code-bg);
+    padding: 2px 6px; border-radius: 4px; color: var(--inline-code);
+  }
+  pre {
+    background: #1e1e2e; color: #cdd6f4;
+    border-radius: 8px; padding: 16px 20px; overflow-x: auto;
+    margin: 1em 0; font-size: 14px; line-height: 1.55;
+  }
+  pre code { background: none; padding: 0; border-radius: 0; color: inherit; font-size: inherit; }
+
+  .codehilite { background: #1e1e2e; border-radius: 8px; padding: 16px 20px; overflow-x: auto; margin: 1em 0; }
+  .codehilite pre { background: none; padding: 0; margin: 0; border-radius: 0; }
+  .codehilite .hll { background-color: #2a2a3e; }
+  .codehilite .c  { color: #6c7086; font-style: italic; }
+  .codehilite .k  { color: #cba6f7; }
+  .codehilite .o  { color: #89b4fa; }
+  .codehilite .s  { color: #a6e3a1; }
+  .codehilite .n  { color: #cdd6f4; }
+  .codehilite .p  { color: #bac2de; }
+  .codehilite .mi { color: #fab387; }
+  .codehilite .nf { color: #89b4fa; }
+  .codehilite .nb { color: #f38ba8; }
+  .codehilite .nc { color: #f9e2af; }
+  .codehilite .bp { color: #f38ba8; }
+
+  table { width: 100%; border-collapse: collapse; margin: 1em 0; font-size: 0.925em; }
+  th, td { border: 1px solid var(--border); padding: 10px 14px; text-align: left; }
+  th { background: var(--table-stripe); font-weight: 600; color: var(--heading); }
+  tr:nth-child(even) td { background: var(--table-stripe); }
+
+  .math.display { display: block; overflow-x: auto; padding: 12px 0; margin: 1em 0; }
+  ul, ol { padding-left: 1.5em; margin-bottom: 1em; }
+  li { margin-bottom: 0.3em; }
+  hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+  img { max-width: 100%; height: auto; border-radius: 6px; margin: 0; }
+  p:has(img) { text-align: center; margin-top: 0.6em; margin-bottom: 0; }
+  p:has(img) + p { text-align: center; font-size: 0.9em; color: var(--text-secondary); margin-top: 0.15em; margin-bottom: 0.6em; }
+  .mermaid { text-align: center; margin: 1.5em 0; background: #fafbfc; border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+  .article-stats {
+    font-size: 0.85rem; color: var(--text-secondary);
+    padding: 10px 18px; margin-bottom: 28px;
+    background: #f8f9fa; border: 1px solid var(--border); border-radius: 8px;
+  }
+
+  @media (max-width: 1024px) {
+    .sidebar { position: static; width: 100%; height: auto; max-height: 35vh; border-right: none; border-bottom: 1px solid var(--border); }
+    .main-wrapper { margin-left: 0; display: block; }
+    .content-inner { max-width: none; padding: 24px 20px 60px; }
+  }
+</style>
+
+<script>
+MathJax = {
+  tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']], processEscapes: true, tags: 'none' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] }
+};
+</script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  mermaid.initialize({ startOnLoad: true, theme: 'neutral', securityLevel: 'loose' });
+});
+</script>
+
+</head>
+<body>
+
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-title">目录</div>
+  <ul class="toc-list">
+<li class="toc-h1"><a href="#when-to-trust-imagination-adaptive-action-execution-for-world-action-models">When to Trust Imagination: Adaptive Action Execution for World Action Models</a>
+<ul>
+</li>
+<li class="toc-h2"><a href="#_1">一、核心问题</a>
+</li>
+<li class="toc-h2"><a href="#_2">二、核心思路 / 方法</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#21-futurereality-verification">2.1 问题形式化：Future–Reality Verification</a>
+</li>
+<li class="toc-h3"><a href="#22-ffdcfuture-forward-dynamics-causal-attention">2.2 FFDC：Future Forward Dynamics Causal Attention</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_3">三、训练目标</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#31-wam-mixture-of-horizon">3.1 WAM 训练：Mixture-of-Horizon</a>
+</li>
+<li class="toc-h3"><a href="#32-verifier">3.2 Verifier 训练：二分类 + 数据增强</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_4">四、实验与结果</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#41">4.1 仿真结果</a>
+</li>
+<li class="toc-h3"><a href="#42">4.2 真实世界结果</a>
+</li>
+<li class="toc-h3"><a href="#43">4.3 消融实验</a>
+</li>
+<li class="toc-h3"><a href="#44">4.4 定性可视化</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_5">五、关键洞察与技术亮点</a>
+</li>
+<li class="toc-h2"><a href="#_6">六、局限性</a>
+</li>
+<li class="toc-h2"><a href="#_7">七、关键概念速查</a>
+</ul></li>
+</li></ul>
+</nav>
+
+<main class="main-wrapper">
+  <div class="content-inner" id="main-content">
+<h1 id="when-to-trust-imagination-adaptive-action-execution-for-world-action-models">When to Trust Imagination: Adaptive Action Execution for World Action Models</h1>
+<div class="article-stats">3,022 字 · English 389 词 · 约 11 分钟阅读</div>
+
+<blockquote>
+<p><strong>论文信息</strong>
+- 作者：Rui Wang<span class="math inline">$^*$</span>, Yue Zhang<span class="math inline">$^*$</span>, Jiehong Lin, Kuncheng Luo, Jianan Wang, Zhongrui Wang<span class="math inline">$^\dagger$</span>, Xiaojuan Qi<span class="math inline">$^\dagger$</span>
+- 通讯作者：Zhongrui Wang (SUSTech), Xiaojuan Qi (HKU)
+- 投稿方向：NeurIPS 2026（投稿中）
+- arXiv ID：2605.06222v2
+- 代码：未开源</p>
+</blockquote>
+<hr />
+<h2 id="_1">一、核心问题</h2>
+<p>World Action Models（WAM）能同时预测未来视觉观测和未来动作序列，在机器人操控中展现了强大的泛化能力。但当前 WAM 的推理执行方式存在根本性局限：<strong>每次推理预测一个固定长度的 action chunk，机器人执行完这个 chunk 后再重新推理</strong>。这种固定长度执行忽略了两个关键事实：</p>
+<ol>
+<li><strong>可预测阶段浪费计算</strong>：在简单、可预测的阶段（如接近刚性杯子），WAM 的预测在很长 horizon 内都是准确的，频繁重新推理纯属浪费。</li>
+<li><strong>困难阶段累积误差</strong>：在接触密集、变形物体、随机性强的情况下，预测很快就不准了，但机器人仍然盲目执行剩余的不可靠动作，导致失败。</li>
+</ol>
+<blockquote>
+<p>核心挑战不是选择一个"更好的 chunk size"，而是判断 <strong>WAM 的想象何时仍可被信任</strong>。</p>
+</blockquote>
+<p><img alt="图1：FFDC 方法总览" src="assets/ffdc-wam/Fig1v2.jpg" /></p>
+<p><em>图1：FFDC 实现 WAM 的"自适应信任"。该图从三个层面展示了本方法的核心思路。</em></p>
+<p><strong>子图 (a) 自适应验证机制：</strong> 展示 FFDC-WAM 的完整工作流。WAM 接收当前观测和语言指令，每次推理输出三样东西——未来的视觉动态预测（predicted visual dynamics）、动作序列（action chunk）以及语义 tokens。FFDC verifier 在物理执行过程中持续比对"想象"与"现实"：当 WAM 预测的视觉未来与实际观测、计划动作、指令保持因果一致时，允许机器人继续执行（Continue）；一旦检测到不一致，立即触发重新规划（Replan）。这一设计将 WAM 从"预测完就盲执行"转变为"带着未来预期去执行"。</p>
+<p><strong>子图 (b) 固定 vs 自适应执行对比：</strong> 对比了两种执行策略的差异。Fixed-size 方法在可预测阶段仍频繁推理（效率低），在困难阶段却盲目执行不可靠动作（成功率低）。FFDC 则在一致性高的绿色阶段执行长序列（省推理），在出现偏差的红色阶段立即重规划（保成功率），实现了两种需求的自动平衡。</p>
+<p><strong>子图 (c) RoboTwin benchmark 散点图：</strong> 横轴为任务完成时间（越左越快），纵轴为成功率（越上越高）。最理想的点是左上角——又快又好。FFDC-WAM 恰好处于这个位置，成功率达到最高的同时显著缩短了完成时间。相比之下，Base-Motus（chunk size=16）虽有较好成功率但速度慢，LC-64（一次执行 64 步的长 chunk）速度最快但成功率更低。FFDC 证明了两者可以兼得。</p>
+<hr />
+<h2 id="_2">二、核心思路 / 方法</h2>
+<h3 id="21-futurereality-verification">2.1 问题形式化：Future–Reality Verification</h3>
+<p>作者将自适应 WAM 执行形式化为一个<strong>未来—现实一致性验证</strong>问题：</p>
+<ul>
+<li>WAM 推断时输出 <span class="math inline">$(\hat{A}_{t+1:t+H}, \hat{O}_{t+1:t+H})$</span>——未来 H 步的动作序列和对应的视觉 token 预测</li>
+<li>在物理执行过程中，verifier <span class="math inline">$\mu_\phi$</span> 输入当前真实观测 <span class="math inline">$o_t$</span>、剩余动作序列 <span class="math inline">$\hat{A}_{t:t+k}$</span>、对应视觉预测 <span class="math inline">$\hat{O}_{t:t+k}$</span> 和语言指令 <span class="math inline">$\ell$</span>，输出一个置信度分数 <span class="math inline">$e_t \in [0,1]$</span></li>
+<li>如果 <span class="math inline">$e_t \ge \tau$</span>（<span class="math inline">$\tau=0.5$</span>），继续执行；否则立即触发重规划</li>
+</ul>
+<p>这样一来，有效 chunk size 不再是手动设定的超参数，而是<strong>未来—现实一致性自然涌现的结果</strong>：一致性高时执行长（省推理），不一致时执行短（保安全）。</p>
+<h3 id="22-ffdcfuture-forward-dynamics-causal-attention">2.2 FFDC：Future Forward Dynamics Causal Attention</h3>
+<p><img alt="图2：FFDC-WAM 架构" src="assets/ffdc-wam/Fig2v2.jpg" /></p>
+<p><em>图2：FFDC-WAM 系统架构。(a) 展示 WAM 推理与 FFDC verifier 的协作关系；(b) 展示 FFDC 的 structured causal attention 机制。</em></p>
+<p><strong>子图 (a) 系统总览：</strong> WAM 每次推理输出三类信息——预测的未来动作序列（Action Tokens）、对应的视频 tokens（Video Tokens）、以及理解专家（Understanding Expert）从语言指令中提取的语义 tokens。这些 token 序列被缓存在 KV cache 中（白色块）。FFDC verifier 是一个轻量级 Transformer，在每个 check step <span class="math inline">$t$</span> 接收当前真实观测 <span class="math inline">$O_t$</span>（蓝色块），与缓存的预测 tokens 进行结构化交叉注意力，输出一个执行置信度分数 <span class="math inline">$e_t \in [0,1]$</span>。绿色分数表示可继续执行，红色分数表示需要重规划。</p>
+<p><strong>子图 (b) 结构化因果注意力细节：</strong> 展示了 FFDC 的核心——未来前向动力学因果注意力（Future Forward Dynamics Causal Attention）。输入序列由 6 部分组成：语言语义 tokens <span class="math inline">$L$</span>（黄色）、WAM 预测的历史视觉 tokens <span class="math inline">$\hat{O}_{t_p}$</span>（灰色）、当前真实观测 <span class="math inline">$O_t$</span>（深灰）、WAM 预测的未来视觉 tokens <span class="math inline">$\hat{O}_{t_f}$</span>（紫色）、未来动作 tokens <span class="math inline">$\hat{A}_t$</span>（蓝色）、以及可学习的 [CLS] token（绿色）。注意力通过一个布尔可见性矩阵 <span class="math inline">$M$</span> 进行约束，强制未来视觉 token 只能注意到时间上对齐的动作 token 和更早的未来视觉 token。这种因果结构防止了信息泄漏，同时保证 verifier 能够评估"未来动作是否与预测的未来视觉一致、而预测的未来是否与实际观测兼容"这一关键问题。</p>
+<p><strong>KV cache 设计的高效性：</strong> WAM 推理产生的预测 tokens 只需计算一次并存入 KV cache。后续每个验证步，verifier 只需编码最新的真实观测 <span class="math inline">$O_t$</span>，然后对缓存的 tokens 做轻量级注意力计算——不需要重新运行 WAM。</p>
+<hr />
+<h2 id="_3">三、训练目标</h2>
+<h3 id="31-wam-mixture-of-horizon">3.1 WAM 训练：Mixture-of-Horizon</h3>
+<p>为了支持自适应执行的长 horizon 轨迹覆盖，作者提出了 Mixture-of-Horizon 训练策略：</p>
+<ul>
+<li>从 episode 中<strong>均匀随机采样</strong>一个时间步 <span class="math inline">$s$</span> 作为条件起点（而非总是从 episode 开头开始）</li>
+<li>给定 horizon <span class="math inline">$H$</span>，动作索引为 <span class="math inline">$\tau_i = \min(s+i, T)$</span>，视频索引为 <span class="math inline">$\upsilon_j = \min(s+jr, T)$</span></li>
+<li>越界位置用最后一个有效帧/动作重复填充</li>
+</ul>
+<p>这使得训练覆盖了更长的预测 horizon 和更多样的起始状态，减少了仅从 episode 前缀采样的偏差。</p>
+<h3 id="32-verifier">3.2 Verifier 训练：二分类 + 数据增强</h3>
+<p>Verifier 作为一个二分类器训练，损失函数为标准二元交叉熵：</p>
+<p><div class="math display">$$\mathcal{L}_{\text{ver}} = -[y \log \sigma(z) + (1-y) \log (1-\sigma(z))]$$</div></p>
+<p><strong>训练数据构造</strong>：</p>
+<ul>
+<li><strong>正样本</strong>（<span class="math inline">$y=1$</span>）：来自演示数据中的有效轨迹段 + 少量成功 rollout</li>
+<li><strong>负样本</strong>（<span class="math inline">$y=0$</span>）：来自少量失败 rollout + 对有效演示的合成破坏（synthetic corruptions）</li>
+</ul>
+<p>四种合成破坏方式：</p>
+<ol>
+<li><strong>Temporal Swap</strong>：随机交换 horizon 内的两对动作</li>
+<li><strong>Gripper Flip</strong>：翻转夹爪维度的符号</li>
+<li><strong>Late-Stage Gaussian Noise</strong>：对序列后半段加高斯噪声</li>
+<li><strong>Tail Scaling</strong>：对随机采样的尾部片段乘以随机缩放因子</li>
+</ol>
+<hr />
+<h2 id="_4">四、实验与结果</h2>
+<p>实验基于 Motus WAM 作为 backbone，在 RoboTwin 仿真 benchmark（50 个任务，clean/random 两种设置，每个任务 100 次执行）和真实世界 Astribot S1 机器人（25 DoF）上进行。</p>
+<p><strong>对比基线</strong>：</p>
+<ul>
+<li><strong>Base-Motus</strong>：chunk size=16，训练和测试都用 16</li>
+<li><strong>LC-16/32/48/64</strong>：用 chunk size=64 训练的长 horizon backbone，测试时分别只执行前 16/32/48/64 步</li>
+</ul>
+<h3 id="41">4.1 仿真结果</h3>
+<table>
+<thead>
+<tr>
+<th>设置</th>
+<th>指标</th>
+<th>Base-Motus</th>
+<th>LC-16</th>
+<th>LC-32</th>
+<th>LC-48</th>
+<th>LC-64</th>
+<th>FFDC-WAM</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Rand.hard</td>
+<td>SR(%)</td>
+<td>54.20</td>
+<td>67.40</td>
+<td>71.60</td>
+<td>65.00</td>
+<td>73.00</td>
+<td><strong>76.40</strong></td>
+</tr>
+<tr>
+<td>Rand.hard</td>
+<td>T(s)</td>
+<td>33.0</td>
+<td>29.4</td>
+<td>21.2</td>
+<td>19.0</td>
+<td>16.5</td>
+<td>20.5</td>
+</tr>
+<tr>
+<td>Clean.hard</td>
+<td>SR(%)</td>
+<td>57.80</td>
+<td>64.40</td>
+<td>70.60</td>
+<td>67.40</td>
+<td>74.60</td>
+<td><strong>76.00</strong></td>
+</tr>
+<tr>
+<td>Rand.easy</td>
+<td>SR(%)</td>
+<td>89.16</td>
+<td>85.58</td>
+<td>88.64</td>
+<td>88.49</td>
+<td>88.89</td>
+<td><strong>89.51</strong></td>
+</tr>
+<tr>
+<td>Rand.easy</td>
+<td>T(s)</td>
+<td>23.5</td>
+<td>51.4</td>
+<td>16.0</td>
+<td>13.9</td>
+<td>13.3</td>
+<td>15.7</td>
+</tr>
+<tr>
+<td>Clean.easy</td>
+<td>SR(%)</td>
+<td><strong>90.98</strong></td>
+<td>86.82</td>
+<td>89.38</td>
+<td>89.73</td>
+<td>90.00</td>
+<td>90.33</td>
+</tr>
+<tr>
+<td>Clean.easy</td>
+<td>T(s)</td>
+<td>20.4</td>
+<td>18.3</td>
+<td>13.4</td>
+<td>11.4</td>
+<td>10.7</td>
+<td>12.9</td>
+</tr>
+<tr>
+<td>Rand.avg</td>
+<td>Calls</td>
+<td>5.47</td>
+<td>4.76</td>
+<td>2.67</td>
+<td>1.81</td>
+<td>1.56</td>
+<td><strong>1.69</strong></td>
+</tr>
+</tbody>
+</table>
+<p>关键发现：</p>
+<ul>
+<li><strong>融合效率与鲁棒性最优</strong>：FFDC-WAM 在 hard 任务上大幅提升 SR（Rand.hard: 54.20%→76.40%），在 easy 任务上大幅缩短时间（21%–37%）</li>
+<li><strong>推理调用减少 69.10%</strong>：相对于 Base-Motus 的 5.47 次平均调用，FFDC-WAM 仅需 1.69 次</li>
+<li><strong>固定长 chunk 的代价</strong>：LC-64 虽然推理次数最少（1.56），但 hard 任务 SR 从 76.40% 降至 73.00%</li>
+</ul>
+<h3 id="42">4.2 真实世界结果</h3>
+<table>
+<thead>
+<tr>
+<th>任务</th>
+<th>指标</th>
+<th>LC-16</th>
+<th>FFDC-WAM</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>pick banana and place</td>
+<td>SR(%)</td>
+<td>50</td>
+<td><strong>80</strong></td>
+</tr>
+<tr>
+<td>pick carrot and place</td>
+<td>SR(%)</td>
+<td>40</td>
+<td><strong>80</strong></td>
+</tr>
+<tr>
+<td>Average</td>
+<td>SR(%)</td>
+<td>45</td>
+<td><strong>80</strong></td>
+</tr>
+<tr>
+<td>Average</td>
+<td>T(s)</td>
+<td>25.6</td>
+<td>28.1</td>
+</tr>
+<tr>
+<td>Average</td>
+<td>Calls</td>
+<td>14</td>
+<td>16</td>
+</tr>
+</tbody>
+</table>
+<p>FFDC-WAM 在真实世界的成功率从 45% 提升到 80%（+35 个百分点）。推理次数和时间的略微增加是因为在真实世界中感知噪声和接触不确定性更大，FFDC 增加了必要的在线修正——这正是"用适度的额外计算换取大幅鲁棒性提升"的体现。</p>
+<h3 id="43">4.3 消融实验</h3>
+<p>在 RoboTwin hard 任务子集（5 个任务）上，逐一移除 FFDC 的四个输入模态：</p>
+<table>
+<thead>
+<tr>
+<th>变体</th>
+<th>移除内容</th>
+<th>Avg SR(%)</th>
+<th>Avg T(s)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>FFDC-WAM</td>
+<td>完整模型</td>
+<td><strong>76.4</strong></td>
+<td>20.5</td>
+</tr>
+<tr>
+<td>w/o Und</td>
+<td>语言指令</td>
+<td>74.8</td>
+<td>22.1</td>
+</tr>
+<tr>
+<td>w/o Pred</td>
+<td>预测视觉 tokens</td>
+<td>71.6</td>
+<td>20.8</td>
+</tr>
+<tr>
+<td>w/o Real</td>
+<td>当前真实观测</td>
+<td>72.4</td>
+<td>21.0</td>
+</tr>
+<tr>
+<td>w/o Action</td>
+<td>预测动作</td>
+<td>73.4</td>
+<td>21.0</td>
+</tr>
+</tbody>
+</table>
+<p><strong>移除预测视觉 tokens 导致最大性能下降</strong>（76.4%→71.6%），说明 WAM 的"想象"是判断 rollout 可信度最重要的信号。移除真实观测也导致明显下降（76.4%→72.4%），验证了"想象与现实的对比"这一核心设计。移除动作输入和语言指令也产生一致但相对较小的下降。</p>
+<h3 id="44">4.4 定性可视化</h3>
+<p><img alt="图3：执行行为定性对比" src="assets/ffdc-wam/Fig3v3.jpg" /></p>
+<p><em>图3：两种任务上的 FFDC-WAM vs Base-Motus 执行行为对比。绿色标识表示 FFDC 高置信度，允许继续执行；红色标识表示低置信度，触发重规划。</em></p>
+<p><strong>子图 (a) 简单任务（move can pot）：</strong> Base-Motus 由于固定短 chunk（16 步），需要 3 次 WAM 推理（C1→C2→C3）才完成任务。FFDC-WAM 在整个执行过程中置信度始终很高（绿色分数），仅需 1 次推理就完成了全部动作（C1 覆盖了整个任务）。这直接展示了自适应长执行在可预测阶段的计算节省效果。</p>
+<p><strong>子图 (b) 困难任务（hanging mug）：</strong> 这是一个需要精确对准挂钩的精细操作。Base-Motus 需要 7 次 WAM 推理（C1 到 C7）才成功。FFDC-WAM 展现出智能的自适应行为：在运输阶段（从抓取杯子到接近挂钩），置信度高，执行了长 chunk；进入精度关键的最终悬挂阶段时，置信度下降（红色分数），立即切换到高频重规划模式。如果不用 FFDC，直接开环执行与 C1 同样长度的 chunk，则误差累积最终导致失败（底部帧显示）。这说明 FFDC 实现了"在需要精确反馈的地方自动切换为谨慎模式"。</p>
+<hr />
+<p><img alt="图4：真实世界定性示例" src="assets/ffdc-wam/Fig4v1.jpg" /></p>
+<p><em>图4：真实世界中的定性示例，展示 FFDC 如何检测执行偏差并触发重规划。</em></p>
+<p><strong>香蕉抓取任务（上一行）：</strong> LC-16（固定短 chunk）在抓取香蕉的过程中持续开环执行，中间帧显示手指位置偏离目标后没有进行修正，最终失败。FFDC-WAM（下一行）展现出交替的执行与重规划行为——当真实场景与预测 rollout 出现偏差时，FFDC 检测到不一致并触发重新推理，机器人修正动作后最终成功抓取。</p>
+<p><strong>胡萝卜抓取任务（下一组）：</strong> 同样的模式——LC-16 在接近胡萝卜的过程中继续执行偏离的动作导致失败，而 FFDC-WAM 通过在线验证检测到执行漂移（drift），自动触发 replanning 后的修正动作，成功完成了抓取。两个任务共同验证了 FFDC 在真实世界感知噪声和接触不确定性下的鲁棒性增益。</p>
+<hr />
+<h2 id="_5">五、关键洞察与技术亮点</h2>
+<ol>
+<li>
+<p><strong>从"如何执行"到"何时信任"的视角转换</strong>：不再问"chunk size 多大好"，而是问"WAM 的想象现在还靠谱吗"。这是对 WAM 这个模型家族独特能力（联合预测视觉+动作）的首次充分利用。</p>
+</li>
+<li>
+<p><strong>未来—现实一致性作为自适应信号</strong>：现有的自适应方法（基于动作不确定性、熵、policy confidence）都是"只看当前"，FFDC 第一次利用了 WAM 的"未来视觉预测"作为在线验证信号——这是 WAM 独有而 VLA 不具备的能力。</p>
+</li>
+<li>
+<p><strong>因果注意力 + KV cache 的高效架构</strong>：FFDC 用结构化布尔 mask 强制"未来动作↔未来视觉"之间只有因果交互，同时将 WAM 预测 tokens 缓存为 KV cache，验证时仅需编码当前观测并做轻量注意力——非常高效。</p>
+</li>
+<li>
+<p><strong>合成负样本数据增强</strong>：通过 temporal swap、gripper flip、late-stage noise、tail scaling 四种方式从有效演示中构造不可执行的轨迹段，解决了真实负样本不足的问题。</p>
+</li>
+<li>
+<p><strong>难度感知的推理分配</strong>：FFDC 在 hard 任务上调用更多推理（2.34 次），在 easy 任务上接近 LC-64 的水平（1.62 次），实现了"按需分配"的推理预算。</p>
+</li>
+</ol>
+<hr />
+<h2 id="_6">六、局限性</h2>
+<ol>
+<li>
+<p><strong>二分类监督的覆盖范围有限</strong>：FFDC 用成功/失败/合成破坏的二元数据训练，可能无法覆盖真实世界执行中全部多样的偏差模式——更丰富的失败模式数据是重要扩展方向。</p>
+</li>
+<li>
+<p><strong>固定阈值</strong>：当前使用固定检测阈值 <span class="math inline">$\tau=0.5$</span>，但不同任务和不同阶段可能适合不同的阈值——需要更系统地研究阈值对鲁棒性-效率权衡的影响。</p>
+</li>
+<li>
+<p><strong>Verifier 参数量的权衡</strong>：FFDC 设计较为轻量，虽然实验显示效果很好，但更深的 verifier 架构与效率之间的权衡空间尚未充分探索。</p>
+</li>
+</ol>
+<hr />
+<h2 id="_7">七、关键概念速查</h2>
+<table>
+<thead>
+<tr>
+<th>概念</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>WAM (World Action Model)</strong></td>
+<td>联合预测未来视觉观测和未来动作的生成式机器人策略模型</td>
+</tr>
+<tr>
+<td><strong>Action Chunking</strong></td>
+<td>一次推理预测多步动作，开环执行后再重新推理</td>
+</tr>
+<tr>
+<td><strong>FFDC (Future Forward Dynamics Causal Attention)</strong></td>
+<td>本文提出的轻量级 verifier，通过结构化因果注意力验证 WAM 想象的未来是否仍可信任</td>
+</tr>
+<tr>
+<td><strong>Future–Reality Verification</strong></td>
+<td>将自适应执行视为"未来预测 vs 现实观测"的一致性判断问题</td>
+</tr>
+<tr>
+<td><strong>Mixture-of-Horizon Training</strong></td>
+<td>均匀随机采样起始时间步的长 horizon 训练策略</td>
+</tr>
+<tr>
+<td><strong>KV Cache Verification</strong></td>
+<td>WAM 预测 tokens 一次缓存，后续验证仅编码新观测 + 轻量注意力</td>
+</tr>
+<tr>
+<td><strong>Motus</strong></td>
+<td>本文所用的 WAM backbone，基于 rectified flow-matching 的联合视频-动作生成模型</td>
+</tr>
+<tr>
+<td><strong>RoboTwin</strong></td>
+<td>包含 50 个操控任务的仿真 benchmark，支持 clean 和 random（背景/光照/高度变化）两种设置</td>
+</tr>
+</tbody>
+</table>
+  </div>
+</main>
+
+
+<script>
+(function() {
+  const sidebar = document.getElementById('sidebar');
+  const links = sidebar.querySelectorAll('a');
+  const headings = document.querySelectorAll('h1[id], h2[id], h3[id], h4[id]');
+  if (headings.length === 0) return;
+
+  const linkMap = new Map();
+  links.forEach(function(a) {
+    const href = a.getAttribute('href');
+    if (href && href.startsWith('#')) linkMap.set(href.slice(1), a);
+  });
+
+  function onScroll() {
+    let currentId = null;
+    const scrollTop = window.scrollY + 80;
+    headings.forEach(function(h) { if (h.offsetTop <= scrollTop) currentId = h.id; });
+    links.forEach(function(a) { a.classList.remove('active'); });
+    if (currentId && linkMap.has(currentId)) {
+      const el = linkMap.get(currentId);
+      el.classList.add('active');
+      const sr = sidebar.getBoundingClientRect();
+      const er = el.getBoundingClientRect();
+      if (er.bottom > sr.bottom || er.top < sr.top) {
+        el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+    }
+  }
+
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+})();
+</script>
+
+</body>
+</html>

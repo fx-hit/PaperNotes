@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Is the Future Compatible? Diagnosing Dynamic Consistency in World Action Models</title>
+<!-- arxiv: 2605.07514 -->
+<!-- venue: NeurIPS 2026（投稿中） -->
+<!-- tags: World Action Model, Action-State Consistency, Test-Time Scaling, Robotics, WAM -->
+<!-- words-zh: 5710 -->
+<!-- words-en: 520 -->
+<!-- reading-time: 19 -->
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #ffffff;
+    --text: #1a1a2e;
+    --text-secondary: #555;
+    --border: #e1e4e8;
+    --link: #0969da;
+    --table-stripe: #f6f8fa;
+    --heading: #0d1117;
+    --blockquote-border: #0969da;
+    --blockquote-bg: #f0f6ff;
+    --inline-code: #d73a49;
+    --inline-code-bg: #f6f8fa;
+    --sidebar-width: 260px;
+    --toc-active: #0969da;
+    --content-max-width: 900px;
+    --content-padding: 48px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "Inter", "Noto Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 16px;
+    line-height: 1.75;
+    color: var(--text);
+    background: var(--bg);
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    width: var(--sidebar-width);
+    overflow-y: auto;
+    padding: 28px 20px 40px;
+    background: #fafbfc;
+    border-right: 1px solid var(--border);
+    z-index: 10;
+    scrollbar-width: thin;
+  }
+  .sidebar-title {
+    font-size: 13px; font-weight: 700; color: var(--text-secondary);
+    margin-bottom: 16px; letter-spacing: 0.06em; text-transform: uppercase;
+  }
+  .toc-list { list-style: none; padding: 0; margin: 0; }
+  .toc-list ul { list-style: none; padding-left: 14px; }
+  .toc-list li { margin: 1px 0; }
+  .toc-list a {
+    display: block; padding: 4px 12px; font-size: 13.5px; line-height: 1.45;
+    color: var(--text-secondary); text-decoration: none; border-radius: 4px;
+    border-left: 2px solid transparent; transition: all 0.15s;
+  }
+  .toc-list a:hover { color: var(--link); background: #e8f0fe; }
+  .toc-list a.active {
+    color: var(--toc-active); font-weight: 600;
+    border-left-color: var(--toc-active); background: #e8f0fe;
+  }
+  .toc-h1 a { font-weight: 600; color: var(--heading); font-size: 14px; }
+  .toc-h3 a { padding-left: 24px; font-size: 13px; }
+  .toc-h4 a { padding-left: 36px; font-size: 12.5px; }
+  .toc-empty { color: var(--text-secondary); font-size: 13px; font-style: italic; }
+
+  .main-wrapper {
+    margin-left: var(--sidebar-width);
+    min-height: 100vh;
+    display: flex; justify-content: center;
+  }
+  .content-inner {
+    width: 100%;
+    max-width: var(--content-max-width);
+    padding: 40px var(--content-padding) 80px;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    color: var(--heading); font-weight: 700; line-height: 1.3;
+    margin-top: 2em; margin-bottom: 0.6em; scroll-margin-top: 24px;
+  }
+  h1 { font-size: 2em; border-bottom: 2px solid var(--border); padding-bottom: 0.3em; margin-top: 0; }
+  h2 { font-size: 1.5em; border-bottom: 1px solid var(--border); padding-bottom: 0.25em; }
+  h3 { font-size: 1.25em; }
+  h4 { font-size: 1.1em; }
+  p { margin-bottom: 1em; }
+  a { color: var(--link); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  strong { font-weight: 600; }
+
+  blockquote {
+    border-left: 4px solid var(--blockquote-border);
+    background: var(--blockquote-bg);
+    padding: 12px 20px; margin: 1em 0;
+    border-radius: 0 6px 6px 0; color: var(--text-secondary);
+  }
+  blockquote p:last-child { margin-bottom: 0; }
+
+  code {
+    font-family: "JetBrains Mono", "SF Mono", "Fira Code", monospace;
+    font-size: 0.875em; background: var(--inline-code-bg);
+    padding: 2px 6px; border-radius: 4px; color: var(--inline-code);
+  }
+  pre {
+    background: #1e1e2e; color: #cdd6f4;
+    border-radius: 8px; padding: 16px 20px; overflow-x: auto;
+    margin: 1em 0; font-size: 14px; line-height: 1.55;
+  }
+  pre code { background: none; padding: 0; border-radius: 0; color: inherit; font-size: inherit; }
+
+  .codehilite { background: #1e1e2e; border-radius: 8px; padding: 16px 20px; overflow-x: auto; margin: 1em 0; }
+  .codehilite pre { background: none; padding: 0; margin: 0; border-radius: 0; }
+  .codehilite .hll { background-color: #2a2a3e; }
+  .codehilite .c  { color: #6c7086; font-style: italic; }
+  .codehilite .k  { color: #cba6f7; }
+  .codehilite .o  { color: #89b4fa; }
+  .codehilite .s  { color: #a6e3a1; }
+  .codehilite .n  { color: #cdd6f4; }
+  .codehilite .p  { color: #bac2de; }
+  .codehilite .mi { color: #fab387; }
+  .codehilite .nf { color: #89b4fa; }
+  .codehilite .nb { color: #f38ba8; }
+  .codehilite .nc { color: #f9e2af; }
+  .codehilite .bp { color: #f38ba8; }
+
+  table { width: 100%; border-collapse: collapse; margin: 1em 0; font-size: 0.925em; }
+  th, td { border: 1px solid var(--border); padding: 10px 14px; text-align: left; }
+  th { background: var(--table-stripe); font-weight: 600; color: var(--heading); }
+  tr:nth-child(even) td { background: var(--table-stripe); }
+
+  .math.display { display: block; overflow-x: auto; padding: 12px 0; margin: 1em 0; }
+  ul, ol { padding-left: 1.5em; margin-bottom: 1em; }
+  li { margin-bottom: 0.3em; }
+  hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+  img { max-width: 100%; height: auto; border-radius: 6px; margin: 0; }
+  p:has(img) { text-align: center; margin-top: 0.6em; margin-bottom: 0; }
+  p:has(img) + p { text-align: center; font-size: 0.9em; color: var(--text-secondary); margin-top: 0.15em; margin-bottom: 0.6em; }
+  .mermaid { text-align: center; margin: 1.5em 0; background: #fafbfc; border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+  .article-stats {
+    font-size: 0.85rem; color: var(--text-secondary);
+    padding: 10px 18px; margin-bottom: 28px;
+    background: #f8f9fa; border: 1px solid var(--border); border-radius: 8px;
+  }
+
+  @media (max-width: 1024px) {
+    .sidebar { position: static; width: 100%; height: auto; max-height: 35vh; border-right: none; border-bottom: 1px solid var(--border); }
+    .main-wrapper { margin-left: 0; display: block; }
+    .content-inner { max-width: none; padding: 24px 20px 60px; }
+  }
+</style>
+
+<script>
+MathJax = {
+  tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']], processEscapes: true, tags: 'none' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] }
+};
+</script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  mermaid.initialize({ startOnLoad: true, theme: 'neutral', securityLevel: 'loose' });
+});
+</script>
+
+</head>
+<body>
+
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-title">目录</div>
+  <ul class="toc-list">
+<li class="toc-h1"><a href="#is-the-future-compatible-diagnosing-dynamic-consistency-in-world-action-models">Is the Future Compatible? Diagnosing Dynamic Consistency in World Action Models</a>
+<ul>
+</li>
+<li class="toc-h2"><a href="#_1">一、核心问题</a>
+</li>
+<li class="toc-h2"><a href="#_2">二、核心思路 / 方法</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#21-wam">2.1 WAM 的两种范式</a>
+</li>
+<li class="toc-h3"><a href="#22">2.2 一致性度量</a>
+</li>
+<li class="toc-h3"><a href="#23-rq">2.3 三个研究问题（RQ）</a>
+</li>
+<li class="toc-h3"><a href="#24">2.4 测试时选择策略</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_3">三、实验与结果</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#31">3.1 实验设置</a>
+</li>
+<li class="toc-h3"><a href="#32-rq1">3.2 RQ1：一致性与任务成败的关系</a>
+</li>
+<li class="toc-h3"><a href="#33-rq2background-collapse">3.3 RQ2：Background Collapse——一致性何时失效</a>
+</li>
+<li class="toc-h3"><a href="#34-rq3-value-free">3.4 RQ3：一致性作为 Value-Free 信号</a>
+</li>
+<li class="toc-h3"><a href="#35">3.5 测试时选择的实验效果</a>
+</li>
+<li class="toc-h3"><a href="#36">3.6 候选分支数量扩展</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_4">四、关键洞察与技术亮点</a>
+</li>
+<li class="toc-h2"><a href="#_5">五、局限性</a>
+</li>
+<li class="toc-h2"><a href="#_6">六、关键概念速查</a>
+</ul></li>
+</li></ul>
+</nav>
+
+<main class="main-wrapper">
+  <div class="content-inner" id="main-content">
+<h1 id="is-the-future-compatible-diagnosing-dynamic-consistency-in-world-action-models">Is the Future Compatible? Diagnosing Dynamic Consistency in World Action Models</h1>
+<div class="article-stats">5,710 字 · English 520 词 · 约 19 分钟阅读</div>
+
+<blockquote>
+<p><strong>论文信息</strong>
+- 作者：Bo-Kai Ruan, Teng-Fang Hsiao, Ling Lo, Hong-Han Shuai（National Yang Ming Chiao Tung University）
+- 投稿方向：NeurIPS 2026（投稿中）
+- arXiv ID：2605.07514
+- 代码：—</p>
+</blockquote>
+<hr />
+<h2 id="_1">一、核心问题</h2>
+<p>World Action Models（WAM）通过预测未来观察和动作来实现"想象式"决策。但现有工作主要关注<strong>预测质量</strong>和<strong>下游成功率</strong>，忽略了一个根本性问题：</p>
+<blockquote>
+<p>模型生成的"想象未来"是否真的与它所预测的动作<strong>动态一致</strong>？还是仅仅生成视觉上 plausible 但物理上不可能的幻象？</p>
+</blockquote>
+<p>作者将此问题定义为 <strong>Action-State Consistency（动作-状态一致性）</strong>：预测的未来状态是否与执行该动作后实际发生的状态转移相容。这是 WAM 可靠性评估中一个此前完全缺失的维度。</p>
+<hr />
+<h2 id="_2">二、核心思路 / 方法</h2>
+<h3 id="21-wam">2.1 WAM 的两种范式</h3>
+<p>论文梳理了 WAM 的两种代表性形式：</p>
+<p><strong>Joint-Prediction WAM（联合预测）</strong>：直接建模 <span class="math inline">$p(o_{t+1:t+\Delta}, a_{t+1:t+\Delta} \mid o_{0:t}, q_t, \mathcal{G})$</span>，未来观察和动作在统一模型中同时生成。代表：Cosmos-Policy、FastWAM。</p>
+<p><strong>Inverse-Dynamics WAM（逆动力学）</strong>：先预测未来状态 <span class="math inline">$p(o_{t+1:t+\Delta} \mid o_{0:t}, q_t, \mathcal{G})$</span>，再从预测的未来状态中反推动作 <span class="math inline">$p(a_{t+1:t+\Delta} \mid o_{0:t+\Delta}, q_t)$</span>。代表：LingBot-VA、GigaWorld。Hybrid 变体：DreamZero（训练时联合预测，推理时依赖逆动力学）。</p>
+<p><img alt="图1：WAM 的基本工作流程" src="assets/dynamic-consistency-wam/wam_demo.jpg" /></p>
+<p><em>图1：World Action Model 的概念总览图，展示了 WAM 从输入到输出的完整数据流。</em></p>
+<p><em>图的左侧为当前时刻 <span class="math inline">$t$</span> 的输入：包括历史视觉观察 <span class="math inline">$o_{0:t}$</span>（多帧 RGB 图像序列）、机器人本体感知状态 <span class="math inline">$q_t$</span>（关节角度、末端位姿等）、以及任务描述 <span class="math inline">$\mathcal{G}$</span>（自然语言指令）。这些异构输入在模型内部被编码为统一的 latent 表征。</em></p>
+<p><em>图的右侧为 WAM 的输出——模型同时预测两样东西：</em><em>未来观察帧</em><em>（<span class="math inline">$\hat{o}_{t+1}, \hat{o}_{t+2}, \dots$</span>，即模型"想象"的接下来会发生什么）和</em><em>动作序列</em><em>（<span class="math inline">$\hat{a}_{t+1}, \hat{a}_{t+2}, \dots$</span>，即每一步应该执行什么动作）。部分 WAM 还包含可选的 </em><em>Value Head</em><em>（价值头），对每个预测分支输出一个标量价值估计，用于 Best-of-N 候选选择。</em></p>
+<p><em>图的下部说明了本文的核心概念 </em><em>Action-State Consistency</em><em>：将预测的未来帧 <span class="math inline">$\hat{o}_{t+\Delta}$</span> 与实际执行动作后观察到的真实帧 <span class="math inline">$o_{t+\Delta}$</span> 进行比较（在 VAE latent 空间计算 MSE 距离），通过指数衰减函数转换为 <span class="math inline">$[0,1]$</span> 区间的一致性得分。一致性高意味着模型的"想象"和"现实"高度吻合，一致性低则表示预测偏离了实际物理转移。</em></p>
+<h3 id="22">2.2 一致性度量</h3>
+<p>一致性定义为预测观察 <span class="math inline">$\hat{o}_{t+\Delta}$</span> 与真实观察 <span class="math inline">$o_{t+\Delta}$</span> 之间的相似度：</p>
+<p><div class="math display">$$c_t(o_{t+\Delta}, \hat{o}_{t+\Delta}) = \exp\big(-\alpha \cdot d(o_{t+\Delta}, \hat{o}_{t+\Delta})\big)$$</div></p>
+<p>其中 <span class="math inline">$\alpha=0.1$</span> 为缩放因子，<span class="math inline">$d(\cdot,\cdot)$</span> 为 VAE 解码前 latent 空间的 MSE 距离。在 latent 空间计算避免了像素级敏感度，确保一致性反映结构层面的语义对齐。</p>
+<h3 id="23-rq">2.3 三个研究问题（RQ）</h3>
+<p>论文围绕三个 RQ 展开系统研究：</p>
+<table>
+<thead>
+<tr>
+<th>研究问题</th>
+<th>核心关注点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>RQ1</strong>：WAM 是否表现出可测量的一致性？与任务成败关系如何？</td>
+<td>一致性的涌现与可分离性</td>
+</tr>
+<tr>
+<td><strong>RQ2</strong>：什么条件下一致性会失效？失效原因是什么？</td>
+<td>边界条件与 background collapse</td>
+</tr>
+<tr>
+<td><strong>RQ3</strong>：一致性能否作为 value-free 的决策信号？</td>
+<td>与 value prediction 的对齐程度</td>
+</tr>
+</tbody>
+</table>
+<h3 id="24">2.4 测试时选择策略</h3>
+<p>提出两种基于一致性的 Best-of-N 选择策略：</p>
+<p><strong>Consistency-Exploring</strong>（探索式）：从同一初始状态分别执行 <span class="math inline">$N$</span> 个候选分支，计算每个分支的一致性得分 <span class="math inline">$c_t^{(i)} = c_t(\hat{o}_{t+\Delta}^{(i)}, o_{t+\Delta}^{(i)})$</span>，选择得分最高者。这是理论上界策略，但需要环境重置。</p>
+<p><strong>Consistency-Consensus</strong>（共识式）：不执行候选分支，而是将所有预测未来取平均得到共识未来 <span class="math inline">$\bar{o}_{t+\Delta} = \frac{1}{N}\sum_j \hat{o}_{t+\Delta}^{(j)}$</span>，然后对每个分支计算其与共识未来的相似度。核心假设是：共识平均比单一样本更接近真实未来。这是真正可部署的策略。</p>
+<p>选择方式采用 <strong>Winner-Takes-All</strong>（WTA），直接执行得分最高的分支动作，而非对动作做加权平均。原因是机器人控制指令涉及 <span class="math inline">$SE(3)/SO(3)$</span> 等非线性流形，加权平均反而破坏运动一致性（实验证实加权平均将 RoboCasa 成功率从 67.3% 拉低至 64.9%，RoboTwin 2.0 从 93.0% 拉低至 86.4%）。</p>
+<p><img alt="图2：三种 Best-of-N 测试时选择策略对比" src="assets/dynamic-consistency-wam/its_strategy.jpg" /></p>
+<p><em>图2：三种 Best-of-N 测试时选择策略的并排对比，从上到下分别为 (a) Value-Prediction、(b) Consistency-Exploring、(c) Consistency-Consensus。图中上部是同一初始状态的多个预测分支，下部展示各策略的选择逻辑。</em></p>
+<p><strong><em>子图 (a) Value-Prediction（基于价值的 Best-of-N）：</em></strong> 这是 Cosmos-Policy 原论文提出的方法。每个候选分支由模型自带的 Value Head 输出一个标量价值估计 <span class="math inline">$V^{(i)}$</span>，直接选择 <span class="math inline">$V$</span> 值最高者。此方法的有效性前提是 Value Head 被良好训练（需要 Monte Carlo 回报作为监督信号）。缺点在于：并非所有 WAM 都包含 Value Head（如 LingBot-VA 就没有），且价值估计的训练质量直接影响选择效果。</p>
+<p><strong><em>子图 (b) Consistency-Exploring（探索式一致性）：</em></strong> 从同一初始状态出发，逐一执行 <span class="math inline">$N$</span> 个候选分支的动作序列到环境中，获得 <span class="math inline">$N$</span> 个真实下一帧 <span class="math inline">$o_{t+\Delta}^{(i)}$</span>，然后对每个分支计算其预测帧与真实帧的一致性得分，选最高者。这是直接使用一致性作为选择信号的最纯粹形式，也是理论上界。但它需要在每个决策步都能"重置环境到同一点再试不同动作"，这在真实机器人场景中几乎不可能——因此主要作为 benchmark 参考。</p>
+<p><strong><em>子图 (c) Consistency-Consensus（共识式一致性）：</em></strong> 完全不执行任何候选分支。代之以将所有 <span class="math inline">$N$</span> 个预测的未来帧取平均，得到"共识未来" <span class="math inline">$\bar{o}_{t+\Delta}$</span>。核心直觉：虽然单个预测可能有噪声，但 <span class="math inline">$N$</span> 个独立样本的平均通常比任意单一样本更接近真实未来（类似于 ensemble 降低了方差）。然后对每个分支计算其预测帧与共识未来的相似度，选最接近共识的分支。这一策略完全在模型内部完成（仅需前向推理），无需任何环境交互或重置，是唯一真正可部署的方案。*</p>
+<hr />
+<h2 id="_3">三、实验与结果</h2>
+<h3 id="31">3.1 实验设置</h3>
+<table>
+<thead>
+<tr>
+<th>模型</th>
+<th>数据集</th>
+<th>WAM 类型</th>
+<th>硬件</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Cosmos-Policy</td>
+<td>RoboCasa（24 个厨房操作任务，单臂）</td>
+<td>Joint-Prediction</td>
+<td>8×RTX 5090</td>
+</tr>
+<tr>
+<td>LingBot-VA</td>
+<td>RoboTwin 2.0（50+ 个双臂操作任务）</td>
+<td>Inverse-Dynamics</td>
+<td>8×RTX 5090</td>
+</tr>
+</tbody>
+</table>
+<p>默认 <span class="math inline">$N=8$</span> 个候选分支，候选分支可并行评估。选择权重和一致性得分的计算开销约 <strong>0.7ms</strong>（<span class="math inline">$N=8$</span>）。</p>
+<h3 id="32-rq1">3.2 RQ1：一致性与任务成败的关系</h3>
+<p><img alt="图3：一致性 KDE 分布——成功 vs 失败轨迹" src="assets/dynamic-consistency-wam/cosmos_zscore.jpg" /></p>
+<p><em>图3：成功与失败轨迹的 action-state consistency 核密度估计（KDE）分布对比，左子图为 Cosmos-Policy（RoboCasa），右子图为 LingBot-VA（RoboTwin 2.0）。</em></p>
+<p><strong><em>坐标轴和含义：</em></strong> 横轴为归一化后的一致性 z-score——为了跨任务可比，每个任务内部先计算 episode 级一致性的均值和标准差，再将每个 episode 的一致性转为 z-score（<span class="math inline">$(c - \mu_{\text{task}}) / \sigma_{\text{task}}$</span>）。因此 z-score = 0 代表该 episode 的一致性处于该任务的均值水平，正值表示高于均值，负值表示低于均值。纵轴为核密度估计的密度值。蓝色曲线为成功轨迹（Success）的分布，橙色曲线为失败轨迹（Failure）的分布。</p>
+<p><strong><em>子图 (a) Cosmos-Policy：</em></strong> 成功轨迹的一致性分布整体右移——峰值约在 z-score = +0.3 处，且分布更集中（更窄的峰），说明成功轨迹的一致性普遍偏高且方差较小。失败轨迹的分布偏左，峰值在 z-score ≈ −0.1 附近，且分布更宽（尾部向左延伸至 −2.0 以下），说明失败轨迹的一致性不仅平均更低，且个体差异更大。<strong>Cohen's d = 0.76</strong>，属于中到大效应量，意味着两分布的均值差距约为 0.76 个标准差——在社会科学中通常被视为"有实际意义的差异"。</p>
+<p><strong><em>子图 (b) LingBot-VA：</em></strong> 成功轨迹的一致性分布同样右移但更明显——峰值在 z-score ≈ +0.5 处，且几乎完全与失败分布分离。失败轨迹的分布中心在 z-score ≈ −0.4，且有一条明显的向左长尾延伸至 −2.5。<strong>Cohen's d = 0.99</strong>——接近 1.0 的大效应量，意味着成功和失败轨迹的一致性几乎分布在两个不重叠的区域。这在统计上是非常强的分离：LingBot-VA 的逆动力学设计让一致性信号更加"干净"，可能是因为先预测未来帧再反推动作的结构，使得动作和帧之间的不一致更容易暴露。</p>
+<p><strong><em>连接论文论点：</em></strong> 这两张 KDE 图回答了 RQ1——一致性不仅在两种 WAM 范式上都是可测量的，而且成功和失败轨迹在一致性上有系统性的、统计显著的差异。这意味着一致性不是随机噪声，而是一个与任务执行质量有关的结构化信号。</p>
+<p><img alt="图4：ROC 曲线——一致性预测任务成功" src="assets/dynamic-consistency-wam/combined_roc.jpg" /></p>
+<p><em>图4：使用 action-state consistency 作为唯一特征，通过 logistic 回归（5 折交叉验证）预测任务成功/失败的 ROC 曲线。</em></p>
+<p><strong><em>坐标轴和含义：</em></strong> 横轴为假阳性率（False Positive Rate = FP / (FP + TN)），纵轴为真阳性率（True Positive Rate = TP / (TP + FN)），也称为召回率。对角线虚线代表随机猜测（AUC = 0.5）——任何有意义的分类器都应在这条线之上。曲线越接近左上角，分类性能越好。AUC（曲线下面积）是综合指标：AUC = 1.0 为完美分类，0.5 为随机。</p>
+<p><strong><em>蓝色曲线（Cosmos-Policy）：AUC = 0.77。</em></strong> 在假阳性率约 0.2 时，真阳性率已超过 0.6；在假阳性率 0.4 时，真阳性率达到约 0.8。这意味着如果允许 20% 的假阳性（将失败误判为成功），可以正确识别约 60% 的成功轨迹；如果容忍 40% 假阳性，可识别 80% 的成功轨迹。这个性能水平说明一致性有相当的预测力，但并非完美——这与图 3 中 Cohen's d = 0.76 的量级一致。</p>
+<p><strong><em>橙色曲线（LingBot-VA）：AUC = 0.88。</em></strong> 曲线明显更陡，在假阳性率仅约 0.1 时真阳性率已接近 0.7；假阳性率 0.2 时真阳性率超过 0.85。AUC 0.88 在分类任务中属于"良好到优秀"的水平，意味着仅凭一致性这一个特征，就能相当准确地判断轨迹是否最终成功。这与 LingBot-VA 的逆动力学架构一致——模型需要先"想清楚未来是什么样"再"决定怎么做"，不一致更容易暴露。</p>
+<p><strong><em>连接论文论点：</em></strong> 此图的核心信息是：<strong>一致性本身即可作为有效的任务成败预测信号</strong>。不需要 reward、不需要 value function、不需要人工标注——纯粹来自模型自身预测与现实的对比。此外，LingBot-VA（AUC 0.88）显著优于 Cosmos-Policy（AUC 0.77），暗示逆动力学 WAM 可能天然更具"可诊断性"。</p>
+<h3 id="33-rq2background-collapse">3.3 RQ2：Background Collapse——一致性何时失效</h3>
+<p><img alt="图5：Background Collapse 现象示意" src="assets/dynamic-consistency-wam/bg_collapse_illustration.jpg" /></p>
+<p><em>图5：Background Collapse（背景坍缩）的两种失败轨迹对比，解释为什么"失败了但一致性却很高"的悖论。</em></p>
+<p><strong><em>图的结构：</em></strong> 每行是一个失败轨迹案例，每列从左到右依次是连续时间步的帧。上半部分 (a) 为"一致性对齐"的失败，下半部分 (b) 为"一致性错位"的失败（即 background collapse）。</p>
+<p><strong><em>子图 (a) 一致性对齐的失败：</em></strong> 机器人持续有可见的动作和场景变化——机械臂在移动、物体在改变位置、场景内容逐帧不同。但这些动作并没有导向任务成功（例如：正在做错误的操作）。因为帧与帧之间有显著的变化（较高的 latent change <span class="math inline">$\Delta z_t$</span>），预测这些变化是有难度的，所以一致性得分自然较低，正确地"反映"了任务状态不佳。</p>
+<p><strong><em>子图 (b) 一致性错位的失败（Background Collapse）：</em></strong> 这是本论文的核心发现。在失败轨迹的后半段，预测帧几乎完全<strong>停止变化</strong>——场景退化为静态背景，机械臂不再移动，物体位置固定。比较 <span class="math inline">$t_k$</span> 与 <span class="math inline">$t_{k+1}$</span> 几乎看不到任何差异。本质上，模型进入了"什么都不做"的坍缩模式。但问题在于：<strong>静态的预测非常容易做对</strong>——如果模型预测下一帧"什么都不变"，而客观上下一帧确实"什么都没变"（因为机器人卡住了），那么 latent 空间的距离会非常小，一致性得分会非常高。于是出现了令人困惑的现象：任务失败了，一致性却说"很好"。</p>
+<p><strong><em>为什么这很重要：</em></strong> 这个现象揭示了一致性作为诊断信号的<strong>边界条件</strong>——一致性只在其测量的场景动态有意义时才可靠。如果策略卡住了，低动态本身就让"预测未来"变得 trivial，高一致性不是因为模型"理解"了场景，而是因为场景本身"没有东西可理解"。这就是为什么作者在论文中反复强调要用 latent change <span class="math inline">$\Delta z_t$</span> 来"校准"一致性——当 <span class="math inline">$\Delta z_t$</span> 极低时，高一致性不可信。</p>
+<p><strong>定量验证</strong>：定义 latent change <span class="math inline">$\Delta z_t = d(z_t, z_{t+\Delta})$</span> 作为场景变化幅度的代理量。结果：</p>
+<table>
+<thead>
+<tr>
+<th>模型</th>
+<th>Pearson 相关</th>
+<th>Spearman 相关</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Cosmos-Policy</td>
+<td>-0.47</td>
+<td>-0.46</td>
+</tr>
+<tr>
+<td>LingBot-VA</td>
+<td>-0.30</td>
+<td>-0.30</td>
+</tr>
+</tbody>
+</table>
+<p>两者呈<strong>负相关</strong>：场景变化越大，一致性越低；场景越静止，一致性越高。时序分析显示两者随时间朝相反方向演化——当 <span class="math inline">$\Delta z_t$</span> 上升时，一致性下降；<span class="math inline">$\Delta z_t$</span> 下降时，一致性上升。</p>
+<p><img alt="图6：Latent Change 分解——对齐 vs 错位任务" src="assets/dynamic-consistency-wam/cosmos_latent_change_comparison.jpg" /></p>
+<p><em>图6：将 latent change（<span class="math inline">$\Delta z_t$</span>）按两个维度分解——任务类型（对齐 Aligned / 错位 Misaligned）和轨迹结果（成功 Success / 失败 Failure），形成四组曲线的时间序列对比。左子图 (a) 为 Cosmos-Policy，右子图 (b) 为 LingBot-VA。</em></p>
+<p><strong><em>坐标轴和图例：</em></strong> 横轴为轨迹的时间步（从 episode 开始到结束），纵轴为 latent change <span class="math inline">$\Delta z_t$</span> 的值。四条曲线分别对应：</p>
+<ul>
+<li>深蓝色（Aligned / Success）：对齐任务中的成功轨迹</li>
+<li>浅蓝色（Aligned / Failure）：对齐任务中的失败轨迹</li>
+<li>深红色（Misaligned / Success）：错位任务中的成功轨迹</li>
+<li>浅橙色（Misaligned / Failure）：错位任务中的失败轨迹</li>
+</ul>
+<p><strong><em>子图 (a) Cosmos-Policy：</em></strong> 最引人注目的是浅橙色曲线（Misaligned / Failure），它从约 timestep 5 开始急剧下降，到 timestep 10 左右降至接近零的极低水平，此后持续保持低位直到 episode 结束。对比其他三条曲线——深蓝色（Aligned / Success）维持最高 level 并保持稳定，浅蓝色（Aligned / Failure）虽然低于成功但仍在中等水平波动，深红色（Misaligned / Success）初期较高后有所下降但仍高于浅橙色。这种急剧分化发生在 episode 中期，表明错位任务中的失败轨迹并非"一开始就注定"，而是在中间某个时间点策略做出了错误的动作选择，导致进入不可逆的停滞状态，此后 <span class="math inline">$\Delta z_t$</span> 持续极低——即进入了 background collapse。</p>
+<p><strong><em>子图 (b) LingBot-VA：</em></strong> 模式类似但稍弱。浅橙色（Misaligned / Failure）仍然是最低曲线，在 episode 后半段降到极低水平。但 LingBot-VA 的四条曲线之间的差异比 Cosmos-Policy 更小，这与其更低的 Pearson 相关系数（-0.30 vs -0.47）一致——逆动力学结构可能对 collapse 模式有不同的敏感性。</p>
+<p><strong><em>连接论文论点：</em></strong> 这张图定量地证明了 RQ2 的回答：一致性失效的根本原因是 background collapse——错位任务中的失败轨迹在后期 <span class="math inline">$\Delta z_t$</span> 极低（预测帧几乎静止），而"静止场景"预测 trivial，导致一致性虚高。它也暗示了缓解方向：<strong>如果能在早期（timestep 1-5）做出更好的动作选择，避免轨迹进入 collapse 区域，就能从根本上减少错位现象。</strong></p>
+<h3 id="34-rq3-value-free">3.4 RQ3：一致性作为 Value-Free 信号</h3>
+<p><img alt="图7：Value Prediction 与 Consistency 随时间对比" src="assets/dynamic-consistency-wam/average_value_consistency.jpg" /></p>
+<p><em>图7：以 Cosmos-Policy 为对象，比较 Value Prediction 和 Action-State Consistency 在区分成功与失败轨迹上的表现。</em></p>
+<p><strong><em>坐标轴和含义：</em></strong> 横轴为轨迹时间步（越长表示越接近 episode 末尾），纵轴为"成功轨迹的值减去失败轨迹的值"的差值（<span class="math inline">$\text{Success} - \text{Failure}$</span>）。蓝色曲线代表 Value Prediction 的差值，橙色曲线代表 Consistency 的差值。正值意味着成功轨迹在该指标上高于失败轨迹——正值越大区分度越好。虚线表示差值为零（完全无法区分）。</p>
+<p><strong><em>关键趋势分析：</em></strong></p>
+<ul>
+<li><strong>早期阶段（timestep 0-2）：</strong> 两条曲线差值都较小（接近 0.02），说明在 episode 刚开始时，成功和失败的 value 和一致性都还比较接近——这个阶段模型还没有足够信息判断未来走向。</li>
+<li><strong>中期阶段（timestep 3-7）：</strong> 两条曲线开始分化。Value Prediction 差值从约 0.02 稳步上升到约 0.04，同时 Consistency 差值从约 0.02 上升到约 0.05。有趣的是，在此阶段 <strong>Consistency 的区分度略高于 Value</strong>（橙色略高于蓝色），说明在决策中期，预测与现实的吻合度可能比预期回报估计更早地暴露轨迹质量。</li>
+<li><strong>后期阶段（timestep 8-10）：</strong> 两条曲线均进一步上升并趋于稳定，差值达到约 0.04-0.06 的水平。Value 和 Consistency 在此阶段基本持平。</li>
+</ul>
+<p><strong><em>连接论文论点：</em></strong> 这张图直接回答了 RQ3——<strong>Consistency 与 Value Prediction 遵循相同的成功-失败分化趋势</strong>。两者都能区分好轨迹和坏轨迹，且这种区分能力随时间积累而增强。这意味着：如果模型没有 Value Head（如 LingBot-VA、FastWAM 等大多数 WAM），一致性仍然可以提供一个"免费的"替代信号，用于 Best-of-N 选择。这也就是 Consistency-Consensus 策略有效性的理论基础。</p>
+<h3 id="35">3.5 测试时选择的实验效果</h3>
+<p><strong>RoboCasa（Cosmos-Policy）</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th>TTS</th>
+<th>平均成功率</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>UVA</td>
+<td>✗</td>
+<td>50.0%</td>
+</tr>
+<tr>
+<td>DP-VLA</td>
+<td>✗</td>
+<td>57.3%</td>
+</tr>
+<tr>
+<td>UWM</td>
+<td>✗</td>
+<td>60.8%</td>
+</tr>
+<tr>
+<td>π₀</td>
+<td>✗</td>
+<td>62.5%</td>
+</tr>
+<tr>
+<td>GR00T-N1.5</td>
+<td>✗</td>
+<td>64.1%</td>
+</tr>
+<tr>
+<td>Video-Policy</td>
+<td>✗</td>
+<td>66.0%</td>
+</tr>
+<tr>
+<td>FLARE</td>
+<td>✗</td>
+<td>66.4%</td>
+</tr>
+<tr>
+<td>Cosmos-Policy*</td>
+<td>✗</td>
+<td>66.6%</td>
+</tr>
+<tr>
+<td>+ Value-Prediction*</td>
+<td>✓</td>
+<td>67.4%</td>
+</tr>
+<tr>
+<td>+ <strong>Consistency-Consensus</strong></td>
+<td>✓</td>
+<td><strong>67.3%</strong></td>
+</tr>
+<tr>
+<td>+ <strong>Consistency-Exploring</strong></td>
+<td>✓</td>
+<td><strong>68.0%</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>RoboTwin 2.0（LingBot-VA）</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th>TTS</th>
+<th>平均成功率</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>X-VLA</td>
+<td>✗</td>
+<td>72.9%</td>
+</tr>
+<tr>
+<td>π₀</td>
+<td>✗</td>
+<td>65.9%</td>
+</tr>
+<tr>
+<td>π₀.₅</td>
+<td>✗</td>
+<td>82.7%</td>
+</tr>
+<tr>
+<td>Motus</td>
+<td>✗</td>
+<td>88.7%</td>
+</tr>
+<tr>
+<td>LingBot-VA*</td>
+<td>✗</td>
+<td>90.2%</td>
+</tr>
+<tr>
+<td>+ <strong>Consistency-Consensus</strong></td>
+<td>✓</td>
+<td><strong>93.0%</strong></td>
+</tr>
+</tbody>
+</table>
+<p>关键观察：</p>
+<ul>
+<li>Consistency-Consensus 在 RoboCasa 上几乎匹配 Value-Prediction（67.3% vs 67.4%），且无需 reward/value 建模</li>
+<li>在 RoboTwin 2.0 上提升最大（+2.8pp），因该平台不提供环境重置 API，Consistency-Exploring 不可用，全部收益来自可部署的 Consensus 策略</li>
+<li>策略<strong>跨 WAM 范式</strong>有效：Joint-Prediction（Cosmos-Policy）和 Inverse-Dynamics（LingBot-VA）均可受益</li>
+</ul>
+<p><img alt="图8：原始选择 vs 一致性引导选择的定性对比" src="assets/dynamic-consistency-wam/results_compare.jpg" /></p>
+<p><em>图8：原始 rollout（左列）与 Consistency-Consensus 引导的 rollout（右列）的逐帧定性对比，上半部分 (a) 为 Cosmos-Policy 在 RoboCasa 上的案例，下半部分 (b) 为 LingBot-VA 在 RoboTwin 2.0 上的案例。</em></p>
+<p><strong><em>子图 (a) Cosmos-Policy — RoboCasa（厨房操作）：</em></strong> 这是一个典型的物品放置/移动任务。原始 rollout（左）在关键操作阶段出现问题：预测的未来帧（绿色框标出的"Predicted"区域）与实际执行后观察到的帧（"Real"区域）出现明显偏差。这种偏差意味着模型"以为"会发生某种物体运动，但实际并未发生——action 和 state transition 之间的 gap 导致了失败。Consistency-Consensus rollout（右）从 <span class="math inline">$N=8$</span> 个候选分支中选择了"与其他分支的预测帧最一致"的那一个——因为该分支的预测帧被多个独立采样共同支持，更可能接近真实动力学。结果：预测与实际的匹配度更高，任务成功完成。</p>
+<p><strong><em>子图 (b) LingBot-VA — RoboTwin 2.0（双臂操作）：</em></strong> 这是一个需要双臂协调的灵巧操作任务。原始 rollout（左）在任务执行的中段失去进展——预测帧与实际帧之间出现空间不对齐（物体位置偏差、抓取姿态不匹配）。由于 LingBot-VA 是逆动力学模型（先预测未来帧、再反推动作），这种视觉预测的偏差会直接导致反推的动作也不正确。Consistency-Consensus rollout（右）选择的分支在预测转移的"主流意见"上更一致——意味着其预测的未来帧与该时刻其他采样分支的共识未来更接近，最终双臂协调更好、任务成功。</p>
+<p><strong><em>连接论文论点：</em></strong> 这张定性对比图说明了 Consistency-Consensus <strong>为什么</strong>能工作——它不是通过"选一个看起来更好的帧"，而是通过"选一个被多数采样支持的帧"。当同一个初始状态下多次独立采样产生相似的未来预测时，这个"共识未来"很可能代表了模型学到的可靠动力学模式；反之，一个与其他采样差异很大的预测更可能是 outlier 或噪声，执行它更可能失败。</p>
+<h3 id="36">3.6 候选分支数量扩展</h3>
+<p><img alt="图9：候选分支数量 N 的扩展效果" src="assets/dynamic-consistency-wam/scaling.jpg" /></p>
+<p><em>图9：Consistency-Consensus 策略的 test-time scaling 行为——候选分支数 <span class="math inline">$N$</span> 从 1 到 8 对平均成功率的影响。</em></p>
+<p><strong><em>坐标轴和含义：</em></strong> 横轴为候选分支数 <span class="math inline">$N$</span>，取值为 <span class="math inline">$\{1, 2, 4, 8\}$</span>。纵轴为平均成功率（%）。蓝色折线为 Cosmos-Policy（RoboCasa，左纵轴刻度约 65%–68%），橙色折线为 LingBot-VA（RoboTwin 2.0，右纵轴刻度约 88%–94%）。<span class="math inline">$N=1$</span> 等价于不使用测试时选择（单次推理），因为只有一条分支，选无可选。</p>
+<p><strong><em>Cosmos-Policy（蓝色）：</em></strong></p>
+<ul>
+<li><span class="math inline">$N=1$</span>：约 66.6%（baseline，无选择）</li>
+<li><span class="math inline">$N=2$</span>：约 66.8%（+0.2pp，轻微提升）</li>
+<li><span class="math inline">$N=4$</span>：约 67.1%（+0.5pp）</li>
+<li><span class="math inline">$N=8$</span>：约 67.3%（+0.7pp）</li>
+</ul>
+<p>提升趋势平稳但持续。从 <span class="math inline">$N=1$</span> 到 <span class="math inline">$N=8$</span> 的 +0.7pp 提升在 RoboCasa 的 24 个任务平均下是稳定且非平凡的——考虑到这完全不需要额外训练，只是推理时多采样几个分支并选一个。</p>
+<p><strong><em>LingBot-VA（橙色）：</em></strong></p>
+<ul>
+<li><span class="math inline">$N=1$</span>：约 90.2%（baseline）</li>
+<li><span class="math inline">$N=2$</span>：约 91.0%（+0.8pp）</li>
+<li><span class="math inline">$N=4$</span>：约 92.0%（+1.8pp）</li>
+<li><span class="math inline">$N=8$</span>：约 93.0%（+2.8pp）</li>
+</ul>
+<p>提升幅度更大且更陡峭。从 <span class="math inline">$N=1$</span> 到 <span class="math inline">$N=8$</span> 获得 <strong>+2.8pp</strong> 的提升，且每翻倍一次候选数都有明显收益。这暗示 LingBot-VA 的候选分支间的质量方差可能更大，使得选择更高质量的候选带来的边际收益更高。这也与图 3、图 4 中 LingBot-VA 的一致性分离度更高（Cohen's d = 0.99, AUC = 0.88）一致。</p>
+<p><strong><em>连接论文论点：</em></strong> 两条曲线的单调递增趋势证明了 <strong>一致性是一个有效的 test-time scaling 信号</strong>——给更多的候选分支，选择器就能找到更好的动作。这与大语言模型中"多采样+投票/验证（best-of-N）"的 test-time compute scaling 逻辑一致。重要的是，这种 scaling 行为<strong>不需要训练</strong>——只需在推理时增加采样数，就能稳定获得性能提升。</p>
+<hr />
+<h2 id="_4">四、关键洞察与技术亮点</h2>
+<ol>
+<li>
+<p><strong>缺失的评估维度被填补</strong>：WAM 领域此前关注预测视觉质量、下游成功率，但从未系统评估"预测的未来是否与动作动态相容"。一致性填补了这一空白。</p>
+</li>
+<li>
+<p><strong>Background Collapse 的诊断价值</strong>：论文不仅发现了问题，还通过 latent change 量化了机制——一致性虚高的根源是"静态场景易于预测"，而非模型表现好。这对 WAM 训练策略有直接启示：需要针对 Collapse 场景增加 hard negative 样本或添加动力学正则。</p>
+</li>
+<li>
+<p><strong>Value-Free 决策信号</strong>：一致性不需要 reward model、不需要 value head、不需要环境信号（Consensus 策略），仅需利用模型内部预测间的自洽性即可提供有效排序。这使得一致性成为 WAM 的通用即插即用能力。</p>
+</li>
+<li>
+<p><strong>Cross-Formulation 验证</strong>：所有结论在 Joint-Prediction 和 Inverse-Dynamics 两种范式上都得到验证，说明一致性是 WAM 结构的固有属性，而非某类模型的特例。</p>
+</li>
+<li>
+<p><strong>Winner-Takes-All 优于加权平均</strong>：在 <span class="math inline">$SE(3)/SO(3)$</span> 动作空间中，平均化多个运动假设会模糊意图，选择最一致的一支保持动作完整性更有效。</p>
+</li>
+</ol>
+<hr />
+<h2 id="_5">五、局限性</h2>
+<ol>
+<li>
+<p><strong>无法根治 Background Collapse</strong>：一致性选择可以缓解但无法消除 collapse——这本质上是训练时的表征和动力学学习问题，需要训练阶段的干预（如更强的一致性监督或增加失败重试数据）。</p>
+</li>
+<li>
+<p><strong>一致性度量依赖 latent 空间质量</strong>：MSE 在 VAE latent 空间中计算，如果 latent 空间本身对任务相关的变化不敏感，一致性也会失真。</p>
+</li>
+<li>
+<p><strong>测试平台有限</strong>：仅在 RoboCasa（单臂厨房）和 RoboTwin 2.0（双臂操作）上验证，尚未在导航、移动操作等更多样化的机器人场景中检验。</p>
+</li>
+<li>
+<p><strong>Consensus 假设的局限性</strong>：当所有候选分支都偏向同一类错误时（如都坍缩到背景），共识未来也会偏向该错误，一致性得分失去区分能力。</p>
+</li>
+</ol>
+<hr />
+<h2 id="_6">六、关键概念速查</h2>
+<table>
+<thead>
+<tr>
+<th>概念</th>
+<th>定义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Action-State Consistency</td>
+<td>预测未来观察与执行预测动作后实际观察的相似度，度量 WAM 的"动态可信度"</td>
+</tr>
+<tr>
+<td>WAM（World Action Model）</td>
+<td>联合预测未来观察和动作的模型，扩展自 VLA</td>
+</tr>
+<tr>
+<td>Joint-Prediction WAM</td>
+<td>在统一模型中同时生成未来帧和动作序列</td>
+</tr>
+<tr>
+<td>Inverse-Dynamics WAM</td>
+<td>先预测未来帧，再从预测帧反推动作</td>
+</tr>
+<tr>
+<td>Background Collapse</td>
+<td>失败轨迹中预测帧退化为静态背景，导致一致性虚高的失效模式</td>
+</tr>
+<tr>
+<td>Latent Change (<span class="math inline">$\Delta z_t$</span>)</td>
+<td>两个时间步 latent 表征的距离，度量场景动态变化幅度</td>
+</tr>
+<tr>
+<td>Consistency-Consensus</td>
+<td>无需环境执行的 Best-of-N 策略，用共识未来的自洽性排序候选分支</td>
+</tr>
+<tr>
+<td>Consistency-Exploring</td>
+<td>需要环境重置的 Best-of-N 策略，实际执行每个分支后计算一致性</td>
+</tr>
+<tr>
+<td>WTA（Winner-Takes-All）</td>
+<td>直接选择得分最高的分支动作，而非对多个候选动作加权平均</td>
+</tr>
+</tbody>
+</table>
+  </div>
+</main>
+
+
+<script>
+(function() {
+  const sidebar = document.getElementById('sidebar');
+  const links = sidebar.querySelectorAll('a');
+  const headings = document.querySelectorAll('h1[id], h2[id], h3[id], h4[id]');
+  if (headings.length === 0) return;
+
+  const linkMap = new Map();
+  links.forEach(function(a) {
+    const href = a.getAttribute('href');
+    if (href && href.startsWith('#')) linkMap.set(href.slice(1), a);
+  });
+
+  function onScroll() {
+    let currentId = null;
+    const scrollTop = window.scrollY + 80;
+    headings.forEach(function(h) { if (h.offsetTop <= scrollTop) currentId = h.id; });
+    links.forEach(function(a) { a.classList.remove('active'); });
+    if (currentId && linkMap.has(currentId)) {
+      const el = linkMap.get(currentId);
+      el.classList.add('active');
+      const sr = sidebar.getBoundingClientRect();
+      const er = el.getBoundingClientRect();
+      if (er.bottom > sr.bottom || er.top < sr.top) {
+        el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+    }
+  }
+
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+})();
+</script>
+
+</body>
+</html>
