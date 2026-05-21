@@ -32,6 +32,9 @@ PaperNotes/
    <!-- tags: 标签1, 标签2, 标签3 -->
    ```
 4. **更新首页** — 运行 `./generate_index.sh` 重新生成 `index.html`。
+   - `generate_index.sh` 仅扫描日期目录**顶层**（`find YYYY-MM-DD/ -maxdepth 1 -name "*.html"`），因此笔记 HTML 必须放在 `YYYY-MM-DD/` 目录下，不能放在子目录中。
+   - 首页从 HTML 注释中提取元数据（`<!-- arxiv: -->`、`<!-- venue: -->`、`<!-- tags: -->`），"更新于" 日期则通过 `git log -1 --format="%cs"` 取该文件的最后提交日期。因此即使只修改了图片路径等非内容变更，commit 时该文件的时间戳也会刷新。
+   - 首页不依赖任何外部构建工具或静态站点生成器，每次新增或修改笔记后重新运行脚本并 commit 生成的 `index.html` 即可。
 5. **提交** — 按 commit 规范提交笔记文件。
 
 ## Commit 规范
