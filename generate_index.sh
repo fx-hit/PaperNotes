@@ -34,6 +34,40 @@ from pathlib import Path
 
 MODE = sys.argv[1]
 ROOT = Path.cwd()
+TAG_PAGE_MIN_COUNT = 2
+TAG_ALIASES = {
+    "World Action Model": "WAM",
+    "World-Action Model": "WAM",
+    "世界动作模型": "WAM",
+    "Robotics": "机器人",
+    "Robot Manipulation": "机器人",
+    "机器人操作": "机器人",
+    "机器人操控": "机器人",
+    "操作": "机器人",
+    "机器人基础模型": "机器人",
+    "隐式推理": "推理",
+    "因果推理": "推理",
+    "流式推理": "推理",
+    "Action-State Consistency": "推理",
+    "Test-Time Scaling": "推理",
+    "Future-Reality Verification": "推理",
+    "3D感知": "3D重建",
+    "4D重建": "3D重建",
+    "前馈模型": "3D重建",
+    "视觉几何": "3D重建",
+    "场景重建": "3D重建",
+    "深度估计": "3D重建",
+    "视频扩散": "视频生成",
+    "视频扩散模型": "视频生成",
+    "Video Prediction": "视频生成",
+    "Flow Matching": "视频生成",
+    "零样本泛化": "泛化",
+    "跨具身迁移": "泛化",
+    "Generalization": "泛化",
+    "Diffusion Policy": "策略学习",
+    "Knowledge Distillation": "知识蒸馏",
+    "Parameter-Efficient Transfer": "知识蒸馏",
+}
 
 
 @dataclass(frozen=True)
@@ -77,16 +111,23 @@ def git_updated(path: str) -> str:
     return result.stdout.strip()
 
 
+def normalize_tags(tags: list[str]) -> tuple[str, ...]:
+    normalized: list[str] = []
+    seen: set[str] = set()
+    for tag in tags:
+        canonical = TAG_ALIASES.get(tag, tag)
+        if canonical and canonical not in seen:
+            normalized.append(canonical)
+            seen.add(canonical)
+    return tuple(normalized)
+
+
 def load_notes() -> list[Note]:
     notes: list[Note] = []
     for path in sorted(ROOT.glob("20??-??-??/*.html"), key=lambda p: (p.parent.name, p.name)):
         rel_path = path.relative_to(ROOT).as_posix()
         text = path.read_text(encoding="utf-8", errors="ignore")
-        tags = tuple(
-            tag.strip()
-            for tag in extract_comment(text, "tags").split(",")
-            if tag.strip()
-        )
+        tags = normalize_tags([tag.strip() for tag in extract_comment(text, "tags").split(",") if tag.strip()])
         notes.append(
             Note(
                 path=rel_path,
@@ -457,7 +498,7 @@ def render_tags(notes: list[Note]) -> str:
             by_tag[tag].append(note)
 
     counts = Counter({tag: len(tag_notes) for tag, tag_notes in by_tag.items()})
-    tags = sorted(counts, key=lambda tag: (-counts[tag], tag.casefold()))
+    tags = sorted((tag for tag, count in counts.items() if count >= TAG_PAGE_MIN_COUNT), key=lambda tag: (-counts[tag], tag.casefold()))
     used_anchors: set[str] = set()
     anchors = {tag: tag_anchor(tag, used_anchors) for tag in tags}
 
