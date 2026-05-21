@@ -21,6 +21,32 @@ PaperNotes/
 
 > **assets/ 组织规则**：每篇论文在 `assets/` 下拥有独立子目录（如 `assets/dreamzero/`），图片按论文归类存放，避免扁平的散文件混杂。HTML 和 MD 中的图片引用路径统一为 `assets/<paper-name>/xxx.jpg`。
 
+## 命名规范
+
+### 笔记文件
+
+统一使用 `<EnglishShortName>_阅读笔记.md` / `.html` 格式：
+
+```
+2026-05-21/DreamZero_阅读笔记.md
+2026-05-21/DreamZero_阅读笔记.html
+```
+
+- `EnglishShortName` 取论文简称，用连字符 `-` 或下划线 `_` 连接，不含中文和特殊符号
+- 同一篇论文有多个笔记时加副标题：`LaST-R1_分享笔记.md`、`LaST-R1_论文与代码笔记.md`
+
+### assets 子目录
+
+与笔记文件名对应：
+
+| 笔记文件 | assets 子目录 |
+|---------|-------------|
+| `DreamZero_阅读笔记.md` | `assets/dreamzero/` |
+| `Fast-WAM_阅读笔记.md` | `assets/fastwam/` |
+| `VGGT-Omega_阅读笔记.md` | `assets/vggt-omega/` |
+
+规则：取 `EnglishShortName`，全小写，连字符保持不变。
+
 ## 工作流
 
 1. **读论文做笔记** — 对包含 arxiv TeX 源码的目录使用 `paper2notes` skill，生成带有插图的 markdown 笔记。
@@ -31,9 +57,11 @@ PaperNotes/
    <!-- venue: 会议/期刊 年份 -->
    <!-- tags: 标签1, 标签2, 标签3 -->
    ```
+   - **venue 格式**：已发表写 `会议 年份`（如 `CVPR 2026 Oral`、`ICML 2026 Spotlight`），投稿中写 `会议 年份（投稿中）`（如 `NeurIPS 2026（投稿中）`），技术报告写 `机构/公司 技术报告`（如 `NVIDIA Tech Report 2026`、`蚂蚁灵波技术报告`）。每个 HTML 必须有 venue，禁止缺失。
 4. **更新首页** — 运行 `./generate_index.sh` 重新生成 `index.html`。
    - `generate_index.sh` 仅扫描日期目录**顶层**（`find YYYY-MM-DD/ -maxdepth 1 -name "*.html"`），因此笔记 HTML 必须放在 `YYYY-MM-DD/` 目录下，不能放在子目录中。
    - 首页从 HTML 注释中提取元数据（`<!-- arxiv: -->`、`<!-- venue: -->`、`<!-- tags: -->`），"更新于" 日期则通过 `git log -1 --format="%cs"` 取该文件的最后提交日期。因此即使只修改了图片路径等非内容变更，commit 时该文件的时间戳也会刷新。
+   - **重要**：`git log` 只能查到已提交的文件，因此生成 `index.html` 的时机必须在 `git commit` 笔记文件**之后**（或 commit 后重新生成再 amend）。推荐流程：`git add 笔记 → git commit → bash generate_index.sh > index.html → git add index.html → git commit --amend` 或分两次 commit。
    - 首页不依赖任何外部构建工具或静态站点生成器，每次新增或修改笔记后重新运行脚本并 commit 生成的 `index.html` 即可。
 5. **提交** — 按 commit 规范提交笔记文件。
 
@@ -69,4 +97,20 @@ Co-Authored-By: Claude Code Opus 4.7 <noreply@anthropic.com>
 - 编译产物、二进制文件、macOS 系统文件
 - 日期子目录下的 `.claude/`（根目录 `.claude/` 保留）
 
-如需添加新的代码目录排除规则，编辑 `.gitignore` 并在"Known code directories"下添加。
+### 新增代码目录
+
+每次添加新的代码仓库时，在 `.gitignore` 的"Known code directories"下追加一行：
+
+```
+*/<repo-name>/
+```
+
+`*/` 前缀确保只匹配日期目录层级的代码目录，不会误伤 `assets/` 下同名的子目录。例如：
+
+```
+*/dreamzero/
+*/FastWAM/
+*/giga-world-policy/
+```
+
+此步骤容易遗漏，添加新论文代码后务必检查 `git status` 是否出现了不该提交的代码文件。

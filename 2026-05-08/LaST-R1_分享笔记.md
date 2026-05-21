@@ -2,7 +2,7 @@
 
 > 本文基于以下本地材料整理：
 >
-> - 长版笔记：`LaST-R1论文与代码笔记.md`
+> - 长版笔记：`LaST-R1_论文与代码笔记.md`
 > - 论文 tex 源码：`arXiv-2604.28192v3/main.tex`
 > - 论文图片：`arXiv-2604.28192v3/figs/*.pdf`
 > - 本文图片导出目录：`assets/last-r1-share/`

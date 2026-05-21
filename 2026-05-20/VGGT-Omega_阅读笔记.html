@@ -273,7 +273,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <p>VGGT-Ω 在 VGGT 基础上做了三个层面的改进：</p>
 <h3 id="21-register-attention">2.1 架构改进：Register Attention（寄存器注意力）</h3>
 <p><strong>核心设计</strong>：为每帧图像引入 16 个可学习的"寄存器"（register / scene token），在部分全局注意力层（默认 25%）中，跨帧信息交换<strong>仅通过寄存器进行</strong>。Camera token 和 Register tokens 在 register attention 层中进行跨帧交互，聚合全局场景信息；随后在 frame attention 层中，更新后的寄存器将信息重新分配给每帧的 patch tokens。Patch tokens 本身不参与跨帧 attention，大幅节省计算量。</p>
-<p><img alt="图1：架构总览" src="assets/architecture_v8.jpg" /></p>
+<p><img alt="图1：架构总览" src="assets/vggt-omega/architecture_v8.jpg" /></p>
 <p><em>图1：VGGT-Ω 整体架构总览。输入图像先通过 DINOv3 编码为 patch tokens，每帧附加 1 个 camera token 和 16 个 register（scene）tokens。交替使用 global attention（或 register attention）和 frame attention 进行特征聚合。最终通过 Camera Head 预测 9D 相机编码，通过 Dense Head（DPT 低分辨率卷积 + MLP + Pixel Shuffle）预测深度和置信度。相比 VGGT，去除了多个冗余密集预测头，仅保留训练损失的多任务监督。</em></p>
 <p>两个关键好处：</p>
 <ol>
@@ -289,7 +289,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </ul>
 <h3 id="23">2.3 动态场景支持</h3>
 <p>VGGT-Ω 通过只预测 depth + camera（不预测显式的动态输出如 motion mask），将动态场景处理内化到模型的数据驱动先验中。这避免了需要分割运动像素或引入动态点图的复杂性，同时解锁了海量互联网视频数据。</p>
-<p><img alt="图2：Global Attention 稀疏性" src="assets/vgg_visualization.jpg" /></p>
+<p><img alt="图2：Global Attention 稀疏性" src="assets/vggt-omega/vgg_visualization.jpg" /></p>
 <p><em>图2：VGGT 中 Global Attention 的稀疏性可视化。</em></p>
 <p><strong>子图 (a)</strong>：输入的多帧图像。</p>
 <p><strong>子图 (b)</strong>：第 13 层全局注意力矩阵的可视化。横轴和纵轴分别代表所有帧的所有 tokens，颜色深浅表示注意力权重大小。可以看到注意力矩阵整体非常稀疏——大部分 token 对之间的注意力权重接近于零，只有少数 token 对（亮度较高的点）存在显著的信息交换。这说明全量全局注意力中大量计算是冗余的。</p>
@@ -364,7 +364,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <li><strong>BA 的穹顶效应（doming effect）</strong>：弱全局约束下 BA 产生全局弯曲的重建</li>
 <li><strong>细薄结构标注不完整</strong>：栅栏等细结构的渲染深度可能被误标为背后的墙壁</li>
 </ul>
-<p><img alt="图3：常见数据质量问题" src="assets/data_v3.jpg" /></p>
+<p><img alt="图3：常见数据质量问题" src="assets/vggt-omega/data_v3.jpg" /></p>
 <p><em>图3：训练数据中四类常见的标注质量问题。</em></p>
 <p><strong>第一行—传感器数据的前景-背景泄漏（ScanNet++）</strong>：椅子背部的深度被标注为背景地板或墙壁的深度值，而非椅子本身。吊灯周围的碎片化前景结构也表明传感器在过曝和半透明物体附近的捕获不可靠。此类数据在训练后期被排除。</p>
 <p><strong>第二行—合成数据中的细薄结构标注不完整（Hypersim）</strong>：栅栏等仅占几个像素的细薄结构，其渲染深度可能缺失、过度平滑或错位，导致标注将栅栏的深度赋给背后的墙壁、窗户或地面。这使模型倾向于忽略细薄物体或将其深度"冲刷"到附近大表面上。</p>
@@ -380,7 +380,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <hr />
 <h2 id="_4">四、实验与结果</h2>
 <h3 id="41-scaling">4.1 Scaling 行为</h3>
-<p><img alt="图4：Scaling" src="assets/scale_v5_vector.jpg" /></p>
+<p><img alt="图4：Scaling" src="assets/vggt-omega/scale_v5_vector.jpg" /></p>
 <p><em>图4：模型和数据规模的 scaling 曲线（以 point error 为指标）。</em></p>
 <p><strong>子图 (a) 模型规模 scaling</strong>：在固定数据量下，将模型从 0.2B 扩展到 10B 参数（12→24 层、384→4096 隐层维度），point error 从约 0.25 单调下降至约 0.07。符合幂律规律。</p>
 <p><strong>子图 (b) 数据规模 scaling</strong>：在固定模型大小下，训练序列从几千扩展到 2M，point error 从 0.275 单调下降至 0.073。每增加 10× 数据都带来显著提升，同样符合幂律规律。</p>
@@ -534,7 +534,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <li>静态数据集上已经在天花板附近（ETH3D δ₁.₂₅ 99.8%），动态数据集上仍有显著提升</li>
 </ul>
 <h3 id="44">4.4 推理效率</h3>
-<p><img alt="图5：Memory/Speed" src="assets/mem_speed_v2_vector.jpg" /></p>
+<p><img alt="图5：Memory/Speed" src="assets/vggt-omega/mem_speed_v2_vector.jpg" /></p>
 <p><em>图5：VGGT、DA3 和 VGGT-Ω 的推理内存和速度对比（单张 A100 80GB）。</em></p>
 <p><strong>子图 (a) GPU 内存</strong>：VGGT（修正后）和 VGGT-Ω 内存使用相似，均可处理超过 1,000 帧（单卡 A100）。DA3 在约 750 帧时 OOM。关键洞察：Flash Attention v2 不会显式存储完整 attention 矩阵，内存峰值主要由与帧数和 token 数成正比的 tensor（frame-attention 激活值和 FFN 中间结果）决定。内存随帧数<strong>近似线性</strong>增长。</p>
 <p><strong>子图 (b) 推理速度</strong>：VGGT-Ω 比 VGGT 快 20–25%，主要得益于：(1) DINOv3 的 patch_size=16（vs DINOv2 的 14），token 数减少约 25%；(2) 25% 全局注意力替换为 register attention。全 register attention 变体在 1000 帧上的推理时间从 240.2s 降至 11.7s（速度提升约 20×），但精度会显著下降。</p>
@@ -575,18 +575,18 @@ document.addEventListener('DOMContentLoaded', function() {
 <li>自监督训练略微提升 + 改善 OOD 泛化</li>
 </ul>
 <h3 id="46">4.6 定性对比</h3>
-<p><img alt="图6：定性结果" src="assets/qual_v6.jpg" /></p>
+<p><img alt="图6：定性结果" src="assets/vggt-omega/qual_v6.jpg" /></p>
 <p><em>图6：VGGT-Ω 在多样场景上的定性重建结果（每个场景标注了所用帧数）。</em></p>
 <p><strong>子图 (a) 交通场景（64 帧）</strong>：叠加的车流轨迹展示了模型对动态内容的高质量处理——移动的车辆被正确重建为独立的 3D 结构，未被吸收到静态背景中。注意模型仅预测 depth 和 camera，不预测 motion mask，但仍能自然地处理运动物体。</p>
 <p><strong>子图 (b) 网球比赛（4 帧）</strong>：尽管只有 4 帧输入，运动员轨迹和球场结构的空间关系保持一致。模型对快速人体运动的几何先验来自大规模动态数据训练。</p>
 <p><strong>子图 (c) 自然景观（9 帧）</strong>：在充满重复纹理的山地场景中保持全局几何一致性，未出现纹理重复导致的匹配错误。</p>
 <p><strong>子图 (d) 水下珊瑚礁（16 帧）</strong>：极端非自然光照和复杂几何条件下，模型仍恢复出连贯的 3D 结构。此类场景在训练数据中极为罕见，体现了强泛化能力。</p>
 <p><strong>子图 (e) 室内场景（32 帧）</strong>：大场景下恢复出合理的全局结构，无尺度漂移或全局弯曲。</p>
-<p><img alt="图7：与 DA3 对比" src="assets/qual_comp_to_da3.jpg" /></p>
+<p><img alt="图7：与 DA3 对比" src="assets/vggt-omega/qual_comp_to_da3.jpg" /></p>
 <p><em>图7：与 Depth Anything 3（DA3）在困难场景上的定性对比。</em></p>
 <p><strong>左侧—雪地缆车序列</strong>：白雪覆盖的田野形成大量重复纹理，DA3 因此几乎无法估计相机运动（将其误判为静止场景），重建结果表现为一簇混乱的 3D 点。VGGT-Ω 正确恢复了相机的前向运动轨迹和缆车的 3D 结构。这体现了 VGGT-Ω 的几何先验对纹理歧义的鲁棒性。</p>
 <p><strong>右侧—无人机环绕塔楼序列</strong>：无人机在飞行过程中发生大幅相机旋转（roll）。在这种强视角变化下，DA3 产生了严重的"鬼影"效应——将同一座塔楼重复重建为多个重叠副本，全局几何完全崩溃。VGGT-Ω 的重建保持全局一致，塔楼结构完整无重复。这表明 VGGT-Ω 的 camera estimation 在极端旋转条件下比 DA3 更可靠。</p>
-<p><img alt="图8：与 MegaSaM 定性对比" src="assets/qual_supp_v10.jpg" /></p>
+<p><img alt="图8：与 MegaSaM 定性对比" src="assets/vggt-omega/qual_supp_v10.jpg" /></p>
 <p><em>图8：与 MegaSaM 在困难场景上的定性对比。</em></p>
 <p><strong>左列—航拍场景</strong>：MegaSaM 在航拍序列中呈现严重的几何漂移和纹理涂抹（texture smearing），地面纹理被重复拉伸、全局布局扭曲。VGGT-Ω 保持了全局一致的地面重建。</p>
 <p><strong>右上—稀疏室内场景（第二帧非 upright）</strong>：该场景的第二帧相机存在明显倾斜（非 upright），使位姿估计极具挑战。MegaSaM 在缺乏纹理的墙壁区域产生不连贯的平面结构。VGGT-Ω 凭借强大的几何先验维持了合理的全局重建。</p>
@@ -628,7 +628,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <li>与训练时所用 VLM 嵌入做 retrieval：Top-1 76.8%，Top-3 97.0%</li>
 <li>Zero-shot transfer 到纯文本 LLM（Qwen3）：Top-1 47.5%，Top-3 77.8%</li>
 </ul>
-<p><img alt="图9：语言对齐" src="assets/text_alignment.jpg" /></p>
+<p><img alt="图9：语言对齐" src="assets/vggt-omega/text_alignment.jpg" /></p>
 <p><em>图9：语言对齐流程。VLM 观察多帧图像生成场景描述文本，其隐藏状态被池化为语言嵌入。VGGT-Ω 侧通过可学习的 language token 从 registers 中读取信息，投影后与语言嵌入做对比学习。关键约束：language token 不能直接访问 image patch tokens，只能通过 registers 获取信息。对齐成功意味着 registers 确实携带了场景级语义信息。</em></p>
 <hr />
 <h2 id="_5">五、关键洞察与技术亮点</h2>
@@ -652,7 +652,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <p><strong>运动感知是无监督涌现的</strong>：无需光流或运动标签，仅通过 reconstruction 目标，模型的中间层 features 通过 PCA + k-means 就能自动分离运动区域和背景。</p>
 </li>
 </ol>
-<p><img alt="图10：运动感知" src="assets/motion.jpg" /></p>
+<p><img alt="图10：运动感知" src="assets/vggt-omega/motion.jpg" /></p>
 <p><em>图10：运动感知的涌现。对中间层 tokens 做 PCA 降维 + k-means 聚类（无任何运动标签），浅层（layer 4）的一个聚类可以精确追踪移动的舞者，深层（layer 23）则同时高亮所有人。这说明模型自动学会了区分运动区域——即使它从不知道帧的时间顺序。</em></p>
 <ol>
 <li><strong>模型汤（Model Souping）揭示了信息存储的位置</strong>：通过融合 VGGT 和 VGGT-Ω 的部分权重，发现 depth/FoV 信息主要存储在 frame attention block 的 FFN 中，camera extrinsic 信息存储在更高层。</li>
