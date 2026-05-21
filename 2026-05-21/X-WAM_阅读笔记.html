@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Unified 4D World Action Modeling from Video Priors with Asynchronous Denoising</title>
+<!-- arxiv: 2604.26694v2 -->
+<!-- venue: NeurIPS 2026（投稿中） -->
+<!-- tags: 世界动作模型, 4D重建, 视频扩散模型, 机器人操作, 深度估计, 异步去噪 -->
+<!-- words-zh: 3300 -->
+<!-- words-en: 327 -->
+<!-- reading-time: 11 -->
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #ffffff;
+    --text: #1a1a2e;
+    --text-secondary: #555;
+    --border: #e1e4e8;
+    --link: #0969da;
+    --table-stripe: #f6f8fa;
+    --heading: #0d1117;
+    --blockquote-border: #0969da;
+    --blockquote-bg: #f0f6ff;
+    --inline-code: #d73a49;
+    --inline-code-bg: #f6f8fa;
+    --sidebar-width: 260px;
+    --toc-active: #0969da;
+    --content-max-width: 900px;
+    --content-padding: 48px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "Inter", "Noto Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 16px;
+    line-height: 1.75;
+    color: var(--text);
+    background: var(--bg);
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    width: var(--sidebar-width);
+    overflow-y: auto;
+    padding: 28px 20px 40px;
+    background: #fafbfc;
+    border-right: 1px solid var(--border);
+    z-index: 10;
+    scrollbar-width: thin;
+  }
+  .sidebar-title {
+    font-size: 13px; font-weight: 700; color: var(--text-secondary);
+    margin-bottom: 16px; letter-spacing: 0.06em; text-transform: uppercase;
+  }
+  .toc-list { list-style: none; padding: 0; margin: 0; }
+  .toc-list ul { list-style: none; padding-left: 14px; }
+  .toc-list li { margin: 1px 0; }
+  .toc-list a {
+    display: block; padding: 4px 12px; font-size: 13.5px; line-height: 1.45;
+    color: var(--text-secondary); text-decoration: none; border-radius: 4px;
+    border-left: 2px solid transparent; transition: all 0.15s;
+  }
+  .toc-list a:hover { color: var(--link); background: #e8f0fe; }
+  .toc-list a.active {
+    color: var(--toc-active); font-weight: 600;
+    border-left-color: var(--toc-active); background: #e8f0fe;
+  }
+  .toc-h1 a { font-weight: 600; color: var(--heading); font-size: 14px; }
+  .toc-h3 a { padding-left: 24px; font-size: 13px; }
+  .toc-h4 a { padding-left: 36px; font-size: 12.5px; }
+  .toc-empty { color: var(--text-secondary); font-size: 13px; font-style: italic; }
+
+  .main-wrapper {
+    margin-left: var(--sidebar-width);
+    min-height: 100vh;
+    display: flex; justify-content: center;
+  }
+  .content-inner {
+    width: 100%;
+    max-width: var(--content-max-width);
+    padding: 40px var(--content-padding) 80px;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    color: var(--heading); font-weight: 700; line-height: 1.3;
+    margin-top: 2em; margin-bottom: 0.6em; scroll-margin-top: 24px;
+  }
+  h1 { font-size: 2em; border-bottom: 2px solid var(--border); padding-bottom: 0.3em; margin-top: 0; }
+  h2 { font-size: 1.5em; border-bottom: 1px solid var(--border); padding-bottom: 0.25em; }
+  h3 { font-size: 1.25em; }
+  h4 { font-size: 1.1em; }
+  p { margin-bottom: 1em; }
+  a { color: var(--link); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  strong { font-weight: 600; }
+
+  blockquote {
+    border-left: 4px solid var(--blockquote-border);
+    background: var(--blockquote-bg);
+    padding: 12px 20px; margin: 1em 0;
+    border-radius: 0 6px 6px 0; color: var(--text-secondary);
+  }
+  blockquote p:last-child { margin-bottom: 0; }
+
+  code {
+    font-family: "JetBrains Mono", "SF Mono", "Fira Code", monospace;
+    font-size: 0.875em; background: var(--inline-code-bg);
+    padding: 2px 6px; border-radius: 4px; color: var(--inline-code);
+  }
+  pre {
+    background: #1e1e2e; color: #cdd6f4;
+    border-radius: 8px; padding: 16px 20px; overflow-x: auto;
+    margin: 1em 0; font-size: 14px; line-height: 1.55;
+  }
+  pre code { background: none; padding: 0; border-radius: 0; color: inherit; font-size: inherit; }
+
+  .codehilite { background: #1e1e2e; border-radius: 8px; padding: 16px 20px; overflow-x: auto; margin: 1em 0; }
+  .codehilite pre { background: none; padding: 0; margin: 0; border-radius: 0; }
+  .codehilite .hll { background-color: #2a2a3e; }
+  .codehilite .c  { color: #6c7086; font-style: italic; }
+  .codehilite .k  { color: #cba6f7; }
+  .codehilite .o  { color: #89b4fa; }
+  .codehilite .s  { color: #a6e3a1; }
+  .codehilite .n  { color: #cdd6f4; }
+  .codehilite .p  { color: #bac2de; }
+  .codehilite .mi { color: #fab387; }
+  .codehilite .nf { color: #89b4fa; }
+  .codehilite .nb { color: #f38ba8; }
+  .codehilite .nc { color: #f9e2af; }
+  .codehilite .bp { color: #f38ba8; }
+
+  table { width: 100%; border-collapse: collapse; margin: 1em 0; font-size: 0.925em; }
+  th, td { border: 1px solid var(--border); padding: 10px 14px; text-align: left; }
+  th { background: var(--table-stripe); font-weight: 600; color: var(--heading); }
+  tr:nth-child(even) td { background: var(--table-stripe); }
+
+  .math.display { display: block; overflow-x: auto; padding: 12px 0; margin: 1em 0; }
+  ul, ol { padding-left: 1.5em; margin-bottom: 1em; }
+  li { margin-bottom: 0.3em; }
+  hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+  img { max-width: 100%; height: auto; border-radius: 6px; margin: 0.5em 0; }
+  p:has(img) { text-align: center; }
+  p:has(img) + p { text-align: center; font-size: 0.9em; color: var(--text-secondary); }
+  .mermaid { text-align: center; margin: 1.5em 0; background: #fafbfc; border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+  .article-stats {
+    font-size: 0.85rem; color: var(--text-secondary);
+    padding: 10px 18px; margin-bottom: 28px;
+    background: #f8f9fa; border: 1px solid var(--border); border-radius: 8px;
+  }
+
+  @media (max-width: 1024px) {
+    .sidebar { position: static; width: 100%; height: auto; max-height: 35vh; border-right: none; border-bottom: 1px solid var(--border); }
+    .main-wrapper { margin-left: 0; display: block; }
+    .content-inner { max-width: none; padding: 24px 20px 60px; }
+  }
+</style>
+
+<script>
+MathJax = {
+  tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']], processEscapes: true, tags: 'none' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] }
+};
+</script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  mermaid.initialize({ startOnLoad: true, theme: 'neutral', securityLevel: 'loose' });
+});
+</script>
+
+</head>
+<body>
+
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-title">目录</div>
+  <ul class="toc-list">
+<li class="toc-h1"><a href="#unified-4d-world-action-modeling-from-video-priors-with-asynchronous-denoising">Unified 4D World Action Modeling from Video Priors with Asynchronous Denoising</a>
+<ul>
+</li>
+<li class="toc-h2"><a href="#_1">一、核心问题</a>
+</li>
+<li class="toc-h2"><a href="#_2">二、核心思路 / 方法</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#21">2.1 模型架构总览</a>
+</li>
+<li class="toc-h3"><a href="#22-lightweight-depth-adaptation">2.2 轻量级深度适配模块（Lightweight Depth Adaptation）</a>
+</li>
+<li class="toc-h3"><a href="#23-asynchronous-noise-sampling-ans">2.3 异步噪声采样（Asynchronous Noise Sampling, ANS）</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_3">三、训练目标</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#_4">预训练数据</a>
+</li>
+<li class="toc-h3"><a href="#_5">训练配置</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_6">四、实验与结果</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#41">4.1 策略评估</a>
+</li>
+<li class="toc-h3"><a href="#42-4d">4.2 4D 重建与生成</a>
+</li>
+<li class="toc-h3"><a href="#43-robocasa">4.3 消融实验（RoboCasa，无大规模预训练）</a>
+</li>
+<li class="toc-h3"><a href="#44">4.4 真机实验</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_7">五、关键洞察与技术亮点</a>
+</li>
+<li class="toc-h2"><a href="#_8">六、局限性</a>
+</li>
+<li class="toc-h2"><a href="#_9">七、关键概念速查</a>
+</ul></li>
+</li></ul>
+</nav>
+
+<main class="main-wrapper">
+  <div class="content-inner" id="main-content">
+<h1 id="unified-4d-world-action-modeling-from-video-priors-with-asynchronous-denoising">Unified 4D World Action Modeling from Video Priors with Asynchronous Denoising</h1>
+<div class="article-stats">3,300 字 · English 327 词 · 约 11 分钟阅读</div>
+
+<blockquote>
+<p><strong>论文信息</strong>
+- 作者：Jun Guo (Tsinghua/Xiaomi), Qiwei Li (PKU/Xiaomi), Peiyan Li (CASIA/Xiaomi), Zilong Chen (Tsinghua), Nan Sun (Tsinghua/Xiaomi), Yifei Su, Heyun Wang, Yuan Zhang, Xinghang Li, Huaping Liu
+- 通讯作者：Xinghang Li (Xiaomi Robotics), Huaping Liu (Tsinghua University)
+- 投稿方向：NeurIPS 2026（投稿中）
+- arXiv ID：2604.26694v2
+- 项目主页：https://sharinka0715.github.io/X-WAM/</p>
+</blockquote>
+<hr />
+<h2 id="_1">一、核心问题</h2>
+<p>当前具身 AI 模型存在两大割裂：</p>
+<ol>
+<li><strong>策略模型（VLA / WAM）</strong> 专注动作预测，缺乏 3D 空间感知和物理直觉。</li>
+<li><strong>世界模型（World Model）</strong> 专注未来观测仿真，不直接产生可执行动作。</li>
+</ol>
+<p>近期工作（UWM、Motus、DreamZero 等）尝试在单一框架中统一视频生成与动作预测，但存在两个关键缺陷：</p>
+<blockquote>
+<p><strong>缺陷一</strong>：仅建模 2D 像素空间，缺乏显式 3D 几何感知，容易产生物理上不可行的幻觉预测。</p>
+<p><strong>缺陷二</strong>：异步去噪（加速动作解码）时，训练和推理的噪声分布不匹配——训练阶段各模态独立采样噪声时间步，推理阶段却要求动作先于视频完成去噪。这种训练-推理 gap 限制了异步去噪的效果。</p>
+</blockquote>
+<p><strong>论文目标</strong>：将统一世界动作模型从 2D 像素预测器升级为<strong>空间感知的 4D 动态模拟器</strong>，同时完成视频生成、3D 重建和策略执行三大任务。</p>
+<hr />
+<h2 id="_2">二、核心思路 / 方法</h2>
+<p>X-WAM 基于预训练视频扩散模型 <strong>Wan2.2-TI2V-5B</strong>（一个 5B 参数的 Diffusion Transformer），通过两个核心设计实现 4D 统一建模：</p>
+<p><img alt="图1：X-WAM 总览图" src="assets/x-wam/teaser_new.jpg" /></p>
+<p><em>图1：X-WAM 整体概览。上半部分展示模型架构：输入多视角 RGB 观测和机器人状态，联合预测未来多视角 RGB-D 视频和机器人动作，核心组件包括轻量级深度适配模块（空间重建）和异步噪声采样 ANS（高效动作解码）。下半部分展示三项关键结果：(1) 在 RoboCasa 和 RoboTwin 2.0 上的策略成功率均超越所有基线；(2) 4D 重建质量在视觉和几何指标上均达最优；(3) 可在真实机器人上实时部署执行。</em></p>
+<h3 id="21">2.1 模型架构总览</h3>
+<p>X-WAM 接收语言指令 <span class="math inline">$c$</span>、初始本体感受状态 <span class="math inline">$s_0$</span>、多视角初始 RGB 观测 <span class="math inline">$O_0$</span> 作为条件，同时预测：</p>
+<ul>
+<li>未来 RGB 视频 <span class="math inline">$O_{1:H}$</span>（<span class="math inline">$H=8$</span> 帧）</li>
+<li>未来深度视频 <span class="math inline">$D_{1:H}$</span></li>
+<li>未来本体感受状态 <span class="math inline">$s_{1:H}$</span></li>
+<li>未来动作 <span class="math inline">$a_{1:K}$</span>（<span class="math inline">$K=32$</span>，控制频率为视频帧率的 4 倍）</li>
+</ul>
+<p>三种模态统一拼接为去噪序列：</p>
+<p><div class="math display">$$\mathbf{Z} = [\mathbf{z}_{O_0},\, \mathbf{z}_{O_{1:H}},\, \mathbf{z}_{s_0},\, \mathbf{z}_{s_{1:H}},\, \mathbf{z}_{a_{1:K}}]$$</div></p>
+<p>其中 RGB 视频通过 Wan2.2 原有的因果 VAE 编码为 latent，状态和动作通过可学习的 MLP 投影到同一 latent 空间，使用双向全注意力处理。</p>
+<p><strong>多视角兼容</strong>：原始模型仅支持单视角 2D 生成（使用 3D RoPE 编码时空位置）。X-WAM 为每个视角的 token 添加可学习的视角嵌入（view embedding），在不破坏预训练位置编码的前提下支持多视角输入。</p>
+<p><strong>相机外参估计</strong>：X-WAM 不显式编码相机外参或射线方向图，而是预测末端执行器位姿 <span class="math inline">$\mathbf{T}_{\text{ee}} \in SE(3)$</span>，再通过固定的手眼标定矩阵 <span class="math inline">$\mathbf{T}_{\text{h2e}}$</span> 推导腕部相机位姿：</p>
+<p><div class="math display">$$\mathbf{T}_{\text{wrist}} = \mathbf{T}_{\text{ee}} \cdot \mathbf{T}_{\text{h2e}}$$</div></p>
+<h3 id="22-lightweight-depth-adaptation">2.2 轻量级深度适配模块（Lightweight Depth Adaptation）</h3>
+<p><img alt="图2：X-WAM 架构与 ANS 机制" src="assets/x-wam/framework.jpg" /></p>
+<p><em>图2：X-WAM 框架详细设计。</em><em>(a) 模型架构</em><em>：多视角 RGB 观测、本体感受状态和加噪动作被编码后，由基于 Wan2.2-5B 初始化的 Diffusion Transformer 联合去噪。模型末端 <span class="math inline">$M$</span> 层复制为并行的深度分支（interleaved depth branch），通过单向交叉注意力（unilateral attention）从主分支读取信息，实现轻量级空间建模。</em><em>(b) 异步噪声采样 ANS</em><em>：(i) 标准解耦采样浪费训练资源在 <span class="math inline">$t_O &lt; t_a$</span> 的无效配置上；(ii) X-WAM 的耦合联合采样确保 <span class="math inline">$t_O \geq t_a$</span>，忠实匹配推理分布；(iii) 推理阶段，动作在 <span class="math inline">$T_a$</span> 步内快速解码并立即分发执行，视频去噪继续至 <span class="math inline">$T_O$</span> 步以生成高保真画面。</em></p>
+<p>这是 X-WAM 的第一个核心创新，解决"如何在不大幅增加计算量的前提下注入 3D 感知"。</p>
+<p><strong>三种朴素方案的问题</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>方案</th>
+<th>问题</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>沿序列维度拼接深度 token</td>
+<td>序列长度翻倍，注意力成本平方增长</td>
+</tr>
+<tr>
+<td>沿通道维度融合深度</td>
+<td>输入分布偏离预训练流形，大幅增加学习难度</td>
+</tr>
+<tr>
+<td>后处理深度估计（如 DA3）</td>
+<td>并非端到端联合优化，几何一致性差</td>
+</tr>
+</tbody>
+</table>
+<p><strong>X-WAM 的方案——交错深度分支（Interleaved Depth Branch）</strong>：</p>
+<ol>
+<li>将预训练 DiT 的最后 <span class="math inline">$M$</span> 个 block（论文中 <span class="math inline">$M=10$</span>）复制一份，构造专属深度预测分支。</li>
+<li>前 <span class="math inline">$N-M$</span> 个共享 DiT block 产出隐藏状态 <span class="math inline">$\mathbf{H}$</span> 后，主分支和深度分支初始化为 <span class="math inline">$\mathbf{Z}_m^{(0)} = \mathbf{Z}_D^{(0)} = \mathbf{H}$</span>。</li>
+<li>交错执行：每层深度分支通过交叉注意力读取主分支输入 <span class="math inline">$\mathbf{Z}_m^{(j-1)}$</span>，再执行主分支的 DiT block。</li>
+</ol>
+<p><strong>关键设计——单向注意力（Unilateral Attention）</strong>：深度分支可以读取主分支信息，但主分支不受深度 token 影响，严格保护预训练权重完整性。</p>
+<p><strong>推理灵活性</strong>：深度分支不需要参与每个去噪步骤，可以灵活开关，大幅降低 rollout 开销。动作解码时关闭深度分支，视频生成时按需开启。</p>
+<h3 id="23-asynchronous-noise-sampling-ans">2.3 异步噪声采样（Asynchronous Noise Sampling, ANS）</h3>
+<p>这是 X-WAM 的第二个核心创新，解决"高维视频需要大量去噪步数 vs 低维动作只需少量步数"的模态失配。</p>
+<p><strong>异步推理</strong>：推理时分配 <span class="math inline">$T_a$</span> 步给动作/状态去噪，<span class="math inline">$T_O$</span> 步给视频去噪（<span class="math inline">$T_a &lt; T_O$</span>）。前 <span class="math inline">$T_a$</span> 步两者联合去噪，之后动作变为干净的 conditioning，视频继续去噪至 <span class="math inline">$T_O$</span> 步。动作在 <span class="math inline">$T_a$</span> 步后即可立即发送给机器人执行。</p>
+<p><strong>耦合训练采样</strong>（区别于以往工作的独立采样）：</p>
+<p>从联合分布中采样 <span class="math inline">$(t_O, t_a)$</span>：</p>
+<p><div class="math display">$$(t_O, t_a) \sim
+\begin{cases}
+    t_a = 0,\;\; t_O \sim \mathrm{U}(0, 1) & \text{w.p. } p, \\[4pt]
+    t_a \sim \mathrm{U}(0, 1),\;\; t_O = t_a + (1 - t_a) \cdot b,\;\; b \sim \mathrm{Beta}(1.5, 1) & \text{w.p. } 1-p,
+\end{cases}$$</div></p>
+<ul>
+<li><strong>第一种情况</strong>（概率 <span class="math inline">$p=0.5$</span>）：动作无噪（<span class="math inline">$t_a=0$</span>），仅对视频加噪——模拟推理后半段"动作条件视频生成"的 regime。</li>
+<li><strong>第二种情况</strong>（概率 <span class="math inline">$1-p=0.5$</span>）：同步加噪，但通过 <span class="math inline">$\mathrm{Beta}(1.5, 1)$</span> 分布确保 <span class="math inline">$t_O \geq t_a$</span>——视频噪声水平始终不低于动作，反映了视频需要更多去噪步数的现实。</li>
+</ul>
+<p>核心洞察：<strong><span class="math inline">$t_O$</span> 以 <span class="math inline">$t_a$</span> 为条件采样</strong>，二者是 dependent 而非 independent 随机变量，忠实匹配推理分布。</p>
+<hr />
+<h2 id="_3">三、训练目标</h2>
+<p>训练框架基于 <strong>Flow Matching</strong>，模型 <span class="math inline">$f_\theta$</span> 预测速度场 <span class="math inline">$\mathbf{v} = \boldsymbol{\epsilon} - \mathbf{z}^0$</span>：</p>
+<p><div class="math display">$$\mathcal{L}_{m} = \left\| f_\theta^{m}(\mathbf{z}_m^{t_m}, t_m) - (\boldsymbol{\epsilon}_m - \mathbf{z}_m^0) \right\|^2$$</div></p>
+<p>其中 <span class="math inline">$m \in \{O, s, a\}$</span> 分别对应视频、状态、动作。<span class="math inline">$t_O$</span> 和 <span class="math inline">$t_a$</span> 通过 ANS 采样，<span class="math inline">$t_s = t_a$</span>。深度分支使用直接的 MSE 回归损失：</p>
+<p><div class="math display">$$\mathcal{L}_{\text{depth}} = \left\| \hat{D} - D^{*} \right\|^2$$</div></p>
+<p>总损失：</p>
+<p><div class="math display">$$\mathcal{L}_{\text{total}} = \mathcal{L}_{O} + \lambda_s \mathcal{L}_{s} + \lambda_a \mathcal{L}_{a} + \lambda_D \mathcal{L}_{\text{depth}}$$</div></p>
+<p>其中 <span class="math inline">$\lambda_s = \lambda_a = \lambda_D = 1.0$</span>。</p>
+<h3 id="_4">预训练数据</h3>
+<table>
+<thead>
+<tr>
+<th>数据集</th>
+<th>来源</th>
+<th>轨迹数</th>
+<th>时长 (h)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>AgibotWorld-Beta</td>
+<td>真实</td>
+<td>866,562</td>
+<td>2,221.5</td>
+</tr>
+<tr>
+<td>DROID</td>
+<td>真实</td>
+<td>74,734</td>
+<td>280.3</td>
+</tr>
+<tr>
+<td>InternA1-Aloha</td>
+<td>仿真</td>
+<td>184,803</td>
+<td>1,337.3</td>
+</tr>
+<tr>
+<td>InternA1-Genie1</td>
+<td>仿真</td>
+<td>50,638</td>
+<td>174.0</td>
+</tr>
+<tr>
+<td>InternA1-Lift2</td>
+<td>仿真</td>
+<td>231,018</td>
+<td>1,464.7</td>
+</tr>
+<tr>
+<td>RoboCasa MimicGen</td>
+<td>仿真</td>
+<td>56,771</td>
+<td>282.4</td>
+</tr>
+<tr>
+<td>RoboTwin 2.0</td>
+<td>仿真</td>
+<td>27,500</td>
+<td>113.7</td>
+</tr>
+<tr>
+<td><strong>合计</strong></td>
+<td>—</td>
+<td><strong>1,492,026</strong></td>
+<td><strong>5,873.9</strong></td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>关键细节：预训练数据大多缺乏深度标注，X-WAM 使用 Video Depth Anything (VDA) 从所有训练视频中提取深度图作为伪标签。</p>
+</blockquote>
+<h3 id="_5">训练配置</h3>
+<ul>
+<li><strong>预训练</strong>：256 × NVIDIA H20 GPU，总 batch size 2,048，40,000 步</li>
+<li><strong>微调</strong>：32 × NVIDIA H20 GPU，总 batch size 128，20,000 步</li>
+<li>优化器：AdamW，峰值学习率 <span class="math inline">$1\times10^{-4}$</span>（预训练）/ <span class="math inline">$3\times10^{-5}$</span>（微调），1,000 步 warmup + cosine decay</li>
+<li>推理：<span class="math inline">$T_a=10$</span> 动作去噪步，<span class="math inline">$T_O=50$</span> 视频去噪步，UniPC 多步调度器，CFG scale=1.0</li>
+</ul>
+<hr />
+<h2 id="_6">四、实验与结果</h2>
+<h3 id="41">4.1 策略评估</h3>
+<p><strong>RoboCasa（24 个厨房操作任务）</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>类别</th>
+<th>方法</th>
+<th>平均成功率</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>VLA</td>
+<td><span class="math inline">$\pi_0$</span></td>
+<td>62.5%</td>
+</tr>
+<tr>
+<td>VLA</td>
+<td>GR00T-N1.5</td>
+<td>64.1%</td>
+</tr>
+<tr>
+<td>WAM</td>
+<td>UWM</td>
+<td>60.8%</td>
+</tr>
+<tr>
+<td>WAM</td>
+<td>DreamZero</td>
+<td>62.4%</td>
+</tr>
+<tr>
+<td>WAM</td>
+<td>Cosmos Policy</td>
+<td>67.1%</td>
+</tr>
+<tr>
+<td><strong>WAM</strong></td>
+<td><strong>X-WAM</strong></td>
+<td><strong>79.2%</strong></td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>X-WAM 以 79.2% 胜出，比最强基线 Cosmos Policy 高出 <strong>12.1 个百分点</strong>。</p>
+</blockquote>
+<p><strong>RoboTwin 2.0（50 个双臂操作任务）</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>类别</th>
+<th>方法</th>
+<th>Clean</th>
+<th>Randomized</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>VLA</td>
+<td><span class="math inline">$\pi_0$</span></td>
+<td>65.9%</td>
+<td>58.4%</td>
+</tr>
+<tr>
+<td>VLA</td>
+<td><span class="math inline">$\pi_{0.5}$</span></td>
+<td>82.7%</td>
+<td>76.8%</td>
+</tr>
+<tr>
+<td>WAM</td>
+<td>UWM</td>
+<td>81.7%</td>
+<td>78.6%</td>
+</tr>
+<tr>
+<td>WAM</td>
+<td>GigaWorld-Policy</td>
+<td>87.0%</td>
+<td>85.0%</td>
+</tr>
+<tr>
+<td>WAM</td>
+<td>Motus</td>
+<td>88.7%</td>
+<td>87.0%</td>
+</tr>
+<tr>
+<td><strong>WAM</strong></td>
+<td><strong>X-WAM</strong></td>
+<td><strong>89.8%</strong></td>
+<td><strong>90.7%</strong></td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>在 Clean 和 Randomized 两个设置下均超越 Motus，且 Randomized 下高出 3.7 个百分点，展现了更强的泛化鲁棒性。</p>
+</blockquote>
+<h3 id="42-4d">4.2 4D 重建与生成</h3>
+<p>在 RoboCasa 环境上评估多视角 RGB-D 预测质量（像素指标仅在两个静态相机上计算，腕部相机因预测位姿微小误差导致像素不对齐）：</p>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th>PSNR↑</th>
+<th>SSIM↑</th>
+<th>LPIPS↓</th>
+<th>AbsRel↓</th>
+<th>δ₁↑</th>
+<th>CD↓</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>DreamZero + DA3</td>
+<td>21.12</td>
+<td>0.7788</td>
+<td>0.1580</td>
+<td>0.1362</td>
+<td>0.8594</td>
+<td>0.0680</td>
+</tr>
+<tr>
+<td>Robot4DGen</td>
+<td>22.67</td>
+<td>0.8207</td>
+<td>0.1026</td>
+<td>0.0736</td>
+<td>0.9443</td>
+<td>0.0134</td>
+</tr>
+<tr>
+<td>X-WAM w/o depth + DA3</td>
+<td>23.09</td>
+<td>0.8916</td>
+<td>0.0548</td>
+<td>0.1045</td>
+<td>0.9089</td>
+<td>0.0401</td>
+</tr>
+<tr>
+<td><strong>X-WAM</strong></td>
+<td><strong>23.46</strong></td>
+<td><strong>0.8942</strong></td>
+<td><strong>0.0513</strong></td>
+<td><strong>0.0349</strong></td>
+<td><strong>0.9738</strong></td>
+<td><strong>0.0049</strong></td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>关键发现</strong>：
+- X-WAM 在所有 6 个指标上全面领先。
+- 相比 DreamZero+DA3 的两阶段方案，PSNR 提升 2.34 dB，Chamfer Distance 从 0.0680 降至 0.0049（<strong>降低 13.9 倍</strong>），说明端到端联合建模远优于后处理深度估计。
+- X-WAM w/o depth + DA3 保持了较强的 RGB 质量，但深度精度明显下降（AbsRel 0.1045 vs 0.0349），点云质量也大幅降低（CD 0.0401 vs 0.0049），证实了集成深度分支的几何一致性优势。</p>
+</blockquote>
+<h3 id="43-robocasa">4.3 消融实验（RoboCasa，无大规模预训练）</h3>
+<p><strong>深度架构设计对比</strong>（Table 3a）：</p>
+<table>
+<thead>
+<tr>
+<th>变体</th>
+<th>SR↑</th>
+<th>延迟(ms)↓</th>
+<th>PSNR↑</th>
+<th>AbsRel↓</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>No depth</td>
+<td>63.0%</td>
+<td><strong>1033</strong></td>
+<td>23.09</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Sequence concat</td>
+<td><strong>68.7%</strong></td>
+<td>1888</td>
+<td><strong>23.60</strong></td>
+<td><strong>0.0332</strong></td>
+</tr>
+<tr>
+<td>Channel concat</td>
+<td>64.2%</td>
+<td>1266</td>
+<td>23.20</td>
+<td>0.0377</td>
+</tr>
+<tr>
+<td><strong>Interleaved branch (Ours)</strong></td>
+<td><strong>67.8%</strong></td>
+<td><strong>1033</strong></td>
+<td>23.46</td>
+<td>0.0349</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<ul>
+<li>序列拼接质量最优但延迟近翻倍（1888ms），不可接受。</li>
+<li>通道拼接延迟也有显著开销（1266ms），且成功率仅 64.2%——破坏了预训练输入分布。</li>
+<li>交错分支方案在保持与 No depth 相同延迟（1033ms）的前提下，将成功率从 63.0% 提升至 67.8%（<strong>+4.8pp</strong>），证明了显式空间建模对策略执行的关键价值。</li>
+<li>深度分支可在动作推理时关闭，这是延迟不受影响的根本原因。</li>
+</ul>
+</blockquote>
+<p><strong>噪声调度策略对比</strong>（Table 3b）：</p>
+<table>
+<thead>
+<tr>
+<th>变体</th>
+<th>SR↑</th>
+<th>延迟(ms)↓</th>
+<th>PSNR↑</th>
+<th>AbsRel↓</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Sync train + Sync infer</td>
+<td>66.4%</td>
+<td>4665</td>
+<td><strong>23.48</strong></td>
+<td>0.0375</td>
+</tr>
+<tr>
+<td>Decoupled train + Sync infer</td>
+<td>66.3%</td>
+<td>4665</td>
+<td>23.17</td>
+<td>0.0397</td>
+</tr>
+<tr>
+<td>Decoupled train + Async infer</td>
+<td>67.2%</td>
+<td><strong>1033</strong></td>
+<td>22.60</td>
+<td>0.0430</td>
+</tr>
+<tr>
+<td><strong>ANS train + Async infer (Ours)</strong></td>
+<td><strong>67.8%</strong></td>
+<td><strong>1033</strong></td>
+<td>23.46</td>
+<td><strong>0.0349</strong></td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<ul>
+<li>同步方案延迟 4665ms（25 步），异步方案仅 1033ms（5 步），<strong>延迟降低 4.5 倍</strong>。</li>
+<li>Decoupled-Async 成功率不错（67.2%），但重建质量显著退化（PSNR 从 23.17 降至 22.60）——因为视频必须在干净动作条件下继续去噪，而独立采样训练未见过此 regime。</li>
+<li>ANS 通过耦合训练噪声分布，在异步推理的低延迟（1033ms）下取得了最高的成功率（67.8%）和最佳的深度指标（AbsRel 0.0349），同时视频质量接近同步基线水平。</li>
+</ul>
+</blockquote>
+<h3 id="44">4.4 真机实验</h3>
+<p><img alt="图3：真机实验设置" src="assets/x-wam/settings.jpg" /></p>
+<p><em>图3：真实机器人实验平台。使用 AC One 双臂平台，配备一个全局主相机和两个腕部相机（分辨率 320×256）。耳机包装任务要求精确的双臂协调和在严格几何公差下的鲁棒插入操作。</em></p>
+<p>在 <strong>AC One 双臂平台</strong>上执行<strong>耳机包装任务</strong>（4 阶段长序列任务：开盖→放左耳机→放右耳机→合盖归位），对比 X-WAM 与 Xiaomi-Robotics-0 (XR-0)：</p>
+<table>
+<thead>
+<tr>
+<th>设置</th>
+<th>XR-0 进度</th>
+<th>XR-0 时间</th>
+<th>X-WAM 进度</th>
+<th>X-WAM 时间</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1 个耳机</td>
+<td>100.0%</td>
+<td>54.66s</td>
+<td><strong>100.0%</strong></td>
+<td><strong>41.63s</strong></td>
+</tr>
+<tr>
+<td>2 个耳机</td>
+<td>79.1%</td>
+<td>115.44s</td>
+<td><strong>93.8%</strong></td>
+<td><strong>113.25s</strong></td>
+</tr>
+<tr>
+<td>3 个耳机</td>
+<td>63.9%</td>
+<td>195.66s</td>
+<td><strong>68.0%</strong></td>
+<td><strong>160.72s</strong></td>
+</tr>
+<tr>
+<td>新位置</td>
+<td>58.3%</td>
+<td>89.63s</td>
+<td><strong>70.8%</strong></td>
+<td><strong>46.68s</strong></td>
+</tr>
+<tr>
+<td>新桌布</td>
+<td><strong>66.7%</strong></td>
+<td>65.73s</td>
+<td><strong>66.7%</strong></td>
+<td><strong>62.01s</strong></td>
+</tr>
+<tr>
+<td>新干扰物</td>
+<td>66.7%</td>
+<td>76.32s</td>
+<td><strong>75.0%</strong></td>
+<td><strong>51.53s</strong></td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>关键发现</strong>：
+- X-WAM 在所有扩展性和泛化设置下均超越 XR-0，尤其在长时间任务和新位置泛化上优势显著。
+- <span class="math inline">$\pi_{0.5}$</span> 在相同数据和训练设置下<strong>未能完成任何单个完整耳机包装 episode</strong>，只做到 25%–50% 进度（即只能抓取盒子但无法完成耳机插入），侧面反映了 2D 模型在需要精确 3D 空间推理的插入任务上的局限性。
+- 推理方面：8 步异步去噪 + RTC（Real-Time Chunking），单次延迟约 300ms，控制频率 15Hz，实现无缝实时部署。</p>
+</blockquote>
+<p><img alt="图4：真机实验定性结果" src="assets/x-wam/qualitative.jpg" /></p>
+<p><em>图4：X-WAM 在 AC One 双臂机器人上执行耳机包装任务的关键帧序列。从上到下展示了完整的 4 阶段流程：(a) 抓取耳机盒并开盖，(b) 拾取第一只耳机并放入盒中，(c) 拾取第二只耳机并放入盒中，(d) 合盖并将盒子放回桌面。每个阶段都需要精确的 6-DoF 姿态估计和满足亚厘米级间隙约束的插入轨迹——这些对 3D 空间推理的要求使得纯 2D 模型（如 <span class="math inline">$\pi_{0.5}$</span>）在此任务上完全失败。</em></p>
+<hr />
+<h2 id="_7">五、关键洞察与技术亮点</h2>
+<ol>
+<li>
+<p><strong>3D 感知提升策略性能</strong>：消融实验中移除深度监督导致成功率从 67.8% 降至 63.0%（−4.8pp），证明显式空间建模不仅在重建上有益，还直接提升操作鲁棒性。</p>
+</li>
+<li>
+<p><strong>单向注意力的设计哲学</strong>：深度分支可以"偷看"主分支，但主分支不受深度 token 影响——这保护了预训练权重的完整性，是深度分支不破坏原有性能的根本保障。</p>
+</li>
+<li>
+<p><strong>训练-推理分布对齐</strong>：以往工作（Motus、DreamZero 等）独立采样各模态噪声时间步，导致训练时出现 <span class="math inline">$t_O &lt; t_a$</span> 等推理中不可能出现的配置，浪费训练资源。ANS 通过耦合采样（<span class="math inline">$t_O$</span> 以 <span class="math inline">$t_a$</span> 为条件）消除了这一 mismatch。</p>
+</li>
+<li>
+<p><strong>深度分支的可开关特性</strong>：推理时动作解码不需要深度信息，因此可关闭深度分支以维持低延迟；视频生成时按需开启。这种"按需使用"的设计是交错分支方案在延迟上持平 No depth 变体的关键。</p>
+</li>
+<li>
+<p><strong>相机位姿的巧妙处理</strong>：不同于显式编码外参或射线方向，X-WAM 仅预测末端执行器位姿并通过手眼标定推导腕部相机位姿——利用了机器人系统的结构化先验，避免了额外的预测头。</p>
+</li>
+<li>
+<p><strong>大规模多源数据统一</strong>：5,800+ 小时、7 个异构数据集通过统一的末端执行器状态/动作表示（16 维状态 + 14 维动作）进行标准化，对单臂机器人只监督左臂输出。</p>
+</li>
+</ol>
+<hr />
+<h2 id="_8">六、局限性</h2>
+<ol>
+<li>
+<p><strong>固定长度上下文窗口</strong>：X-WAM 仅处理固定长度的观测窗口，不包含历史信息也不支持自回归 rollout。在长序列操作中，单帧观测不足以区分任务阶段，可能产生次优决策。作者指出可通过 KV 缓存和自回归推理扩展。</p>
+</li>
+<li>
+<p><strong>推理延迟高于专用策略模型</strong>：作为同时生成高维视频和低维动作的统一模型，X-WAM 的单次推理延迟（约 300ms / 8 步）高于专用 VLA 或轻量 WAM（如 Fast-WAM）。虽然 RTC 机制可在物理机器人上实现实时部署，但额外的推理延迟意味着机器人必须基于"几个帧之前"的预测执行动作，可能降低策略性能。模型蒸馏、一致性模型和更激进的异步调度是潜在的加速方向。</p>
+</li>
+</ol>
+<hr />
+<h2 id="_9">七、关键概念速查</h2>
+<table>
+<thead>
+<tr>
+<th>概念</th>
+<th>简要说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>WAM (World Action Model)</strong></td>
+<td>统一世界动作模型，从视频生成模型出发联合预测未来观测和机器人动作</td>
+</tr>
+<tr>
+<td><strong>X-WAM</strong></td>
+<td>本文提出的 4D WAM，同时完成视频生成、3D 重建和策略执行</td>
+</tr>
+<tr>
+<td><strong>Interleaved Depth Branch</strong></td>
+<td>轻量级深度适配模块：复制 DiT 末尾 M 个 block 作为深度分支，通过单向交叉注意力从主分支读取信息</td>
+</tr>
+<tr>
+<td><strong>Unilateral Attention</strong></td>
+<td>单向注意力：深度分支可读取主分支，反之不可，保护预训练权重</td>
+</tr>
+<tr>
+<td><strong>ANS (Asynchronous Noise Sampling)</strong></td>
+<td>异步噪声采样：训练时耦合采样 <span class="math inline">$(t_O, t_a)$</span> 确保 <span class="math inline">$t_O \geq t_a$</span>，推理时动作在 <span class="math inline">$T_a$</span> 步解码、视频在 <span class="math inline">$T_O$</span> 步生成</td>
+</tr>
+<tr>
+<td><strong>Flow Matching</strong></td>
+<td>训练框架：模型预测速度场 <span class="math inline">$\mathbf{v} = \boldsymbol{\epsilon} - \mathbf{z}^0$</span>，而非噪声本身</td>
+</tr>
+<tr>
+<td><strong>Wan2.2-TI2V-5B</strong></td>
+<td>预训练视频 DiT 基座，5B 参数，支持文生视频（T2V）和图生视频（I2V）</td>
+</tr>
+<tr>
+<td><strong>RTC (Real-Time Chunking)</strong></td>
+<td>实时分块推理：重叠计算与执行，减少等待延迟</td>
+</tr>
+<tr>
+<td><strong>UniPC</strong></td>
+<td>多步 ODE 调度器，Wan2.2 推荐的推理采样器</td>
+</tr>
+</tbody>
+</table>
+  </div>
+</main>
+
+
+<script>
+(function() {
+  const sidebar = document.getElementById('sidebar');
+  const links = sidebar.querySelectorAll('a');
+  const headings = document.querySelectorAll('h1[id], h2[id], h3[id], h4[id]');
+  if (headings.length === 0) return;
+
+  const linkMap = new Map();
+  links.forEach(function(a) {
+    const href = a.getAttribute('href');
+    if (href && href.startsWith('#')) linkMap.set(href.slice(1), a);
+  });
+
+  function onScroll() {
+    let currentId = null;
+    const scrollTop = window.scrollY + 80;
+    headings.forEach(function(h) { if (h.offsetTop <= scrollTop) currentId = h.id; });
+    links.forEach(function(a) { a.classList.remove('active'); });
+    if (currentId && linkMap.has(currentId)) {
+      const el = linkMap.get(currentId);
+      el.classList.add('active');
+      const sr = sidebar.getBoundingClientRect();
+      const er = el.getBoundingClientRect();
+      if (er.bottom > sr.bottom || er.top < sr.top) {
+        el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+    }
+  }
+
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+})();
+</script>
+
+</body>
+</html>
