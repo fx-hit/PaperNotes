@@ -10,12 +10,16 @@ PaperNotes/
 │   ├── arXiv-XXXX.XXXXXvX/      # arxiv TeX 源码（不提交到 git）
 │   ├── paper_code_repo/         # 论文官方代码（不提交到 git）
 │   ├── assets/                  # 笔记插图资源（提交）
+│   │   ├── paper-name-1/        # 每篇论文独立子目录，存放其插图
+│   │   └── paper-name-2/
 │   ├── paper_notes.md           # 图文笔记（提交）
 │   └── paper_notes.html         # 独立 HTML 页面（提交）
 ├── .gitignore
 ├── AGENTS.md
 └── .claude/                     # Claude Code 配置
 ```
+
+> **assets/ 组织规则**：每篇论文在 `assets/` 下拥有独立子目录（如 `assets/dreamzero/`），图片按论文归类存放，避免扁平的散文件混杂。HTML 和 MD 中的图片引用路径统一为 `assets/<paper-name>/xxx.jpg`。
 
 ## 工作流
 

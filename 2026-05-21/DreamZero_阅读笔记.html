@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DreamZero: World Action Models are Zero-shot Policies</title>
+<!-- arxiv: 2602.15922 -->
+<!-- venue: NVIDIA Tech Report 2026 -->
+<!-- tags: WAM, 世界模型, 机器人, 视频扩散, 零样本泛化, 跨具身迁移 -->
+<!-- words-zh: 3888 -->
+<!-- words-en: 500 -->
+<!-- reading-time: 14 -->
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #ffffff;
+    --text: #1a1a2e;
+    --text-secondary: #555;
+    --border: #e1e4e8;
+    --link: #0969da;
+    --table-stripe: #f6f8fa;
+    --heading: #0d1117;
+    --blockquote-border: #0969da;
+    --blockquote-bg: #f0f6ff;
+    --inline-code: #d73a49;
+    --inline-code-bg: #f6f8fa;
+    --sidebar-width: 260px;
+    --toc-active: #0969da;
+    --content-max-width: 900px;
+    --content-padding: 48px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "Inter", "Noto Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 16px;
+    line-height: 1.75;
+    color: var(--text);
+    background: var(--bg);
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    width: var(--sidebar-width);
+    overflow-y: auto;
+    padding: 28px 20px 40px;
+    background: #fafbfc;
+    border-right: 1px solid var(--border);
+    z-index: 10;
+    scrollbar-width: thin;
+  }
+  .sidebar-title {
+    font-size: 13px; font-weight: 700; color: var(--text-secondary);
+    margin-bottom: 16px; letter-spacing: 0.06em; text-transform: uppercase;
+  }
+  .toc-list { list-style: none; padding: 0; margin: 0; }
+  .toc-list ul { list-style: none; padding-left: 14px; }
+  .toc-list li { margin: 1px 0; }
+  .toc-list a {
+    display: block; padding: 4px 12px; font-size: 13.5px; line-height: 1.45;
+    color: var(--text-secondary); text-decoration: none; border-radius: 4px;
+    border-left: 2px solid transparent; transition: all 0.15s;
+  }
+  .toc-list a:hover { color: var(--link); background: #e8f0fe; }
+  .toc-list a.active {
+    color: var(--toc-active); font-weight: 600;
+    border-left-color: var(--toc-active); background: #e8f0fe;
+  }
+  .toc-h1 a { font-weight: 600; color: var(--heading); font-size: 14px; }
+  .toc-h3 a { padding-left: 24px; font-size: 13px; }
+  .toc-h4 a { padding-left: 36px; font-size: 12.5px; }
+  .toc-empty { color: var(--text-secondary); font-size: 13px; font-style: italic; }
+
+  .main-wrapper {
+    margin-left: var(--sidebar-width);
+    min-height: 100vh;
+    display: flex; justify-content: center;
+  }
+  .content-inner {
+    width: 100%;
+    max-width: var(--content-max-width);
+    padding: 40px var(--content-padding) 80px;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    color: var(--heading); font-weight: 700; line-height: 1.3;
+    margin-top: 2em; margin-bottom: 0.6em; scroll-margin-top: 24px;
+  }
+  h1 { font-size: 2em; border-bottom: 2px solid var(--border); padding-bottom: 0.3em; margin-top: 0; }
+  h2 { font-size: 1.5em; border-bottom: 1px solid var(--border); padding-bottom: 0.25em; }
+  h3 { font-size: 1.25em; }
+  h4 { font-size: 1.1em; }
+  p { margin-bottom: 1em; }
+  a { color: var(--link); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  strong { font-weight: 600; }
+
+  blockquote {
+    border-left: 4px solid var(--blockquote-border);
+    background: var(--blockquote-bg);
+    padding: 12px 20px; margin: 1em 0;
+    border-radius: 0 6px 6px 0; color: var(--text-secondary);
+  }
+  blockquote p:last-child { margin-bottom: 0; }
+
+  code {
+    font-family: "JetBrains Mono", "SF Mono", "Fira Code", monospace;
+    font-size: 0.875em; background: var(--inline-code-bg);
+    padding: 2px 6px; border-radius: 4px; color: var(--inline-code);
+  }
+  pre {
+    background: #1e1e2e; color: #cdd6f4;
+    border-radius: 8px; padding: 16px 20px; overflow-x: auto;
+    margin: 1em 0; font-size: 14px; line-height: 1.55;
+  }
+  pre code { background: none; padding: 0; border-radius: 0; color: inherit; font-size: inherit; }
+
+  .codehilite { background: #1e1e2e; border-radius: 8px; padding: 16px 20px; overflow-x: auto; margin: 1em 0; }
+  .codehilite pre { background: none; padding: 0; margin: 0; border-radius: 0; }
+  .codehilite .hll { background-color: #2a2a3e; }
+  .codehilite .c  { color: #6c7086; font-style: italic; }
+  .codehilite .k  { color: #cba6f7; }
+  .codehilite .o  { color: #89b4fa; }
+  .codehilite .s  { color: #a6e3a1; }
+  .codehilite .n  { color: #cdd6f4; }
+  .codehilite .p  { color: #bac2de; }
+  .codehilite .mi { color: #fab387; }
+  .codehilite .nf { color: #89b4fa; }
+  .codehilite .nb { color: #f38ba8; }
+  .codehilite .nc { color: #f9e2af; }
+  .codehilite .bp { color: #f38ba8; }
+
+  table { width: 100%; border-collapse: collapse; margin: 1em 0; font-size: 0.925em; }
+  th, td { border: 1px solid var(--border); padding: 10px 14px; text-align: left; }
+  th { background: var(--table-stripe); font-weight: 600; color: var(--heading); }
+  tr:nth-child(even) td { background: var(--table-stripe); }
+
+  .math.display { display: block; overflow-x: auto; padding: 12px 0; margin: 1em 0; }
+  ul, ol { padding-left: 1.5em; margin-bottom: 1em; }
+  li { margin-bottom: 0.3em; }
+  hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+  img { max-width: 100%; height: auto; border-radius: 6px; margin: 0.5em 0; }
+  p:has(img) { text-align: center; }
+  p:has(img) + p { text-align: center; font-size: 0.9em; color: var(--text-secondary); }
+  .mermaid { text-align: center; margin: 1.5em 0; background: #fafbfc; border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+  .article-stats {
+    font-size: 0.85rem; color: var(--text-secondary);
+    padding: 10px 18px; margin-bottom: 28px;
+    background: #f8f9fa; border: 1px solid var(--border); border-radius: 8px;
+  }
+
+  @media (max-width: 1024px) {
+    .sidebar { position: static; width: 100%; height: auto; max-height: 35vh; border-right: none; border-bottom: 1px solid var(--border); }
+    .main-wrapper { margin-left: 0; display: block; }
+    .content-inner { max-width: none; padding: 24px 20px 60px; }
+  }
+</style>
+
+<script>
+MathJax = {
+  tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']], processEscapes: true, tags: 'none' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] }
+};
+</script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  mermaid.initialize({ startOnLoad: true, theme: 'neutral', securityLevel: 'loose' });
+});
+</script>
+
+</head>
+<body>
+
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-title">目录</div>
+  <ul class="toc-list">
+<li class="toc-h1"><a href="#dreamzero-world-action-models-are-zero-shot-policies">DreamZero: World Action Models are Zero-shot Policies</a>
+<ul>
+</li>
+<li class="toc-h2"><a href="#_1">一、核心问题</a>
+</li>
+<li class="toc-h2"><a href="#_2">二、核心思路 / 方法</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#21-world-action-model-wam">2.1 World Action Model (WAM) 概念</a>
+</li>
+<li class="toc-h3"><a href="#22">2.2 问题形式化</a>
+</li>
+<li class="toc-h3"><a href="#23">2.3 模型架构</a>
+</li>
+<li class="toc-h3"><a href="#24-38x">2.4 实时推理优化（38x 加速）</a>
+</li>
+<li class="toc-h3"><a href="#25">2.5 训练与数据配置</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_3">三、关键洞察与技术亮点</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#31">3.1 "改进视频生成 = 改进策略"</a>
+</li>
+<li class="toc-h3"><a href="#32">3.2 多样数据优于重复数据</a>
+</li>
+<li class="toc-h3"><a href="#33">3.3 模型规模的正向缩放</a>
+</li>
+<li class="toc-h3"><a href="#34-ar">3.4 AR 架构：质量相当但更快更平滑</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_4">四、实验与结果</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#41">4.1 实验设置</a>
+</li>
+<li class="toc-h3"><a href="#42">4.2 主实验一：已见任务泛化</a>
+</li>
+<li class="toc-h3"><a href="#43">4.3 主实验二：未见任务零样本泛化</a>
+</li>
+<li class="toc-h3"><a href="#44">4.4 主实验三：后训练表现</a>
+</li>
+<li class="toc-h3"><a href="#45">4.5 主实验四：跨具身迁移</a>
+</li>
+<li class="toc-h3"><a href="#46-few-shot">4.6 主实验五：Few-shot 新具身适应</a>
+</li>
+<li class="toc-h3"><a href="#47">4.7 消融实验</a>
+</li>
+<li class="toc-h3"><a href="#48-dreamzero-flash">4.8 DreamZero-Flash 性能</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_5">五、代码实现解读</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#51">5.1 项目结构</a>
+</li>
+<li class="toc-h3"><a href="#52">5.2 核心架构数据流</a>
+</li>
+<li class="toc-h3"><a href="#53">5.3 关键代码模块映射</a>
+</li>
+<li class="toc-h3"><a href="#54">5.4 数据处理流程</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_6">六、局限性</a>
+</li>
+<li class="toc-h2"><a href="#_7">七、关键概念速查</a>
+</li>
+<li class="toc-h2"><a href="#_8">八、讨论与未来方向</a>
+</ul></li>
+</li></ul>
+</nav>
+
+<main class="main-wrapper">
+  <div class="content-inner" id="main-content">
+<h1 id="dreamzero-world-action-models-are-zero-shot-policies">DreamZero: World Action Models are Zero-shot Policies</h1>
+<div class="article-stats">3,888 字 · English 500 词 · 约 14 分钟阅读</div>
+
+<blockquote>
+<p><strong>论文信息</strong>
+- 作者：Seonghyeon Ye, Yunhao Ge, Kaiyuan Zheng, Shenyuan Gao, Sihyun Yu, ..., Joel Jang（NVIDIA GEAR Lab, 共 39 位作者）
+- 通讯作者/项目负责人：Seonghyeon Ye, Yuke Zhu, Linxi "Jim" Fan, Joel Jang
+- 投稿方向：NVIDIA Tech Report（arXiv 2602.15922, 2026 年 2 月）
+- 代码：https://github.com/dreamzero0/dreamzero（Apache 2.0 开源）
+- 模型规模：14B 参数，基于 Wan2.1-I2V-14B-480P 视频扩散 backbone</p>
+</blockquote>
+<hr />
+<h2 id="_1">一、核心问题</h2>
+<p>当前最强的 Vision-Language-Action（VLA）模型在语义级泛化（例如识别未见过的物体）方面表现出色，但在两类关键泛化能力上存在根本性短板：</p>
+<ol>
+<li><strong>环境泛化（Environment Generalization）</strong>：将已知任务换到新环境执行时性能骤降</li>
+<li><strong>技能/动作泛化（Skill/Motion Generalization）</strong>：面对训练数据中从未出现的新动作（如"解鞋带""熨衣服"）完全失败</li>
+</ol>
+<p>根本原因在于：<strong>VLA 从 VLM 继承的是"知道做什么"（语义先验），但缺乏"知道怎么做"的物理先验</strong>——即对几何结构、动力学和运动控制的精确空间理解。</p>
+<blockquote>
+<p>VLA priors encode <em>what</em> to do at a semantic level, but lack representations of <em>how</em> actions should be executed with precise spatial awareness.</p>
+</blockquote>
+<p>此外，传统 VLA 训练通常依赖每个任务的大量重复演示（repetitive demonstrations），难以有效利用异构、非重复的多样机器人数据。</p>
+<hr />
+<h2 id="_2">二、核心思路 / 方法</h2>
+<h3 id="21-world-action-model-wam">2.1 World Action Model (WAM) 概念</h3>
+<p>DreamZero 提出了 <strong>World Action Model（WAM）</strong> 这一概念：基于预训练视频扩散模型，<strong>同时预测未来的视频帧和对应的机器人动作</strong>。核心直觉是：</p>
+<ul>
+<li>视频扩散模型在互联网规模数据上预训练，已经内化了丰富的时空物理先验</li>
+<li>通过联合建模视频和动作，将"action learning"从稠密的状态-动作模仿问题转化为<strong>逆动力学（inverse dynamics）问题</strong>——即学习从预测的视觉未来中提取可执行的动作</li>
+<li>这一转化使得模型可以从异构、非重复的多样数据中高效学习</li>
+</ul>
+<p><img alt="图1：DreamZero 总览 —— 通过联合预测视频和动作，WAM 继承了世界物理先验，实现了多种泛化能力" src="assets/dreamzero/dreamzero-header-v2.jpg" /></p>
+<p><em>图1：DreamZero 总览。通过联合预测视频和动作，WAM 获得四个核心能力：(1) 从多样、非重复数据中高效学习，(2) 开放世界泛化，(3) 仅用视频数据的跨具身学习，(4) 对新机器人的 few-shot 适应。</em></p>
+<h3 id="22">2.2 问题形式化</h3>
+<p>DreamZero 将问题形式化为联合预测问题：</p>
+<p><div class="math display">$$P(\mathbf{o}_{l:l+H}, \mathbf{a}_{l:l+H} \mid \mathbf{o}_{0:l}, \mathbf{c}, \mathbf{q}_l) = P(\mathbf{o}_{l:l+H} \mid \mathbf{o}_{0:l}, \mathbf{c}, \mathbf{q}_l) \cdot P(\mathbf{a}_{l:l+H} \mid \mathbf{o}_{0:l+H}, \mathbf{q}_l)$$</div></p>
+<p>其中：</p>
+<ul>
+<li><span class="math inline">$\mathbf{o}$</span> 为视频观测，<span class="math inline">$\mathbf{a}$</span> 为动作，<span class="math inline">$\mathbf{c}$</span> 为语言指令，<span class="math inline">$\mathbf{q}$</span> 为本体感知状态</li>
+<li>右侧第一项是视频预测，第二项是逆动力学模型（IDM）</li>
+</ul>
+<p>与传统方法不同，DreamZero 使用单一模型端到端地联合学习这两部分，而不是用两个独立模型分别建模。</p>
+<h3 id="23">2.3 模型架构</h3>
+<p><img alt="图2：DreamZero 模型架构 —— 基于自回归 DiT backbone 的联合视频-动作去噪模型" src="assets/dreamzero/dreamzero_model.jpg" /></p>
+<p><em>图2：DreamZero 模型架构。模型接受三类输入：视觉上下文（经 VAE 编码）、语言指令（经 Text Encoder）、以及本体感知状态（经 State Encoder）。这些输入由自回归 DiT backbone 通过 Flow Matching 处理，分别经由 Video Decoder 和 Action Decoder 输出预测的未来视频帧和动作。训练时（左），对每个 chunk 基于干净视频上下文对加噪的视频和动作 latent 进行去噪。推理时（右），动作异步在真实世界执行，真实观测替换 KV cache 中的预测帧以防止误差累积。</em></p>
+<p>架构要点：</p>
+<p><strong>1. 自回归（AR）架构</strong></p>
+<ul>
+<li>以 chunk 为单位自回归生成：每个 chunk 包含 <span class="math inline">$K$</span> 个 latent 帧（<span class="math inline">$K=2$</span>），对应固定的动作 horizon</li>
+<li>AR 架构的优势：(a) 通过 KV-cache 实现更快推理，(b) 可利用视觉观测历史做引导，(c) 保留原生帧率，确保视频-动作的精确对齐</li>
+<li>双向模型需要子采样视频来匹配语言标注间隔，会扭曲原生 FPS，破坏视频-动作对齐</li>
+</ul>
+<p><strong>2. 注意力机制（Attention Mask）</strong></p>
+<p><img alt="图3：DreamZero 的注意力策略 —— 训练和推理时的 QKV 注意力掩码" src="assets/dreamzero/dreamzero_attention_figure.jpg" /></p>
+<p><em>图3：DreamZero 注意力策略。(a) 训练的 QKV Self-Attention mask：Y 轴为 Query(Q)，X 轴为 Key/Value(KV)。给定条件帧 (C0, C1, C2)，模型预测后续帧 (Z1, Z2, Z3) 和动作 (Y1, Y2, Y3) 的速度。每个 noisy chunk 可关注前序干净 chunk 的上下文。(b) 推理时，先计算条件帧的 KV-cache，然后拼接后预测动作和帧。例如 Y3（动作）关注 C0, C1, C2，利用视觉历史来预测当前动作。关键设计：推理时 C0, C1, C2 被替换为真实观测。</em></p>
+<p><strong>3. Flow Matching 训练目标</strong></p>
+<p>采用 Flow Matching 作为训练目标，视频和动作共享相同的去噪时间步（基础版本）：</p>
+<p><div class="math display">$$\mathcal{L}(\theta) = \mathbb{E}\Bigg[\frac{1}{K} \sum_{k=1}^{K} w(t_k) \lVert \mathbf{u}_{\theta}([\mathbf{z}_{t_k}^{k}, \mathbf{a}_{t_k}^{k}];\mathcal{C}_{k}, \mathbf{c}, \mathbf{q}_{k}, t_{k}) - \mathbf{v}^{k} \rVert^2\Bigg]$$</div></p>
+<p>其中速度目标 <span class="math inline">$\mathbf{v}^{k} \coloneqq [\mathbf{z}_{1}^{k}, \mathbf{a}_{1}^{k}] - [\mathbf{z}_{0}^{k}, \mathbf{a}_{0}^{k}]$</span>。</p>
+<p><strong>4. 推理时的闭环设计（关键创新）</strong></p>
+<p>推理的核心优势是<strong>用真实观测替换 KV cache 中的预测帧</strong>：</p>
+<ul>
+<li>推理时异步执行：模型推断和动作执行解耦</li>
+<li>执行完一个 action chunk 后，将真实世界观测编码后注入 KV cache，<strong>丢弃预测的视频 latent</strong></li>
+<li>这从根本上消除了自回归视频生成的累积误差问题——这是 WAM 独有的优势</li>
+</ul>
+<p><strong>5. 自回归 vs 双向架构对比</strong></p>
+<p><img alt="图4：双向 vs 自回归 WAM 的关键差异 —— 子采样问题" src="assets/dreamzero/bidiraug.jpg" /></p>
+<p><em>图4：双向 vs 自回归 WAM。当采样点落在任务中间（T=20），双向 WAM 必须对视频进行子采样来匹配语言标注间隔，扭曲了原生 FPS 并破坏视频-动作对齐。自回归 WAM 通过条件化视频上下文而非子采样，避免了这种权衡。蓝色高亮帧为预测目标，灰色帧为上下文。</em></p>
+<h3 id="24-38x">2.4 实时推理优化（38x 加速）</h3>
+<p>14B 视频扩散模型在单 GPU 上无优化时，每次动作推断需约 5.7 秒，无法用于闭环控制。DreamZero 引入三层优化：</p>
+<p><strong>系统级优化：</strong></p>
+<ul>
+<li><strong>CFG 并行</strong>：将有条件/无条件两个前向传播分布到两块 GPU，减少 47% 步骤延迟</li>
+<li><strong>DiT Caching</strong>：利用 Flow Matching 速度向量的方向一致性，当连续速度预测的余弦相似度超过阈值时重用缓存速度，将有效 DiT 步数从 16 步降至 4 步</li>
+</ul>
+<p><strong>实现级优化：</strong></p>
+<ul>
+<li><strong>Torch Compile + CUDA Graphs</strong>：对五个组件（DiT、scheduler、text encoder、image encoder、VAE）编译</li>
+<li><strong>NVFP4 量化</strong>：在 Blackwell 架构上将权重和激活量化为 4-bit，敏感操作（QKV、Softmax）保留 FP8</li>
+<li><strong>cuDNN attention kernels + GPU scheduler</strong></li>
+</ul>
+<p><strong>模型级优化 —— DreamZero-Flash：</strong></p>
+<p><img alt="图5：DreamZero-Flash 解耦噪声调度 —— 训练时让模型学会从噪声视频中预测干净动作" src="assets/dreamzero/dreamzero-flash_noise_distribution-comparison.jpg" /></p>
+<p><em>图5：解耦噪声调度。标准 DreamZero（蓝色）使用耦合噪声分布（视频和动作都是 uniform 分布）。DreamZero-Flash（红色）将视频时间步偏向高噪声状态（Beta(7,1) 分布，均值 = 0.125），动作保持 uniform，训练模型在高噪声视觉上下文下预测干净动作，使训练和少步推理的分布对齐。</em></p>
+<p>核心洞察：标准训练时视频和动作在同一噪声水平，但少步推理时动作需要在视频仍 noisy 时去噪到干净值——存在 train-test mismatch。DreamZero-Flash 通过训练时偏向视频噪声（Beta(7,1)）来解决，使单步去噪（150ms）达到 4 步去噪的 90% 性能。</p>
+<p><strong>累计加速效果：</strong></p>
+<table>
+<thead>
+<tr>
+<th>优化类别</th>
+<th>H100</th>
+<th>GB200</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Baseline</td>
+<td>1x</td>
+<td>1.1x</td>
+</tr>
+<tr>
+<td>+ CFG 并行</td>
+<td>1.9x</td>
+<td>1.8x</td>
+</tr>
+<tr>
+<td>+ DiT Caching</td>
+<td>5.5x</td>
+<td>5.4x</td>
+</tr>
+<tr>
+<td>+ Torch Compile + CUDA Graphs</td>
+<td>8.9x</td>
+<td>10.9x</td>
+</tr>
+<tr>
+<td>+ Kernel &amp; Scheduler 优化</td>
+<td>9.6x</td>
+<td>14.8x</td>
+</tr>
+<tr>
+<td>+ NVFP4 量化</td>
+<td>—</td>
+<td>16.6x</td>
+</tr>
+<tr>
+<td>+ DreamZero-Flash</td>
+<td>—</td>
+<td><strong>38x</strong></td>
+</tr>
+</tbody>
+</table>
+<p>最终在 2x GB200 上达到 <strong>7Hz 实时闭环控制</strong>（~150ms/action chunk）。</p>
+<h3 id="25">2.5 训练与数据配置</h3>
+<ul>
+<li><strong>Backbone</strong>：Wan2.1-I2V-14B-480P（14B 图像到视频扩散模型）</li>
+<li><strong>训练步数</strong>：100K steps，全局 batch size 128</li>
+<li><strong>更新策略</strong>：更新所有 DiT block、state encoder、action encoder、action decoder（LoRA 实验效果不佳，改为全参更新），冻结 text encoder、image encoder、VAE</li>
+<li><strong>数据</strong>：AgiBot G1 约 500 小时遥操作数据（22 个环境）；Franka 使用 DROID 数据集</li>
+<li><strong>视频采样</strong>：5 FPS；动作采样：30Hz（AgiBot）/ 15Hz（DROID）</li>
+<li><strong>动作 horizon</strong>：48（AgiBot）/ 24（DROID），每 chunk 1.6 秒</li>
+<li><strong>多视图处理</strong>：将多个相机视图拼接为单帧（2x2 或特殊 grid），无需修改 backbone 架构</li>
+</ul>
+<hr />
+<h2 id="_3">三、关键洞察与技术亮点</h2>
+<h3 id="31">3.1 "改进视频生成 = 改进策略"</h3>
+<p>论文的核心发现：<strong>大多数 DreamZero 失败案例源于视频预测错误，而非动作提取错误</strong>。策略忠实地执行视频预测出的轨迹——这意味着改进视频 backbone 的质量将直接转化为更好的策略性能。这使得 WAM 的性能提升可以借助视频生成领域的持续进步。</p>
+<h3 id="32">3.2 多样数据优于重复数据</h3>
+<p>即使数据总量相同（500 小时），在 22 个环境中采集的多样化数据（50% 任务进度）显著优于 70 个任务的重复数据（33% 任务进度）。直觉解释：WAM 的视频预测能力大多继承自预训练，关键瓶颈是学习鲁棒的逆动力学模型——而多样的状态-动作对应关系正是构建鲁棒 IDM 的必要条件。</p>
+<h3 id="33">3.3 模型规模的正向缩放</h3>
+<p>14B 模型显著优于 5B 模型（50% vs 21%），小模型容易出现视觉幻觉并传播到错误动作。相比之下，将 VLA 从 5B 扩展到 14B 仍然无法从多样数据中学习（0% 任务进度）——单纯的模型规模扩展无法解决 VLA 在多样数据分布上的困难。</p>
+<h3 id="34-ar">3.4 AR 架构：质量相当但更快更平滑</h3>
+<p>AR 和双向架构在任务进度上相近，但 AR 模型产生的动作更平滑（因为在完整动作序列上进行梯度反传），且推理速度快 3-4 倍（得益于 KV cache）。</p>
+<hr />
+<h2 id="_4">四、实验与结果</h2>
+<h3 id="41">4.1 实验设置</h3>
+<p><img alt="图6：AgiBot 评估设置 —— 所有评测默认在未见环境和未见物体上进行" src="assets/dreamzero/main_eval_setting.jpg" /></p>
+<p><em>图6：AgiBot 评估设置。评测场景涵盖不同环境（不同地理位置，因此测试环境和训练环境分布不同）、不同物体。分为两类任务：seen tasks（10 个，80 次 rollout）和 unseen tasks（10 个，80 次 rollout）。每个任务在 4 台机器人上各执行 2 次，变换物体、位置和使用的机械臂。基线包括 GR00T N1.6 和 π₀.₅，各有两个初始化策略。</em></p>
+<p><strong>测试场景说明</strong>：由于训练数据和评测数据在不同地理位置采集，<strong>所有评测天然是分布外测试</strong>，而非训练分布内的插值。</p>
+<p><strong>数据统计</strong>：</p>
+<p><img alt="图7：AgiBot 预训练语料分布统计" src="assets/dreamzero/agibot_stats_1.jpg" /></p>
+<p><em>图7(a)：Episode 时长分布。平均每个 episode 约 4.4 分钟，远长于典型机器人操作数据集。</em></p>
+<p><img alt="图7(b)：每 episode 子任务数量分布" src="assets/dreamzero/agibot_stats_2.jpg" /></p>
+<p><em>图7(b)：每 episode 子任务数。平均约 42 个子任务，反映了多任务 episode 结构的设计效果。</em></p>
+<p><img alt="图7(c)：技能分布" src="assets/dreamzero/agibot_stats_3.jpg" /></p>
+<p><em>图7(c)：技能分布涵盖导航（Navigation）、躯干调节（Torso）、右臂、左臂等，反映了真实部署需求——导航实现工作区切换，躯干调节实现对不同高度物体的交互。</em></p>
+<h3 id="42">4.2 主实验一：已见任务泛化</h3>
+<p><img alt="图8：已见任务评估 —— DreamZero 在所有任务类别上均显著优于 VLA" src="assets/dreamzero/eval_bar_chart.jpg" /></p>
+<p><em>图8：已见任务（seen tasks）评估结果。横轴为三个任务类别（PnP Easy、PnP Hard、Contact-Rich Manipulation）及平均，纵轴为任务进度百分比。三种颜色分别代表：from-scratch VLA、pretrained VLA、DreamZero。</em></p>
+<p><strong>关键数据：</strong></p>
+<ul>
+<li><strong>From-scratch VLA</strong>：在所有类别上接近零分——即使简单 pick-and-place，VLA 偶尔能朝向正确物体但无法在未见环境中精确交互</li>
+<li><strong>Pretrained VLA</strong>：最佳 baseline 平均 27.4%——得益于跨具身预训练中获取的具身知识</li>
+<li><strong>DreamZero</strong>：平均 <strong>62.2%</strong>，<strong>超过最佳 VLA 基线 2 倍以上</strong>——且 DreamZero 没有使用额外的跨具身预训练</li>
+<li>在 DROID-Franka 上，DreamZero 同样显著优于 pretrained 基线</li>
+</ul>
+<h3 id="43">4.3 主实验二：未见任务零样本泛化</h3>
+<p><img alt="图9：未见任务零样本泛化 —— DreamZero 在 10 个训练外任务上取得实质进展" src="assets/dreamzero/unseen_success_rates.jpg" /></p>
+<p><em>图9：未见任务（unseen tasks）零样本泛化。左半边为 AgiBot G1（10 个任务），右半边为 DROID-Franka。横轴为具体任务，蓝色条为成功执行（Success），橙色条为部分完成（Progress/Failure），总计为任务进度。底部为基线对比（from-scratch VLA 接近零分，pretrained VLA 分别为 16.3% 和 31%/33%）。</em></p>
+<p><strong>关键数据：</strong></p>
+<ul>
+<li><strong>From-scratch VLA</strong>：&lt;1%（接近零）</li>
+<li><strong>Pretrained VLA</strong>：平均 16.3%（AgiBot），31-33%（DROID）</li>
+<li><strong>DreamZero</strong>：AgiBot 平均 <strong>39.5%</strong>，DROID 平均 <strong>49%</strong>（成功率达 22.5% vs 基线 7.5-12.5%）</li>
+<li>强表现任务："Remove Hat from Mannequin"（85.7%），"Shake Hands"（59.2%）</li>
+</ul>
+<p><strong>关键定性观察</strong>：Pretrained VLA 常表现出"不管指令只管抓取"的行为，说明它们过拟合到训练中的主流行为（pick-and-place），而非真正理解新任务语义。DreamZero 则能对未见任务进行视觉规划并成功执行。</p>
+<h3 id="44">4.4 主实验三：后训练表现</h3>
+<p><img alt="图10：后训练结果 —— DreamZero 在任务特化微调后保留环境泛化能力" src="assets/dreamzero/posttrain.jpg" /></p>
+<p><em>图10：后训练（post-training）结果。三个任务：Shirt Folding（33 小时）、Fruit Packing（12 小时）、Table Bussing（40 小时）。每个任务 10 次 rollout 的平均任务进度。DreamZero 在所有任务上持平或超越 pretrained VLA 基线。</em></p>
+<ul>
+<li>DreamZero 在三个后训练任务上持平或超越 pretrained VLA 基线</li>
+<li>From-scratch VLA 在后训练后仍然过度拟合训练场景，无法泛化到新环境（不同桌子高度、距离、物体摆放）</li>
+<li>证明 WAM 的<strong>环境泛化能力在后训练后得以保留</strong></li>
+</ul>
+<h3 id="45">4.5 主实验四：跨具身迁移</h3>
+<p><img alt="图11：跨具身迁移 —— 机器人到机器人和人类到机器人的知识迁移" src="assets/dreamzero/embodiment_transfer.jpg" /></p>
+<p><em>图11：跨具身迁移实验设计。上半部分（Robot-to-Robot Transfer）：使用 YAM 机器人采集 9 个未见任务的 72 条多视图轨迹（20 分钟），仅用视频预测目标（无动作标注），与 AgiBot 数据 1:1 混合再训练 10K 步。下半部分（Human-to-Robot Transfer）：使用人类第一视角演示，72 条轨迹（12 分钟）。</em></p>
+<p><strong>关键数据：</strong></p>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th>任务进度</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>DreamZero</td>
+<td>38.3% ± 7.6%</td>
+</tr>
+<tr>
+<td>DreamZero + Human→Robot</td>
+<td>54.3% ± 10.4%</td>
+</tr>
+<tr>
+<td>DreamZero + Robot→Robot</td>
+<td><strong>55.4%</strong> ± 9.5%</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>仅用 <strong>10-20 分钟</strong>视频数据（无动作标注），未见任务性能相对提升 <strong>42%+</strong></li>
+<li>机器人到机器人迁移效果最好（55.4%），因为具身差距更小</li>
+<li>人类到机器人也有效（54.3%），尽管存在形态学差距和动态第一人称视角</li>
+<li><strong>关键意义</strong>：海量互联网人类视频数据（比机器人数据大数个数量级）可能成为 WAM 获取多样化技能的燃料</li>
+</ul>
+<h3 id="46-few-shot">4.6 主实验五：Few-shot 新具身适应</h3>
+<p><img alt="图12：Few-shot 新具身适应 —— 只用 30 分钟 play data 迁移到全新机器人" src="assets/dreamzero/yam_transfer.jpg" /></p>
+<p><em>图12：Few-shot 新具身适应。将 DreamZero-AgiBot checkpoint 在新机器人 YAM 上用仅 30 分钟 play data（55 条轨迹，11 个任务）后训练，随后在新的 pick-and-place 变体上评估语言跟随能力。右图为生成的视频帧和实际执行对比——即使数据极少，视频-动作对齐仍然紧密。</em></p>
+<ul>
+<li>仅用 <strong>30 分钟 play data</strong>（55 条轨迹，11 个任务）将 AgiBot 模型适应到 YAM 机器人</li>
+<li>后训练后的策略保留了强大的语言跟随能力，甚至泛化到训练中未见的新物体</li>
+<li>高效适应的两个因素：</li>
+<li>AgiBot 和 YAM 视觉外观相似（都是双臂并行夹爪）</li>
+<li>更根本地，<strong>从预测视频中学习隐式 IDM 天生比直接策略学习更样本高效</strong></li>
+</ul>
+<h3 id="47">4.7 消融实验</h3>
+<table>
+<thead>
+<tr>
+<th>消融问题</th>
+<th>配置</th>
+<th>任务进度</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Q1. 数据多样性</strong></td>
+<td>AR 14B + Repetitive</td>
+<td>33% ± 4.2%</td>
+</tr>
+<tr>
+<td></td>
+<td>AR 14B + Diverse</td>
+<td><strong>50%</strong> ± 6.3%</td>
+</tr>
+<tr>
+<td><strong>Q2. 模型规模</strong></td>
+<td>AR 5B + Diverse</td>
+<td>21% ± 4.2%</td>
+</tr>
+<tr>
+<td></td>
+<td>AR 14B + Diverse</td>
+<td><strong>50%</strong> ± 6.3%</td>
+</tr>
+<tr>
+<td></td>
+<td>VLA 5B + Diverse</td>
+<td>0%</td>
+</tr>
+<tr>
+<td></td>
+<td>VLA 14B + Diverse</td>
+<td>0%</td>
+</tr>
+<tr>
+<td><strong>Q3. 架构</strong></td>
+<td>BD 14B + Diverse</td>
+<td>50% ± 14.4%</td>
+</tr>
+<tr>
+<td></td>
+<td>AR 14B + Diverse</td>
+<td>50% ± 6.3%</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>多样数据比重复数据改进 <strong>52%</strong>（33% → 50%）</li>
+<li>14B 比 5B 改善 <strong>138%</strong>（21% → 50%）</li>
+<li>AR 和 BD 架构分数相近，但 AR 方差更小且动作更平滑</li>
+</ul>
+<h3 id="48-dreamzero-flash">4.8 DreamZero-Flash 性能</h3>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th>去噪步数</th>
+<th>任务进度</th>
+<th>推理速度</th>
+<th>加速比</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>DreamZero</td>
+<td>4</td>
+<td>83% ± 6.1%</td>
+<td>350ms</td>
+<td>1x</td>
+</tr>
+<tr>
+<td>DreamZero</td>
+<td>1</td>
+<td>52% ± 10.2%</td>
+<td>150ms</td>
+<td>2.33x</td>
+</tr>
+<tr>
+<td>DreamZero-Flash</td>
+<td>1</td>
+<td><strong>74%</strong> ± 10.1%</td>
+<td>150ms</td>
+<td>2.33x</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>Flash 在单步推理时恢复 4 步性能的 89%，同时速度快 2.33 倍</li>
+</ul>
+<hr />
+<h2 id="_5">五、代码实现解读</h2>
+<h3 id="51">5.1 项目结构</h3>
+<p>DreamZero 代码库基于 PyTorch 和 DeepSpeed ZeRO Stage 2，核心模型定义在 <code>groot/vla/model/dreamzero/</code> 下：</p>
+<div class="codehilite"><pre><span></span><code><span class="nv">dreamzero</span><span class="o">/</span>
+├──<span class="w"> </span><span class="nv">groot</span><span class="o">/</span><span class="nv">vla</span><span class="o">/</span><span class="nv">model</span><span class="o">/</span><span class="nv">dreamzero</span><span class="o">/</span>
+│<span class="w">   </span>├──<span class="w"> </span><span class="nv">action_head</span><span class="o">/</span><span class="nv">wan_flow_matching_action_tf</span>.<span class="nv">py</span><span class="w">  </span>#<span class="w"> </span>核心<span class="w"> </span><span class="nv">inference</span><span class="o">/</span><span class="nv">training</span><span class="w"> </span><span class="k">loop</span>
+│<span class="w">   </span>├──<span class="w"> </span><span class="nv">modules</span><span class="o">/</span>
+│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span><span class="nv">wan_video_dit_action_casual_chunk</span>.<span class="nv">py</span><span class="w">     </span>#<span class="w"> </span>因果<span class="w"> </span><span class="nv">chunk</span><span class="w"> </span><span class="nv">DiT</span>（核心架构）
+│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span><span class="nv">wan_video_dit</span>.<span class="nv">py</span><span class="w">                         </span>#<span class="w"> </span><span class="nv">Wan</span><span class="w"> </span><span class="nv">DiT</span><span class="w"> </span><span class="nv">backbone</span>
+│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span><span class="nv">flow_match_scheduler</span>.<span class="nv">py</span><span class="w">                  </span>#<span class="w"> </span><span class="nv">Flow</span><span class="w"> </span><span class="nv">Matching</span><span class="w"> </span>调度器
+│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span><span class="nv">flow_unipc_multistep_scheduler</span>.<span class="nv">py</span><span class="w">        </span>#<span class="w"> </span>推理用多步调度器
+│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span><span class="nv">wan_video_vae</span>.<span class="nv">py</span><span class="w">                         </span>#<span class="w"> </span><span class="nv">VAE</span><span class="w"> </span>编码<span class="o">/</span>解码
+│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span><span class="nv">wan_video_text_encoder</span>.<span class="nv">py</span><span class="w">                </span>#<span class="w"> </span><span class="nv">T5</span><span class="w"> </span>文本编码器
+│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span><span class="nv">wan_video_image_encoder</span>.<span class="nv">py</span><span class="w">               </span>#<span class="w"> </span><span class="nv">CLIP</span><span class="w"> </span>图像编码器
+│<span class="w">   </span>│<span class="w">   </span>└──<span class="w"> </span><span class="nv">attention</span>.<span class="nv">py</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="nv">cudnn_attention</span>.<span class="nv">py</span><span class="w">        </span>#<span class="w"> </span>注意力实现
+│<span class="w">   </span>├──<span class="w"> </span><span class="nv">transform</span><span class="o">/</span><span class="nv">dreamzero_cotrain</span>.<span class="nv">py</span><span class="w">               </span>#<span class="w"> </span>数据预处理<span class="o">/</span>变换
+│<span class="w">   </span>└──<span class="w"> </span><span class="nv">backbone</span><span class="o">/</span><span class="w">                                    </span>#<span class="w"> </span>抽象<span class="w"> </span><span class="nv">backbone</span><span class="w"> </span>接口
+├──<span class="w"> </span><span class="nv">scripts</span><span class="o">/</span><span class="nv">train</span><span class="o">/</span><span class="w">                                   </span>#<span class="w"> </span>训练脚本
+├──<span class="w"> </span><span class="nv">eval_utils</span><span class="o">/</span><span class="w">                                      </span>#<span class="w"> </span>评测工具（<span class="nv">WebSocket</span><span class="w"> </span>服务）
+├──<span class="w"> </span><span class="nv">socket_test_optimized_AR</span>.<span class="nv">py</span><span class="w">                      </span>#<span class="w"> </span>推理服务器入口（<span class="nv">AR</span><span class="w"> </span>模式）
+└──<span class="w"> </span><span class="nv">test_client_AR</span>.<span class="nv">py</span><span class="w">                                </span>#<span class="w"> </span>测试客户端
+</code></pre></div>
+
+<h3 id="52">5.2 核心架构数据流</h3>
+<div class="codehilite"><pre><span></span><code><span class="err">┌─────────────────────────────────────────────────────────────────────┐</span>
+<span class="err">│</span><span class="w">                        </span><span class="nx">DreamZero</span><span class="w"> </span><span class="nx">架构全景</span><span class="w">                            </span><span class="err">│</span>
+<span class="err">└─────────────────────────────────────────────────────────────────────┘</span>
+
+<span class="w">                         </span><span class="nx">训练</span><span class="w"> </span><span class="p">(</span><span class="nx">Training</span><span class="p">)</span>
+<span class="err">┌──────────┐</span><span class="w">   </span><span class="err">┌──────────┐</span><span class="w">   </span><span class="err">┌──────────┐</span>
+<span class="err">│</span><span class="w"> </span><span class="nx">多视图</span><span class="w">    </span><span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w"> </span><span class="nx">语言指令</span><span class="w">  </span><span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w"> </span><span class="nx">本体感知</span><span class="w">  </span><span class="err">│</span>
+<span class="err">│</span><span class="w"> </span><span class="nx">视频</span><span class="w"> </span><span class="nx">o_t</span><span class="w">  </span><span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w"> </span><span class="nx">文本</span><span class="w"> </span><span class="nx">c</span><span class="w">    </span><span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w"> </span><span class="nx">状态</span><span class="w"> </span><span class="nx">q_t</span><span class="w">  </span><span class="err">│</span>
+<span class="err">└────┬─────┘</span><span class="w">   </span><span class="err">└────┬─────┘</span><span class="w">   </span><span class="err">└────┬─────┘</span>
+<span class="w">     </span><span class="err">│</span><span class="w">              </span><span class="err">│</span><span class="w">              </span><span class="err">│</span>
+<span class="w">     </span><span class="err">▼</span><span class="w">              </span><span class="err">▼</span><span class="w">              </span><span class="err">▼</span>
+<span class="err">┌──────────┐</span><span class="w">  </span><span class="err">┌───────────┐</span><span class="w">  </span><span class="err">┌───────────┐</span>
+<span class="err">│</span><span class="w"> </span><span class="nx">VAE</span><span class="w">      </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="nx">T5</span><span class="o">-</span><span class="nx">XXL</span><span class="w">    </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="nx">State</span><span class="w">      </span><span class="err">│</span>
+<span class="err">│</span><span class="w"> </span><span class="nx">Encoder</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="nx">Text</span><span class="w"> </span><span class="nx">Enc</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="nx">Encoder</span><span class="w">    </span><span class="err">│</span>
+<span class="err">└────┬─────┘</span><span class="w">  </span><span class="err">└────┬──────┘</span><span class="w">  </span><span class="err">└────┬──────┘</span>
+<span class="w">     </span><span class="err">│</span><span class="w"> </span><span class="nx">z_latent</span><span class="w">    </span><span class="err">│</span><span class="w"> </span><span class="nx">prompt_emb</span><span class="w">   </span><span class="err">│</span><span class="w"> </span><span class="nx">state_emb</span>
+<span class="w">     </span><span class="err">│</span><span class="w">             </span><span class="err">│</span><span class="w">              </span><span class="err">│</span>
+<span class="w">     </span><span class="err">└─────────────┼──────────────┘</span>
+<span class="w">                   </span><span class="err">│</span>
+<span class="w">    </span><span class="err">┌──────────────▼──────────────┐</span>
+<span class="w">    </span><span class="err">│</span><span class="w">   </span><span class="nx">Flow</span><span class="w"> </span><span class="nx">Matching</span><span class="w"> </span><span class="nx">加噪</span><span class="w">         </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">   </span><span class="nx">z_noisy</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">t</span><span class="o">*</span><span class="nx">z</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="nx">t</span><span class="p">)</span><span class="o">*</span><span class="nx">ε</span><span class="w">   </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">   </span><span class="nx">a_noisy</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">t</span><span class="o">*</span><span class="nx">a</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="nx">t</span><span class="p">)</span><span class="o">*</span><span class="nx">ε</span><span class="w">   </span><span class="err">│</span>
+<span class="w">    </span><span class="err">└──────────────┬──────────────┘</span>
+<span class="w">                   </span><span class="err">│</span>
+<span class="w">    </span><span class="err">┌──────────────▼──────────────────────────┐</span>
+<span class="w">    </span><span class="err">│</span><span class="w">   </span><span class="nx">Causal</span><span class="w"> </span><span class="nx">Chunk</span><span class="w"> </span><span class="nx">DiT</span><span class="w"> </span><span class="p">(</span><span class="mi">14</span><span class="nx">B</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">40</span><span class="w"> </span><span class="nx">layers</span><span class="p">)</span><span class="w">     </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">   </span><span class="err">┌─────────────────────────────────┐</span><span class="w">   </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">  </span><span class="k">Self</span><span class="o">-</span><span class="nx">Attn</span><span class="p">:</span><span class="w"> </span><span class="nx">causal</span><span class="w"> </span><span class="nx">chunk</span><span class="w"> </span><span class="nx">mask</span><span class="w">   </span><span class="err">│</span><span class="w">   </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">  </span><span class="nx">Cross</span><span class="o">-</span><span class="nx">Attn</span><span class="p">:</span><span class="w"> </span><span class="nx">text</span><span class="w"> </span><span class="nx">embeddings</span><span class="w">    </span><span class="err">│</span><span class="w">   </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">  </span><span class="nx">RoPE</span><span class="p">:</span><span class="w"> </span><span class="nx">video</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nx">action</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nx">state</span><span class="w">   </span><span class="err">│</span><span class="w">   </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">   </span><span class="err">└─────────────────────────────────┘</span><span class="w">   </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">   </span><span class="nx">预测速度场</span><span class="w"> </span><span class="nx">v</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="p">[</span><span class="nx">v_vid</span><span class="p">,</span><span class="w"> </span><span class="nx">v_act</span><span class="p">]</span><span class="w">           </span><span class="err">│</span>
+<span class="w">    </span><span class="err">└──────────────┬──────────────────────────┘</span>
+<span class="w">                   </span><span class="err">│</span>
+<span class="w">    </span><span class="err">┌──────────────▼──────────────┐</span>
+<span class="w">    </span><span class="err">│</span><span class="w">   </span><span class="nx">MSE</span><span class="w"> </span><span class="nx">Loss</span><span class="w"> </span><span class="p">=</span><span class="w">                </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">   </span><span class="o">||</span><span class="nx">v_pred</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nx">v_target</span><span class="o">||</span><span class="nx">²</span><span class="w">     </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">   </span><span class="p">(</span><span class="nx">视频</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nx">动作联合</span><span class="p">)</span><span class="w">          </span><span class="err">│</span>
+<span class="w">    </span><span class="err">└─────────────────────────────┘</span>
+
+
+<span class="w">                       </span><span class="nx">推理</span><span class="w"> </span><span class="p">(</span><span class="nx">Inference</span><span class="p">)</span>
+<span class="err">┌──────────┐</span><span class="w">   </span><span class="err">┌──────────┐</span><span class="w">   </span><span class="err">┌──────────┐</span>
+<span class="err">│</span><span class="w"> </span><span class="nx">初始图像</span><span class="w">  </span><span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w"> </span><span class="nx">语言指令</span><span class="w">  </span><span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w"> </span><span class="nx">初始状态</span><span class="w">  </span><span class="err">│</span>
+<span class="err">└────┬─────┘</span><span class="w">   </span><span class="err">└────┬─────┘</span><span class="w">   </span><span class="err">└────┬─────┘</span>
+<span class="w">     </span><span class="err">│</span><span class="w">              </span><span class="err">│</span><span class="w">              </span><span class="err">│</span>
+<span class="w">     </span><span class="err">▼</span><span class="w">              </span><span class="err">▼</span><span class="w">              </span><span class="err">▼</span>
+<span class="err">┌──────────┐</span><span class="w">  </span><span class="err">┌───────────┐</span><span class="w">  </span><span class="err">┌───────────┐</span>
+<span class="err">│</span><span class="w"> </span><span class="nx">VAE</span><span class="o">+</span><span class="nx">CLIP</span><span class="w"> </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="nx">T5</span><span class="o">-</span><span class="nx">XXL</span><span class="w">    </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="nx">State</span><span class="w">      </span><span class="err">│</span>
+<span class="err">│</span><span class="w"> </span><span class="nx">Encode</span><span class="w">   </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="nx">Text</span><span class="w"> </span><span class="nx">Enc</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="nx">Encoder</span><span class="w">    </span><span class="err">│</span>
+<span class="err">└────┬─────┘</span><span class="w">  </span><span class="err">└────┬──────┘</span><span class="w">  </span><span class="err">└────┬──────┘</span>
+<span class="w">     </span><span class="err">│</span><span class="w">             </span><span class="err">│</span><span class="w">              </span><span class="err">│</span>
+<span class="w">     </span><span class="err">└─────────────┼──────────────┘</span>
+<span class="w">                   </span><span class="err">│</span>
+<span class="w">    </span><span class="err">┌──────────────▼──────────────────────────┐</span>
+<span class="w">    </span><span class="err">│</span><span class="w"> </span><span class="nx">❶</span><span class="w"> </span><span class="nx">Prefill</span><span class="p">:</span><span class="w"> </span><span class="nx">干净帧</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="nx">KV</span><span class="w"> </span><span class="nx">Cache</span><span class="err">（</span><span class="nx">t</span><span class="p">=</span><span class="mi">0</span><span class="err">）</span><span class="w">    </span><span class="err">│</span>
+<span class="w">    </span><span class="err">└──────────────┬──────────────────────────┘</span>
+<span class="w">                   </span><span class="err">│</span>
+<span class="w">    </span><span class="err">┌──────────────▼──────────────────────────┐</span>
+<span class="w">    </span><span class="err">│</span><span class="w"> </span><span class="nx">❷</span><span class="w"> </span><span class="nx">AR</span><span class="w"> </span><span class="nx">Loop</span><span class="w"> </span><span class="p">(</span><span class="nx">每次</span><span class="w"> </span><span class="o">~</span><span class="mi">150</span><span class="nx">ms</span><span class="p">)</span><span class="w">                  </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">                                          </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">   </span><span class="err">┌──────────────────────────────────┐</span><span class="w">  </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w"> </span><span class="nx">从噪声开始</span><span class="w"> </span><span class="nx">joint</span><span class="w"> </span><span class="nx">denoising</span><span class="w">        </span><span class="err">│</span><span class="w">  </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w"> </span><span class="nx">Flow</span><span class="w"> </span><span class="nx">Matching</span><span class="w"> </span><span class="nx">t</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="mi">1</span><span class="w">           </span><span class="err">│</span><span class="w">  </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w"> </span><span class="err">┌────────────────────────────┐</span><span class="w">   </span><span class="err">│</span><span class="w">  </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="err">@</span><span class="nx">each</span><span class="w"> </span><span class="nx">step</span><span class="p">:</span><span class="w">                 </span><span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">  </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w"> </span><span class="err">│</span><span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="nx">CosSim</span><span class="p">(</span><span class="nx">v_i</span><span class="p">,</span><span class="w"> </span><span class="nx">v_</span><span class="p">{</span><span class="nx">i</span><span class="o">-</span><span class="mi">1</span><span class="p">})</span><span class="w">    </span><span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">  </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w"> </span><span class="err">│</span><span class="w">     </span><span class="p">&gt;</span><span class="w"> </span><span class="nx">ε</span><span class="p">:</span><span class="w"> </span><span class="nx">skip</span><span class="w"> </span><span class="nx">DiT</span><span class="w"> </span><span class="p">(</span><span class="nx">cache</span><span class="p">)</span><span class="w">   </span><span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">  </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w"> </span><span class="err">│</span><span class="w">  </span><span class="k">else</span><span class="p">:</span><span class="w"> </span><span class="nx">v</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">DiT</span><span class="p">(</span><span class="nx">z</span><span class="p">,</span><span class="nx">a</span><span class="p">;</span><span class="w"> </span><span class="nx">KV</span><span class="p">)</span><span class="w">     </span><span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">  </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w"> </span><span class="err">│</span><span class="w">  </span><span class="nx">x_</span><span class="p">{</span><span class="nx">i</span><span class="o">+</span><span class="mi">1</span><span class="p">}</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">x_i</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nx">v</span><span class="err">·</span><span class="nx">Δσ</span><span class="w">       </span><span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">  </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w"> </span><span class="err">└────────────────────────────┘</span><span class="w">   </span><span class="err">│</span><span class="w">  </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">   </span><span class="err">└──────────────────────────────────┘</span><span class="w">  </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">                                          </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">   </span><span class="nx">输出</span><span class="p">:</span><span class="w"> </span><span class="nx">action_chunk</span><span class="w"> </span><span class="p">(</span><span class="mi">48</span><span class="w"> </span><span class="nx">步</span><span class="p">),</span><span class="w"> </span><span class="nx">video_pred</span><span class="w">  </span><span class="err">│</span>
+<span class="w">    </span><span class="err">└──────────────┬──────────────────────────┘</span>
+<span class="w">                   </span><span class="err">│</span>
+<span class="w">    </span><span class="err">┌──────────────▼──────────────────────────┐</span>
+<span class="w">    </span><span class="err">│</span><span class="w"> </span><span class="nx">❸</span><span class="w"> </span><span class="nx">Async</span><span class="w"> </span><span class="nx">Execution</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nx">Cache</span><span class="w"> </span><span class="nx">Update</span><span class="w">        </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">                                          </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">   </span><span class="nx">action_chunk</span><span class="w"> </span><span class="err">──►</span><span class="w"> </span><span class="nx">异步执行</span><span class="err">（</span><span class="nx">机器人</span><span class="err">）</span><span class="w">     </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">                                          </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">   </span><span class="nx">真实观测</span><span class="w"> </span><span class="nx">o_real</span><span class="w"> </span><span class="err">──►</span><span class="w"> </span><span class="nx">VAE</span><span class="w">                </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">   </span><span class="nx">z_real</span><span class="w"> </span><span class="err">──►</span><span class="w"> </span><span class="nx">KV</span><span class="w"> </span><span class="nx">cache</span><span class="w"> </span><span class="p">(</span><span class="nx">替换预测帧</span><span class="p">)</span><span class="w">       </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">                                          </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">   </span><span class="nx">丢弃预测的</span><span class="w"> </span><span class="nx">video</span><span class="w"> </span><span class="nx">latent</span><span class="w">                 </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">   </span><span class="nx">保留</span><span class="w"> </span><span class="nx">KV</span><span class="w"> </span><span class="nx">cache</span><span class="w"> </span><span class="nx">中的视觉历史</span><span class="w">              </span><span class="err">│</span>
+<span class="w">    </span><span class="err">└──────────────┬──────────────────────────┘</span>
+<span class="w">                   </span><span class="err">│</span>
+<span class="w">                   </span><span class="err">▼</span>
+<span class="w">             </span><span class="nx">循环</span><span class="w"> </span><span class="nx">❷</span><span class="w"> </span><span class="err">（</span><span class="nx">直到任务完成</span><span class="err">）</span>
+</code></pre></div>
+
+<h3 id="53">5.3 关键代码模块映射</h3>
+<p><strong>论文 Algorithm 1（Training）→ <code>wan_flow_matching_action_tf.py:forward()</code></strong></p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Line 603-813: 完整训练 forward pass</span>
+<span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">backbone_output</span><span class="p">,</span> <span class="n">action_input</span><span class="p">):</span>
+    <span class="c1"># 1. 编码视频 → latents (VAE)</span>
+    <span class="n">latents</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">encode_video</span><span class="p">(</span><span class="n">videos</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
+
+    <span class="c1"># 2. 编码文本 → prompt_embs</span>
+    <span class="n">prompt_embs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">encode_prompt</span><span class="p">(</span><span class="n">text_ids</span><span class="p">,</span> <span class="n">attn_mask</span><span class="p">)</span>
+
+    <span class="c1"># 3. 编码图像 → clip_feas, y</span>
+    <span class="n">clip_feas</span><span class="p">,</span> <span class="n">ys</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">encode_image</span><span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
+
+    <span class="c1"># 4. 采样时间步 → 加噪</span>
+    <span class="n">noise</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn_like</span><span class="p">(</span><span class="n">latents</span><span class="p">)</span>
+    <span class="n">timestep_id</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>  <span class="c1"># uniform</span>
+    <span class="n">noisy_latents</span> <span class="o">=</span> <span class="n">scheduler</span><span class="o">.</span><span class="n">add_noise</span><span class="p">(</span><span class="n">latents</span><span class="p">,</span> <span class="n">noise</span><span class="p">,</span> <span class="n">timestep</span><span class="p">)</span>
+
+    <span class="c1"># 5. 模型前向</span>
+    <span class="n">video_noise_pred</span><span class="p">,</span> <span class="n">action_noise_pred</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">(</span>
+        <span class="n">noisy_latents</span><span class="p">,</span> <span class="n">timestep</span><span class="p">,</span> <span class="o">...</span><span class="p">,</span> <span class="n">context</span><span class="o">=</span><span class="n">prompt_embs</span><span class="p">,</span>
+        <span class="n">state</span><span class="o">=</span><span class="n">state_features</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="n">noisy_actions</span><span class="p">,</span> <span class="o">...</span>
+    <span class="p">)</span>
+
+    <span class="c1"># 6. 联合损失</span>
+    <span class="n">dynamics_loss</span> <span class="o">=</span> <span class="n">MSE</span><span class="p">(</span><span class="n">video_noise_pred</span><span class="p">,</span> <span class="n">training_target</span><span class="p">)</span>
+    <span class="n">action_loss</span> <span class="o">=</span> <span class="n">MSE</span><span class="p">(</span><span class="n">action_noise_pred</span><span class="p">,</span> <span class="n">training_target_action</span><span class="p">)</span> <span class="o">*</span> <span class="n">action_mask</span>
+    <span class="n">loss</span> <span class="o">=</span> <span class="n">dynamics_loss</span> <span class="o">+</span> <span class="n">action_loss</span>
+</code></pre></div>
+
+<p><strong>论文 Algorithm 2（Inference）→ <code>lazy_joint_video_action()</code></strong></p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Line 973-1338: 推理 pipeline</span>
+<span class="k">def</span> <span class="nf">lazy_joint_video_action</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">backbone_output</span><span class="p">,</span> <span class="n">action_input</span><span class="p">):</span>
+    <span class="c1"># 1. Prefill: clean frames → KV cache</span>
+    <span class="k">if</span> <span class="n">current_start_frame</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_run_diffusion_steps</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">update_kv_cache</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="c1"># 2. AR loop: 联合去噪</span>
+    <span class="k">for</span> <span class="n">timestep</span> <span class="ow">in</span> <span class="n">scheduler</span><span class="o">.</span><span class="n">timesteps</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">should_run_model</span><span class="p">:</span>  <span class="c1"># DiT caching</span>
+            <span class="n">predictions</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_run_diffusion_steps</span><span class="p">(</span>
+                <span class="n">noisy_input</span><span class="p">,</span> <span class="n">timestep</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="n">noisy_action</span><span class="p">,</span> <span class="o">...</span>
+            <span class="p">)</span>
+            <span class="n">flow_pred</span> <span class="o">=</span> <span class="n">flow_uncond</span> <span class="o">+</span> <span class="n">cfg_scale</span> <span class="o">*</span> <span class="p">(</span><span class="n">flow_cond</span> <span class="o">-</span> <span class="n">flow_uncond</span><span class="p">)</span>
+
+        <span class="n">noisy_input</span> <span class="o">=</span> <span class="n">scheduler</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">flow_pred_transpose</span><span class="p">,</span> <span class="n">timestep</span><span class="p">,</span> <span class="n">noisy_input</span><span class="p">)</span>
+        <span class="n">noisy_action</span> <span class="o">=</span> <span class="n">scheduler_action</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">flow_pred_action</span><span class="p">,</span> <span class="n">timestep</span><span class="p">,</span> <span class="n">noisy_action</span><span class="p">)</span>
+
+    <span class="c1"># 3. 输出</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;action_pred&quot;</span><span class="p">:</span> <span class="n">latents_action</span><span class="p">,</span> <span class="s2">&quot;video_pred&quot;</span><span class="p">:</span> <span class="n">output</span><span class="p">}</span>
+</code></pre></div>
+
+<p><strong>注意力掩码实现 → <code>wan_video_dit_action_casual_chunk.py</code></strong></p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># 核心: 因果 chunk 注意力 + 多种 RoPE (video/action/state)</span>
+<span class="k">def</span> <span class="nf">causal_rope_action_apply</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">freqs</span><span class="p">,</span> <span class="n">freqs_action</span><span class="p">,</span> <span class="n">freqs_state</span><span class="p">,</span>
+                              <span class="n">action_register_length</span><span class="p">,</span> <span class="n">num_action_per_block</span><span class="p">,</span>
+                              <span class="n">num_state_per_block</span><span class="p">,</span> <span class="n">action_state_index</span><span class="p">):</span>
+    <span class="c1"># 为 video/action/state tokens 应用不同的 RoPE 频率</span>
+    <span class="c1"># action token 和 state token 使用独立频率</span>
+    <span class="c1"># 实现论文中 Y3 关注 C0,C1,C2 的注意力模式</span>
+</code></pre></div>
+
+<p><strong>DreamZero-Flash 噪声解耦 → <code>wan_flow_matching_action_tf.py:680-731</code></strong></p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Line 680-731: 解耦噪声采样</span>
+<span class="k">if</span> <span class="n">decouple_video_action_noise</span><span class="p">:</span>
+    <span class="c1"># 视频: Beta(α,β) 偏向高噪声</span>
+    <span class="n">video_noise_ratio</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">video_beta_dist</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+    <span class="n">timestep_id</span> <span class="o">=</span> <span class="p">((</span><span class="mf">1.0</span> <span class="o">-</span> <span class="n">video_noise_ratio</span><span class="p">)</span> <span class="o">*</span> <span class="mi">1000</span><span class="p">)</span><span class="o">.</span><span class="n">long</span><span class="p">()</span>
+    <span class="c1"># 动作: 独立 uniform</span>
+    <span class="n">timestep_action_id</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1000</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
+</code></pre></div>
+
+<p><strong>DiT Caching → <code>should_run_model()</code></strong></p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Line 943-971: 自适应 DiT 步骤跳过</span>
+<span class="k">def</span> <span class="nf">should_run_model</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">,</span> <span class="n">current_timestep</span><span class="p">,</span> <span class="n">prev_predictions</span><span class="p">):</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">dynamic_cache_schedule</span><span class="p">:</span> <span class="k">return</span> <span class="n">dit_step_mask</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
+
+    <span class="c1"># 计算相邻速度向量的余弦相似度</span>
+    <span class="n">sim</span> <span class="o">=</span> <span class="n">cosine_similarity</span><span class="p">(</span><span class="n">v_last</span><span class="p">,</span> <span class="n">v_prev</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+
+    <span class="c1"># 相似度 &gt; 阈值: 跳过 N 步</span>
+    <span class="k">for</span> <span class="n">threshold</span><span class="p">,</span> <span class="n">countdown</span> <span class="ow">in</span> <span class="p">[(</span><span class="mf">0.95</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="p">(</span><span class="mf">0.93</span><span class="p">,</span> <span class="mi">2</span><span class="p">)]:</span>
+        <span class="k">if</span> <span class="n">sim</span> <span class="o">&gt;</span> <span class="n">threshold</span><span class="p">:</span> <span class="n">skip_countdown</span> <span class="o">=</span> <span class="n">countdown</span><span class="p">;</span> <span class="k">return</span> <span class="kc">False</span>
+    <span class="k">return</span> <span class="kc">True</span>
+</code></pre></div>
+
+<h3 id="54">5.4 数据处理流程</h3>
+<div class="codehilite"><pre><span></span><code>┌──────────────────────────────────────────────────────────────┐
+│                    DreamTransform Pipeline                    │
+└──────────────────────────────────────────────────────────────┘
+
+原始数据                    处理后
+┌────────────────┐        ┌─────────────────────────┐
+│ video (T,V,H,W)│───────▶│ _prepare_video()        │
+│                │        │ 多视图拼接为 2x2 grid     │
+│                │        │ DROID: wrist(顶行全宽)    │
+│                │        │        left|right(底行)  │
+│                │        │ AgiBot: head|right       │
+│                │        │         left |black      │
+└────────────────┘        └─────────────────────────┘
+                                    │
+┌────────────────┐        ┌────────▼────────────────┐
+│ language (str) │───────▶│ _prepare_language()     │
+│                │        │ 多视图描述增强            │
+│                │        │ &quot;A multi-view video     │
+│                │        │  shows that a robot...&quot; │
+└────────────────┘        └─────────────────────────┘
+                                    │
+┌────────────────┐        ┌────────▼────────────────┐
+│ state (T,D)    │───────▶│ _prepare_state()        │
+│                │        │ pad to max_state_dim    │
+└────────────────┘        └─────────────────────────┘
+                                    │
+┌────────────────┐        ┌────────▼────────────────┐
+│ action (T,D)   │───────▶│ _prepare_action()       │
+│                │        │ pad to max_action_dim   │
+└────────────────┘        └─────────────────────────┘
+</code></pre></div>
+
+<hr />
+<h2 id="_6">六、局限性</h2>
+<ol>
+<li>
+<p><strong>推理延迟仍然较高</strong>：虽然通过一系列优化达到了 7Hz，但相比 VLA 在消费级 GPU 上可达 20Hz+ 仍有差距。需要 2x GB200 级别的硬件。</p>
+</li>
+<li>
+<p><strong>高精度任务受限</strong>：在需要亚厘米级精度的任务（如钥匙插入、精细装配）上继承了行为克隆的通用局限。多样预训练策略优先覆盖广度，可能忽视了这类高精度操作所需的密集演示。</p>
+</li>
+<li>
+<p><strong>视觉上下文窗口有限</strong>：当前最大上下文为 8 个 latent 帧（约 6.6 秒），对于需要长程记忆的任务可能不够。</p>
+</li>
+<li>
+<p><strong>多具身联合训练</strong>：目前每个具身单独训练，未探索多具身联合训练的潜力。</p>
+</li>
+<li>
+<p><strong>跨具身迁移成功率仍中等</strong>：虽然相对提升显著，但绝对成功率（~55%）仍有较大提升空间。</p>
+</li>
+<li>
+<p><strong>失败主要源于视频预测</strong>：如果视频 backbone 预测错误，策略会忠实地执行错误的视觉计划——这在安全关键场景中可能带来风险。</p>
+</li>
+</ol>
+<hr />
+<h2 id="_7">七、关键概念速查</h2>
+<table>
+<thead>
+<tr>
+<th>概念</th>
+<th>解释</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>WAM (World Action Model)</td>
+<td>基于预训练视频扩散 backbone，联合预测视频和动作的机器人基础模型</td>
+</tr>
+<tr>
+<td>VLA (Vision-Language-Action)</td>
+<td>从 VLM 初始化、直接预测动作的传统机器人模型</td>
+</tr>
+<tr>
+<td>Flow Matching</td>
+<td>DreamZero 使用的生成建模目标，预测从噪声分布到数据分布的速度场</td>
+</tr>
+<tr>
+<td>IDM (Inverse Dynamics Model)</td>
+<td>从预测的视觉未来中提取可执行动作的隐式模型</td>
+</tr>
+<tr>
+<td>DiT (Diffusion Transformer)</td>
+<td>DreamZero 的 backbone 架构，基于 Transformer 的扩散模型</td>
+</tr>
+<tr>
+<td>KV Cache</td>
+<td>自回归推理时缓存 Key-Value 注意力张量的技术，加速推理</td>
+</tr>
+<tr>
+<td>CFG (Classifier-Free Guidance)</td>
+<td>通过结合条件和无条件预测来增强生成质量的技术</td>
+</tr>
+<tr>
+<td>DreamZero-Flash</td>
+<td>解耦视频和动作噪声调度以支持少步/单步去噪的模型级优化</td>
+</tr>
+<tr>
+<td>Chunk-wise Generation</td>
+<td>每次自回归生成固定数量 latent 帧（K=2）和对应动作</td>
+</tr>
+<tr>
+<td>Teacher Forcing</td>
+<td>训练时基于干净前序 chunk 条件化当前 noisy chunk 的策略</td>
+</tr>
+<tr>
+<td>Savitzky-Golay Filter</td>
+<td>用于平滑生成动作 chunk 中高频噪声的数字滤波器</td>
+</tr>
+<tr>
+<td>NVFP4 (E2M1)</td>
+<td>NVIDIA Blackwell 架构的 4-bit 浮点量化格式</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="_8">八、讨论与未来方向</h2>
+<ul>
+<li><strong>WAM 缩放定律</strong>：类似 LLM 的缩放定律，WAM 在模型规模、数据规模、计算量之间的关系尚需探索，预计 VAM 的动作缩放曲线将比 VLA 更陡峭。</li>
+<li><strong>大规模人类视频数据</strong>：当前实验仅使用 12 分钟室内人类数据。大规模第一人称人类视频（如 Ego4D、EgoDex、Action100M）可能带来更强的下游迁移。</li>
+<li><strong>长程推理</strong>：需要 System 2 规划器或大幅扩展视觉上下文窗口来实现鲁棒的长程执行。</li>
+<li><strong>WAM 时代的具身设计</strong>：更高自由度需要更多 play data，但更像人的具身可能从互联网人类视频中受益更多——人形机器人可能因数据优势而胜出。</li>
+</ul>
+  </div>
+</main>
+
+
+<script>
+(function() {
+  const sidebar = document.getElementById('sidebar');
+  const links = sidebar.querySelectorAll('a');
+  const headings = document.querySelectorAll('h1[id], h2[id], h3[id], h4[id]');
+  if (headings.length === 0) return;
+
+  const linkMap = new Map();
+  links.forEach(function(a) {
+    const href = a.getAttribute('href');
+    if (href && href.startsWith('#')) linkMap.set(href.slice(1), a);
+  });
+
+  function onScroll() {
+    let currentId = null;
+    const scrollTop = window.scrollY + 80;
+    headings.forEach(function(h) { if (h.offsetTop <= scrollTop) currentId = h.id; });
+    links.forEach(function(a) { a.classList.remove('active'); });
+    if (currentId && linkMap.has(currentId)) {
+      const el = linkMap.get(currentId);
+      el.classList.add('active');
+      const sr = sidebar.getBoundingClientRect();
+      const er = el.getBoundingClientRect();
+      if (er.bottom > sr.bottom || er.top < sr.top) {
+        el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+    }
+  }
+
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+})();
+</script>
+
+</body>
+</html>
