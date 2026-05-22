@@ -186,9 +186,21 @@ def format_stats_html(stats):
     return '<div class="article-stats">' + ' · '.join(parts) + '</div>\n'
 
 
-def format_stats_comment(stats):
+def extract_metadata_comments(text):
+    """Extract site metadata comments (arxiv, venue, tags) from markdown."""
+    metadata = []
+    for line in text.split('\n'):
+        stripped = line.strip()
+        if stripped.startswith('<!--') and any(k in stripped for k in ('arxiv', 'venue', 'tags')):
+            metadata.append(stripped)
+    return metadata
+
+
+def format_stats_comment(stats, metadata_comments=None):
     """HTML comments consumed by generate_index.sh."""
     lines = []
+    if metadata_comments:
+        lines.extend(metadata_comments)
     if stats['zh'] > 0 or stats['en'] > 0:
         lines.append(f'<!-- words-zh: {stats["zh"]} -->')
         lines.append(f'<!-- words-en: {stats["en"]} -->')
@@ -481,7 +493,16 @@ def convert_file(md_path):
     with open(md_path, 'r', encoding='utf-8') as f:
         text = f.read()
 
-    title = text.split('\n')[0].lstrip('#').strip() if text.startswith('#') else os.path.basename(md_path)
+    # Extract metadata before any processing
+    metadata_comments = extract_metadata_comments(text)
+
+    # Find first # heading for title (skip HTML comments)
+    title = os.path.basename(md_path)
+    for line in text.split('\n'):
+        s = line.strip()
+        if s.startswith('# ') and not s.startswith('## '):
+            title = s.lstrip('#').strip()
+            break
 
     text = fix_nested_list_indent(text)
     text = fix_list_blank_lines(text)
@@ -494,7 +515,7 @@ def convert_file(md_path):
     # Compute stats and inject into body
     stats = compute_stats(body)
     stats_html = format_stats_html(stats)
-    stats_comment = format_stats_comment(stats)
+    stats_comment = format_stats_comment(stats, metadata_comments)
     body = insert_stats_into_body(body, stats_html)
 
     # Inject heading IDs

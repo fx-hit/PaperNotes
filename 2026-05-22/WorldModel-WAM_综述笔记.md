@@ -1,3 +1,7 @@
+<!-- arxiv: -->
+<!-- venue: PaperNotes 综述 2026 -->
+<!-- tags: WAM, 世界模型, 机器人, 视频生成, 泛化 -->
+
 # World Models and World Action Models: A Survey Note
 
 > **笔记信息**
