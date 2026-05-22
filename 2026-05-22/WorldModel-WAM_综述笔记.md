@@ -106,6 +106,10 @@ Joint WAM 把未来视频 token 和动作 token 放进同一个 diffusion / flow
 
 *图3：HarmoWAM 的动机图把 WAM 内部的一个关键 trade-off 可视化了：Imagine-then-Execute 在 Transit 阶段泛化很强，能在 OOD 背景、位置和对象变化下接近目标；Joint Modeling 在 Interaction 阶段更准，目标附近的抓取、插入、堆叠更稳定。图右侧表格按 ID / OOD Background / OOD Position / OOD Objects 分解 Transit 和 Interaction 成功次数，因此它不是简单比较平均成功率，而是在回答“失败发生在哪个阶段”。这也是 HarmoWAM 后续采用双专家和门控机制的直接依据。*
 
+![图4：HarmoWAM 用世界模型统一预测型专家、反应式专家和过程自适应门控](assets/worldmodel-wam/harmowam-method.jpg)
+
+*图4：HarmoWAM 的架构图补上了动机实验之后的“怎么融合”。世界模型同时输出显式未来视频和隐式时空 latent；Predictive Expert 利用世界模型潜特征做精细动作预测，更适合 Interaction；Reactive Expert 利用预测帧和实时视觉做大范围目标接近，更适合 Transit；中间的 Process-Adaptive Gating 根据当前视觉状态在两个专家之间切换。这个图说明 HarmoWAM 不是把两类 WAM 简单平均，而是把“泛化移动”和“精细交互”拆成两个控制专家，再用阶段判断决定何时相信哪一路。*
+
 优势是动作精度更高。动作不是后处理出来的，而是在联合 latent 空间里与视觉动态共同优化，因此视频状态和控制信号之间的对齐更紧。HarmoWAM 的实验显示，Joint Modeling 在 ID 场景中移动和交互都很强；当人为把机器人放到目标附近后，它在 OOD Interaction 阶段仍能保持 8 到 10 次成功中的高成功次数，说明“做得准”这件事并没有退化。
 
 缺点是探索空间受训练分布限制。Joint Modeling 容易把训练数据里的空间分布、背景和对象布局内化为动作先验。一旦目标位置或对象外观落到分布外，它可能“走不到”正确交互区域。HarmoWAM 的 Position OOD 案例中，Joint Modeling 的 Transit 失败非常明显，说明联合建模虽然精细，但容易受 SFT 数据覆盖范围约束。
