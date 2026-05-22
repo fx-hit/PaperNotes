@@ -202,7 +202,7 @@ $$R(a_{i,t} \mid s_{i,t}) = \begin{cases} 1, & \text{is\_successful}[\text{traj}
 
 #### 3.1.3 探索增强策略（§3.3）
 
-三类改进共同作用，每类各带来 10-15% 的额外性能提升：
+在 VLA RL 中，探索（exploration）比 LLM RL 更为关键。操控任务天然允许多种有效解决方案，但 VLA 模型由于 SFT 训练轨迹的同质性，容易收敛到狭窄的策略模式，限制 RL 的效率。论文提出三类探索增强改进，共同作用，每类各带来 10-15% 的额外性能提升。
 
 <table><tr>
 <td width="33%"><img src="assets/simplevla-rl/vla_ablation_3_dynamic_sampling.jpg" width="100%"><br><em>(a) Dynamic Sampling</em></td>
@@ -210,13 +210,62 @@ $$R(a_{i,t} \mid s_{i,t}) = \begin{cases} 1, & \text{is\_successful}[\text{traj}
 <td width="33%"><img src="assets/simplevla-rl/vla_ablation_2_temperature_higher.jpg" width="100%"><br><em>(c) Higher Rollout Temperature</em></td>
 </tr></table>
 
-*图3：三种探索增强策略的消融实验结果（均在 LIBERO 基准上评估）。横轴为 RL 训练步数（global steps），纵轴为验证成功率（Success Rate %）。*
+*图3：三种探索增强策略的消融实验结果（均在 LIBERO 基准上评估）。横轴为 RL 训练步数（global steps），纵轴为验证成功率（Success Rate %）。每张子图中红色曲线=启用该增强策略，蓝色曲线=未启用（baseline）。*
 
-**子图 (a) Dynamic Sampling：** 绿色曲线=启用，灰色曲线=禁用。禁用时训练波动剧烈——当整组 8 条轨迹全成功或全失败，GRPO 优势估计 $\hat{A}_i = (R_i - \text{mean})/(\text{std} + \epsilon)$ 中 $\text{std}=0$，所有 $\hat{A}_i=0$，梯度消失。启用后过滤全同组，确保非零方差，成功率稳步收敛至约 98%（vs 95%）。
+---
 
-**子图 (b) Clip Higher：** 蓝色曲线=clip [0.8, 1.28]，橙色曲线=对称 clip [0.8, 1.2]。提高上界（借鉴 DAPO）给予低概率 token 更大的增长空间，同时保留下界 0.8 防止遗忘。训练中后期蓝色线优势明显，最终收敛值更高。
+**子图 (a) Dynamic Sampling（动态采样过滤）**
 
-**子图 (c) Higher Temperature：** 蓝绿色曲线=T=1.6，灰色曲线=T=1.0。更高温度在 rollout 阶段产生更多样化轨迹，为 GRPO 组内对比提供更丰富的好/坏信号。注意评估阶段始终使用 greedy sampling（T=0），确保最终策略的确定性。*
+**要解决的问题：梯度消失**。GRPO 的优势估计完全依赖组内相对比较：
+
+$$\hat{A}_i = \frac{R_i - \text{mean}(\{R_i\}_{i=1}^G)}{\text{std}(\{R_i\}_{i=1}^G)}$$
+
+当同一 prompt 的 $G=8$ 条轨迹全部成功（$R_i$ 全为 1）或全部失败（$R_i$ 全为 0）时，$\text{std}=0$，所有轨迹的优势 $\hat{A}_i = 0$。此时梯度完全消失，这一批数据对策略更新没有任何贡献——相当于白做了 8 条轨迹的采样和推理。在 RL 训练早期，由于策略能力不足，全失败组频繁出现；到了训练后期，随着策略提升，全成功组又频繁出现。无论哪种情况，都导致大量训练步的梯度信号为零，训练极不稳定。
+
+**怎么做**：在每次 rollout 采样后，检查每组的 8 条轨迹 outcome。如果一组全成功或全失败，直接丢弃该组，重新采样，直到收集到足够数量（batch_size）的"混合结果组"——即每组内至少有一条成功和至少有一条失败。形式化约束条件：
+
+$$0 < \left| \{\text{traj}_i \mid \text{is\_successful}[\text{traj}_i]\} \right| < G$$
+
+**代码实现**（`ray_trainer.py:filter()`）：过滤 accuracy 全 0 或全 1 的 group，`acc_mask = (acc_tensor >= lower) & (acc_tensor <= upper)`，只保留混合结果组。
+
+**效果**：图中蓝色曲线（未启用）波动剧烈，训练不稳定，最终收敛至约 95%。红色曲线（启用 Dynamic Sampling）过滤了无梯度信号的无效组，确保每一步更新都有非零优势估计，训练曲线平滑稳定，最终收敛至约 98%。这一方法在 LLM RL 中已被 DAPO、Kimi-K1.5 等工作验证有效，SimpleVLA-RL 将其引入 VLA RL 场景。
+
+---
+
+**子图 (b) Clip Higher（非对称裁剪上界）**
+
+**要解决的问题：低概率 token 的探索受限**。PPO/GRPO 的核心操作是对 importance sampling ratio $r_{i,t}(\theta) = \pi_\theta(a_{i,t}|s_{i,t}) / \pi_{\theta_{\text{old}}}(a_{i,t}|s_{i,t})$ 进行裁剪（clipping），防止单步策略更新过大：
+
+$$\text{clip}(r, 1-\varepsilon, 1+\varepsilon)$$
+
+标准 PPO 使用对称裁剪范围，如 $\varepsilon=0.2$，即裁剪到 $[0.8, 1.2]$。这个对称设计隐含一个假设：**概率增加和概率减少同样危险**。但在 RL 探索阶段，这个假设有问题——如果一个 action token 在当前策略下概率很低（比如 $p=0.01$），但它恰好导向成功轨迹，策略应该大幅提高它的概率。然而，裁剪上界 $1.2$ 意味着 $r$ 最大只能到 $1.2$，即新策略对该 token 的概率最多只能提升到旧策略的 $1.2$ 倍——对低概率 token 来说，这个增长空间太窄了。
+
+**怎么做**：借鉴 DAPO，将裁剪范围改为非对称的 $[1-\varepsilon_{low}, 1+\varepsilon_{high}] = [0.8, 1.28]$。下界保持 $0.8$ 不变（防止遗忘好动作），上界从 $1.2$ 提高到 $1.28$。这意味着新策略可以将低概率 token 的概率提升到旧策略的 $1.28$ 倍，给予探索更大的空间。
+
+**为什么下界不变**：如果下界也提高（比如改成 $0.72$），原本高概率的好动作可能被过快"遗忘"。非对称设计的关键洞察是：**鼓励探索（提高上界）和防止遗忘（保留下界）是不对称的需求**。
+
+**效果**：图中蓝色曲线（对称 clip $[0.8, 1.2]$）和红色曲线（clip higher $[0.8, 1.28]$）在训练早期表现接近，但到中后期（约 2000 steps 后），红色曲线持续高于蓝色曲线，最终收敛值更高。提高上界的收益主要来自训练后期——此时策略已掌握基本能力，需要突破局部最优、发现更优动作模式，clip higher 给了低概率但高回报的动作被"发现"和"强化"的空间。
+
+---
+
+**子图 (c) Higher Rollout Temperature（提高采样温度）**
+
+**要解决的问题：rollout 轨迹多样性不足**。在 rollout 阶段，VLA 模型通过 temperature sampling 生成动作：
+
+$$a_t \sim \text{softmax}(f_\theta(s_t) / T)$$
+
+其中 $f_\theta(s_t)$ 是模型输出的 action token logits，$T$ 是温度参数。温度控制采样分布的"尖锐"程度：
+- $T=1.0$（默认）：采样分布与原始 softmax 一致，概率集中在少数高-likelihood token 上
+- $T>1.0$：分布被"拉平"，高概率和低概率 token 之间的差距缩小，低概率 token 被采到的机会增加
+- $T \to 0$：趋向 argmax（确定性），只有最高概率的 token 被选中
+
+当 $T=1.0$ 时，模型倾向于反复采样出相似的轨迹——因为每步都选择概率最高的那几个 action token。这导致 GRPO 的 8 条组内轨迹之间差异很小，好/坏对比信号弱，策略难以通过相对比较获得有意义的梯度。
+
+**怎么做**：将 rollout 阶段的采样温度从 $T=1.0$ 提高到 $T=1.6$。更高的温度让每步的动作采样更"随机"，8 条轨迹之间的行为差异更大——有的可能碰巧探索到成功路径，有的则因偏离而失败，为 GRPO 提供更丰富的正/负对比信号。
+
+**重要区分**：温度只在 rollout（训练采样）阶段提高。评估阶段始终使用 greedy sampling（$T \to 0$，等价于 argmax），确保最终策略的确定性和可复现性。这是 RL 中标准的"训练时探索，评估时利用"范式。
+
+**效果**：图中蓝色曲线（$T=1.0$）和红色曲线（$T=1.6$）的差距贯穿整个训练过程。更高温度带来的轨迹多样性从训练初期就开始发挥作用——模型在更宽的动作空间中探索，更早接触到多样化的成功/失败模式，梯度信号更丰富，收敛速度更快且最终成功率更高。这一策略在多项 LLM RL 工作（Polaris、ACE-Reason、Liao et al. 2025）中已被验证有效，SimpleVLA-RL 证实其在 VLA 场景下同样关键。*
 
 #### 3.1.4 训练目标（§3.4）
 
@@ -320,7 +369,7 @@ $$\mathcal{J}(\theta) = \mathbb{E}_{s_0 \sim \mathcal{D}, \{a_t\}_{i=1}^G \sim \
 </tr>
 </table>
 
-*图4：LIBERO 三个维度（Goal、Object、Spatial）的泛化分析（3×3 网格，9 个 held-out unseen tasks）。横轴为 seen tasks 训练成功率（训练进度 0%→100%），纵轴为对应 unseen task 的成功率变化。蓝色线=RL 训练，橙色线=SFT 训练。所有实验以 1-trajectory SFT 初始化的 OpenVLA-OFT 为起点。*
+*图4：LIBERO 三个维度（Goal、Object、Spatial）的泛化分析（3×3 网格，9 个 held-out unseen tasks）。横轴为 seen tasks 训练成功率（训练进度 0%→100%），纵轴为对应 unseen task 的成功率变化。红色曲线=RL 训练，蓝色曲线=SFT 训练。所有实验以 1-trajectory SFT 初始化的 OpenVLA-OFT 为起点。*
 
 **第一行 — LIBERO-Goal Unseen（跨任务泛化，Task 2/6/9）：** 最具挑战性的泛化场景——不同 goal 任务涉及截然不同的物体和操控策略，任务间可迁移知识最少。
 - **Task 2**：SFT 从约 25% 立即跌至 0%，RL 从约 25% 升至约 38%（+13%）。
