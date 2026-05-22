@@ -1,3 +1,7 @@
+<!-- arxiv: 2605.06247 -->
+<!-- venue: NeurIPS 2026（投稿中） -->
+<!-- tags: WAM, VLA, 机器人, 知识蒸馏 -->
+
 # CKT-WAM: Parameter-Efficient Context Knowledge Transfer Between World Action Models
 
 > **论文信息**
@@ -189,7 +193,7 @@ CKT-WAM 取得 **86.1% 总成功率**，全面超越所有对比方法：
 
 ### 4.4 中间层选择消融
 
-![图2：不同教师中间层 $\ell^*$ 的延迟-成功率 trade-off](assets/ckt-wam/latency_success.jpg)
+![图2：不同教师中间层 ℓ* 的延迟-成功率 trade-off](assets/ckt-wam/latency_success.jpg)
 
 *图2：中间层 $\ell^*$ 的消融。左 y 轴为 LIBERO-Plus 零样本成功率（蓝色曲线），右 y 轴为每个 action chunk 的推理延迟（红色曲线），单位秒。x 轴为从 0 到 40 层的 $\ell^*$。*
 

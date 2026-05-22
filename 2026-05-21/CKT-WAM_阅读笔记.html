@@ -142,9 +142,9 @@
   ul, ol { padding-left: 1.5em; margin-bottom: 1em; }
   li { margin-bottom: 0.3em; }
   hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
-  img { max-width: 100%; height: auto; border-radius: 6px; margin: 0.5em 0; }
-  p:has(img) { text-align: center; }
-  p:has(img) + p { text-align: center; font-size: 0.9em; color: var(--text-secondary); }
+  img { max-width: 100%; height: auto; border-radius: 6px; margin: 0; }
+  p:has(img) { text-align: center; margin-top: 0.6em; margin-bottom: 0; }
+  p:has(img) + p { text-align: center; font-size: 0.9em; color: var(--text-secondary); margin-top: 0.15em; margin-bottom: 0.6em; }
   .mermaid { text-align: center; margin: 1.5em 0; background: #fafbfc; border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
   .article-stats {
     font-size: 0.85rem; color: var(--text-secondary);
@@ -251,6 +251,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <main class="main-wrapper">
   <div class="content-inner" id="main-content">
+<!-- arxiv: 2605.06247 -->
+<!-- venue: NeurIPS 2026（投稿中） -->
+<!-- tags: WAM, VLA, 机器人, 知识蒸馏 -->
+
 <h1 id="ckt-wam-parameter-efficient-context-knowledge-transfer-between-world-action-models">CKT-WAM: Parameter-Efficient Context Knowledge Transfer Between World Action Models</h1>
 <div class="article-stats">3,782 字 · English 445 词 · 约 13 分钟阅读</div>
 
@@ -634,7 +638,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <li><strong>移除辅助损失</strong>影响最小（84.1%，-2.0），说明其主要作用是正则化路由稳定性，主体收益来自双分支联合使用</li>
 </ul>
 <h3 id="44">4.4 中间层选择消融</h3>
-<p><img alt="图2：不同教师中间层 <span class="math inline">$\ell^*$</span> 的延迟-成功率 trade-off" src="assets/ckt-wam/latency_success.jpg" /></p>
+<p><img alt="图2：不同教师中间层 ℓ* 的延迟-成功率 trade-off" src="assets/ckt-wam/latency_success.jpg" /></p>
 <p><em>图2：中间层 <span class="math inline">$\ell^*$</span> 的消融。左 y 轴为 LIBERO-Plus 零样本成功率（蓝色曲线），右 y 轴为每个 action chunk 的推理延迟（红色曲线），单位秒。x 轴为从 0 到 40 层的 <span class="math inline">$\ell^*$</span>。</em></p>
 <p><strong>子图解读：</strong></p>
 <ul>
