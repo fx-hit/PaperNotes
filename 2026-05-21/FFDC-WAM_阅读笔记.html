@@ -244,7 +244,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <blockquote>
 <p>核心挑战不是选择一个"更好的 chunk size"，而是判断 <strong>WAM 的想象何时仍可被信任</strong>。</p>
 </blockquote>
-<p><img alt="图1：FFDC 方法总览" src="assets/ffdc-wam/Fig1v2.jpg" /></p>
+<p><img alt="图1：FFDC 方法总览" src="assets/ffdc-wam/Fig1v2-cropped.jpg" /></p>
 <p><em>图1：FFDC 实现 WAM 的"自适应信任"。该图从三个层面展示了本方法的核心思路。</em></p>
 <p><strong>子图 (a) 自适应验证机制：</strong> 展示 FFDC-WAM 的完整工作流。WAM 接收当前观测和语言指令，每次推理输出三样东西——未来的视觉动态预测（predicted visual dynamics）、动作序列（action chunk）以及语义 tokens。FFDC verifier 在物理执行过程中持续比对"想象"与"现实"：当 WAM 预测的视觉未来与实际观测、计划动作、指令保持因果一致时，允许机器人继续执行（Continue）；一旦检测到不一致，立即触发重新规划（Replan）。这一设计将 WAM 从"预测完就盲执行"转变为"带着未来预期去执行"。</p>
 <p><strong>子图 (b) 固定 vs 自适应执行对比：</strong> 对比了两种执行策略的差异。Fixed-size 方法在可预测阶段仍频繁推理（效率低），在困难阶段却盲目执行不可靠动作（成功率低）。FFDC 则在一致性高的绿色阶段执行长序列（省推理），在出现偏差的红色阶段立即重规划（保成功率），实现了两种需求的自动平衡。</p>
@@ -260,7 +260,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </ul>
 <p>这样一来，有效 chunk size 不再是手动设定的超参数，而是<strong>未来—现实一致性自然涌现的结果</strong>：一致性高时执行长（省推理），不一致时执行短（保安全）。</p>
 <h3 id="22-ffdcfuture-forward-dynamics-causal-attention">2.2 FFDC：Future Forward Dynamics Causal Attention</h3>
-<p><img alt="图2：FFDC-WAM 架构" src="assets/ffdc-wam/Fig2v2.jpg" /></p>
+<p><img alt="图2：FFDC-WAM 架构" src="assets/ffdc-wam/Fig2v2-cropped.jpg" /></p>
 <p><em>图2：FFDC-WAM 系统架构。(a) 展示 WAM 推理与 FFDC verifier 的协作关系；(b) 展示 FFDC 的 structured causal attention 机制。</em></p>
 <p><strong>子图 (a) 系统总览：</strong> WAM 每次推理输出三类信息——预测的未来动作序列（Action Tokens）、对应的视频 tokens（Video Tokens）、以及理解专家（Understanding Expert）从语言指令中提取的语义 tokens。这些 token 序列被缓存在 KV cache 中（白色块）。FFDC verifier 是一个轻量级 Transformer，在每个 check step <span class="math inline">$t$</span> 接收当前真实观测 <span class="math inline">$O_t$</span>（蓝色块），与缓存的预测 tokens 进行结构化交叉注意力，输出一个执行置信度分数 <span class="math inline">$e_t \in [0,1]$</span>。绿色分数表示可继续执行，红色分数表示需要重规划。</p>
 <p><strong>子图 (b) 结构化因果注意力细节：</strong> 展示了 FFDC 的核心——未来前向动力学因果注意力（Future Forward Dynamics Causal Attention）。输入序列由 6 部分组成：语言语义 tokens <span class="math inline">$L$</span>（黄色）、WAM 预测的历史视觉 tokens <span class="math inline">$\hat{O}_{t_p}$</span>（灰色）、当前真实观测 <span class="math inline">$O_t$</span>（深灰）、WAM 预测的未来视觉 tokens <span class="math inline">$\hat{O}_{t_f}$</span>（紫色）、未来动作 tokens <span class="math inline">$\hat{A}_t$</span>（蓝色）、以及可学习的 [CLS] token（绿色）。注意力通过一个布尔可见性矩阵 <span class="math inline">$M$</span> 进行约束，强制未来视觉 token 只能注意到时间上对齐的动作 token 和更早的未来视觉 token。这种因果结构防止了信息泄漏，同时保证 verifier 能够评估"未来动作是否与预测的未来视觉一致、而预测的未来是否与实际观测兼容"这一关键问题。</p>
@@ -491,12 +491,12 @@ document.addEventListener('DOMContentLoaded', function() {
 </table>
 <p><strong>移除预测视觉 tokens 导致最大性能下降</strong>（76.4%→71.6%），说明 WAM 的"想象"是判断 rollout 可信度最重要的信号。移除真实观测也导致明显下降（76.4%→72.4%），验证了"想象与现实的对比"这一核心设计。移除动作输入和语言指令也产生一致但相对较小的下降。</p>
 <h3 id="44">4.4 定性可视化</h3>
-<p><img alt="图3：执行行为定性对比" src="assets/ffdc-wam/Fig3v3.jpg" /></p>
+<p><img alt="图3：执行行为定性对比" src="assets/ffdc-wam/Fig3v3-cropped.jpg" /></p>
 <p><em>图3：两种任务上的 FFDC-WAM vs Base-Motus 执行行为对比。绿色标识表示 FFDC 高置信度，允许继续执行；红色标识表示低置信度，触发重规划。</em></p>
 <p><strong>子图 (a) 简单任务（move can pot）：</strong> Base-Motus 由于固定短 chunk（16 步），需要 3 次 WAM 推理（C1→C2→C3）才完成任务。FFDC-WAM 在整个执行过程中置信度始终很高（绿色分数），仅需 1 次推理就完成了全部动作（C1 覆盖了整个任务）。这直接展示了自适应长执行在可预测阶段的计算节省效果。</p>
 <p><strong>子图 (b) 困难任务（hanging mug）：</strong> 这是一个需要精确对准挂钩的精细操作。Base-Motus 需要 7 次 WAM 推理（C1 到 C7）才成功。FFDC-WAM 展现出智能的自适应行为：在运输阶段（从抓取杯子到接近挂钩），置信度高，执行了长 chunk；进入精度关键的最终悬挂阶段时，置信度下降（红色分数），立即切换到高频重规划模式。如果不用 FFDC，直接开环执行与 C1 同样长度的 chunk，则误差累积最终导致失败（底部帧显示）。这说明 FFDC 实现了"在需要精确反馈的地方自动切换为谨慎模式"。</p>
 <hr />
-<p><img alt="图4：真实世界定性示例" src="assets/ffdc-wam/Fig4v1.jpg" /></p>
+<p><img alt="图4：真实世界定性示例" src="assets/ffdc-wam/Fig4v1-cropped.jpg" /></p>
 <p><em>图4：真实世界中的定性示例，展示 FFDC 如何检测执行偏差并触发重规划。</em></p>
 <p><strong>香蕉抓取任务（上一行）：</strong> LC-16（固定短 chunk）在抓取香蕉的过程中持续开环执行，中间帧显示手指位置偏离目标后没有进行修正，最终失败。FFDC-WAM（下一行）展现出交替的执行与重规划行为——当真实场景与预测 rollout 出现偏差时，FFDC 检测到不一致并触发重新推理，机器人修正动作后最终成功抓取。</p>
 <p><strong>胡萝卜抓取任务（下一组）：</strong> 同样的模式——LC-16 在接近胡萝卜的过程中继续执行偏离的动作导致失败，而 FFDC-WAM 通过在线验证检测到执行漂移（drift），自动触发 replanning 后的修正动作，成功完成了抓取。两个任务共同验证了 FFDC 在真实世界感知噪声和接触不确定性下的鲁棒性增益。</p>
