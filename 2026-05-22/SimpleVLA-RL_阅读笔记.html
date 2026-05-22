@@ -7,9 +7,9 @@
 <!-- arxiv: 2509.09674 -->
 <!-- venue: ICLR 2026 -->
 <!-- tags: 机器人, VLA, 强化学习, 策略学习 -->
-<!-- words-zh: 4941 -->
-<!-- words-en: 919 -->
-<!-- reading-time: 19 -->
+<!-- words-zh: 6040 -->
+<!-- words-en: 1093 -->
+<!-- reading-time: 23 -->
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
@@ -184,103 +184,113 @@ document.addEventListener('DOMContentLoaded', function() {
 </li>
 <li class="toc-h2"><a href="#_1">一、核心问题</a>
 </li>
-<li class="toc-h2"><a href="#_2">二、核心思路 / 方法</a>
+<li class="toc-h2"><a href="#llm-rl-vla-rl">二、预备知识：LLM RL 与 VLA RL 的形式化对比</a>
 <ul>
 </li>
-<li class="toc-h3"><a href="#21-llm-rl-vs-vla-rl">2.1 LLM RL vs VLA RL 的关键差异</a>
+<li class="toc-h3"><a href="#21-llm-rl">2.1 LLM 的 RL 形式化</a>
 </li>
-<li class="toc-h3"><a href="#22-simplevla-rl">2.2 SimpleVLA-RL 框架总览</a>
+<li class="toc-h3"><a href="#22-vla-rl">2.2 VLA 的 RL 形式化</a>
+</li>
+<li class="toc-h3"><a href="#23-llm-rl-vs-vla-rl">2.3 LLM RL vs VLA RL：核心差异总结</a>
+</li>
+<li class="toc-h3"><a href="#24-group-relative-policy-optimizationgrpo">2.4 Group Relative Policy Optimization（GRPO）</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_2">三、核心思路 / 方法</a>
 <ul>
 </li>
-<li class="toc-h4"><a href="#221-vla-rollout31">2.2.1 交互式 VLA Rollout（§3.1）</a>
+<li class="toc-h3"><a href="#31-simplevla-rl">3.1 SimpleVLA-RL 框架总览</a>
+<ul>
 </li>
-<li class="toc-h4"><a href="#222-outcome-reward32">2.2.2 Outcome Reward（§3.2）</a>
+<li class="toc-h4"><a href="#311-vla-rollout31">3.1.1 交互式 VLA Rollout（§3.1）</a>
 </li>
-<li class="toc-h4"><a href="#223-33">2.2.3 探索增强策略（§3.3）</a>
+<li class="toc-h4"><a href="#312-outcome-reward32">3.1.2 Outcome Reward（§3.2）</a>
 </li>
-<li class="toc-h4"><a href="#224-34">2.2.4 训练目标（§3.4）</a>
+<li class="toc-h4"><a href="#313-33">3.1.3 探索增强策略（§3.3）</a>
+</li>
+<li class="toc-h4"><a href="#314-34">3.1.4 训练目标（§3.4）</a>
 </ul></li>
 </ul></li>
 </li>
-<li class="toc-h2"><a href="#_3">三、实验与结果</a>
+<li class="toc-h2"><a href="#_3">四、实验与结果</a>
 <ul>
 </li>
-<li class="toc-h3"><a href="#31">3.1 实验设置</a>
+<li class="toc-h3"><a href="#41">4.1 实验设置</a>
 </li>
-<li class="toc-h3"><a href="#32-libero">3.2 LIBERO 结果</a>
+<li class="toc-h3"><a href="#42-libero">4.2 LIBERO 结果</a>
 </li>
-<li class="toc-h3"><a href="#33-robotwin">3.3 RoboTwin 结果</a>
+<li class="toc-h3"><a href="#43-robotwin">4.3 RoboTwin 结果</a>
 </li>
-<li class="toc-h3"><a href="#34">3.4 数据效率实验</a>
+<li class="toc-h3"><a href="#44">4.4 数据效率实验</a>
 </li>
-<li class="toc-h3"><a href="#35">3.5 泛化分析</a>
+<li class="toc-h3"><a href="#45">4.5 泛化分析</a>
 </li>
-<li class="toc-h3"><a href="#36-sim-to-real">3.6 真实世界实验（Sim-to-Real）</a>
+<li class="toc-h3"><a href="#46-sim-to-real">4.6 真实世界实验（Sim-to-Real）</a>
 </ul></li>
 </li>
-<li class="toc-h2"><a href="#_4">四、关键洞察与技术亮点</a>
+<li class="toc-h2"><a href="#_4">五、关键洞察与技术亮点</a>
 <ul>
 </li>
-<li class="toc-h3"><a href="#41-pushcutrl">4.1 "Pushcut"：RL 驱动的新动作模式涌现</a>
+<li class="toc-h3"><a href="#51-pushcutrl">5.1 "Pushcut"：RL 驱动的新动作模式涌现</a>
 </li>
-<li class="toc-h3"><a href="#42-kl">4.2 移除 KL 正则化</a>
+<li class="toc-h3"><a href="#52-kl">5.2 移除 KL 正则化</a>
 </li>
-<li class="toc-h3"><a href="#43">4.3 工程优化要点</a>
+<li class="toc-h3"><a href="#53">5.3 工程优化要点</a>
 </ul></li>
 </li>
-<li class="toc-h2"><a href="#_5">五、代码实现深度解读</a>
+<li class="toc-h2"><a href="#_5">六、代码实现深度解读</a>
 <ul>
 </li>
-<li class="toc-h3"><a href="#51">5.1 整体架构</a>
+<li class="toc-h3"><a href="#61">6.1 整体架构</a>
 </li>
-<li class="toc-h3"><a href="#52-main_ppopy">5.2 模块一：main_ppo.py — 入口 + 奖励管理</a>
+<li class="toc-h3"><a href="#62-main_ppopy">6.2 模块一：main_ppo.py — 入口 + 奖励管理</a>
 </li>
-<li class="toc-h3"><a href="#53-ray_trainerpy">5.3 模块二：ray_trainer.py — 主训练循环</a>
+<li class="toc-h3"><a href="#63-ray_trainerpy">6.3 模块二：ray_trainer.py — 主训练循环</a>
 </li>
-<li class="toc-h3"><a href="#54-fsdp_workerspy">5.4 模块三：fsdp_workers.py — 模型加载与分布式管理</a>
+<li class="toc-h3"><a href="#64-fsdp_workerspy">6.4 模块三：fsdp_workers.py — 模型加载与分布式管理</a>
 </li>
-<li class="toc-h3"><a href="#55-dp_robpy">5.5 模块四：dp_rob.py — 策略更新引擎</a>
+<li class="toc-h3"><a href="#65-dp_robpy">6.5 模块四：dp_rob.py — 策略更新引擎</a>
 </li>
-<li class="toc-h3"><a href="#56-rob_rolloutpy">5.6 模块五：rob_rollout.py — 环境交互引擎</a>
+<li class="toc-h3"><a href="#66-rob_rolloutpy">6.6 模块五：rob_rollout.py — 环境交互引擎</a>
 </li>
-<li class="toc-h3"><a href="#57-core_algospy-grpo">5.7 模块六：core_algos.py — GRPO 损失 + 优势计算</a>
+<li class="toc-h3"><a href="#67-core_algospy-grpo">6.7 模块六：core_algos.py — GRPO 损失 + 优势计算</a>
 </li>
-<li class="toc-h3"><a href="#58-modeling_prismaticpy-vla">5.8 模块七：modeling_prismatic.py — VLA 模型实现</a>
+<li class="toc-h3"><a href="#68-modeling_prismaticpy-vla">6.8 模块七：modeling_prismatic.py — VLA 模型实现</a>
 </li>
-<li class="toc-h3"><a href="#59">5.9 公式 → 代码映射</a>
+<li class="toc-h3"><a href="#69">6.9 公式 → 代码映射</a>
 </ul></li>
 </li>
-<li class="toc-h2"><a href="#_6">六、局限性</a>
+<li class="toc-h2"><a href="#_6">七、局限性</a>
 <ul>
 </li>
-<li class="toc-h3"><a href="#61-rl">6.1 RL 需要初始能力门槛</a>
+<li class="toc-h3"><a href="#71-rl">7.1 RL 需要初始能力门槛</a>
 </li>
-<li class="toc-h3"><a href="#62-token-based-action-vla">6.2 仅支持 token-based action VLA</a>
+<li class="toc-h3"><a href="#72-token-based-action-vla">7.2 仅支持 token-based action VLA</a>
 </li>
-<li class="toc-h3"><a href="#63">6.3 未探索方向</a>
+<li class="toc-h3"><a href="#73">7.3 未探索方向</a>
 </ul></li>
 </li>
-<li class="toc-h2"><a href="#vla">七、新 VLA 模型适配指南</a>
+<li class="toc-h2"><a href="#vla">八、新 VLA 模型适配指南</a>
 <ul>
 </li>
-<li class="toc-h3"><a href="#71">7.1 适配层次总览</a>
+<li class="toc-h3"><a href="#81">8.1 适配层次总览</a>
 </li>
-<li class="toc-h3"><a href="#72-level-1-vla">7.2 Level 1：注册 VLA 模型</a>
+<li class="toc-h3"><a href="#82-level-1-vla">8.2 Level 1：注册 VLA 模型</a>
 </li>
-<li class="toc-h3"><a href="#73-level-2-rollout">7.3 Level 2：添加 Rollout 推理路径</a>
+<li class="toc-h3"><a href="#83-level-2-rollout">8.3 Level 2：添加 Rollout 推理路径</a>
 </li>
-<li class="toc-h3"><a href="#74-level-3">7.4 Level 3：添加训练前向/反传路径</a>
+<li class="toc-h3"><a href="#84-level-3">8.4 Level 3：添加训练前向/反传路径</a>
 </li>
-<li class="toc-h3"><a href="#75-level-4">7.5 Level 4：注册新仿真环境</a>
+<li class="toc-h3"><a href="#85-level-4">8.5 Level 4：注册新仿真环境</a>
 </li>
-<li class="toc-h3"><a href="#76-level-5">7.6 Level 5：数据管道</a>
+<li class="toc-h3"><a href="#86-level-5">8.6 Level 5：数据管道</a>
 </li>
-<li class="toc-h3"><a href="#77-level-6">7.7 Level 6：训练脚本</a>
+<li class="toc-h3"><a href="#87-level-6">8.7 Level 6：训练脚本</a>
 </li>
-<li class="toc-h3"><a href="#78">7.8 适配清单</a>
+<li class="toc-h3"><a href="#88">8.8 适配清单</a>
 </ul></li>
 </li>
-<li class="toc-h2"><a href="#_7">八、关键概念速查</a>
+<li class="toc-h2"><a href="#_7">九、关键概念速查</a>
 </ul></li>
 </li></ul>
 </nav>
@@ -288,7 +298,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <main class="main-wrapper">
   <div class="content-inner" id="main-content">
 <h1 id="simplevla-rl-scaling-vla-training-via-reinforcement-learning">SimpleVLA-RL: Scaling VLA Training via Reinforcement Learning</h1>
-<div class="article-stats">4,941 字 · English 919 词 · 约 19 分钟阅读</div>
+<div class="article-stats">6,040 字 · English 1,093 词 · 约 23 分钟阅读</div>
 
 <blockquote>
 <p><strong>论文信息</strong>
@@ -312,49 +322,142 @@ document.addEventListener('DOMContentLoaded', function() {
 <p><img alt="图1：SimpleVLA-RL 总览" src="assets/simplevla-rl/teaser_v2.jpg" /></p>
 <p><em>图1：SimpleVLA-RL 框架总览。该图以四栏布局展示了 SimpleVLA-RL 的核心贡献：(1) </em><em>RL 训练流程</em><em>——从 SFT 初始化的 VLA 模型出发，通过 GRPO 在线 RL 持续改进策略，利用二元 outcome reward（成功=1，失败=0）驱动学习；(2) </em><em>性能对比</em><em>——在 LIBERO 和 RoboTwin 基准上大幅超越 SFT 基线；(3) </em><em>"pushcut" 现象</em><em>——RL 训练中自主涌现出演示数据中不存在的新动作策略（推挤而非抓取）；(4) </em><em>泛化能力</em><em>——在空间配置、物体类型、任务目标三个维度上均优于 SFT。该图直观展示了从"模仿学习"到"强化学习"的范式转变带来的多方面收益。</em></p>
 <hr />
-<h2 id="_2">二、核心思路 / 方法</h2>
-<h3 id="21-llm-rl-vs-vla-rl">2.1 LLM RL vs VLA RL 的关键差异</h3>
+<h2 id="llm-rl-vla-rl">二、预备知识：LLM RL 与 VLA RL 的形式化对比</h2>
+<p>论文第 2 节提供了一个非常清晰的 LLM RL 和 VLA RL 形式化对比。这一节是理解整篇工作的关键基础——因为将 RL 从 LLM 迁移到 VLA 绝非简单的"换个模型"，两者在状态空间、动作空间、环境反馈和采样方式上存在根本性差异。以下逐一定义并对比。</p>
+<h3 id="21-llm-rl">2.1 LLM 的 RL 形式化</h3>
+<p><strong>状态（State）<span class="math inline">$s_t$</span></strong>：在时刻 <span class="math inline">$t$</span>，状态由输入 prompt 和已生成的 token 序列组成：</p>
+<p><div class="math display">$$s_t = (x_{\text{prompt}}, y_1, y_2, \ldots, y_{t-1})$$</div></p>
+<p>其中 <span class="math inline">$x_{\text{prompt}}$</span> 是初始 prompt，<span class="math inline">$y_t$</span> 是第 <span class="math inline">$t$</span> 个生成的 token。<strong>关键特点</strong>：状态只包含文本信息，且完全由模型自身输出驱动增长——不需要外部环境的干预。</p>
+<p><strong>动作（Action）<span class="math inline">$a_t$</span></strong>：动作是从词表 <span class="math inline">$\mathcal{V}$</span> 中选择下一个 token：</p>
+<p><div class="math display">$$a_t = y_t \in \mathcal{V}, \quad y_t \sim \pi_\theta(\cdot|s_t) = \mathrm{softmax}\left(f_\theta(s_t) / T\right)$$</div></p>
+<p>其中 <span class="math inline">$f_\theta(s_t) \in \mathbb{R}^{|\mathcal{V}|}$</span> 是 LLM 输出的 logits，<span class="math inline">$T$</span> 是温度参数（控制采样随机性）。<strong>关键特点</strong>：动作空间是离散的（词表大小通常 32k-128k），且动作的选择通过 softmax + temperature sampling 完成。</p>
+<p><strong>环境（Environment）</strong>：LLM 的环境不参与中间步骤——它在<strong>整个序列生成完成后</strong>才给出奖励信号。在 rule-based RL（如 DeepSeek-R1）中，奖励通常是基于正确性的二元判断：</p>
+<p><div class="math display">$$r(\tau) = \begin{cases} 1, & \text{如果 } \tau \text{ 满足正确性标准} \\ 0, & \text{否则} \end{cases}, \quad \text{或} \quad r(\tau) = R_\phi(\tau) \in [0, 1]$$</div></p>
+<p>其中 <span class="math inline">$R_\phi$</span> 是学习到的奖励模型（如用于 RLHF 的 preference model），<span class="math inline">$\tau = (x_{\text{prompt}}, y_1, \ldots, y_{T_{\text{seq}}})$</span> 是完整的生成序列。<strong>关键特点</strong>：奖励是 trajectory-level 的——只在序列结束后给出，中间步骤没有信号。这天然适合 rule-based RL（如 GRPO），因为它只关心最终结果而非过程。</p>
+<p><strong>Rollout（采样）</strong>：给定 prompt <span class="math inline">$x_{\text{prompt}}$</span>，LLM 自回归地逐 token 采样，直到遇到 EOS token 或达到最大长度。整个过程是<strong>单向的</strong>——模型输出 token，token 追加到状态中，循环往复直到终止。没有任何外部环境反馈介入。非零温度 <span class="math inline">$T$</span> 使策略可产生多样化的 rollouts，探索不同解题路径。</p>
+<p><strong>直觉理解</strong>：LLM RL 就像是"闭卷答题"——你拿到题目（prompt），在脑子里思考并写下答案（自回归生成），最后老师只看答案对不对（outcome reward），不关心中间草稿写了什么。</p>
+<hr />
+<h3 id="22-vla-rl">2.2 VLA 的 RL 形式化</h3>
+<p><strong>状态（State）<span class="math inline">$s_t$</span></strong>：状态由三类多模态信息组成：</p>
+<p><div class="math display">$$s_t = (o_t^{\text{vis}}, o_t^{\text{prop}}, l_{\text{task}})$$</div></p>
+<ul>
+<li><span class="math inline">$o_t^{\text{vis}}$</span>：多模态视觉观测（RGB 图像、深度图或点云）</li>
+<li><span class="math inline">$o_t^{\text{prop}}$</span>：本体感知信息（关节角度、末端执行器位姿）</li>
+<li><span class="math inline">$l_{\text{task}}$</span>：任务语言指令</li>
+</ul>
+<p><strong>关键特点</strong>：与 LLM 不同，VLA 的状态包含来自物理世界的实时感知数据。视觉观测每到新时刻都会变化（因为机械臂移动了、物体位置改变了），本体感知信息反映机器人自身的物理状态。这意味着<strong>状态不是模型自己能决定的</strong>——它由环境反馈决定。</p>
+<p><strong>动作（Action）<span class="math inline">$a_t$</span></strong>：动作是机器人操作空间中的连续控制指令，通常是末端执行器增量或关节角度目标：</p>
+<p><div class="math display">$$a_t = \text{Decoder}(h_\theta(s_t)), \quad \text{Decoder} \in \{\text{Diffusion Expert}, \text{Action Tokenizer}\}, \quad a_t \in \mathbb{R}^d$$</div></p>
+<p>其中 <span class="math inline">$h_\theta(s_t)$</span> 是 VLA 模型对状态 <span class="math inline">$s_t$</span> 的隐藏表示，Decoder 是动作解码器。<span class="math inline">$d=7$</span> 表示典型的 6-DoF 位姿 + 夹爪位置。</p>
+<p>Decoder 的两类实现：</p>
+<ul>
+<li><strong>Diffusion Expert</strong>（如 RDT-1B、π₀）：在 latent space 上迭代去噪生成连续动作。表达能力强，但与 PPO 类 RL 算法兼容性差——无法直接计算 action 的对数概率。</li>
+<li><strong>Action Tokenizer</strong>（如 OpenVLA、OpenVLA-OFT）：将连续动作空间离散化为有限个 bin，通过 LLM output head 输出 action token 的离散分布。<strong>这是 SimpleVLA-RL 选择的方式</strong>，因为它天然提供 action distribution，支持 PPO/GRPO 所需的 random sampling 和 log-probability 计算。</li>
+</ul>
+<p><strong>关键特点</strong>：动作空间是<strong>连续的</strong>但被<strong>离散化</strong>处理。这让 VLA 可以借用 LLM 的输出范式（softmax over tokens），同时输出的是物理世界中可执行的连续控制指令。</p>
+<p><strong>环境（Environment）</strong>：环境是机器人操作的物理世界或仿真器。它提供<strong>状态转移</strong> <span class="math inline">$s_{t+1} = \text{Env}(s_t, a_t)$</span> 和<strong>奖励信号</strong>：</p>
+<p><div class="math display">$$r_t = \alpha \cdot \mathbb{I}_{\text{success}} + (1-\alpha) \cdot \sum_i w_i \cdot \phi_i(s_t, a_t), \quad \alpha \in [0,1]$$</div></p>
+<p><div class="math display">$$\mathbb{I}_{\text{success}} = \begin{cases} 1, & \text{任务成功} \\ 0, & \text{否则} \end{cases}$$</div></p>
+<p>其中 <span class="math inline">$\phi_i(s_t, a_t)$</span> 是过程奖励（如距离目标的远近），<span class="math inline">$w_i$</span> 是各过程奖励的权重，<span class="math inline">$\alpha$</span> 平衡 outcome 和 process reward 的比重。</p>
+<p><strong>关键特点</strong>：VLA 的环境奖励可以是混合的——既有最终成功与否的二元信号，也有中间步骤的稠密信号（如距离目标的缩短）。传统的机器人 RL 通常精心设计过程奖励 <span class="math inline">$\phi_i$</span>，但这严重限制了可扩展性——<strong>每个任务需要专属的奖励工程</strong>。SimpleVLA-RL 的关键选择是设 <span class="math inline">$\alpha = 1$</span>，即纯 outcome reward，从而避免这一瓶颈。</p>
+<p><strong>Rollout（采样）</strong>：这是 LLM RL 和 VLA RL 最根本的区别。VLA 的 rollout 是<strong>闭环交互采样</strong>：</p>
+<ul>
+<li>每步：策略 <span class="math inline">$\pi_\theta$</span> 接收当前状态 <span class="math inline">$s_t$</span>，输出一个 <strong>action chunk</strong> <span class="math inline">$(a_t, a_{t+1}, \ldots, a_{t+k-1})$</span>（长度为 <span class="math inline">$k$</span>，如 LIBERO 中 <span class="math inline">$k=8$</span>，RoboTwin 中 <span class="math inline">$k=25$</span>）</li>
+<li>机器人顺序执行这 <span class="math inline">$k$</span> 个动作，环境根据物理动力学产生更新状态</li>
+<li>执行完毕后，模型以新状态 <span class="math inline">$s_{t+k}$</span> 为输入，生成下一个 action chunk</li>
+<li>这一过程持续到任务完成或达到最大 episode 长度</li>
+</ul>
+<p>最终产生完整轨迹：<span class="math inline">$\tau = ((s_0, a_0), (s_1, a_1), \ldots, (s_T, a_T))$</span></p>
+<p><strong>直觉理解</strong>：VLA RL 就像是"驾驶考试"——你坐在车里，眼睛看路况（视觉观测），手握方向盘（本体感知），考官在你耳边说"前面路口左转"（语言指令）。你每做一个操作（打方向盘），车的位置就变了（环境状态转移），你需要根据新的路况做出下一个操作。考官只看你最后有没有到达目的地（outcome reward），不管你中途怎么开的。这比 LLM 的"闭卷答题"复杂得多——因为每一步的输入都依赖于之前所有步骤的物理后果。</p>
+<hr />
+<h3 id="23-llm-rl-vs-vla-rl">2.3 LLM RL vs VLA RL：核心差异总结</h3>
 <table>
 <thead>
 <tr>
 <th>维度</th>
 <th>LLM RL</th>
 <th>VLA RL</th>
+<th>VLA 带来的额外挑战</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><strong>State</strong></td>
-<td>prompt + 已生成 token</td>
-<td>多模态观测（RGB 图像 + proprioception + language）</td>
+<td>纯文本，自包含</td>
+<td>多模态，依赖环境</td>
+<td>需要实时视觉编码，每步都变</td>
 </tr>
 <tr>
 <td><strong>Action</strong></td>
-<td>从词表采样离散 token</td>
-<td>连续控制指令 <span class="math inline">$\mathbb{R}^d$</span>，通过 action tokenizer 离散化</td>
+<td>离散 token（~128k）</td>
+<td>连续→离散化（256 bins）</td>
+<td>离散化引入精度损失</td>
 </tr>
 <tr>
 <td><strong>Environment</strong></td>
-<td>无中间反馈，序列完成时给奖励</td>
-<td>每步物理交互，环境状态实时更新</td>
-</tr>
-<tr>
-<td><strong>Rollout</strong></td>
-<td>自回归生成至 EOS/max_length</td>
-<td>闭环交互采样：infer → execute → observe → infer → ...</td>
+<td>只在结束时给反馈</td>
+<td>每步都有物理交互</td>
+<td>慢且昂贵（仿真步进+渲染）</td>
 </tr>
 <tr>
 <td><strong>Reward</strong></td>
-<td>最终正确性判断（rule-based / RM）</td>
-<td>任务完成与否 + 可选过程奖励（如距离目标距离）</td>
+<td>Rule-based / RM (0/1)</td>
+<td>可混合 outcome + process</td>
+<td>手工过程奖励不可扩展</td>
+</tr>
+<tr>
+<td><strong>Rollout</strong></td>
+<td>一次性自回归生成</td>
+<td>闭环交互采样</td>
+<td>无法并行生成多条轨迹（每步依赖上一步环境状态）</td>
+</tr>
+<tr>
+<td><strong>采样速度</strong></td>
+<td>极快（纯推理）</td>
+<td>慢（推理 + 仿真 + 渲染）</td>
+<td>需要多环境并行</td>
 </tr>
 </tbody>
 </table>
-<p>VLA RL 的核心工程挑战：rollout 需要频繁与环境交互（每步都要 VLA 推理 + 环境 step），且必须支持并行多环境以提高吞吐。</p>
-<h3 id="22-simplevla-rl">2.2 SimpleVLA-RL 框架总览</h3>
+<p>理解这些差异是理解 SimpleVLA-RL 所有设计选择的前提：为什么选 token-based action、为什么用纯 outcome reward、为什么需要多环境并行渲染——这些都在后面的方法部分得到具体回应。</p>
+<hr />
+<h3 id="24-group-relative-policy-optimizationgrpo">2.4 Group Relative Policy Optimization（GRPO）</h3>
+<p>GRPO 是 DeepSeekMath 提出的 RL 方法，也是 SimpleVLA-RL 使用的核心算法。理解它需要先理解它替掉了什么。</p>
+<p><strong>传统 PPO 的问题</strong>：PPO 需要一个独立的 Value Network（Critic）来估计每个状态的价值 <span class="math inline">$V(s)$</span>，用于计算 advantage <span class="math inline">$A_t = R_t - V(s_t)$</span>。这意味着：</p>
+<ul>
+<li>额外训练一个与 Policy 规模相当的神经网络（2× 显存）</li>
+<li>Critic 自身也有估计误差，特别是在长程任务中误差累积严重</li>
+<li>在 VLA 场景中，Critic 需要理解多模态状态——这本身就是一个难题</li>
+</ul>
+<p><strong>GRPO 的核心思想</strong>：<strong>用一个 prompt 的多条采样轨迹之间的相对比较，替代 Value Network 的绝对估计</strong>。</p>
+<p>具体做法：对同一个初始状态 <span class="math inline">$s_0$</span>（即同一个 task prompt），behavior policy <span class="math inline">$\pi_{\theta_{\text{old}}}$</span> 生成 <span class="math inline">$G$</span> 条轨迹 <span class="math inline">$\{\tau_i\}_{i=1}^G$</span>（本文中 <span class="math inline">$G=8$</span>）。GRPO 的目标函数采用 PPO-style clipping，配合 KL 正则化约束策略更新：</p>
+<p><div class="math display">$$J_{\text{GRPO}}(\theta) = \mathbb{E}_{s_0 \sim \mathcal{D}, \{\tau_i\} \sim \pi_{\theta_{\text{old}}}} \Bigg[ \frac{1}{G} \sum_{i=1}^G \frac{1}{|\tau_i|} \sum_{t=1}^{|\tau_i|} \min\left( r_{i,t}(\theta) \hat{A}_i, \text{clip}(r_{i,t}(\theta), 1-\epsilon, 1+\epsilon) \hat{A}_i \right) - \beta D_{\text{KL}}(\pi_\theta || \pi_{\text{ref}}) \Bigg]$$</div></p>
+<p>其中两个关键量：</p>
+<p><strong>Importance Sampling Ratio</strong> <span class="math inline">$r_{i,t}(\theta)$</span>：
+<div class="math display">$$r_{i,t}(\theta) = \frac{\pi_\theta(a_{i,t}|s_{i,t})}{\pi_{\theta_{\text{old}}}(a_{i,t}|s_{i,t})}$$</div></p>
+<p>这是新旧策略在同一状态-动作对上的概率之比。<span class="math inline">$r > 1$</span> 表示新策略比旧策略更偏好该动作，<span class="math inline">$r &lt; 1$</span> 则相反。PPO 的 clipping 将此 ratio 限制在 <span class="math inline">$[1-\epsilon, 1+\epsilon]$</span> 范围内，防止单步更新过大导致训练不稳定。</p>
+<p><strong>Group-Normalized Advantage</strong> <span class="math inline">$\hat{A}_i$</span>：
+<div class="math display">$$\hat{A}_i = \frac{R_i - \text{mean}(\{R_i\}_{i=1}^G)}{\text{std}(\{R_i\}_{i=1}^G)}$$</div></p>
+<p>这是 GRPO 的核心创新。<span class="math inline">$R_i$</span> 是第 <span class="math inline">$i$</span> 条轨迹的总奖励（在 SimpleVLA-RL 中就是 0 或 1）。通过组内 z-score 标准化：</p>
+<ul>
+<li>成功轨迹（<span class="math inline">$R_i=1$</span>）获得正的 advantage：被策略强化</li>
+<li>失败轨迹（<span class="math inline">$R_i=0$</span>）获得负的 advantage：被策略抑制</li>
+<li>如果全组 8 条都成功或都失败，<span class="math inline">$\text{std}=0$</span>，所有 <span class="math inline">$\hat{A}_i = 0$</span>，梯度消失——这解释了为什么需要 Dynamic Sampling</li>
+</ul>
+<p><strong>直觉理解</strong>：GRPO 就像是"小组测评"——同一个任务让你尝试 8 次，不看你做得好不好（没有绝对标准），只看你哪些尝试比组内平均水平更好（相对比较）。比平均好的得到鼓励，比平均差的被抑制。这消除了对"绝对好"的评判标准的需求（即 Value Network），大幅简化了训练架构。</p>
+<p><strong>GRPO 的三层嵌套期望</strong>：</p>
+<ul>
+<li>外层 <span class="math inline">$\mathbb{E}_{s_0 \sim \mathcal{D}}$</span>：遍历训练数据中的所有 task prompt</li>
+<li>中层 <span class="math inline">$\mathbb{E}_{\{\tau_i\} \sim \pi_{\theta_{\text{old}}}}$</span>：每个 prompt 采样 <span class="math inline">$G$</span> 条轨迹</li>
+<li>内层 <span class="math inline">$\frac{1}{|\tau_i|} \sum_{t=1}^{|\tau_i|}$</span>：每条轨迹的所有 action token 取平均</li>
+</ul>
+<p>SimpleVLA-RL 对标准 GRPO 做了两处修改（详见下文 §3.1.3 和 §3.1.4）：(1) 使用非对称 clip <span class="math inline">$[1-\varepsilon_{low}, 1+\varepsilon_{high}]$</span> 替代对称 clip；(2) 移除 KL 正则化项（设 <span class="math inline">$\beta=0$</span>）。</p>
+<hr />
+<h2 id="_2">三、核心思路 / 方法</h2>
+<h3 id="31-simplevla-rl">3.1 SimpleVLA-RL 框架总览</h3>
 <p><img alt="图2：SimpleVLA-RL 方法概览" src="assets/simplevla-rl/overview_v4.jpg" /></p>
 <p><em>图2：SimpleVLA-RL 训练流程架构图。该图展示了从输入到策略更新的完整数据流。顶部是 VLA Policy Model（基于 OpenVLA-OFT，LLaMA2-7B backbone + SigLIP/DINOv2 vision encoder），接收任务指令和多视角图像作为输入。中部展示了核心 RL 循环的三个阶段：(1) </em><em>Rollout 阶段</em><em>——对同一 task prompt 采样 8 条轨迹（temperature=1.6），每条轨迹通过多步闭环交互完成，输出 action chunks；(2) </em><em>Reward 分配</em><em>——根据仿真环境返回的任务完成信号，给整个轨迹分配 0/1 二元奖励；(3) </em><em>GRPO 优化</em><em>——在 8 条轨迹间进行组内标准化计算优势函数，结合 PPO-style clipping 和动态采样过滤，更新策略参数。底部显示多环境并行渲染和交互的管理架构。</em></p>
-<h4 id="221-vla-rollout31">2.2.1 交互式 VLA Rollout（§3.1）</h4>
+<h4 id="311-vla-rollout31">3.1.1 交互式 VLA Rollout（§3.1）</h4>
 <p>当前 VLA 模型有三种 action decoding 方式：</p>
 <ol>
 <li><strong>Token-based</strong>（如 OpenVLA、π₀）：输出 action token 的概率分布，与 PPO 类 RL 算法最兼容——天然提供 action distribution 用于随机采样和策略梯度计算。</li>
@@ -370,7 +473,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <span class="w">                  </span><span class="k">if</span><span class="w"> </span><span class="nv">all</span><span class="ss">(</span><span class="nv">dones</span><span class="ss">)</span>:<span class="w"> </span><span class="k">break</span>
 </code></pre></div>
 
-<h4 id="222-outcome-reward32">2.2.2 Outcome Reward（§3.2）</h4>
+<h4 id="312-outcome-reward32">3.1.2 Outcome Reward（§3.2）</h4>
 <p>采用极简二元奖励：轨迹成功 → 全体 token reward = 1，失败 → 全体 token reward = 0。</p>
 <p><div class="math display">$$R(a_{i,t} \mid s_{i,t}) = \begin{cases} 1, & \text{is\_successful}[\text{traj}_i(a_i,s_i)] \\ 0, & \text{otherwise} \end{cases}$$</div></p>
 <p>轨迹级奖励均匀传播到每个 action token。这种设计的关键优势：</p>
@@ -379,31 +482,33 @@ document.addEventListener('DOMContentLoaded', function() {
 <li><strong>鼓励创新</strong>：不约束中间步骤，给策略最大的探索自由度——任何能达成目标的行为都获得等值奖励</li>
 <li><strong>避免 reward hacking</strong>：二元信号比连续过程奖励更难被利用</li>
 </ul>
-<h4 id="223-33">2.2.3 探索增强策略（§3.3）</h4>
+<h4 id="313-33">3.1.3 探索增强策略（§3.3）</h4>
 <p>三类改进共同作用，每类各带来 10-15% 的额外性能提升：</p>
-<p><img alt="图3：三种探索增强的消融实验" src="assets/simplevla-rl/vla_ablation_3_dynamic_sampling.jpg" /></p>
-<p><em>图3：三种探索增强策略的消融实验结果（均在 LIBERO 基准上评估）。该图是一个三子图并排的组合图（a/b/c），每个子图对比启用和禁用对应策略时的训练曲线。横轴为 RL 训练步数（global steps），纵轴为该步数对应的验证成功率（Success Rate %）。蓝色/绿色曲线代表启用策略的结果，橙色/灰色曲线代表禁用策略的对照结果。</em></p>
-<p><strong>子图 (a) Dynamic Sampling 效果：</strong>
-对比启用（绿线）和禁用（灰线）动态采样的训练曲线。动态采样过滤掉所有 8 条轨迹全成功或全失败的 group，只保留至少有一条成功和至少有一条失败的混合 group 用于训练。灰线（禁用）波动剧烈，训练极不稳定——当整组全部成功或全部失败时，GRPO 的优势估计变为零，梯度消失，导致模型在无信号的状态下随机漂移。绿线（启用）波动显著减小，成功率稳步上升并收敛到更高值（约 98% vs 95%）。这个改进的理论意义是：GRPO 通过组内标准化计算优势 <span class="math inline">$\hat{A}_i = (R_i - \text{mean})/(\text{std} + \epsilon)$</span>，当所有 <span class="math inline">$R_i$</span> 相等时，<span class="math inline">$\text{std}=0$</span>，所有 <span class="math inline">$\hat{A}_i=0$</span>，loss 梯度为零——动态采样确保每组都有非零方差。</p>
-<p><strong>子图 (b) Clip Higher 效果：</strong>
-对比 clip 范围 [0.8, 1.2]（橙线）vs [0.8, 1.28]（蓝线）。提高 clip 上界后，蓝线的最终成功率更高且收敛更快。PPO 的 clipping 机制 <span class="math inline">$\text{clip}(r, 1-\epsilon_{low}, 1+\epsilon_{high})$</span> 限制了 importance sampling ratio 的变动范围——传统的对称 clip [0.8, 1.2] 对概率增大和概率减小施加同等约束。但在 exploration 阶段，低概率但可能有价值的 action token 需要更大的增长空间才能被策略采纳。将上界从 1.2 放宽到 1.28（DAPO 提出的 Clip-Higher）给予低概率 token 更大的上升空间，同时保留下界 0.8 防止高概率 token 被过快遗忘。曲线显示在训练中后期（40-60 步后），clip higher 的优势更加明显。</p>
-<p><strong>子图 (c) Higher Temperature 效果：</strong>
-对比 rollout temperature=1.0（灰色）vs temperature=1.6（蓝绿色）。提高温度后，训练初期的成功率攀升更快，最终收敛值也更高。Temperature 控制 action token 采样的随机程度：<span class="math inline">$T=1.0$</span> 时模型基本遵循其训练分布，<span class="math inline">$T=1.6$</span> 时采样的探索性显著增强。更高的温度产生更多样化的轨迹，为 GRPO 的组内比较提供了更丰富的好/坏对比信号。注意温度只在 rollout 阶段调高（鼓励探索），评估阶段始终使用 greedy sampling（temperature=0），确保最终策略的确定性。</p>
-<h4 id="224-34">2.2.4 训练目标（§3.4）</h4>
+<table><tr>
+<td width="33%"><img src="assets/simplevla-rl/vla_ablation_3_dynamic_sampling.jpg" width="100%"><br><em>(a) Dynamic Sampling</em></td>
+<td width="33%"><img src="assets/simplevla-rl/vla_ablation_1_clip_higher.jpg" width="100%"><br><em>(b) Clip Higher</em></td>
+<td width="33%"><img src="assets/simplevla-rl/vla_ablation_2_temperature_higher.jpg" width="100%"><br><em>(c) Higher Rollout Temperature</em></td>
+</tr></table>
+
+<p><em>图3：三种探索增强策略的消融实验结果（均在 LIBERO 基准上评估）。横轴为 RL 训练步数（global steps），纵轴为验证成功率（Success Rate %）。</em></p>
+<p><strong>子图 (a) Dynamic Sampling：</strong> 绿色曲线=启用，灰色曲线=禁用。禁用时训练波动剧烈——当整组 8 条轨迹全成功或全失败，GRPO 优势估计 <span class="math inline">$\hat{A}_i = (R_i - \text{mean})/(\text{std} + \epsilon)$</span> 中 <span class="math inline">$\text{std}=0$</span>，所有 <span class="math inline">$\hat{A}_i=0$</span>，梯度消失。启用后过滤全同组，确保非零方差，成功率稳步收敛至约 98%（vs 95%）。</p>
+<p><strong>子图 (b) Clip Higher：</strong> 蓝色曲线=clip [0.8, 1.28]，橙色曲线=对称 clip [0.8, 1.2]。提高上界（借鉴 DAPO）给予低概率 token 更大的增长空间，同时保留下界 0.8 防止遗忘。训练中后期蓝色线优势明显，最终收敛值更高。</p>
+<p><strong>子图 (c) Higher Temperature：</strong> 蓝绿色曲线=T=1.6，灰色曲线=T=1.0。更高温度在 rollout 阶段产生更多样化轨迹，为 GRPO 组内对比提供更丰富的好/坏信号。注意评估阶段始终使用 greedy sampling（T=0），确保最终策略的确定性。*</p>
+<h4 id="314-34">3.1.4 训练目标（§3.4）</h4>
 <p>采用改进的 GRPO，移除 KL 散度正则化项（借鉴 DAPO），最终目标：</p>
 <p><div class="math display">$$\mathcal{J}(\theta) = \mathbb{E}_{s_0 \sim \mathcal{D}, \{a_t\}_{i=1}^G \sim \pi_{\theta_\text{old}}} \left[ \frac{1}{G} \sum_{i=1}^G \frac{1}{|a_i|} \sum_{t=1}^{|a_i|} \min \left( r_{i,t}(\theta) \hat{A}_{i}, \, \text{clip} \left( r_{i,t}(\theta), 1 - \varepsilon_{low}, 1 + \varepsilon_{high} \right) \hat{A}_{i} \right) \right]$$</div></p>
 <p>约束条件：<span class="math inline">$0 &lt; |\{\text{traj}_i \mid \text{is\_successful}[\text{traj}_i]\}| &lt; G$</span>（动态采样过滤）</p>
 <p>移除 KL 正则化有两个动机：（1）省去 reference model 的 GPU 显存和推理开销；（2）KL 约束限制策略偏离 reference 的程度，移除后策略可以获得更大的探索自由度，有利于发现新行为（如 pushcut 现象）。</p>
 <hr />
-<h2 id="_3">三、实验与结果</h2>
-<h3 id="31">3.1 实验设置</h3>
+<h2 id="_3">四、实验与结果</h2>
+<h3 id="41">4.1 实验设置</h3>
 <ul>
 <li><strong>Backbone</strong>：OpenVLA-OFT（LLaMA2-7B + SigLIP/DINOv2 fused vision encoder + action chunking + parallel decoding），256 个 action token，vocab_size=32000</li>
 <li><strong>硬件</strong>：8× NVIDIA A800 80GB（单节点）或 2×8 节点，全参数 FSDP 训练</li>
 <li><strong>超参</strong>：lr=5e-6，batch_size=64，n_samples=8（每 prompt 采样 8 条轨迹），mini_batch=128，ε_low=0.2，ε_high=0.28，T=1.6，action_chunks: LIBERO=8 / RoboTwin=25，max_steps: LIBERO=512 / RoboTwin=200-800</li>
 <li><strong>训练方式</strong>：两阶段——SFT 初始化 + RL 训练。评估用 greedy sampling，每 benchmark 测 3 次取平均</li>
 </ul>
-<h3 id="32-libero">3.2 LIBERO 结果</h3>
+<h3 id="42-libero">4.2 LIBERO 结果</h3>
 <table>
 <thead>
 <tr>
@@ -496,9 +601,9 @@ document.addEventListener('DOMContentLoaded', function() {
 <li>所有四个 suite 均达到 99% 左右，逼近性能上界</li>
 <li>超越 π₀（94.2%）和 UniVLA（95.2%）等当前 SOTA VLA 模型</li>
 </ul>
-<h3 id="33-robotwin">3.3 RoboTwin 结果</h3>
+<h3 id="43-robotwin">4.3 RoboTwin 结果</h3>
 <p><img alt="图-SimpleVLA-RL 主结果" src="assets/simplevla-rl/main.jpg" /></p>
-<p><em>图-SimpleVLA-RL 主结果海报图。该图综合展示了 LIBERO Long 和 RoboTwin 2.0 的主要结果，以柱状图和雷达图对比 OpenVLA-OFT 在 SFT-only 和 +SimpleVLA-RL 两种设置下的成功率。左侧 LIBERO-Long 柱状图：SFT-only（灰色）约 86.5%，+RL（蓝色）约 98.5%，提升 12 个百分点。右侧 RoboTwin 2.0 雷达图：六个维度的 SR 从 SFT-only 的约 38% 全面提升至 +RL 的约 69%。该图突显了 SimpleVLA-RL 在不同难度和类型的操作任务上的普适有效性。</em></p>
+<p><em>图-SimpleVLA-RL 主结果总览。该图以表格形式对比展示了 LIBERO-Long（10 个长程任务）和 RoboTwin 2.0（12 个任务，按 Short/Medium/Long/Extra-Long 四个难度级别分组）的完整结果。每个任务列出 OpenVLA-OFT SFT-only 和 +SimpleVLA-RL 的成功率对比，清晰展示了 RL 在全部任务上的一致性提升。LIBERO-Long：SFT-only 86.5% → +RL 98.5%（+12.0 百分点）。RoboTwin 2.0 Overall：SFT-only 38.3% → +RL 68.8%（相对提升 80%），同时标注了 π₀（49.2%）和 RDT（33.3%）作为参考线。该图的核心信息是 SimpleVLA-RL 在所有难度级别的任务上均实现了正的收益，无一对任务退化。</em></p>
 <p><strong>RoboTwin 1.0（4 个双臂任务）</strong>：</p>
 <table>
 <thead>
@@ -600,7 +705,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <li>即使在 637-step 的 Extra-Long 任务（Put Bottles Dustbin）上也有 +18.7%——验证了 outcome-level reward 即使不分解为中间步骤，也能有效指导长程策略学习</li>
 <li>超越 π₀（diffusion-based，49.2%）和 RDT（33.3%）</li>
 </ul>
-<h3 id="34">3.4 数据效率实验</h3>
+<h3 id="44">4.4 数据效率实验</h3>
 <table>
 <thead>
 <tr>
@@ -648,32 +753,46 @@ document.addEventListener('DOMContentLoaded', function() {
 </tbody>
 </table>
 <p><strong>核心发现</strong>：仅用 1 条演示轨迹 per task 做 SFT 初始化，然后通过 RL 训练，性能从 17.3% 飙升至 91.7%（+74.4 百分点，提升 430%），一举超越 Full SFT（500 trajectories）的 86.5%。而 1-trajectory + RL（96.9% avg）与 Full SFT + RL（99.1% avg）的差距仅 2.2%。这说明：<strong>RL 可以大幅降低对大规模演示数据的依赖，数据稀缺不应再被视为 VLA 扩展的根本瓶颈。</strong></p>
-<h3 id="35">3.5 泛化分析</h3>
-<p><img alt="图4：泛化分析 - LIBERO Goal Unseen（Task 2/6/9）" src="assets/simplevla-rl/libero_goal_unseen_2_new.jpg" /></p>
-<p><em>图4：LIBERO 三个维度（Goal、Object、Spatial）的泛化分析（共 9 子图，3 行×3 列）。每行对应一个泛化维度，三列分别展示该维度下 3 个 held-out unseen tasks 的泛化曲线。横轴为训练过程中 seen tasks（9 个）的成功率（代表训练进度），范围 0%–100%。纵轴为对应 unseen task 的成功率变化。蓝色线代表 RL 训练下的 unseen task 表现，橙色线代表 SFT 训练下的 unseen task 表现。所有实验均以 1-trajectory SFT 初始化的 OpenVLA-OFT 为起点。</em></p>
-<p><strong>第一行 — LIBERO-Goal Unseen（跨任务泛化，Task 2/6/9）：</strong>
-三个子图展示了最具挑战性的泛化场景——不同 goal 任务涉及截然不同的物体和操控策略，任务间可迁移的知识最少。</p>
+<h3 id="45">4.5 泛化分析</h3>
+<table>
+<tr>
+<td width="33%"><img src="assets/simplevla-rl/libero_goal_unseen_2_new.jpg" width="100%"><br><em>Goal Unseen Task 2</em></td>
+<td width="33%"><img src="assets/simplevla-rl/libero_goal_unseen_6_new.jpg" width="100%"><br><em>Goal Unseen Task 6</em></td>
+<td width="33%"><img src="assets/simplevla-rl/libero_goal_unseen_9_new.jpg" width="100%"><br><em>Goal Unseen Task 9</em></td>
+</tr>
+<tr>
+<td width="33%"><img src="assets/simplevla-rl/libero_object_unseen_1_new.jpg" width="100%"><br><em>Object Unseen Task 1</em></td>
+<td width="33%"><img src="assets/simplevla-rl/libero_object_unseen_2_new.jpg" width="100%"><br><em>Object Unseen Task 2</em></td>
+<td width="33%"><img src="assets/simplevla-rl/libero_object_unseen_7_new.jpg" width="100%"><br><em>Object Unseen Task 7</em></td>
+</tr>
+<tr>
+<td width="33%"><img src="assets/simplevla-rl/libero_spatial_unseen_0_new.jpg" width="100%"><br><em>Spatial Unseen Task 0</em></td>
+<td width="33%"><img src="assets/simplevla-rl/libero_spatial_unseen_1_new.jpg" width="100%"><br><em>Spatial Unseen Task 1</em></td>
+<td width="33%"><img src="assets/simplevla-rl/libero_spatial_unseen_5_new.jpg" width="100%"><br><em>Spatial Unseen Task 5</em></td>
+</tr>
+</table>
+
+<p><em>图4：LIBERO 三个维度（Goal、Object、Spatial）的泛化分析（3×3 网格，9 个 held-out unseen tasks）。横轴为 seen tasks 训练成功率（训练进度 0%→100%），纵轴为对应 unseen task 的成功率变化。蓝色线=RL 训练，橙色线=SFT 训练。所有实验以 1-trajectory SFT 初始化的 OpenVLA-OFT 为起点。</em></p>
+<p><strong>第一行 — LIBERO-Goal Unseen（跨任务泛化，Task 2/6/9）：</strong> 最具挑战性的泛化场景——不同 goal 任务涉及截然不同的物体和操控策略，任务间可迁移知识最少。</p>
 <ul>
-<li><strong>Task 2（左）</strong>：SFT 橙色线在训练开始后几乎立即从约 25% 跌至 0%，且始终保持 0%。RL 蓝色线从约 25% 稳步上升至约 38%（+13%）。SFT 的灾难性遗忘在此体现得淋漓尽致——在 9 个 seen goal tasks 上学习的过程中，模型完全丢失了在第 2 个 unseen task 上的能力。RL 通过学习通用的操控模式而非记忆特定轨迹避免了这一问题。</li>
-<li><strong>Task 6（中）</strong>：SFT 橙色线同样迅速归零。RL 蓝色线从约 12% 持续提升至约 27%（+15%），且未见衰减。</li>
-<li><strong>Task 9（右）</strong>：SFT 立即归零。RL 蓝色线从约 20% 稳步升至约 25%（+5%）。虽然提升幅度小于前两个任务，但关键是<strong>没有退化</strong>——这在任何 SFT 模型中都无法实现。</li>
+<li><strong>Task 2</strong>：SFT 从约 25% 立即跌至 0%，RL 从约 25% 升至约 38%（+13%）。</li>
+<li><strong>Task 6</strong>：SFT 同样迅速归零，RL 从约 12% 升至约 27%（+15%）。</li>
+<li><strong>Task 9</strong>：SFT 立即归零，RL 从约 20% 升至约 25%（+5%）。关键是<strong>没有退化</strong>。</li>
 </ul>
-<p><strong>第二行 — LIBERO-Object Unseen（跨物体泛化，Task 1/2/7）：</strong>
-三个子图展示了不同物体类型下的泛化表现。物体泛化相对 goal 泛化更容易，因为操控不同物体时底层动作原语（grasp/move/place）仍然相似。</p>
+<p><strong>第二行 — LIBERO-Object Unseen（跨物体泛化，Task 1/2/7）：</strong> 物体泛化相对容易，底层动作原语可跨物体迁移。</p>
 <ul>
-<li><strong>Task 1（左）</strong>：SFT 橙色线从约 50% 开始，但随训练进行逐渐下降至约 30%。RL 蓝色线从约 50% 稳步升至约 70%（+20%）。</li>
-<li><strong>Task 2（中）</strong>：SFT 橙色线从约 30% 降至约 15%。RL 蓝色线从约 30% 飙升至约 67%（+37%），是所有 9 个 unseen task 中提升幅度最大的。这说明利用 RL 在 seen objects 上学到的操控模式可以很好地迁移到视觉外观不同但物理交互相似的物体上。</li>
-<li><strong>Task 7（右）</strong>：SFT 橙色线维持在约 40-60% 范围内波动，最终约 74%。RL 蓝色线从约 60% 升至约 90%（+30%）。</li>
+<li><strong>Task 1</strong>：SFT 从约 50% 降至约 30%，RL 升至约 70%（+20%）。</li>
+<li><strong>Task 2</strong>：SFT 从约 30% 降至约 15%，RL 飙升至约 67%（+37%），所有 9 个任务中提升最大。</li>
+<li><strong>Task 7</strong>：SFT 维持 40-60%，RL 从约 60% 升至约 90%（+30%）。</li>
 </ul>
-<p><strong>第三行 — LIBERO-Spatial Unseen（跨空间泛化，Task 0/1/5）：</strong>
-三个子图展示了空间配置变化下的泛化。空间泛化对 VLA 来说极为困难——物体位置的微小变化就可能导致 SFT 策略完全失败。</p>
+<p><strong>第三行 — LIBERO-Spatial Unseen（跨空间泛化，Task 0/1/5）：</strong> 空间泛化极为困难——物体位置微小变化可致 SFT 策略完全失效。</p>
 <ul>
-<li><strong>Task 0（左）</strong>：SFT 橙色线从约 70% 开始，训练后迅速跌至约 10%（-60%）。RL 蓝色线从约 70% 升至约 84%（+14%）。</li>
-<li><strong>Task 1（中）</strong>：SFT 橙色线从约 43% 降至约 33%（-10%）。RL 蓝色线从约 43% 升至约 72%（+29%）。这是空间泛化维度中提升最大的 unseen task。</li>
-<li><strong>Task 5（右）</strong>：SFT 橙色线从约 47% 降至 0%（彻底遗忘）。RL 蓝色线从约 47% 升至约 60%（+13%）。</li>
+<li><strong>Task 0</strong>：SFT 从约 70% 迅速跌至约 10%（-60%），RL 升至约 84%（+14%）。</li>
+<li><strong>Task 1</strong>：SFT 从约 43% 降至约 33%（-10%），RL 升至约 72%（+29%）。</li>
+<li><strong>Task 5</strong>：SFT 从约 47% 降至 0%（彻底遗忘），RL 升至约 60%（+13%）。</li>
 </ul>
-<p><strong>关键结论</strong>：RL 训练在 9 个 unseen tasks 上全部实现正向泛化增长（+5% ~ +37%），而 SFT 在 6/9 个任务上出现退化或遗忘。这揭示了 RL vs SFT 的根本差异：SFT 通过最小化训练数据的负对数似然来拟合特定轨迹分布，导致过拟合；RL 通过奖励驱动的试错探索来学习通用成功条件，自然获得更好的泛化性。</p>
-<h3 id="36-sim-to-real">3.6 真实世界实验（Sim-to-Real）</h3>
+<p><strong>关键结论</strong>：RL 训练在 9 个 unseen tasks 上全部实现正向泛化增长（+5% ~ +37%），而 SFT 在 6/9 个任务上出现退化或遗忘。SFT 通过拟合特定轨迹分布导致过拟合；RL 通过奖励驱动的试错探索学到通用成功条件，自然获得更好的泛化性。</p>
+<h3 id="46-sim-to-real">4.6 真实世界实验（Sim-to-Real）</h3>
 <table>
 <thead>
 <tr>
@@ -728,8 +847,8 @@ document.addEventListener('DOMContentLoaded', function() {
 <li>Click Bell：从 30% 翻倍至 60%，超越 RDT。</li>
 </ul>
 <hr />
-<h2 id="_4">四、关键洞察与技术亮点</h2>
-<h3 id="41-pushcutrl">4.1 "Pushcut"：RL 驱动的新动作模式涌现</h3>
+<h2 id="_4">五、关键洞察与技术亮点</h2>
+<h3 id="51-pushcutrl">5.1 "Pushcut"：RL 驱动的新动作模式涌现</h3>
 <p><img alt="图5：Pushcut 现象 — move can pot 任务" src="assets/simplevla-rl/unseen2_cropped.jpg" /></p>
 <p><em>图5：Pushcut 现象——move can pot 任务中的新行为涌现。上排（演示数据）展示标准操作序列（从左到右）：机械臂移动到罐子上方→抓取罐子→移动到锅旁边→释放罐子。这是人类演示的标准"grasp-move-place"范式和唯一被 SFT 训练数据包含的行为模式。下排（RL 训练后）展示涌现的新策略（从左到右）：机械臂靠近罐子侧面→直接推动罐子沿桌面滑行→罐子滑行至锅旁边的目标位置→任务完成。整个过程中机械臂从未抓取罐子。关键观察：这种推挤策略比抓取-搬运更高效（步骤更少、轨迹更短），但完全不在演示数据中——它是 RL 的 outcome-level reward 驱动的自主发现，因为"推挤成功"和"抓取成功"获得相同的 +1 奖励。</em></p>
 <p><img alt="图6：Pushcut 现象 — place a2b right 任务" src="assets/simplevla-rl/unseen1_cropped.jpg" /></p>
@@ -740,13 +859,13 @@ document.addEventListener('DOMContentLoaded', function() {
 <li>类似于 DeepSeek-R1 的"Aha Moment"，体现了 RL 超越模仿学习范式的独特优势</li>
 <li>这种涌现现象也暗示：在复杂操控任务中，人类演示的策略未必是最优的——RL 可能发现人类未曾考虑的更高效方案</li>
 </ul>
-<h3 id="42-kl">4.2 移除 KL 正则化</h3>
+<h3 id="52-kl">5.2 移除 KL 正则化</h3>
 <p>省略 KL 散度损失带来两个收益：</p>
 <ol>
 <li><strong>显存节省</strong>：无需维护 reference model（在混合引擎中共享同一组 GPU），训练吞吐提升</li>
 <li><strong>探索自由</strong>：KL 惩罚约束策略不得偏离 reference 太远；移除后策略在 reward 引导下可以自由探索新行为空间</li>
 </ol>
-<h3 id="43">4.3 工程优化要点</h3>
+<h3 id="53">5.3 工程优化要点</h3>
 <ul>
 <li>基于字节跳动 veRL 框架，利用 FSDP 全分片数据并行 + 混合通信模式</li>
 <li>Libero 环境：multiprocessing 多进程管理（每个 env 独立进程，通过 Queue 通信）</li>
@@ -754,9 +873,9 @@ document.addEventListener('DOMContentLoaded', function() {
 <li>训练-推理-渲染一体化，FSDP 参数在 actor 和 rollout 间动态 offload/load</li>
 </ul>
 <hr />
-<h2 id="_5">五、代码实现深度解读</h2>
+<h2 id="_5">六、代码实现深度解读</h2>
 <p>SimpleVLA-RL 是 veRL（字节跳动 LLM RL 框架）的 VLA 扩展。核心代码改动集中在 7 个模块，各模块的职责与论文方法的对应关系如下。</p>
-<h3 id="51">5.1 整体架构</h3>
+<h3 id="61">6.1 整体架构</h3>
 <div class="codehilite"><pre><span></span><code>main_ppo.py (入口)
 │
 ├── RobRewardManager         ← 奖励管理：verify() + __call__()
@@ -781,7 +900,7 @@ document.addEventListener('DOMContentLoaded', function() {
     └─[6] _validate()           定期评估
 </code></pre></div>
 
-<h3 id="52-main_ppopy">5.2 模块一：main_ppo.py — 入口 + 奖励管理</h3>
+<h3 id="62-main_ppopy">6.2 模块一：main_ppo.py — 入口 + 奖励管理</h3>
 <p><strong>文件</strong>：<code>verl/trainer/main_ppo.py</code></p>
 <p>这是训练的主入口，使用 Hydra 配置管理 + Ray 分布式框架。</p>
 <p><strong>RobRewardManager 类</strong>（line 30-99）是奖励分配的核心：</p>
@@ -798,7 +917,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </code></pre></div>
 
 <p><strong>关键设计</strong>：reward 只放在轨迹的最后一个有效 token 位置（<code>finish_step * action_token_len - 1</code>），之前所有位置为 0。这是因为二元 reward 是 trajectory-level 的，在 token-level 计算 advantage 时，GRPO 会通过组内标准化自动将 reward 信号传播到整个轨迹。</p>
-<h3 id="53-ray_trainerpy">5.3 模块二：ray_trainer.py — 主训练循环</h3>
+<h3 id="63-ray_trainerpy">6.3 模块二：ray_trainer.py — 主训练循环</h3>
 <p><strong>文件</strong>：<code>verl/trainer/ppo/ray_trainer.py</code></p>
 <p><code>RayTrainer.fit()</code> 方法（line 469-710）是训练的核心。关键数据流：</p>
 <div class="codehilite"><pre><span></span><code><span class="k">while</span><span class="w"> </span><span class="nv">True</span>:<span class="w">  </span>#<span class="w"> </span><span class="nv">epoch</span><span class="w"> </span><span class="k">loop</span>
@@ -830,7 +949,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </code></pre></div>
 
 <p>每个 prompt 的 8 条轨迹由 <code>uid</code> 标识为一组，在组内做 z-score 标准化。</p>
-<h3 id="54-fsdp_workerspy">5.4 模块三：fsdp_workers.py — 模型加载与分布式管理</h3>
+<h3 id="64-fsdp_workerspy">6.4 模块三：fsdp_workers.py — 模型加载与分布式管理</h3>
 <p><strong>文件</strong>：<code>verl/workers/fsdp_workers.py</code></p>
 <p><code>RobActorRolloutRefWorker</code> 类（line 64-645）管理 VLA 模型的生命周期。</p>
 <p><strong>模型加载</strong>（<code>_build_model_optimizer()</code>，line 111-323）：</p>
@@ -872,7 +991,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <li><code>update_actor()</code>（line 414-449）— 策略梯度更新</li>
 <li><code>compute_entropy()</code>（line 451-481）— 熵监控（动态采样过滤前后）</li>
 </ul>
-<h3 id="55-dp_robpy">5.5 模块四：dp_rob.py — 策略更新引擎</h3>
+<h3 id="65-dp_robpy">6.5 模块四：dp_rob.py — 策略更新引擎</h3>
 <p><strong>文件</strong>：<code>verl/workers/actor/dp_rob.py</code></p>
 <p><code>RobDataParallelPPOActor</code> 类（line 39-607）实现了 VLA 的策略评估和更新。</p>
 <p><strong>核心方法链路</strong>：</p>
@@ -927,7 +1046,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <span class="n">loss</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
 </code></pre></div>
 
-<h3 id="56-rob_rolloutpy">5.6 模块五：rob_rollout.py — 环境交互引擎</h3>
+<h3 id="66-rob_rolloutpy">6.6 模块五：rob_rollout.py — 环境交互引擎</h3>
 <p><strong>文件</strong>：<code>verl/workers/rollout/rob_rollout.py</code></p>
 <p>这是 VLA RL 最核心的工程模块，负责轨迹采样、环境管理、多环境并行。</p>
 <p><strong>Libero 多进程架构</strong>（<code>_generate_minibatch_libero()</code>，line 772-886）：</p>
@@ -972,7 +1091,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </code></pre></div>
 
 <p><code>generate_action_verl()</code> 是 OpenVLA-OFT 模型中为 veRL 定制的推理入口（定义在 modeling_prismatic.py）。</p>
-<h3 id="57-core_algospy-grpo">5.7 模块六：core_algos.py — GRPO 损失 + 优势计算</h3>
+<h3 id="67-core_algospy-grpo">6.7 模块六：core_algos.py — GRPO 损失 + 优势计算</h3>
 <p><strong>文件</strong>：<code>verl/trainer/ppo/core_algos.py</code></p>
 <p><strong>GRPO 优势计算</strong>（<code>compute_grpo_outcome_advantage()</code>，line 173-216）：</p>
 <div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">compute_grpo_outcome_advantage</span><span class="p">(</span><span class="n">token_level_rewards</span><span class="p">,</span> <span class="n">eos_mask</span><span class="p">,</span> <span class="n">index</span><span class="p">,</span> <span class="n">epsilon</span><span class="o">=</span><span class="mf">1e-6</span><span class="p">):</span>
@@ -1001,7 +1120,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <span class="k">return</span> <span class="n">pg_loss</span><span class="p">,</span> <span class="n">pg_clipfrac</span><span class="p">,</span> <span class="n">ppo_kl</span>
 </code></pre></div>
 
-<h3 id="58-modeling_prismaticpy-vla">5.8 模块七：modeling_prismatic.py — VLA 模型实现</h3>
+<h3 id="68-modeling_prismaticpy-vla">6.8 模块七：modeling_prismatic.py — VLA 模型实现</h3>
 <p><strong>文件</strong>：<code>verl/utils/vla_utils/openvla_oft/modeling_prismatic.py</code></p>
 <p><strong>模型架构</strong>（<code>OpenVLAForActionPrediction</code>，line 1355-2040）：</p>
 <div class="codehilite"><pre><span></span><code><span class="s s-Atom">输入</span><span class="o">:</span>
@@ -1047,7 +1166,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <li>Temperature sampling（训练）/ greedy decoding（评估）</li>
 <li>bin_centers 查表 de-tokenize + norm_stats unnormalize → 连续动作</li>
 </ol>
-<h3 id="59">5.9 公式 → 代码映射</h3>
+<h3 id="69">6.9 公式 → 代码映射</h3>
 <table>
 <thead>
 <tr>
@@ -1105,8 +1224,8 @@ document.addEventListener('DOMContentLoaded', function() {
 </tbody>
 </table>
 <hr />
-<h2 id="_6">六、局限性</h2>
-<h3 id="61-rl">6.1 RL 需要初始能力门槛</h3>
+<h2 id="_6">七、局限性</h2>
+<h3 id="71-rl">7.1 RL 需要初始能力门槛</h3>
 <table>
 <thead>
 <tr>
@@ -1138,18 +1257,18 @@ document.addEventListener('DOMContentLoaded', function() {
 </tbody>
 </table>
 <p>当基础模型成功率为 0% 时，RL 完全无效——所有轨迹奖励为 0，无梯度信号。1000-trajectory SFT 的 Δ（+22.2%）也大于 100-trajectory 的 Δ（+18.1%），表明初始能力越强，RL 提升空间越大。</p>
-<h3 id="62-token-based-action-vla">6.2 仅支持 token-based action VLA</h3>
+<h3 id="72-token-based-action-vla">7.2 仅支持 token-based action VLA</h3>
 <p>框架天然兼容输出 action token 分布的 VLA 模型，diffusion-based（π₀、RDT）和 deterministic MLP regression 模型需要额外适配（roadmap 中计划支持）。</p>
-<h3 id="63">6.3 未探索方向</h3>
+<h3 id="73">7.3 未探索方向</h3>
 <ul>
 <li>仅测试 outcome-level binary reward，未与 process reward 对比</li>
 <li>最大模型规模为 7B（LLaMA2），未在更大 backbone 上验证</li>
 <li>真实世界实验仅 4 个任务</li>
 </ul>
 <hr />
-<h2 id="vla">七、新 VLA 模型适配指南</h2>
+<h2 id="vla">八、新 VLA 模型适配指南</h2>
 <p>本节说明如何将一个新的 VLA 模型通过 SimpleVLA-RL 框架适配到指定的仿真环境中进行 RL 训练。适配涉及 6 个层次的改造或扩展。</p>
-<h3 id="71">7.1 适配层次总览</h3>
+<h3 id="81">8.1 适配层次总览</h3>
 <div class="codehilite"><pre><span></span><code>适配一个新 VLA 模型到新仿真环境需要改动 6 个层次：
 
 Level 1: 模型注册         vla_utils/your_model/         ← 注册模型类到 HF AutoModel
@@ -1160,7 +1279,7 @@ Level 5: 数据管道         rob_dataset.py                ← 实现 YourEnv_D
 Level 6: 训练脚本         examples/                     ← 创建 run_yourmodel_rl_yourenv.sh
 </code></pre></div>
 
-<h3 id="72-level-1-vla">7.2 Level 1：注册 VLA 模型</h3>
+<h3 id="82-level-1-vla">8.2 Level 1：注册 VLA 模型</h3>
 <p><strong>目标</strong>：将新 VLA 模型（假设叫 <code>YourVLA</code>）注册到 HuggingFace AutoModel 体系。</p>
 <p><strong>步骤</strong>：</p>
 <ol>
@@ -1240,7 +1359,7 @@ Level 6: 训练脚本         examples/                     ← 创建 run_yourm
     <span class="n">actor_module</span> <span class="o">=</span> <span class="n">AutoModelForVision2Seq</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="n">local_path</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
 </code></pre></div>
 
-<h3 id="73-level-2-rollout">7.3 Level 2：添加 Rollout 推理路径</h3>
+<h3 id="83-level-2-rollout">8.3 Level 2：添加 Rollout 推理路径</h3>
 <p><strong>文件</strong>：<code>verl/workers/rollout/rob_rollout.py</code></p>
 <p>在 <code>_generate_one_step()</code> 方法中添加新 VLA 的分支：</p>
 <div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">_generate_one_step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">prompts</span><span class="p">):</span>
@@ -1284,7 +1403,7 @@ Level 6: 训练脚本         examples/                     ← 创建 run_yourm
     <span class="p">}</span>
 </code></pre></div>
 
-<h3 id="74-level-3">7.4 Level 3：添加训练前向/反传路径</h3>
+<h3 id="84-level-3">8.4 Level 3：添加训练前向/反传路径</h3>
 <p><strong>文件</strong>：<code>verl/workers/actor/dp_rob.py</code></p>
 <p>在 <code>_forward_micro_batch()</code> 和 <code>_forward_micro_batch_update()</code> 中添加新 VLA 的 logits 提取逻辑：</p>
 <div class="codehilite"><pre><span></span><code><span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">vla</span> <span class="o">==</span> <span class="s2">&quot;your-vla&quot;</span><span class="p">:</span>
@@ -1310,7 +1429,7 @@ Level 6: 训练脚本         examples/                     ← 创建 run_yourm
     <span class="n">override_config_kwargs</span><span class="p">[</span><span class="s2">&quot;proprio_dim&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">action_token_len</span>
 </code></pre></div>
 
-<h3 id="75-level-4">7.5 Level 4：注册新仿真环境</h3>
+<h3 id="85-level-4">8.5 Level 4：注册新仿真环境</h3>
 <p><strong>文件</strong>：<code>verl/workers/rollout/rob_rollout.py</code></p>
 <ol>
 <li>在 <code>RobHFRollout.__init__()</code> 的 <code>self.max_steps</code> 字典中添加新任务的 max_steps：</li>
@@ -1348,7 +1467,7 @@ Level 6: 训练脚本         examples/                     ← 创建 run_yourm
 </ul>
 </li>
 </ol>
-<h3 id="76-level-5">7.6 Level 5：数据管道</h3>
+<h3 id="86-level-5">8.6 Level 5：数据管道</h3>
 <p><strong>文件</strong>：<code>verl/utils/dataset/rob_dataset.py</code></p>
 <p>为新环境实现 Dataset 类：</p>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">YourEnv_Dataset</span><span class="p">(</span><span class="n">Dataset</span><span class="p">):</span>
@@ -1381,7 +1500,7 @@ Level 6: 训练脚本         examples/                     ← 创建 run_yourm
     <span class="bp">self</span><span class="o">.</span><span class="n">val_dataset</span> <span class="o">=</span> <span class="n">YourEnv_Dataset</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">task_suite_name</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
 </code></pre></div>
 
-<h3 id="77-level-6">7.7 Level 6：训练脚本</h3>
+<h3 id="87-level-6">8.7 Level 6：训练脚本</h3>
 <p><strong>文件</strong>：<code>examples/run_yourmodel_rl_yourenv.sh</code></p>
 <p>参照 LIBERO 示例，关键配置项：</p>
 <div class="codehilite"><pre><span></span><code><span class="nb">export</span><span class="w"> </span><span class="nv">ROBOT_PLATFORM</span><span class="o">=</span>YOUR_PLATFORM
@@ -1405,7 +1524,7 @@ python<span class="w"> </span>-u<span class="w"> </span>-m<span class="w"> </spa
 <span class="w">    </span>...
 </code></pre></div>
 
-<h3 id="78">7.8 适配清单</h3>
+<h3 id="88">8.8 适配清单</h3>
 <table>
 <thead>
 <tr>
@@ -1451,7 +1570,7 @@ python<span class="w"> </span>-u<span class="w"> </span>-m<span class="w"> </spa
 <strong>中等适配路径</strong>（同一仿真器 + 新 VLA 模型）：L1 + L2 + L3 + L6。
 <strong>完整适配路径</strong>（全新仿真器 + 新 VLA 模型）：全部 6 层。</p>
 <hr />
-<h2 id="_7">八、关键概念速查</h2>
+<h2 id="_7">九、关键概念速查</h2>
 <table>
 <thead>
 <tr>
