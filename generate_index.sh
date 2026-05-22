@@ -207,6 +207,12 @@ BASE_STYLE = """  :root {
     color: var(--text-secondary);
     font-size: 0.95rem;
   }
+  header .site-intro {
+    max-width: 680px;
+    margin: 14px auto 0;
+    color: #4b5563;
+    font-size: 0.95rem;
+  }
   .nav-bar {
     text-align: center;
     margin-top: 24px;
@@ -426,13 +432,17 @@ def document_head(title: str, extra_style: str) -> list[str]:
     ]
 
 
-def header(subtitle: str, active: str) -> list[str]:
+def header(subtitle: str, active: str, intro: str = "") -> list[str]:
     index_active = ' class="active"' if active == "index" else ""
     tags_active = ' class="active"' if active == "tags" else ""
-    return [
+    lines = [
         "<header>",
         "  <h1>PaperNotes</h1>",
         f"  <p>{e(subtitle)}</p>",
+    ]
+    if intro:
+        lines.append(f'  <p class="site-intro">{e(intro)}</p>')
+    lines += [
         '  <div class="nav-bar">',
         f'    <a href="index.html"{index_active}>按时间</a>',
         f'    <a href="tags.html"{tags_active}>按标签</a>',
@@ -440,6 +450,7 @@ def header(subtitle: str, active: str) -> list[str]:
         "</header>",
         "",
     ]
+    return lines
 
 
 def footer() -> list[str]:
@@ -448,7 +459,7 @@ def footer() -> list[str]:
         "<footer>",
         '  Powered by <a href="https://github.com/fx-hit/PaperNotes">GitHub Pages</a>',
         "  &nbsp;·&nbsp;",
-        "  Generated with Claude Code",
+        "  Generated with Claude Code and Codex",
         "</footer>",
         "",
         "</div>",
@@ -508,7 +519,11 @@ def note_meta(note: Note, include_reading: bool, include_updated: bool) -> str:
 
 def render_index(notes: list[Note]) -> str:
     lines = document_head("PaperNotes — 论文阅读笔记", INDEX_EXTRA_STYLE)
-    lines += header("论文阅读笔记 · 图文详解 · 公式与图表", "index")
+    lines += header(
+        "一个由人类审阅、Claude Code 和 Codex 协作更新的论文阅读笔记站。",
+        "index",
+        "Agent 负责生成初稿和维护页面，我负责检查理解是否正确、指出问题并推动修改。这里不是自动摘要合集，而是人类判断与 AI 执行力共同产出的阅读记录。",
+    )
 
     current_date = None
     for note in chronological_notes(notes):
