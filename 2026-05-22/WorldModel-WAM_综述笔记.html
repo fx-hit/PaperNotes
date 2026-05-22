@@ -7,9 +7,9 @@
 <!-- arxiv: -->
 <!-- venue: PaperNotes 综述 2026 -->
 <!-- tags: WAM, 世界模型, 机器人, 视频生成, 泛化 -->
-<!-- words-zh: 6436 -->
-<!-- words-en: 610 -->
-<!-- reading-time: 21 -->
+<!-- words-zh: 6486 -->
+<!-- words-en: 620 -->
+<!-- reading-time: 22 -->
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
@@ -248,7 +248,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <main class="main-wrapper">
   <div class="content-inner" id="main-content">
 <h1 id="world-models-and-world-action-models-a-survey-note">World Models and World Action Models: A Survey Note</h1>
-<div class="article-stats">6,436 字 · English 610 词 · 约 21 分钟阅读</div>
+<div class="article-stats">6,486 字 · English 620 词 · 约 22 分钟阅读</div>
 
 <blockquote>
 <p><strong>笔记信息</strong>
@@ -370,7 +370,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <p>优势是泛化强。视频生成 backbone 通常来自大规模视频预训练，天然携带关于物体外观、空间关系和运动趋势的先验。DreamZero 在未见任务上明显优于 VLA，AgiBot 未见任务平均任务进度达到 39.5%，DROID 平均 49%，而 from-scratch VLA 接近 0，pretrained VLA 也只有 16.3% 或 31% 到 33% 的水平。LingBot-VA 在 RoboTwin 2.0 上达到 92.9% Easy / 91.6% Hard，在 LIBERO 平均 98.5%，说明因果视频-动作建模在长程任务中确实有优势。</p>
 <p>缺点是精细动作可能不够准。HarmoWAM 的动机实验把这个问题说得很清楚：Imagine-then-Execute 在 OOD 场景下能够可靠到达目标区域，但 Interaction 阶段容易因为 IDM 对接触、抓取点、插入深度的反推不准而失败。换句话说，视频预测能告诉机器人“应该去哪里”，但未必能告诉它“夹爪应该以多高精度、什么时序、什么接触姿态执行”。</p>
 <h3 id="42-joint-modeling">4.2 Joint Modeling：视频和动作共同去噪</h3>
-<p>Joint WAM 把未来视频 token 和动作 token 放进同一个 diffusion / flow matching 过程里，通过共享注意力让两者彼此条件化。DreamZero、Motus、Fast-WAM-Joint、X-WAM 都属于或接近这一类。</p>
+<p>Joint WAM 把未来视频 token 和动作 token 放进同一个 diffusion / flow matching 过程里，通过共享注意力让两者彼此条件化。DreamZero、Motus、Fast-WAM-Joint、X-WAM 都属于或接近这一类；HarmoWAM 本身不是纯 Joint Modeling 方法，而是把 Joint Modeling 与 Imagine-then-Execute 做系统对比后，再用双专家门控融合两者，因此这里主要用它的动机实验来说明 Joint Modeling 的优势和边界。</p>
 <p><img alt="图3：HarmoWAM 动机实验揭示两类 WAM 范式的互补失败模式" src="assets/worldmodel-wam/harmowam-motivation.jpg" /></p>
 <p><em>图3：HarmoWAM 的动机图把 WAM 内部的一个关键 trade-off 可视化了：Imagine-then-Execute 在 Transit 阶段泛化很强，能在 OOD 背景、位置和对象变化下接近目标；Joint Modeling 在 Interaction 阶段更准，目标附近的抓取、插入、堆叠更稳定。图右侧表格按 ID / OOD Background / OOD Position / OOD Objects 分解 Transit 和 Interaction 成功次数，因此它不是简单比较平均成功率，而是在回答“失败发生在哪个阶段”。这也是 HarmoWAM 后续采用双专家和门控机制的直接依据。</em></p>
 <p>优势是动作精度更高。动作不是后处理出来的，而是在联合 latent 空间里与视觉动态共同优化，因此视频状态和控制信号之间的对齐更紧。HarmoWAM 的实验显示，Joint Modeling 在 ID 场景中移动和交互都很强；当人为把机器人放到目标附近后，它在 OOD Interaction 阶段仍能保持 8 到 10 次成功中的高成功次数，说明“做得准”这件事并没有退化。</p>
