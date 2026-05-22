@@ -1,0 +1,1544 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SimpleVLA-RL: Scaling VLA Training via Reinforcement Learning</title>
+<!-- arxiv: 2509.09674 -->
+<!-- venue: ICLR 2026 -->
+<!-- tags: 机器人, VLA, 强化学习, 策略学习 -->
+<!-- words-zh: 4941 -->
+<!-- words-en: 919 -->
+<!-- reading-time: 19 -->
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #ffffff;
+    --text: #1a1a2e;
+    --text-secondary: #555;
+    --border: #e1e4e8;
+    --link: #0969da;
+    --table-stripe: #f6f8fa;
+    --heading: #0d1117;
+    --blockquote-border: #0969da;
+    --blockquote-bg: #f0f6ff;
+    --inline-code: #d73a49;
+    --inline-code-bg: #f6f8fa;
+    --sidebar-width: 260px;
+    --toc-active: #0969da;
+    --content-max-width: 900px;
+    --content-padding: 48px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "Inter", "Noto Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 16px;
+    line-height: 1.75;
+    color: var(--text);
+    background: var(--bg);
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    width: var(--sidebar-width);
+    overflow-y: auto;
+    padding: 28px 20px 40px;
+    background: #fafbfc;
+    border-right: 1px solid var(--border);
+    z-index: 10;
+    scrollbar-width: thin;
+  }
+  .sidebar-title {
+    font-size: 13px; font-weight: 700; color: var(--text-secondary);
+    margin-bottom: 16px; letter-spacing: 0.06em; text-transform: uppercase;
+  }
+  .toc-list { list-style: none; padding: 0; margin: 0; }
+  .toc-list ul { list-style: none; padding-left: 14px; }
+  .toc-list li { margin: 1px 0; }
+  .toc-list a {
+    display: block; padding: 4px 12px; font-size: 13.5px; line-height: 1.45;
+    color: var(--text-secondary); text-decoration: none; border-radius: 4px;
+    border-left: 2px solid transparent; transition: all 0.15s;
+  }
+  .toc-list a:hover { color: var(--link); background: #e8f0fe; }
+  .toc-list a.active {
+    color: var(--toc-active); font-weight: 600;
+    border-left-color: var(--toc-active); background: #e8f0fe;
+  }
+  .toc-h1 a { font-weight: 600; color: var(--heading); font-size: 14px; }
+  .toc-h3 a { padding-left: 24px; font-size: 13px; }
+  .toc-h4 a { padding-left: 36px; font-size: 12.5px; }
+  .toc-empty { color: var(--text-secondary); font-size: 13px; font-style: italic; }
+
+  .main-wrapper {
+    margin-left: var(--sidebar-width);
+    min-height: 100vh;
+    display: flex; justify-content: center;
+  }
+  .content-inner {
+    width: 100%;
+    max-width: var(--content-max-width);
+    padding: 40px var(--content-padding) 80px;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    color: var(--heading); font-weight: 700; line-height: 1.3;
+    margin-top: 2em; margin-bottom: 0.6em; scroll-margin-top: 24px;
+  }
+  h1 { font-size: 2em; border-bottom: 2px solid var(--border); padding-bottom: 0.3em; margin-top: 0; }
+  h2 { font-size: 1.5em; border-bottom: 1px solid var(--border); padding-bottom: 0.25em; }
+  h3 { font-size: 1.25em; }
+  h4 { font-size: 1.1em; }
+  p { margin-bottom: 1em; }
+  a { color: var(--link); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  strong { font-weight: 600; }
+
+  blockquote {
+    border-left: 4px solid var(--blockquote-border);
+    background: var(--blockquote-bg);
+    padding: 12px 20px; margin: 1em 0;
+    border-radius: 0 6px 6px 0; color: var(--text-secondary);
+  }
+  blockquote p:last-child { margin-bottom: 0; }
+
+  code {
+    font-family: "JetBrains Mono", "SF Mono", "Fira Code", monospace;
+    font-size: 0.875em; background: var(--inline-code-bg);
+    padding: 2px 6px; border-radius: 4px; color: var(--inline-code);
+  }
+  pre {
+    background: #1e1e2e; color: #cdd6f4;
+    border-radius: 8px; padding: 16px 20px; overflow-x: auto;
+    margin: 1em 0; font-size: 14px; line-height: 1.55;
+  }
+  pre code { background: none; padding: 0; border-radius: 0; color: inherit; font-size: inherit; }
+
+  .codehilite { background: #1e1e2e; border-radius: 8px; padding: 16px 20px; overflow-x: auto; margin: 1em 0; }
+  .codehilite pre { background: none; padding: 0; margin: 0; border-radius: 0; }
+  .codehilite .hll { background-color: #2a2a3e; }
+  .codehilite .c  { color: #6c7086; font-style: italic; }
+  .codehilite .k  { color: #cba6f7; }
+  .codehilite .o  { color: #89b4fa; }
+  .codehilite .s  { color: #a6e3a1; }
+  .codehilite .n  { color: #cdd6f4; }
+  .codehilite .p  { color: #bac2de; }
+  .codehilite .mi { color: #fab387; }
+  .codehilite .nf { color: #89b4fa; }
+  .codehilite .nb { color: #f38ba8; }
+  .codehilite .nc { color: #f9e2af; }
+  .codehilite .bp { color: #f38ba8; }
+
+  table { width: 100%; border-collapse: collapse; margin: 1em 0; font-size: 0.925em; }
+  th, td { border: 1px solid var(--border); padding: 10px 14px; text-align: left; }
+  th { background: var(--table-stripe); font-weight: 600; color: var(--heading); }
+  tr:nth-child(even) td { background: var(--table-stripe); }
+
+  .math.display { display: block; overflow-x: auto; padding: 12px 0; margin: 1em 0; }
+  ul, ol { padding-left: 1.5em; margin-bottom: 1em; }
+  li { margin-bottom: 0.3em; }
+  hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+  img { max-width: 100%; height: auto; border-radius: 6px; margin: 0; }
+  p:has(img) { text-align: center; margin-top: 0.6em; margin-bottom: 0; }
+  p:has(img) + p { text-align: center; font-size: 0.9em; color: var(--text-secondary); margin-top: 0.15em; margin-bottom: 0.6em; }
+  .mermaid { text-align: center; margin: 1.5em 0; background: #fafbfc; border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+  .article-stats {
+    font-size: 0.85rem; color: var(--text-secondary);
+    padding: 10px 18px; margin-bottom: 28px;
+    background: #f8f9fa; border: 1px solid var(--border); border-radius: 8px;
+  }
+
+  @media (max-width: 1024px) {
+    .sidebar { position: static; width: 100%; height: auto; max-height: 35vh; border-right: none; border-bottom: 1px solid var(--border); }
+    .main-wrapper { margin-left: 0; display: block; }
+    .content-inner { max-width: none; padding: 24px 20px 60px; }
+  }
+</style>
+
+<script>
+MathJax = {
+  tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']], processEscapes: true, tags: 'none' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] }
+};
+</script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  mermaid.initialize({ startOnLoad: true, theme: 'neutral', securityLevel: 'loose' });
+});
+</script>
+
+</head>
+<body>
+
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-title">目录</div>
+  <ul class="toc-list">
+<li class="toc-h1"><a href="#simplevla-rl-scaling-vla-training-via-reinforcement-learning">SimpleVLA-RL: Scaling VLA Training via Reinforcement Learning</a>
+<ul>
+</li>
+<li class="toc-h2"><a href="#_1">一、核心问题</a>
+</li>
+<li class="toc-h2"><a href="#_2">二、核心思路 / 方法</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#21-llm-rl-vs-vla-rl">2.1 LLM RL vs VLA RL 的关键差异</a>
+</li>
+<li class="toc-h3"><a href="#22-simplevla-rl">2.2 SimpleVLA-RL 框架总览</a>
+<ul>
+</li>
+<li class="toc-h4"><a href="#221-vla-rollout31">2.2.1 交互式 VLA Rollout（§3.1）</a>
+</li>
+<li class="toc-h4"><a href="#222-outcome-reward32">2.2.2 Outcome Reward（§3.2）</a>
+</li>
+<li class="toc-h4"><a href="#223-33">2.2.3 探索增强策略（§3.3）</a>
+</li>
+<li class="toc-h4"><a href="#224-34">2.2.4 训练目标（§3.4）</a>
+</ul></li>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_3">三、实验与结果</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#31">3.1 实验设置</a>
+</li>
+<li class="toc-h3"><a href="#32-libero">3.2 LIBERO 结果</a>
+</li>
+<li class="toc-h3"><a href="#33-robotwin">3.3 RoboTwin 结果</a>
+</li>
+<li class="toc-h3"><a href="#34">3.4 数据效率实验</a>
+</li>
+<li class="toc-h3"><a href="#35">3.5 泛化分析</a>
+</li>
+<li class="toc-h3"><a href="#36-sim-to-real">3.6 真实世界实验（Sim-to-Real）</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_4">四、关键洞察与技术亮点</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#41-pushcutrl">4.1 "Pushcut"：RL 驱动的新动作模式涌现</a>
+</li>
+<li class="toc-h3"><a href="#42-kl">4.2 移除 KL 正则化</a>
+</li>
+<li class="toc-h3"><a href="#43">4.3 工程优化要点</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_5">五、代码实现深度解读</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#51">5.1 整体架构</a>
+</li>
+<li class="toc-h3"><a href="#52-main_ppopy">5.2 模块一：main_ppo.py — 入口 + 奖励管理</a>
+</li>
+<li class="toc-h3"><a href="#53-ray_trainerpy">5.3 模块二：ray_trainer.py — 主训练循环</a>
+</li>
+<li class="toc-h3"><a href="#54-fsdp_workerspy">5.4 模块三：fsdp_workers.py — 模型加载与分布式管理</a>
+</li>
+<li class="toc-h3"><a href="#55-dp_robpy">5.5 模块四：dp_rob.py — 策略更新引擎</a>
+</li>
+<li class="toc-h3"><a href="#56-rob_rolloutpy">5.6 模块五：rob_rollout.py — 环境交互引擎</a>
+</li>
+<li class="toc-h3"><a href="#57-core_algospy-grpo">5.7 模块六：core_algos.py — GRPO 损失 + 优势计算</a>
+</li>
+<li class="toc-h3"><a href="#58-modeling_prismaticpy-vla">5.8 模块七：modeling_prismatic.py — VLA 模型实现</a>
+</li>
+<li class="toc-h3"><a href="#59">5.9 公式 → 代码映射</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_6">六、局限性</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#61-rl">6.1 RL 需要初始能力门槛</a>
+</li>
+<li class="toc-h3"><a href="#62-token-based-action-vla">6.2 仅支持 token-based action VLA</a>
+</li>
+<li class="toc-h3"><a href="#63">6.3 未探索方向</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#vla">七、新 VLA 模型适配指南</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#71">7.1 适配层次总览</a>
+</li>
+<li class="toc-h3"><a href="#72-level-1-vla">7.2 Level 1：注册 VLA 模型</a>
+</li>
+<li class="toc-h3"><a href="#73-level-2-rollout">7.3 Level 2：添加 Rollout 推理路径</a>
+</li>
+<li class="toc-h3"><a href="#74-level-3">7.4 Level 3：添加训练前向/反传路径</a>
+</li>
+<li class="toc-h3"><a href="#75-level-4">7.5 Level 4：注册新仿真环境</a>
+</li>
+<li class="toc-h3"><a href="#76-level-5">7.6 Level 5：数据管道</a>
+</li>
+<li class="toc-h3"><a href="#77-level-6">7.7 Level 6：训练脚本</a>
+</li>
+<li class="toc-h3"><a href="#78">7.8 适配清单</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_7">八、关键概念速查</a>
+</ul></li>
+</li></ul>
+</nav>
+
+<main class="main-wrapper">
+  <div class="content-inner" id="main-content">
+<h1 id="simplevla-rl-scaling-vla-training-via-reinforcement-learning">SimpleVLA-RL: Scaling VLA Training via Reinforcement Learning</h1>
+<div class="article-stats">4,941 字 · English 919 词 · 约 19 分钟阅读</div>
+
+<blockquote>
+<p><strong>论文信息</strong>
+- 作者：Haozhan Li<em>, Yuxin Zuo</em>, Jiale Yu*, Yuhao Zhang, Zhaohui Yang, Kaiyan Zhang, Xuekai Zhu, Yuchen Zhang, Tianxing Chen, Ganqu Cui, Dehui Wang, Dingxiang Luo, Yuchen Fan, Youbang Sun, Jia Zeng, Jiangmiao Pang, Shanghang Zhang, Yu Wang, Yao Mu, Bowen Zhou†, Ning Ding†
+- 通讯作者：Bowen Zhou, Ning Ding
+- 机构：Shanghai AI Lab, SJTU, Peking University, HKU
+- arXiv ID：2509.09674
+- 会议：ICLR 2026
+- 代码：https://github.com/PRIME-RL/SimpleVLA-RL
+- 日期：2025-09-12</p>
+</blockquote>
+<hr />
+<h2 id="_1">一、核心问题</h2>
+<p>VLA（Vision-Language-Action）模型在机器人操控领域取得了显著进展，但面临两个根本性瓶颈：</p>
+<ol>
+<li><strong>数据稀缺与高成本</strong>：SFT 需要大量人工采集的机器人轨迹数据。采集高质量轨迹需要精心设计的实验场景、多样的操控对象和熟练操作员，导致数据规模和多样性严重受限。这一瓶颈随模型规模增长而加剧。</li>
+<li><strong>泛化能力不足</strong>：在面临分布偏移（unseen tasks、new environments、novel objects、spatial variations）时，VLA 性能急剧下降。SFT 依赖有限的、场景特定的数据，导致过拟合——模型在训练任务上表现尚可，但在未见任务上完全失败。</li>
+</ol>
+<p>DeepSeek-R1 等工作证明 RL 可以显著增强 LLM 的逐步推理能力。论文核心问题是：<strong>RL 能否同样增强 VLA 模型逐步生成准确动作的长程规划能力？</strong></p>
+<p>挑战在于：LLM rollout 是一次性自回归生成，而 VLA rollout 需要与物理/仿真环境进行闭环多轮交互——每步执行后环境状态改变，模型必须基于实时感知反馈生成下一步动作。这远比 LLM RL 更慢、更昂贵。</p>
+<p><img alt="图1：SimpleVLA-RL 总览" src="assets/simplevla-rl/teaser_v2.jpg" /></p>
+<p><em>图1：SimpleVLA-RL 框架总览。该图以四栏布局展示了 SimpleVLA-RL 的核心贡献：(1) </em><em>RL 训练流程</em><em>——从 SFT 初始化的 VLA 模型出发，通过 GRPO 在线 RL 持续改进策略，利用二元 outcome reward（成功=1，失败=0）驱动学习；(2) </em><em>性能对比</em><em>——在 LIBERO 和 RoboTwin 基准上大幅超越 SFT 基线；(3) </em><em>"pushcut" 现象</em><em>——RL 训练中自主涌现出演示数据中不存在的新动作策略（推挤而非抓取）；(4) </em><em>泛化能力</em><em>——在空间配置、物体类型、任务目标三个维度上均优于 SFT。该图直观展示了从"模仿学习"到"强化学习"的范式转变带来的多方面收益。</em></p>
+<hr />
+<h2 id="_2">二、核心思路 / 方法</h2>
+<h3 id="21-llm-rl-vs-vla-rl">2.1 LLM RL vs VLA RL 的关键差异</h3>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>LLM RL</th>
+<th>VLA RL</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>State</strong></td>
+<td>prompt + 已生成 token</td>
+<td>多模态观测（RGB 图像 + proprioception + language）</td>
+</tr>
+<tr>
+<td><strong>Action</strong></td>
+<td>从词表采样离散 token</td>
+<td>连续控制指令 <span class="math inline">$\mathbb{R}^d$</span>，通过 action tokenizer 离散化</td>
+</tr>
+<tr>
+<td><strong>Environment</strong></td>
+<td>无中间反馈，序列完成时给奖励</td>
+<td>每步物理交互，环境状态实时更新</td>
+</tr>
+<tr>
+<td><strong>Rollout</strong></td>
+<td>自回归生成至 EOS/max_length</td>
+<td>闭环交互采样：infer → execute → observe → infer → ...</td>
+</tr>
+<tr>
+<td><strong>Reward</strong></td>
+<td>最终正确性判断（rule-based / RM）</td>
+<td>任务完成与否 + 可选过程奖励（如距离目标距离）</td>
+</tr>
+</tbody>
+</table>
+<p>VLA RL 的核心工程挑战：rollout 需要频繁与环境交互（每步都要 VLA 推理 + 环境 step），且必须支持并行多环境以提高吞吐。</p>
+<h3 id="22-simplevla-rl">2.2 SimpleVLA-RL 框架总览</h3>
+<p><img alt="图2：SimpleVLA-RL 方法概览" src="assets/simplevla-rl/overview_v4.jpg" /></p>
+<p><em>图2：SimpleVLA-RL 训练流程架构图。该图展示了从输入到策略更新的完整数据流。顶部是 VLA Policy Model（基于 OpenVLA-OFT，LLaMA2-7B backbone + SigLIP/DINOv2 vision encoder），接收任务指令和多视角图像作为输入。中部展示了核心 RL 循环的三个阶段：(1) </em><em>Rollout 阶段</em><em>——对同一 task prompt 采样 8 条轨迹（temperature=1.6），每条轨迹通过多步闭环交互完成，输出 action chunks；(2) </em><em>Reward 分配</em><em>——根据仿真环境返回的任务完成信号，给整个轨迹分配 0/1 二元奖励；(3) </em><em>GRPO 优化</em><em>——在 8 条轨迹间进行组内标准化计算优势函数，结合 PPO-style clipping 和动态采样过滤，更新策略参数。底部显示多环境并行渲染和交互的管理架构。</em></p>
+<h4 id="221-vla-rollout31">2.2.1 交互式 VLA Rollout（§3.1）</h4>
+<p>当前 VLA 模型有三种 action decoding 方式：</p>
+<ol>
+<li><strong>Token-based</strong>（如 OpenVLA、π₀）：输出 action token 的概率分布，与 PPO 类 RL 算法最兼容——天然提供 action distribution 用于随机采样和策略梯度计算。</li>
+<li><strong>Diffusion-based</strong>（如 RDT）：在 latent space 上去噪，难以直接计算 action likelihood。</li>
+<li><strong>Deterministic MLP regression</strong>（如部分 fine-tuned VLA）：输出确定性连续值，无法直接支持随机探索。</li>
+</ol>
+<p>SimpleVLA-RL 选择 token-based 方式，因为这是唯一与 PPO/GRPO 等 policy-gradient 算法自然兼容的范式。在 rollout 阶段，VLA 通过 temperature 采样生成多样化轨迹；在更新阶段，通过 action token 的 log probability 计算 importance sampling ratio。</p>
+<p>核心 pseudo-code 对比：</p>
+<div class="codehilite"><pre><span></span><code><span class="nv">LLM</span><span class="w"> </span><span class="nv">rollout</span>:<span class="w">  </span><span class="nv">outputs</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nv">policy</span>.<span class="nv">generate</span><span class="ss">(</span><span class="nv">batch</span>,<span class="w"> </span><span class="nv">temperature</span><span class="o">=</span><span class="nv">T</span><span class="ss">)</span><span class="w">  </span><span class="o">//</span><span class="w"> </span>一次性
+<span class="nv">VLA</span><span class="w"> </span><span class="nv">rollout</span>:<span class="w">  </span><span class="k">for</span><span class="w"> </span><span class="nv">t</span><span class="w"> </span><span class="nv">in</span><span class="w"> </span><span class="nv">range</span><span class="ss">(</span><span class="nv">max_steps</span><span class="ss">)</span>:<span class="w">                       </span><span class="o">//</span><span class="w"> </span>闭环
+<span class="w">                  </span><span class="nv">actions</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nv">policy</span>.<span class="nv">generate</span><span class="ss">(</span><span class="nv">states</span>,<span class="w"> </span><span class="nv">temperature</span><span class="o">=</span><span class="nv">T</span><span class="ss">)</span>
+<span class="w">                  </span><span class="nv">states</span>,<span class="w"> </span><span class="nv">dones</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nv">env</span>.<span class="nv">step</span><span class="ss">(</span><span class="nv">actions</span><span class="ss">)</span>
+<span class="w">                  </span><span class="k">if</span><span class="w"> </span><span class="nv">all</span><span class="ss">(</span><span class="nv">dones</span><span class="ss">)</span>:<span class="w"> </span><span class="k">break</span>
+</code></pre></div>
+
+<h4 id="222-outcome-reward32">2.2.2 Outcome Reward（§3.2）</h4>
+<p>采用极简二元奖励：轨迹成功 → 全体 token reward = 1，失败 → 全体 token reward = 0。</p>
+<p><div class="math display">$$R(a_{i,t} \mid s_{i,t}) = \begin{cases} 1, & \text{is\_successful}[\text{traj}_i(a_i,s_i)] \\ 0, & \text{otherwise} \end{cases}$$</div></p>
+<p>轨迹级奖励均匀传播到每个 action token。这种设计的关键优势：</p>
+<ul>
+<li><strong>可扩展</strong>：无需为每个任务手工设计过程奖励，跨环境通用</li>
+<li><strong>鼓励创新</strong>：不约束中间步骤，给策略最大的探索自由度——任何能达成目标的行为都获得等值奖励</li>
+<li><strong>避免 reward hacking</strong>：二元信号比连续过程奖励更难被利用</li>
+</ul>
+<h4 id="223-33">2.2.3 探索增强策略（§3.3）</h4>
+<p>三类改进共同作用，每类各带来 10-15% 的额外性能提升：</p>
+<p><img alt="图3：三种探索增强的消融实验" src="assets/simplevla-rl/vla_ablation_3_dynamic_sampling.jpg" /></p>
+<p><em>图3：三种探索增强策略的消融实验结果（均在 LIBERO 基准上评估）。该图是一个三子图并排的组合图（a/b/c），每个子图对比启用和禁用对应策略时的训练曲线。横轴为 RL 训练步数（global steps），纵轴为该步数对应的验证成功率（Success Rate %）。蓝色/绿色曲线代表启用策略的结果，橙色/灰色曲线代表禁用策略的对照结果。</em></p>
+<p><strong>子图 (a) Dynamic Sampling 效果：</strong>
+对比启用（绿线）和禁用（灰线）动态采样的训练曲线。动态采样过滤掉所有 8 条轨迹全成功或全失败的 group，只保留至少有一条成功和至少有一条失败的混合 group 用于训练。灰线（禁用）波动剧烈，训练极不稳定——当整组全部成功或全部失败时，GRPO 的优势估计变为零，梯度消失，导致模型在无信号的状态下随机漂移。绿线（启用）波动显著减小，成功率稳步上升并收敛到更高值（约 98% vs 95%）。这个改进的理论意义是：GRPO 通过组内标准化计算优势 <span class="math inline">$\hat{A}_i = (R_i - \text{mean})/(\text{std} + \epsilon)$</span>，当所有 <span class="math inline">$R_i$</span> 相等时，<span class="math inline">$\text{std}=0$</span>，所有 <span class="math inline">$\hat{A}_i=0$</span>，loss 梯度为零——动态采样确保每组都有非零方差。</p>
+<p><strong>子图 (b) Clip Higher 效果：</strong>
+对比 clip 范围 [0.8, 1.2]（橙线）vs [0.8, 1.28]（蓝线）。提高 clip 上界后，蓝线的最终成功率更高且收敛更快。PPO 的 clipping 机制 <span class="math inline">$\text{clip}(r, 1-\epsilon_{low}, 1+\epsilon_{high})$</span> 限制了 importance sampling ratio 的变动范围——传统的对称 clip [0.8, 1.2] 对概率增大和概率减小施加同等约束。但在 exploration 阶段，低概率但可能有价值的 action token 需要更大的增长空间才能被策略采纳。将上界从 1.2 放宽到 1.28（DAPO 提出的 Clip-Higher）给予低概率 token 更大的上升空间，同时保留下界 0.8 防止高概率 token 被过快遗忘。曲线显示在训练中后期（40-60 步后），clip higher 的优势更加明显。</p>
+<p><strong>子图 (c) Higher Temperature 效果：</strong>
+对比 rollout temperature=1.0（灰色）vs temperature=1.6（蓝绿色）。提高温度后，训练初期的成功率攀升更快，最终收敛值也更高。Temperature 控制 action token 采样的随机程度：<span class="math inline">$T=1.0$</span> 时模型基本遵循其训练分布，<span class="math inline">$T=1.6$</span> 时采样的探索性显著增强。更高的温度产生更多样化的轨迹，为 GRPO 的组内比较提供了更丰富的好/坏对比信号。注意温度只在 rollout 阶段调高（鼓励探索），评估阶段始终使用 greedy sampling（temperature=0），确保最终策略的确定性。</p>
+<h4 id="224-34">2.2.4 训练目标（§3.4）</h4>
+<p>采用改进的 GRPO，移除 KL 散度正则化项（借鉴 DAPO），最终目标：</p>
+<p><div class="math display">$$\mathcal{J}(\theta) = \mathbb{E}_{s_0 \sim \mathcal{D}, \{a_t\}_{i=1}^G \sim \pi_{\theta_\text{old}}} \left[ \frac{1}{G} \sum_{i=1}^G \frac{1}{|a_i|} \sum_{t=1}^{|a_i|} \min \left( r_{i,t}(\theta) \hat{A}_{i}, \, \text{clip} \left( r_{i,t}(\theta), 1 - \varepsilon_{low}, 1 + \varepsilon_{high} \right) \hat{A}_{i} \right) \right]$$</div></p>
+<p>约束条件：<span class="math inline">$0 &lt; |\{\text{traj}_i \mid \text{is\_successful}[\text{traj}_i]\}| &lt; G$</span>（动态采样过滤）</p>
+<p>移除 KL 正则化有两个动机：（1）省去 reference model 的 GPU 显存和推理开销；（2）KL 约束限制策略偏离 reference 的程度，移除后策略可以获得更大的探索自由度，有利于发现新行为（如 pushcut 现象）。</p>
+<hr />
+<h2 id="_3">三、实验与结果</h2>
+<h3 id="31">3.1 实验设置</h3>
+<ul>
+<li><strong>Backbone</strong>：OpenVLA-OFT（LLaMA2-7B + SigLIP/DINOv2 fused vision encoder + action chunking + parallel decoding），256 个 action token，vocab_size=32000</li>
+<li><strong>硬件</strong>：8× NVIDIA A800 80GB（单节点）或 2×8 节点，全参数 FSDP 训练</li>
+<li><strong>超参</strong>：lr=5e-6，batch_size=64，n_samples=8（每 prompt 采样 8 条轨迹），mini_batch=128，ε_low=0.2，ε_high=0.28，T=1.6，action_chunks: LIBERO=8 / RoboTwin=25，max_steps: LIBERO=512 / RoboTwin=200-800</li>
+<li><strong>训练方式</strong>：两阶段——SFT 初始化 + RL 训练。评估用 greedy sampling，每 benchmark 测 3 次取平均</li>
+</ul>
+<h3 id="32-libero">3.2 LIBERO 结果</h3>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Spatial</th>
+<th>Object</th>
+<th>Goal</th>
+<th>Long</th>
+<th>Avg</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Octo</td>
+<td>78.9</td>
+<td>85.7</td>
+<td>84.6</td>
+<td>51.1</td>
+<td>75.1</td>
+</tr>
+<tr>
+<td>OpenVLA</td>
+<td>84.7</td>
+<td>88.4</td>
+<td>79.2</td>
+<td>53.7</td>
+<td>76.5</td>
+</tr>
+<tr>
+<td>Nora</td>
+<td>92.2</td>
+<td>95.4</td>
+<td>89.4</td>
+<td>74.6</td>
+<td>87.9</td>
+</tr>
+<tr>
+<td>π₀ + FAST</td>
+<td>96.4</td>
+<td>96.8</td>
+<td>88.6</td>
+<td>60.2</td>
+<td>85.5</td>
+</tr>
+<tr>
+<td>π₀</td>
+<td>96.8</td>
+<td>98.8</td>
+<td>95.8</td>
+<td>85.2</td>
+<td>94.2</td>
+</tr>
+<tr>
+<td>UniVLA</td>
+<td>96.5</td>
+<td>96.8</td>
+<td>95.6</td>
+<td>92.0</td>
+<td>95.2</td>
+</tr>
+<tr>
+<td>OpenVLA-OFT</td>
+<td>91.6</td>
+<td>95.3</td>
+<td>90.6</td>
+<td>86.5</td>
+<td>91.0</td>
+</tr>
+<tr>
+<td><strong>+SimpleVLA-RL</strong></td>
+<td><strong>99.4</strong></td>
+<td><strong>99.1</strong></td>
+<td><strong>99.2</strong></td>
+<td><strong>98.5</strong></td>
+<td><strong>99.1</strong></td>
+</tr>
+<tr>
+<td><em>Δ</em></td>
+<td><em>+7.8</em></td>
+<td><em>+3.8</em></td>
+<td><em>+8.6</em></td>
+<td><em>+12.0</em></td>
+<td><em>+8.1</em></td>
+</tr>
+</tbody>
+</table>
+<p>关键发现：</p>
+<ul>
+<li>LIBERO-Long（10 个长程任务，每任务 50 demo）上提升最大（+12.0%）——长程任务对规划能力要求最高，RL 的 trial-and-error 探索恰好强化了逐步决策能力</li>
+<li>所有四个 suite 均达到 99% 左右，逼近性能上界</li>
+<li>超越 π₀（94.2%）和 UniVLA（95.2%）等当前 SOTA VLA 模型</li>
+</ul>
+<h3 id="33-robotwin">3.3 RoboTwin 结果</h3>
+<p><img alt="图-SimpleVLA-RL 主结果" src="assets/simplevla-rl/main.jpg" /></p>
+<p><em>图-SimpleVLA-RL 主结果海报图。该图综合展示了 LIBERO Long 和 RoboTwin 2.0 的主要结果，以柱状图和雷达图对比 OpenVLA-OFT 在 SFT-only 和 +SimpleVLA-RL 两种设置下的成功率。左侧 LIBERO-Long 柱状图：SFT-only（灰色）约 86.5%，+RL（蓝色）约 98.5%，提升 12 个百分点。右侧 RoboTwin 2.0 雷达图：六个维度的 SR 从 SFT-only 的约 38% 全面提升至 +RL 的约 69%。该图突显了 SimpleVLA-RL 在不同难度和类型的操作任务上的普适有效性。</em></p>
+<p><strong>RoboTwin 1.0（4 个双臂任务）</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Hammer Beat</th>
+<th>Block Handover</th>
+<th>Blocks Stack</th>
+<th>Shoe Place</th>
+<th>Avg</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>DP</td>
+<td>0.0</td>
+<td>12.0</td>
+<td>7.1</td>
+<td>4.3</td>
+<td>5.9</td>
+</tr>
+<tr>
+<td>DP3</td>
+<td>64.7</td>
+<td>84.3</td>
+<td>24.0</td>
+<td>59.3</td>
+<td>58.1</td>
+</tr>
+<tr>
+<td>OpenVLA-OFT</td>
+<td>67.2</td>
+<td>61.6</td>
+<td>7.1</td>
+<td>23.4</td>
+<td>39.8</td>
+</tr>
+<tr>
+<td><strong>+SimpleVLA-RL</strong></td>
+<td><strong>92.6</strong></td>
+<td><strong>89.6</strong></td>
+<td><strong>40.2</strong></td>
+<td><strong>59.3</strong></td>
+<td><strong>70.4</strong></td>
+</tr>
+</tbody>
+</table>
+<p>平均提升 30.6%。Blocks Stack 从 7.1% → 40.2%（+33.1%）——该任务需要高精度空间推理（双机械臂配合堆叠方块），SFT 几乎无法学会，RL 通过大量探索找到了可行的堆叠策略。</p>
+<p><strong>RoboTwin 2.0（12 个任务，按 horizon 分级）</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>Horizon</th>
+<th>Steps Range</th>
+<th>OpenVLA-OFT</th>
+<th>+SimpleVLA-RL</th>
+<th>π₀</th>
+<th>RDT</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Short (4 tasks)</td>
+<td>112-130</td>
+<td>21.3</td>
+<td><strong>64.9</strong></td>
+<td>45.5</td>
+<td>24.5</td>
+</tr>
+<tr>
+<td>Medium (4 tasks)</td>
+<td>151-223</td>
+<td>47.1</td>
+<td><strong>72.5</strong></td>
+<td>58.8</td>
+<td>47.8</td>
+</tr>
+<tr>
+<td>Long+Extra-Long (4 tasks)</td>
+<td>283-637</td>
+<td>46.5</td>
+<td><strong>69.0</strong></td>
+<td>43.3</td>
+<td>27.8</td>
+</tr>
+<tr>
+<td><strong>Overall Avg</strong></td>
+<td>-</td>
+<td>38.3</td>
+<td><strong>68.8</strong></td>
+<td>49.2</td>
+<td>33.3</td>
+</tr>
+</tbody>
+</table>
+<p>关键发现：</p>
+<ul>
+<li>相对提升 80%（38.3% → 68.8%），在所有 horizon 级别一致改进</li>
+<li>即使在 637-step 的 Extra-Long 任务（Put Bottles Dustbin）上也有 +18.7%——验证了 outcome-level reward 即使不分解为中间步骤，也能有效指导长程策略学习</li>
+<li>超越 π₀（diffusion-based，49.2%）和 RDT（33.3%）</li>
+</ul>
+<h3 id="34">3.4 数据效率实验</h3>
+<table>
+<thead>
+<tr>
+<th>Setting</th>
+<th>Spatial</th>
+<th>Object</th>
+<th>Goal</th>
+<th>Long</th>
+<th>Avg</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1-trajectory SFT</td>
+<td>63.6</td>
+<td>54.9</td>
+<td>59.6</td>
+<td>17.3</td>
+<td>48.9</td>
+</tr>
+<tr>
+<td>1-trajectory SFT + RL</td>
+<td><strong>98.2</strong></td>
+<td><strong>98.7</strong></td>
+<td><strong>98.8</strong></td>
+<td><strong>91.7</strong></td>
+<td><strong>96.9</strong></td>
+</tr>
+<tr>
+<td>Full SFT (500 trajs)</td>
+<td>91.6</td>
+<td>95.3</td>
+<td>90.6</td>
+<td>86.5</td>
+<td>91.0</td>
+</tr>
+<tr>
+<td>Full SFT + RL</td>
+<td>99.4</td>
+<td>99.1</td>
+<td>99.2</td>
+<td>98.5</td>
+<td>99.1</td>
+</tr>
+</tbody>
+</table>
+<p><strong>核心发现</strong>：仅用 1 条演示轨迹 per task 做 SFT 初始化，然后通过 RL 训练，性能从 17.3% 飙升至 91.7%（+74.4 百分点，提升 430%），一举超越 Full SFT（500 trajectories）的 86.5%。而 1-trajectory + RL（96.9% avg）与 Full SFT + RL（99.1% avg）的差距仅 2.2%。这说明：<strong>RL 可以大幅降低对大规模演示数据的依赖，数据稀缺不应再被视为 VLA 扩展的根本瓶颈。</strong></p>
+<h3 id="35">3.5 泛化分析</h3>
+<p><img alt="图4：泛化分析 - LIBERO Goal Unseen（Task 2/6/9）" src="assets/simplevla-rl/libero_goal_unseen_2_new.jpg" /></p>
+<p><em>图4：LIBERO 三个维度（Goal、Object、Spatial）的泛化分析（共 9 子图，3 行×3 列）。每行对应一个泛化维度，三列分别展示该维度下 3 个 held-out unseen tasks 的泛化曲线。横轴为训练过程中 seen tasks（9 个）的成功率（代表训练进度），范围 0%–100%。纵轴为对应 unseen task 的成功率变化。蓝色线代表 RL 训练下的 unseen task 表现，橙色线代表 SFT 训练下的 unseen task 表现。所有实验均以 1-trajectory SFT 初始化的 OpenVLA-OFT 为起点。</em></p>
+<p><strong>第一行 — LIBERO-Goal Unseen（跨任务泛化，Task 2/6/9）：</strong>
+三个子图展示了最具挑战性的泛化场景——不同 goal 任务涉及截然不同的物体和操控策略，任务间可迁移的知识最少。</p>
+<ul>
+<li><strong>Task 2（左）</strong>：SFT 橙色线在训练开始后几乎立即从约 25% 跌至 0%，且始终保持 0%。RL 蓝色线从约 25% 稳步上升至约 38%（+13%）。SFT 的灾难性遗忘在此体现得淋漓尽致——在 9 个 seen goal tasks 上学习的过程中，模型完全丢失了在第 2 个 unseen task 上的能力。RL 通过学习通用的操控模式而非记忆特定轨迹避免了这一问题。</li>
+<li><strong>Task 6（中）</strong>：SFT 橙色线同样迅速归零。RL 蓝色线从约 12% 持续提升至约 27%（+15%），且未见衰减。</li>
+<li><strong>Task 9（右）</strong>：SFT 立即归零。RL 蓝色线从约 20% 稳步升至约 25%（+5%）。虽然提升幅度小于前两个任务，但关键是<strong>没有退化</strong>——这在任何 SFT 模型中都无法实现。</li>
+</ul>
+<p><strong>第二行 — LIBERO-Object Unseen（跨物体泛化，Task 1/2/7）：</strong>
+三个子图展示了不同物体类型下的泛化表现。物体泛化相对 goal 泛化更容易，因为操控不同物体时底层动作原语（grasp/move/place）仍然相似。</p>
+<ul>
+<li><strong>Task 1（左）</strong>：SFT 橙色线从约 50% 开始，但随训练进行逐渐下降至约 30%。RL 蓝色线从约 50% 稳步升至约 70%（+20%）。</li>
+<li><strong>Task 2（中）</strong>：SFT 橙色线从约 30% 降至约 15%。RL 蓝色线从约 30% 飙升至约 67%（+37%），是所有 9 个 unseen task 中提升幅度最大的。这说明利用 RL 在 seen objects 上学到的操控模式可以很好地迁移到视觉外观不同但物理交互相似的物体上。</li>
+<li><strong>Task 7（右）</strong>：SFT 橙色线维持在约 40-60% 范围内波动，最终约 74%。RL 蓝色线从约 60% 升至约 90%（+30%）。</li>
+</ul>
+<p><strong>第三行 — LIBERO-Spatial Unseen（跨空间泛化，Task 0/1/5）：</strong>
+三个子图展示了空间配置变化下的泛化。空间泛化对 VLA 来说极为困难——物体位置的微小变化就可能导致 SFT 策略完全失败。</p>
+<ul>
+<li><strong>Task 0（左）</strong>：SFT 橙色线从约 70% 开始，训练后迅速跌至约 10%（-60%）。RL 蓝色线从约 70% 升至约 84%（+14%）。</li>
+<li><strong>Task 1（中）</strong>：SFT 橙色线从约 43% 降至约 33%（-10%）。RL 蓝色线从约 43% 升至约 72%（+29%）。这是空间泛化维度中提升最大的 unseen task。</li>
+<li><strong>Task 5（右）</strong>：SFT 橙色线从约 47% 降至 0%（彻底遗忘）。RL 蓝色线从约 47% 升至约 60%（+13%）。</li>
+</ul>
+<p><strong>关键结论</strong>：RL 训练在 9 个 unseen tasks 上全部实现正向泛化增长（+5% ~ +37%），而 SFT 在 6/9 个任务上出现退化或遗忘。这揭示了 RL vs SFT 的根本差异：SFT 通过最小化训练数据的负对数似然来拟合特定轨迹分布，导致过拟合；RL 通过奖励驱动的试错探索来学习通用成功条件，自然获得更好的泛化性。</p>
+<h3 id="36-sim-to-real">3.6 真实世界实验（Sim-to-Real）</h3>
+<table>
+<thead>
+<tr>
+<th>Task</th>
+<th>RDT</th>
+<th>OpenVLA-OFT</th>
+<th>+SimpleVLA-RL</th>
+<th>Δ</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Stack Bowls</td>
+<td>60.0</td>
+<td>38.0</td>
+<td><strong>70.0</strong></td>
+<td>+32.0</td>
+</tr>
+<tr>
+<td>Place Empty Cup</td>
+<td>4.0</td>
+<td>2.0</td>
+<td><strong>10.0</strong></td>
+<td>+8.0</td>
+</tr>
+<tr>
+<td>Pick Bottle</td>
+<td>10.0</td>
+<td>0.0</td>
+<td><strong>14.0</strong></td>
+<td>+14.0</td>
+</tr>
+<tr>
+<td>Click Bell</td>
+<td>20.0</td>
+<td>30.0</td>
+<td><strong>60.0</strong></td>
+<td>+30.0</td>
+</tr>
+<tr>
+<td><strong>Avg</strong></td>
+<td>23.5</td>
+<td>17.5</td>
+<td><strong>38.5</strong></td>
+<td>+21.0</td>
+</tr>
+</tbody>
+</table>
+<p>全程仅用仿真数据训练（零真实机器人数据），RL 训练大幅提升 sim-to-real 迁移性能：</p>
+<ul>
+<li>Pick Bottle：SFT 完全失败（0%），因为该任务需要极高的初始动作精度（瓶子一旦被碰倒就无法完成）。RL 通过大量仿真探索学到精确的对准策略，达到 14%。</li>
+<li>Click Bell：从 30% 翻倍至 60%，超越 RDT。</li>
+</ul>
+<hr />
+<h2 id="_4">四、关键洞察与技术亮点</h2>
+<h3 id="41-pushcutrl">4.1 "Pushcut"：RL 驱动的新动作模式涌现</h3>
+<p><img alt="图5：Pushcut 现象 — move can pot 任务" src="assets/simplevla-rl/unseen2_cropped.jpg" /></p>
+<p><em>图5：Pushcut 现象——move can pot 任务中的新行为涌现。上排（演示数据）展示标准操作序列（从左到右）：机械臂移动到罐子上方→抓取罐子→移动到锅旁边→释放罐子。这是人类演示的标准"grasp-move-place"范式和唯一被 SFT 训练数据包含的行为模式。下排（RL 训练后）展示涌现的新策略（从左到右）：机械臂靠近罐子侧面→直接推动罐子沿桌面滑行→罐子滑行至锅旁边的目标位置→任务完成。整个过程中机械臂从未抓取罐子。关键观察：这种推挤策略比抓取-搬运更高效（步骤更少、轨迹更短），但完全不在演示数据中——它是 RL 的 outcome-level reward 驱动的自主发现，因为"推挤成功"和"抓取成功"获得相同的 +1 奖励。</em></p>
+<p><img alt="图6：Pushcut 现象 — place a2b right 任务" src="assets/simplevla-rl/unseen1_cropped.jpg" /></p>
+<p><em>图6：Pushcut 现象——place a2b right 任务。与图 5 结构相同。上排演示数据：机械臂抓取物体 A→移动至物体 B 右侧→放置。下排 RL 涌现行为：机械臂靠近物体 A 侧面→直接推挤 A 至 B 右侧→手指松开。推挤策略再次替代了抓取-移动-放置的标准范式。两个任务中对 pushcut 的独立观察到，表明这不是偶然的随机行为，而是 RL 在 outcome reward 框架下系统性地发现的更优解——当奖励只关心"是否到达目标位置"而不关心"如何到达"，策略自然会找到阻力最小的路径。</em></p>
+<p><strong>深层含义</strong>：</p>
+<ul>
+<li>outcome-level 的稀疏奖励设计是关键——不约束中间步骤，给策略最大的探索自由度</li>
+<li>类似于 DeepSeek-R1 的"Aha Moment"，体现了 RL 超越模仿学习范式的独特优势</li>
+<li>这种涌现现象也暗示：在复杂操控任务中，人类演示的策略未必是最优的——RL 可能发现人类未曾考虑的更高效方案</li>
+</ul>
+<h3 id="42-kl">4.2 移除 KL 正则化</h3>
+<p>省略 KL 散度损失带来两个收益：</p>
+<ol>
+<li><strong>显存节省</strong>：无需维护 reference model（在混合引擎中共享同一组 GPU），训练吞吐提升</li>
+<li><strong>探索自由</strong>：KL 惩罚约束策略不得偏离 reference 太远；移除后策略在 reward 引导下可以自由探索新行为空间</li>
+</ol>
+<h3 id="43">4.3 工程优化要点</h3>
+<ul>
+<li>基于字节跳动 veRL 框架，利用 FSDP 全分片数据并行 + 混合通信模式</li>
+<li>Libero 环境：multiprocessing 多进程管理（每个 env 独立进程，通过 Queue 通信）</li>
+<li>RoboTwin 环境：ThreadPoolExecutor（max_workers=16）线程池管理，适应 GPU 密集型环境</li>
+<li>训练-推理-渲染一体化，FSDP 参数在 actor 和 rollout 间动态 offload/load</li>
+</ul>
+<hr />
+<h2 id="_5">五、代码实现深度解读</h2>
+<p>SimpleVLA-RL 是 veRL（字节跳动 LLM RL 框架）的 VLA 扩展。核心代码改动集中在 7 个模块，各模块的职责与论文方法的对应关系如下。</p>
+<h3 id="51">5.1 整体架构</h3>
+<div class="codehilite"><pre><span></span><code>main_ppo.py (入口)
+│
+├── RobRewardManager         ← 奖励管理：verify() + __call__()
+│
+└── RayTrainer.fit()         ← 主训练循环
+    │
+    ├─[1] generate_sequences()  → rob_rollout.py
+    │       VLA 采样：环境创建 → 交互循环 → 轨迹收集
+    │
+    ├─[2] reward_fn.verify()    → main_ppo.py:RobRewardManager
+    │       二元奖励：complete → 0/1
+    │
+    ├─[3] filter()              → ray_trainer.py:filter()
+    │       动态采样：过滤全成功/全失败 group
+    │
+    ├─[4] compute_advantage()   → core_algos.py:compute_grpo_outcome_advantage()
+    │       GRPO 优势：组内标准化 (R_i - mean)/std
+    │
+    ├─[5] update_actor()        → fsdp_workers.py → dp_rob.py
+    │       策略更新：forward → log_prob → PPO loss → backward
+    │
+    └─[6] _validate()           定期评估
+</code></pre></div>
+
+<h3 id="52-main_ppopy">5.2 模块一：main_ppo.py — 入口 + 奖励管理</h3>
+<p><strong>文件</strong>：<code>verl/trainer/main_ppo.py</code></p>
+<p>这是训练的主入口，使用 Hydra 配置管理 + Ray 分布式框架。</p>
+<p><strong>RobRewardManager 类</strong>（line 30-99）是奖励分配的核心：</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># verify() — 将环境的 complete 标志转为 0/1 分数</span>
+<span class="k">def</span> <span class="nf">verify</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+    <span class="n">completes</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">batch</span><span class="p">[</span><span class="s1">&#39;complete&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+    <span class="n">score</span> <span class="o">=</span> <span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="n">item</span><span class="p">)</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">completes</span><span class="p">]</span>  <span class="c1"># True→1.0, False→0.0</span>
+    <span class="o">...</span>
+
+<span class="c1"># __call__() — 将 trajectory-level reward 展开到 token-level</span>
+<span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+    <span class="n">verifier_reward</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">valid_response_length</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+=</span> <span class="n">verifier_score</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+    <span class="c1"># 只在最后一个 valid token 位置放置 reward，其余位置为 0</span>
+</code></pre></div>
+
+<p><strong>关键设计</strong>：reward 只放在轨迹的最后一个有效 token 位置（<code>finish_step * action_token_len - 1</code>），之前所有位置为 0。这是因为二元 reward 是 trajectory-level 的，在 token-level 计算 advantage 时，GRPO 会通过组内标准化自动将 reward 信号传播到整个轨迹。</p>
+<h3 id="53-ray_trainerpy">5.3 模块二：ray_trainer.py — 主训练循环</h3>
+<p><strong>文件</strong>：<code>verl/trainer/ppo/ray_trainer.py</code></p>
+<p><code>RayTrainer.fit()</code> 方法（line 469-710）是训练的核心。关键数据流：</p>
+<div class="codehilite"><pre><span></span><code><span class="k">while</span><span class="w"> </span><span class="nv">True</span>:<span class="w">  </span>#<span class="w"> </span><span class="nv">epoch</span><span class="w"> </span><span class="k">loop</span>
+<span class="w">    </span>#<span class="w"> </span><span class="nv">Step</span><span class="w"> </span><span class="mi">1</span>:<span class="w"> </span>采样<span class="w"> </span>—<span class="w"> </span>收集<span class="w"> </span><span class="nv">batch_size</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nv">n_samples</span><span class="w"> </span>条轨迹
+<span class="w">    </span><span class="k">while</span><span class="w"> </span><span class="nv">len</span><span class="ss">(</span><span class="nv">valid_batch</span><span class="ss">)</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="nv">batch_size</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nv">n_samples</span>:
+<span class="w">        </span><span class="nv">gen_batch_output</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nv">actor_rollout_wg</span>.<span class="nv">generate_sequences</span><span class="ss">(</span><span class="nv">gen_batch</span><span class="ss">)</span>
+<span class="w">        </span><span class="nv">scores</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nv">reward_fn</span>.<span class="nv">verify</span><span class="ss">(</span><span class="nv">roll_batch</span><span class="ss">)</span>
+<span class="w">        </span><span class="nv">filtered</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nv">self</span>.<span class="nv">filter</span><span class="ss">(</span><span class="nv">roll_batch</span>.<span class="nv">batch</span>[<span class="s1">&#39;acc&#39;</span>],<span class="w"> </span><span class="nv">roll_batch</span>,<span class="w"> </span><span class="nv">n_samples</span><span class="ss">)</span>
+<span class="w">        </span><span class="nv">valid_batch</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nv">concat</span><span class="ss">(</span><span class="nv">valid_batch</span>,<span class="w"> </span><span class="nv">filtered</span><span class="ss">)</span>
+
+<span class="w">    </span>#<span class="w"> </span><span class="nv">Step</span><span class="w"> </span><span class="mi">2</span>:<span class="w"> </span>计算奖励和优势
+<span class="w">    </span><span class="nv">reward_tensor_dict</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nv">reward_fn</span><span class="ss">(</span><span class="nv">batch</span><span class="ss">)</span>
+<span class="w">    </span><span class="nv">batch</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nv">apply_kl_penalty</span><span class="ss">(</span><span class="nv">batch</span>,<span class="w"> </span>...<span class="ss">)</span><span class="w">  </span>#<span class="w"> </span><span class="nv">KL</span><span class="w"> </span><span class="nv">penalty</span><span class="w"> </span><span class="ss">(</span>当前设为<span class="w"> </span><span class="mi">0</span><span class="ss">)</span>
+<span class="w">    </span><span class="nv">batch</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nv">compute_advantage</span><span class="ss">(</span><span class="nv">batch</span>,<span class="w"> </span><span class="nv">adv_estimator</span><span class="o">=</span><span class="s1">&#39;grpo&#39;</span><span class="ss">)</span>
+
+<span class="w">    </span>#<span class="w"> </span><span class="nv">Step</span><span class="w"> </span><span class="mi">3</span>:<span class="w"> </span>更新策略
+<span class="w">    </span><span class="nv">actor_output</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nv">actor_rollout_wg</span>.<span class="nv">update_actor</span><span class="ss">(</span><span class="nv">batch</span><span class="ss">)</span>
+
+<span class="w">    </span>#<span class="w"> </span><span class="nv">Step</span><span class="w"> </span><span class="mi">4</span>:<span class="w"> </span>定期评估
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nv">global_steps</span><span class="w"> </span><span class="o">%</span><span class="w"> </span><span class="nv">test_freq</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span>:
+<span class="w">        </span><span class="nv">val_metrics</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nv">_validate</span><span class="ss">()</span>
+</code></pre></div>
+
+<p><strong>Dynamic Sampling 过滤</strong>（<code>filter()</code> 方法，line 755-816）：过滤 accuracy 全 0 或全 1 的 group，确保每组都包含至少一条成功和至少一条失败的轨迹。</p>
+<p><strong>Advantage 计算</strong>（line 160-173）：</p>
+<div class="codehilite"><pre><span></span><code><span class="k">elif</span> <span class="n">adv_estimator</span> <span class="o">==</span> <span class="s1">&#39;grpo&#39;</span><span class="p">:</span>
+    <span class="n">advantages</span><span class="p">,</span> <span class="n">returns</span> <span class="o">=</span> <span class="n">core_algos</span><span class="o">.</span><span class="n">compute_grpo_outcome_advantage</span><span class="p">(</span>
+        <span class="n">token_level_rewards</span><span class="p">,</span> <span class="n">eos_mask</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">uid</span><span class="p">)</span>
+</code></pre></div>
+
+<p>每个 prompt 的 8 条轨迹由 <code>uid</code> 标识为一组，在组内做 z-score 标准化。</p>
+<h3 id="54-fsdp_workerspy">5.4 模块三：fsdp_workers.py — 模型加载与分布式管理</h3>
+<p><strong>文件</strong>：<code>verl/workers/fsdp_workers.py</code></p>
+<p><code>RobActorRolloutRefWorker</code> 类（line 64-645）管理 VLA 模型的生命周期。</p>
+<p><strong>模型加载</strong>（<code>_build_model_optimizer()</code>，line 111-323）：</p>
+<div class="codehilite"><pre><span></span><code><span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">vla</span> <span class="o">==</span> <span class="s2">&quot;openvla-oft&quot;</span><span class="p">:</span>
+    <span class="c1"># 注册 OpenVLA-OFT 的自定义模型类到 HuggingFace AutoModel</span>
+    <span class="n">AutoConfig</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="s2">&quot;openvla&quot;</span><span class="p">,</span> <span class="n">OpenVLAConfig</span><span class="p">)</span>
+    <span class="n">AutoImageProcessor</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">OpenVLAConfig</span><span class="p">,</span> <span class="n">PrismaticImageProcessor</span><span class="p">)</span>
+    <span class="n">AutoProcessor</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">OpenVLAConfig</span><span class="p">,</span> <span class="n">PrismaticProcessor</span><span class="p">)</span>
+    <span class="n">AutoModelForVision2Seq</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">OpenVLAConfig</span><span class="p">,</span> <span class="n">OpenVLAForActionPrediction</span><span class="p">)</span>
+
+    <span class="c1"># 加载模型</span>
+    <span class="n">actor_module</span> <span class="o">=</span> <span class="n">AutoModelForVision2Seq</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span>
+        <span class="n">local_path</span><span class="p">,</span> <span class="n">torch_dtype</span><span class="o">=</span><span class="n">torch_dtype</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="n">actor_model_config</span><span class="p">,</span>
+        <span class="n">trust_remote_code</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="c1"># 设置视觉 backbone 的输入图像数</span>
+    <span class="n">actor_module</span><span class="o">.</span><span class="n">vision_backbone</span><span class="o">.</span><span class="n">set_num_images_in_input</span><span class="p">(</span><span class="n">num_images</span><span class="p">)</span>
+
+    <span class="c1"># 加载 proprioception projector 权重（如果有）</span>
+    <span class="k">if</span> <span class="n">use_proprio</span><span class="p">:</span>
+        <span class="n">actor_module</span><span class="o">.</span><span class="n">load_proprio_projector_weights</span><span class="p">(</span><span class="n">local_path</span><span class="p">)</span>
+
+    <span class="c1"># 加载 norm_stats（用于 action unnormalization）</span>
+    <span class="n">actor_module</span><span class="o">.</span><span class="n">norm_stats</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;dataset_statistics.json&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<p><strong>FSDP 包装</strong>（line 288-297）：</p>
+<div class="codehilite"><pre><span></span><code><span class="n">actor_module_fsdp</span> <span class="o">=</span> <span class="n">FSDP</span><span class="p">(</span><span class="n">actor_module</span><span class="p">,</span>
+    <span class="n">auto_wrap_policy</span><span class="o">=</span><span class="n">auto_wrap_policy</span><span class="p">,</span>  <span class="c1"># VLA 特定的 transformer layer 包装策略</span>
+    <span class="n">sharding_strategy</span><span class="o">=</span><span class="n">ShardingStrategy</span><span class="o">.</span><span class="n">FULL_SHARD</span><span class="p">,</span>  <span class="c1"># Zero-3</span>
+    <span class="n">mixed_precision</span><span class="o">=</span><span class="n">MixedPrecision</span><span class="p">(</span><span class="n">param_dtype</span><span class="o">=</span><span class="n">bf16</span><span class="p">,</span> <span class="n">reduce_dtype</span><span class="o">=</span><span class="n">fp32</span><span class="p">),</span>
+    <span class="n">device_mesh</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device_mesh</span><span class="p">)</span>
+</code></pre></div>
+
+<p><strong>Rollout 构建</strong>（<code>_build_rollout()</code>，line 325-350）：根据配置选择 HF rollout（VLA 用 <code>RobHFRollout</code>）或 vLLM rollout（LLM 用）。</p>
+<p><strong>关键 RPC 方法</strong>：</p>
+<ul>
+<li><code>generate_sequences()</code>（line 483-536）— VLA rollout + old_log_prob 重算</li>
+<li><code>update_actor()</code>（line 414-449）— 策略梯度更新</li>
+<li><code>compute_entropy()</code>（line 451-481）— 熵监控（动态采样过滤前后）</li>
+</ul>
+<h3 id="55-dp_robpy">5.5 模块四：dp_rob.py — 策略更新引擎</h3>
+<p><strong>文件</strong>：<code>verl/workers/actor/dp_rob.py</code></p>
+<p><code>RobDataParallelPPOActor</code> 类（line 39-607）实现了 VLA 的策略评估和更新。</p>
+<p><strong>核心方法链路</strong>：</p>
+<div class="codehilite"><pre><span></span><code>update_policy(data)
+    │
+    ├── _forward_micro_batch_update()  → 前向 + log_prob + entropy
+    │       1. input_ids/attention_mask unpad（去除右 padding）
+    │       2. actor_module.forward()  → logits
+    │       3. logits[..., vocab-256-64 : vocab-64]  → action token logits
+    │       4. logprobs_from_logits()  → log_prob
+    │       5. entropy_from_logits()   → entropy
+    │
+    ├── core_algos.compute_policy_loss()  → GRPO clipped loss
+    │       ratio = exp(log_prob - old_log_prob)
+    │       pg_loss = max(-adv*ratio, -adv*clip(ratio, 1-ε_low, 1+ε_high))
+    │
+    └── _optimizer_step()  → clip_grad → optimizer.step()
+</code></pre></div>
+
+<p><strong>关键实现细节</strong>：</p>
+<ol>
+<li><strong>Action token logits 截取</strong>（line 154-155）：</li>
+</ol>
+<div class="codehilite"><pre><span></span><code><span class="n">start_index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">actor_module</span><span class="o">.</span><span class="n">vocab_size</span> <span class="o">-</span> <span class="mi">256</span>  <span class="c1"># 32000 - 256 = 31744</span>
+<span class="n">logits</span> <span class="o">=</span> <span class="n">logits</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="o">-</span><span class="mi">256</span><span class="o">-</span><span class="mi">64</span><span class="p">:</span><span class="o">-</span><span class="mi">64</span><span class="p">]</span>  <span class="c1"># 取 [31744-64 : 32000-64] 范围的 256 个 token</span>
+<span class="n">responses</span> <span class="o">=</span> <span class="n">responses</span> <span class="o">-</span> <span class="n">start_index</span>  <span class="c1"># 将 action token IDs 映射回 [0, 255]</span>
+</code></pre></div>
+
+<p>OpenVLA 的 action tokens 位于 vocab 的最后 256 个 bin 中。logits 截取 <code>[-320:-64]</code> 是因为 vocab 末尾 64 个 token 为预留位置，实际 action bin 在 <code>[vocab_size-256-64, vocab_size-64)</code> 范围内。</p>
+<ol>
+<li><strong>Trajectory mask 处理</strong>（line 66-77 + 168-169）：</li>
+</ol>
+<div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">generate_traj_mask</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">end_step</span><span class="p">,</span> <span class="n">traj_len</span><span class="p">):</span>
+    <span class="n">steps</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">traj_len</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">end_step</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+    <span class="n">steps_expanded</span> <span class="o">=</span> <span class="n">steps</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">expand</span><span class="p">(</span><span class="n">end_step</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">mask</span> <span class="o">=</span> <span class="n">steps_expanded</span> <span class="o">&lt;</span> <span class="n">end_step</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">mask</span>  <span class="c1"># (batch_size, traj_len)</span>
+
+<span class="c1"># 使用：只对实际执行步数内的 token 计算 loss</span>
+<span class="n">log_probs</span><span class="p">,</span> <span class="n">entropy</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">apply_mask_with_grad_control</span><span class="p">(</span><span class="n">log_probs</span><span class="p">,</span> <span class="n">entropy</span><span class="p">,</span> <span class="n">mask</span><span class="p">)</span>
+</code></pre></div>
+
+<p><code>finish_step</code> 记录每条轨迹的实际交互步数，mask 确保 padding 位置不参与 loss 计算。</p>
+<ol>
+<li><strong>Trajectory 分片梯度累积</strong>（line 480-519）：</li>
+</ol>
+<div class="codehilite"><pre><span></span><code><span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">traj_len</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">traj_len</span><span class="o">/</span><span class="n">traj_split_num</span><span class="p">)):</span>
+    <span class="c1"># 按 traj 维度分片做 forward，节省显存</span>
+    <span class="n">entropy</span><span class="p">,</span> <span class="n">log_prob</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_forward_micro_batch_update</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+    <span class="n">pg_loss</span> <span class="o">=</span> <span class="n">core_algos</span><span class="o">.</span><span class="n">compute_policy_loss</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+    <span class="n">loss</span> <span class="o">=</span> <span class="n">pg_loss</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">gradient_accumulation</span>
+    <span class="n">loss</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
+</code></pre></div>
+
+<h3 id="56-rob_rolloutpy">5.6 模块五：rob_rollout.py — 环境交互引擎</h3>
+<p><strong>文件</strong>：<code>verl/workers/rollout/rob_rollout.py</code></p>
+<p>这是 VLA RL 最核心的工程模块，负责轨迹采样、环境管理、多环境并行。</p>
+<p><strong>Libero 多进程架构</strong>（<code>_generate_minibatch_libero()</code>，line 772-886）：</p>
+<div class="codehilite"><pre><span></span><code>主进程<span class="w">                       </span>子进程<span class="w"> </span><span class="mi">1</span><span class="w">          </span>子进程<span class="w"> </span><span class="mi">2</span><span class="w">          </span>...<span class="w">  </span>子进程<span class="w"> </span><span class="nv">N</span>
+<span class="w">  </span>│<span class="w">                            </span>│<span class="w">                </span>│<span class="w">                     </span>│
+<span class="w">  </span>├──<span class="w"> </span>创建<span class="w"> </span><span class="nv">N</span><span class="w"> </span>个<span class="w"> </span><span class="nv">Process</span><span class="w"> </span>────────→<span class="w"> </span><span class="nv">env_worker</span><span class="ss">()</span><span class="w">   </span><span class="nv">env_worker</span><span class="ss">()</span><span class="w">        </span><span class="nv">env_worker</span><span class="ss">()</span>
+<span class="w">  </span>│<span class="w">                            </span>│<span class="w">  </span><span class="nv">init</span><span class="w"> </span><span class="nv">env</span><span class="w">      </span><span class="nv">init</span><span class="w"> </span><span class="nv">env</span><span class="w">            </span><span class="nv">init</span><span class="w"> </span><span class="nv">env</span>
+<span class="w">  </span>│<span class="w">                            </span>│<span class="w">  </span><span class="nv">reset</span><span class="o">+</span><span class="k">wait</span><span class="w">    </span><span class="nv">reset</span><span class="o">+</span><span class="k">wait</span><span class="w">          </span><span class="nv">reset</span><span class="o">+</span><span class="k">wait</span>
+<span class="w">  </span>│<span class="w">  </span>←───<span class="w"> </span><span class="nv">init_data</span><span class="w"> </span><span class="ss">(</span><span class="nv">Queue</span><span class="ss">)</span><span class="w"> </span>───┤<span class="w">                </span>│<span class="w">                     </span>│
+<span class="w">  </span>│<span class="w">                            </span>│<span class="w">                </span>│<span class="w">                     </span>│
+<span class="w">  </span>├──<span class="w"> </span><span class="k">Loop</span>:<span class="w">                    </span>│<span class="w">                </span>│<span class="w">                     </span>│
+<span class="w">  </span>│<span class="w">    </span><span class="nv">process_input</span><span class="ss">(</span><span class="nv">obs</span><span class="ss">)</span><span class="w">      </span>│<span class="w">                </span>│<span class="w">                     </span>│
+<span class="w">  </span>│<span class="w">    </span>↓<span class="w">                       </span>│<span class="w">                </span>│<span class="w">                     </span>│
+<span class="w">  </span>│<span class="w">    </span><span class="nv">_generate_one_step</span><span class="ss">()</span><span class="w">    </span>│<span class="w">                </span>│<span class="w">                     </span>│
+<span class="w">  </span>│<span class="w">    </span>↓<span class="w">                       </span>│<span class="w">                </span>│<span class="w">                     </span>│
+<span class="w">  </span>│<span class="w">  </span>──→<span class="w"> </span><span class="nv">action</span><span class="w"> </span><span class="ss">(</span><span class="nv">Queue</span><span class="ss">)</span><span class="w"> </span>──────→<span class="w"> </span><span class="nv">env</span>.<span class="nv">step</span><span class="ss">()</span><span class="w">     </span><span class="nv">env</span>.<span class="nv">step</span><span class="ss">()</span><span class="w">           </span><span class="nv">env</span>.<span class="nv">step</span><span class="ss">()</span>
+<span class="w">  </span>│<span class="w">  </span>←──<span class="w"> </span><span class="nv">obs</span><span class="o">+</span><span class="nv">done</span><span class="w"> </span><span class="ss">(</span><span class="nv">Queue</span><span class="ss">)</span><span class="w"> </span>────┤<span class="w">                </span>│<span class="w">                     </span>│
+<span class="w">  </span>│<span class="w">                            </span>│<span class="w">                </span>│<span class="w">                     </span>│
+<span class="w">  </span>└──<span class="w"> </span><span class="nv">_prepare_output_batch</span><span class="ss">()</span><span class="w">  </span>│<span class="w">                </span>│<span class="w">                     </span>│
+</code></pre></div>
+
+<p><strong>RoboTwin 线程池架构</strong>（<code>_generate_minibatch_robotwin()</code>，line 604-770）：</p>
+<div class="codehilite"><pre><span></span><code><span class="bp">self</span><span class="o">.</span><span class="n">env_thread_pool</span> <span class="o">=</span> <span class="n">ThreadPoolExecutor</span><span class="p">(</span><span class="n">max_workers</span><span class="o">=</span><span class="mi">16</span><span class="p">)</span>
+
+<span class="c1"># 并行初始化</span>
+<span class="n">init_futures</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">env_thread_pool</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span><span class="n">w</span><span class="o">.</span><span class="n">initialize</span><span class="p">)</span> <span class="k">for</span> <span class="n">w</span> <span class="ow">in</span> <span class="n">env_wrappers</span><span class="p">]</span>
+<span class="k">for</span> <span class="n">future</span> <span class="ow">in</span> <span class="n">as_completed</span><span class="p">(</span><span class="n">init_futures</span><span class="p">):</span> <span class="n">future</span><span class="o">.</span><span class="n">result</span><span class="p">()</span>
+
+<span class="c1"># 并行执行动作</span>
+<span class="n">step_futures</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">env_thread_pool</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span><span class="n">env_wrappers</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span><span class="o">.</span><span class="n">step</span><span class="p">,</span> <span class="n">actions</span><span class="p">[</span><span class="n">idx</span><span class="p">])</span>
+                <span class="k">for</span> <span class="n">idx</span> <span class="ow">in</span> <span class="n">active_indices</span><span class="p">]</span>
+</code></pre></div>
+
+<p><strong>OpenVLA-OFT 单步推理</strong>（<code>_generate_one_step_oft()</code>，line 925-978）：</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># 核心调用</span>
+<span class="n">actions</span><span class="p">,</span> <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">module</span><span class="o">.</span><span class="n">generate_action_verl</span><span class="p">(</span>
+    <span class="n">input_ids</span><span class="o">=</span><span class="n">idx</span><span class="p">,</span> <span class="n">pixel_values</span><span class="o">=</span><span class="n">pixel_values</span><span class="p">,</span> <span class="n">proprio</span><span class="o">=</span><span class="n">proprio</span><span class="p">,</span>
+    <span class="n">attention_mask</span><span class="o">=</span><span class="n">attention_mask</span><span class="p">,</span>
+    <span class="n">do_sample</span><span class="o">=</span><span class="n">do_sample</span><span class="p">,</span> <span class="n">temperature</span><span class="o">=</span><span class="n">temperature</span><span class="p">,</span>
+    <span class="n">unnorm_key</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">unnorm_key</span><span class="p">,</span>
+<span class="p">)</span>
+</code></pre></div>
+
+<p><code>generate_action_verl()</code> 是 OpenVLA-OFT 模型中为 veRL 定制的推理入口（定义在 modeling_prismatic.py）。</p>
+<h3 id="57-core_algospy-grpo">5.7 模块六：core_algos.py — GRPO 损失 + 优势计算</h3>
+<p><strong>文件</strong>：<code>verl/trainer/ppo/core_algos.py</code></p>
+<p><strong>GRPO 优势计算</strong>（<code>compute_grpo_outcome_advantage()</code>，line 173-216）：</p>
+<div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">compute_grpo_outcome_advantage</span><span class="p">(</span><span class="n">token_level_rewards</span><span class="p">,</span> <span class="n">eos_mask</span><span class="p">,</span> <span class="n">index</span><span class="p">,</span> <span class="n">epsilon</span><span class="o">=</span><span class="mf">1e-6</span><span class="p">):</span>
+    <span class="n">scores</span> <span class="o">=</span> <span class="n">token_level_rewards</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>  <span class="c1"># 每条轨迹的总奖励（0 或 1）</span>
+
+    <span class="c1"># 按 uid 分组计算每个 prompt 的 mean/std</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">bsz</span><span class="p">):</span>
+        <span class="n">id2score</span><span class="p">[</span><span class="n">index</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">scores</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+    <span class="k">for</span> <span class="n">idx</span> <span class="ow">in</span> <span class="n">id2score</span><span class="p">:</span>
+        <span class="n">id2mean</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">id2score</span><span class="p">[</span><span class="n">idx</span><span class="p">]))</span>
+        <span class="n">id2std</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="n">id2score</span><span class="p">[</span><span class="n">idx</span><span class="p">]]))</span>
+
+    <span class="c1"># 组内标准化</span>
+    <span class="n">scores</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">scores</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">-</span> <span class="n">id2mean</span><span class="p">[</span><span class="n">index</span><span class="p">[</span><span class="n">i</span><span class="p">]])</span> <span class="o">/</span> <span class="p">(</span><span class="n">id2std</span><span class="p">[</span><span class="n">index</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span> <span class="o">+</span> <span class="n">epsilon</span><span class="p">)</span>
+    <span class="c1"># 展开到 token 维度</span>
+    <span class="k">return</span> <span class="n">scores</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">tile</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="n">response_length</span><span class="p">])</span> <span class="o">*</span> <span class="n">eos_mask</span>
+</code></pre></div>
+
+<p><strong>PPO 策略损失</strong>（<code>compute_policy_loss()</code>，line 271-302）：</p>
+<div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">compute_policy_loss</span><span class="p">(</span><span class="n">old_log_prob</span><span class="p">,</span> <span class="n">log_prob</span><span class="p">,</span> <span class="n">advantages</span><span class="p">,</span> <span class="n">eos_mask</span><span class="p">,</span>
+                        <span class="n">clip_ratio_high</span><span class="p">,</span> <span class="n">clip_ratio_low</span><span class="p">):</span>
+    <span class="n">ratio</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">log_prob</span> <span class="o">-</span> <span class="n">old_log_prob</span><span class="p">)</span>  <span class="c1"># importance sampling ratio</span>
+    <span class="n">pg_losses</span> <span class="o">=</span> <span class="o">-</span><span class="n">advantages</span> <span class="o">*</span> <span class="n">ratio</span>
+    <span class="n">pg_losses2</span> <span class="o">=</span> <span class="o">-</span><span class="n">advantages</span> <span class="o">*</span> <span class="n">torch</span><span class="o">.</span><span class="n">clamp</span><span class="p">(</span><span class="n">ratio</span><span class="p">,</span> <span class="mi">1</span><span class="o">-</span><span class="n">clip_ratio_low</span><span class="p">,</span> <span class="mi">1</span><span class="o">+</span><span class="n">clip_ratio_high</span><span class="p">)</span>
+    <span class="n">pg_loss</span> <span class="o">=</span> <span class="n">masked_mean</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">pg_losses</span><span class="p">,</span> <span class="n">pg_losses2</span><span class="p">),</span> <span class="n">eos_mask</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">pg_loss</span><span class="p">,</span> <span class="n">pg_clipfrac</span><span class="p">,</span> <span class="n">ppo_kl</span>
+</code></pre></div>
+
+<h3 id="58-modeling_prismaticpy-vla">5.8 模块七：modeling_prismatic.py — VLA 模型实现</h3>
+<p><strong>文件</strong>：<code>verl/utils/vla_utils/openvla_oft/modeling_prismatic.py</code></p>
+<p><strong>模型架构</strong>（<code>OpenVLAForActionPrediction</code>，line 1355-2040）：</p>
+<div class="codehilite"><pre><span></span><code><span class="s s-Atom">输入</span><span class="o">:</span>
+  <span class="s s-Atom">pixel_values</span> <span class="s s-Atom">──→</span> <span class="nv">Vision</span> <span class="nv">Backbone</span> <span class="p">(</span><span class="nv">SigLIP</span> <span class="o">+</span> <span class="nv">DINOv2</span> <span class="s s-Atom">fused</span><span class="p">)</span>
+                        <span class="s s-Atom">│</span> <span class="s s-Atom">patch_features</span>
+                        <span class="s s-Atom">▼</span>
+                   <span class="nv">Projector</span> <span class="p">(</span><span class="nv">MLP</span><span class="o">:</span> <span class="s s-Atom">vision_dim</span> <span class="s s-Atom">→</span> <span class="s s-Atom">llm_dim</span> <span class="s s-Atom">→</span> <span class="s s-Atom">llm_dim</span><span class="p">)</span>
+                        <span class="s s-Atom">│</span> <span class="s s-Atom">projected_patch_embeddings</span>
+                        <span class="s s-Atom">▼</span>
+  <span class="s s-Atom">input_ids</span> <span class="s s-Atom">──────→</span> <span class="nv">Input</span> <span class="nv">Embeddings</span> <span class="s s-Atom">──→</span> <span class="nv">Multimodal</span> <span class="nv">Embeddings</span>
+                        <span class="s s-Atom">│</span>                  <span class="p">(</span><span class="s s-Atom">concat</span><span class="p">:</span> <span class="o">&lt;</span><span class="s s-Atom">bos</span><span class="o">&gt;</span> <span class="o">+</span> <span class="s s-Atom">vision</span> <span class="o">+</span> <span class="s s-Atom">text</span><span class="p">)</span>
+                        <span class="s s-Atom">▼</span>
+                   <span class="nv">LLaMA</span><span class="o">-</span><span class="mi">2</span> <span class="mi">7</span><span class="nv">B</span> <span class="p">(</span><span class="nv">Transformer</span> <span class="nv">Decoder</span><span class="p">)</span>
+                        <span class="s s-Atom">│</span> <span class="s s-Atom">logits</span>
+                        <span class="s s-Atom">▼</span>
+                   <span class="nv">Action</span> <span class="nv">Token</span> <span class="nv">Extraction</span>
+                   <span class="s s-Atom">logits</span><span class="p">[</span><span class="o">:</span><span class="p">,</span> <span class="o">-</span><span class="mi">256</span><span class="o">-</span><span class="mi">64</span><span class="o">:-</span><span class="mi">64</span><span class="p">,</span> <span class="o">:</span><span class="p">]</span>  <span class="s s-Atom">→</span> <span class="p">(</span><span class="nv">B</span><span class="p">,</span> <span class="mi">256</span><span class="p">,</span> <span class="mi">7</span> <span class="o">*</span> <span class="mi">8</span><span class="p">)</span>
+                        <span class="s s-Atom">│</span>
+          <span class="s s-Atom">┌─────────────┴─────────────┐</span>
+          <span class="s s-Atom">▼</span>                           <span class="s s-Atom">▼</span>
+    <span class="s s-Atom">do_sample</span><span class="o">=</span><span class="nv">True</span>              <span class="s s-Atom">do_sample</span><span class="o">=</span><span class="nv">False</span>
+    <span class="s s-Atom">softmax</span> <span class="o">/</span> <span class="nv">T</span> <span class="s s-Atom">→</span> <span class="nb">multinomial</span>   <span class="s s-Atom">argmax</span>
+          <span class="s s-Atom">│</span>                           <span class="s s-Atom">│</span>
+          <span class="s s-Atom">▼</span>                           <span class="s s-Atom">▼</span>
+    <span class="nv">Action</span> <span class="nv">De</span><span class="o">-</span><span class="nf">tokenize</span> <span class="p">(</span><span class="s s-Atom">bin_centers</span> <span class="s s-Atom">查表</span><span class="p">)</span>
+          <span class="s s-Atom">│</span>
+          <span class="s s-Atom">▼</span>
+    <span class="nv">Action</span> <span class="nv">Unnormalize</span> <span class="p">(</span><span class="s s-Atom">norm_stats</span><span class="p">)</span>
+          <span class="s s-Atom">│</span>
+          <span class="s s-Atom">▼</span>
+    <span class="s s-Atom">连续动作</span><span class="o">:</span> <span class="p">(</span><span class="s s-Atom">batch</span><span class="p">,</span> <span class="nv">NUM_ACTIONS_CHUNK</span><span class="p">,</span> <span class="nv">ACTION_DIM</span><span class="p">)</span>
+</code></pre></div>
+
+<p><strong>关键方法 <code>generate_action_verl()</code></strong>（line 1870-2010）：</p>
+<ol>
+<li>为 input_ids 添加 placeholder action tokens + stop token</li>
+<li>构建 labels 用于 action mask 计算</li>
+<li>处理 padding（将左 padding 转为右 padding，适应 FSDP 序列打包）</li>
+<li>Vision backbone forward → projector → multimodal embeddings</li>
+<li>可选：proprioception features 拼接到 vision patch 后</li>
+<li>LLaMA forward → logits</li>
+<li>从 logits 中提取 action token 位置的输出</li>
+<li>Temperature sampling（训练）/ greedy decoding（评估）</li>
+<li>bin_centers 查表 de-tokenize + norm_stats unnormalize → 连续动作</li>
+</ol>
+<h3 id="59">5.9 公式 → 代码映射</h3>
+<table>
+<thead>
+<tr>
+<th>论文公式/概念</th>
+<th>代码文件:行号</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GRPO 目标 <span class="math inline">$J_{\text{GRPO}}(\theta)$</span></td>
+<td><code>core_algos.py:173-216</code></td>
+<td><code>compute_grpo_outcome_advantage()</code></td>
+</tr>
+<tr>
+<td>PPO clipped loss</td>
+<td><code>core_algos.py:271-302</code></td>
+<td><code>compute_policy_loss()</code></td>
+</tr>
+<tr>
+<td>importance ratio <span class="math inline">$r_{i,t}$</span></td>
+<td><code>core_algos.py:294</code></td>
+<td><code>ratio = exp(log_prob - old_log_prob)</code></td>
+</tr>
+<tr>
+<td>clip 范围 <span class="math inline">$[1-\varepsilon_{low}, 1+\varepsilon_{high}]$</span></td>
+<td><code>core_algos.py:298</code></td>
+<td><code>torch.clamp(ratio, 1-clip_ratio_low, 1+clip_ratio_high)</code></td>
+</tr>
+<tr>
+<td>outcome reward 传播</td>
+<td><code>main_ppo.py:78-79</code></td>
+<td><code>verifier_reward[i, valid_response_length[i]-1] += score[i]</code></td>
+</tr>
+<tr>
+<td>动态采样过滤约束</td>
+<td><code>ray_trainer.py:768-778</code></td>
+<td><code>acc_mask = (acc_tensor &gt;= lower) &amp; (acc_tensor &lt;= upper)</code></td>
+</tr>
+<tr>
+<td>VLA rollout 闭环交互</td>
+<td><code>rob_rollout.py:826-862</code></td>
+<td>while step &lt; max_steps 循环</td>
+</tr>
+<tr>
+<td>action token logits 截取</td>
+<td><code>dp_rob.py:154-155</code></td>
+<td><code>logits[..., -256-64:-64]</code></td>
+</tr>
+<tr>
+<td>trajectory mask</td>
+<td><code>dp_rob.py:66-77</code></td>
+<td><code>generate_traj_mask(finish_step, traj_len)</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="_6">六、局限性</h2>
+<h3 id="61-rl">6.1 RL 需要初始能力门槛</h3>
+<table>
+<thead>
+<tr>
+<th>Model Prior</th>
+<th>Pre-RL SR</th>
+<th>Post-RL SR</th>
+<th>Δ</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0-trajectory SFT</td>
+<td>0%</td>
+<td>0%</td>
+<td>0</td>
+</tr>
+<tr>
+<td>100-trajectory SFT</td>
+<td>7.3%</td>
+<td>25.4%</td>
+<td>+18.1</td>
+</tr>
+<tr>
+<td>1000-trajectory SFT</td>
+<td>28.2%</td>
+<td>50.4%</td>
+<td>+22.2</td>
+</tr>
+</tbody>
+</table>
+<p>当基础模型成功率为 0% 时，RL 完全无效——所有轨迹奖励为 0，无梯度信号。1000-trajectory SFT 的 Δ（+22.2%）也大于 100-trajectory 的 Δ（+18.1%），表明初始能力越强，RL 提升空间越大。</p>
+<h3 id="62-token-based-action-vla">6.2 仅支持 token-based action VLA</h3>
+<p>框架天然兼容输出 action token 分布的 VLA 模型，diffusion-based（π₀、RDT）和 deterministic MLP regression 模型需要额外适配（roadmap 中计划支持）。</p>
+<h3 id="63">6.3 未探索方向</h3>
+<ul>
+<li>仅测试 outcome-level binary reward，未与 process reward 对比</li>
+<li>最大模型规模为 7B（LLaMA2），未在更大 backbone 上验证</li>
+<li>真实世界实验仅 4 个任务</li>
+</ul>
+<hr />
+<h2 id="vla">七、新 VLA 模型适配指南</h2>
+<p>本节说明如何将一个新的 VLA 模型通过 SimpleVLA-RL 框架适配到指定的仿真环境中进行 RL 训练。适配涉及 6 个层次的改造或扩展。</p>
+<h3 id="71">7.1 适配层次总览</h3>
+<div class="codehilite"><pre><span></span><code>适配一个新 VLA 模型到新仿真环境需要改动 6 个层次：
+
+Level 1: 模型注册         vla_utils/your_model/         ← 注册模型类到 HF AutoModel
+Level 2: 推理接口         rob_rollout.py                ← 添加 _generate_one_step_yourmodel()
+Level 3: 训练接口         dp_rob.py + fsdp_workers.py   ← 添加 forward/log_prob/entropy 计算
+Level 4: 环境注册         rob_dataset.py + rob_rollout  ← 注册新环境 + max_steps 配置
+Level 5: 数据管道         rob_dataset.py                ← 实现 YourEnv_Dataset 类
+Level 6: 训练脚本         examples/                     ← 创建 run_yourmodel_rl_yourenv.sh
+</code></pre></div>
+
+<h3 id="72-level-1-vla">7.2 Level 1：注册 VLA 模型</h3>
+<p><strong>目标</strong>：将新 VLA 模型（假设叫 <code>YourVLA</code>）注册到 HuggingFace AutoModel 体系。</p>
+<p><strong>步骤</strong>：</p>
+<ol>
+<li>
+<p>在 <code>verl/utils/vla_utils/</code> 下创建 <code>your_vla/</code> 目录，放入：
+   <code>your_vla/
+   ├── __init__.py
+   ├── configuration_yourvla.py     # 继承 PretrainedConfig
+   ├── modeling_yourvla.py          # 继承 PreTrainedModel
+   ├── processing_yourvla.py        # 继承 ProcessorMixin
+   └── constants.py                 # ACTION_DIM, NUM_ACTIONS_CHUNK 等</code></p>
+</li>
+<li>
+<p><code>modeling_yourvla.py</code> 中<strong>必须实现的方法</strong>：</p>
+</li>
+</ol>
+<div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">YourVLAForActionPrediction</span><span class="p">(</span><span class="n">PreTrainedModel</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">):</span>
+        <span class="c1"># 初始化 vision_backbone + projector + language_model + action head</span>
+        <span class="o">...</span>
+
+    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_ids</span><span class="p">,</span> <span class="n">pixel_values</span><span class="p">,</span> <span class="n">attention_mask</span><span class="p">,</span>
+                <span class="n">proprio</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        RL 训练前向传播，返回所有 token 的 logits。</span>
+<span class="sd">        这是 dp_rob.py 中 _forward_micro_batch() 调用的接口。</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># 1. Vision encoding</span>
+        <span class="n">patch_features</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">vision_backbone</span><span class="p">(</span><span class="n">pixel_values</span><span class="p">)</span>
+        <span class="n">projected</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">projector</span><span class="p">(</span><span class="n">patch_features</span><span class="p">)</span>
+
+        <span class="c1"># 2. Multimodal embedding construction</span>
+        <span class="n">input_embeds</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_input_embeddings</span><span class="p">()(</span><span class="n">input_ids</span><span class="p">)</span>
+        <span class="n">multimodal_embeds</span> <span class="o">=</span> <span class="n">build_multimodal</span><span class="p">(</span><span class="n">input_embeds</span><span class="p">,</span> <span class="n">projected</span><span class="p">)</span>
+
+        <span class="c1"># 3. LLM forward</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">language_model</span><span class="p">(</span><span class="n">inputs_embeds</span><span class="o">=</span><span class="n">multimodal_embeds</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">generate_action_verl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_ids</span><span class="p">,</span> <span class="n">pixel_values</span><span class="p">,</span> <span class="n">attention_mask</span><span class="p">,</span>
+                             <span class="n">proprio</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">do_sample</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">temperature</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+                             <span class="n">unnorm_key</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">padding_idx</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        RL rollout 推理接口。这是 rob_rollout.py 中调用的方法。</span>
+<span class="sd">        必须返回:</span>
+
+<span class="sd">                    - actions: (batch, num_action_chunks, action_dim) 连续动作</span>
+<span class="sd">                    - response: (batch, num_action_tokens) action token IDs</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># 1. 添加 placeholder action tokens + stop token</span>
+        <span class="c1"># 2. Forward pass → logits</span>
+        <span class="c1"># 3. 提取 action token 位置的 logits</span>
+        <span class="c1"># 4. Temperature sampling / greedy decoding → token IDs</span>
+        <span class="c1"># 5. De-tokenize (bin_centers 查表或直接解码)</span>
+        <span class="c1"># 6. Unnormalize → 连续动作</span>
+        <span class="k">return</span> <span class="n">actions</span><span class="p">,</span> <span class="n">response_ids</span>
+</code></pre></div>
+
+<p><strong>关键约束</strong>：</p>
+<ul>
+<li><code>forward()</code> 返回的 logits 需要能被 dp_rob.py 正确处理——action token 的 logits 位置必须与 vocab 中 action token 的位置一致</li>
+<li>
+<p><code>generate_action_verl()</code> 返回的 <code>response</code> 是 action token IDs，用于 log_prob 计算和 GRPO loss</p>
+</li>
+<li>
+<p>在 <code>fsdp_workers.py:_build_model_optimizer()</code> 中注册：</p>
+</li>
+</ul>
+<div class="codehilite"><pre><span></span><code><span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">vla</span> <span class="o">==</span> <span class="s2">&quot;your-vla&quot;</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">verl.utils.vla_utils.your_vla.configuration_yourvla</span> <span class="kn">import</span> <span class="n">YourVLAConfig</span>
+    <span class="kn">from</span> <span class="nn">verl.utils.vla_utils.your_vla.modeling_yourvla</span> <span class="kn">import</span> <span class="n">YourVLAForActionPrediction</span>
+    <span class="kn">from</span> <span class="nn">verl.utils.vla_utils.your_vla.processing_yourvla</span> <span class="kn">import</span> <span class="n">YourVLAProcessor</span>
+
+    <span class="n">AutoConfig</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="s2">&quot;yourvla&quot;</span><span class="p">,</span> <span class="n">YourVLAConfig</span><span class="p">)</span>
+    <span class="n">AutoProcessor</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">YourVLAConfig</span><span class="p">,</span> <span class="n">YourVLAProcessor</span><span class="p">)</span>
+    <span class="n">AutoModelForVision2Seq</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">YourVLAConfig</span><span class="p">,</span> <span class="n">YourVLAForActionPrediction</span><span class="p">)</span>
+
+    <span class="n">actor_module</span> <span class="o">=</span> <span class="n">AutoModelForVision2Seq</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="n">local_path</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="73-level-2-rollout">7.3 Level 2：添加 Rollout 推理路径</h3>
+<p><strong>文件</strong>：<code>verl/workers/rollout/rob_rollout.py</code></p>
+<p>在 <code>_generate_one_step()</code> 方法中添加新 VLA 的分支：</p>
+<div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">_generate_one_step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">prompts</span><span class="p">):</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">vla</span> <span class="o">==</span> <span class="s2">&quot;openvla-oft&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_generate_one_step_oft</span><span class="p">(</span><span class="n">prompts</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">vla</span> <span class="o">==</span> <span class="s2">&quot;your-vla&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_generate_one_step_yourvla</span><span class="p">(</span><span class="n">prompts</span><span class="p">)</span>
+</code></pre></div>
+
+<p>新增 <code>_generate_one_step_yourvla()</code> 方法，结构参照 <code>_generate_one_step_oft()</code>：</p>
+<div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">_generate_one_step_yourvla</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">prompts</span><span class="p">):</span>
+    <span class="n">idx</span> <span class="o">=</span> <span class="n">prompts</span><span class="p">[</span><span class="s1">&#39;input_ids&#39;</span><span class="p">]</span>
+    <span class="n">attention_mask</span> <span class="o">=</span> <span class="n">prompts</span><span class="p">[</span><span class="s1">&#39;attention_mask&#39;</span><span class="p">]</span>
+    <span class="n">pixel_values</span> <span class="o">=</span> <span class="n">prompts</span><span class="p">[</span><span class="s1">&#39;pixel_values&#39;</span><span class="p">]</span>
+    <span class="n">proprio</span> <span class="o">=</span> <span class="n">prompts</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;proprio&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="n">do_sample</span> <span class="o">=</span> <span class="n">prompts</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;do_sample&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">do_sample</span><span class="p">)</span>
+    <span class="n">temperature</span> <span class="o">=</span> <span class="n">prompts</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;temperature&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">temperature</span><span class="p">)</span>
+
+    <span class="k">with</span> <span class="n">FSDP</span><span class="o">.</span><span class="n">summon_full_params</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">module</span><span class="p">,</span> <span class="o">...</span><span class="p">):</span>
+        <span class="n">actions</span><span class="p">,</span> <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">module</span><span class="o">.</span><span class="n">generate_action_verl</span><span class="p">(</span>
+            <span class="n">input_ids</span><span class="o">=</span><span class="n">idx</span><span class="p">,</span>
+            <span class="n">pixel_values</span><span class="o">=</span><span class="n">pixel_values</span><span class="p">,</span>
+            <span class="n">proprio</span><span class="o">=</span><span class="n">proprio</span><span class="p">,</span>
+            <span class="n">attention_mask</span><span class="o">=</span><span class="n">attention_mask</span><span class="p">,</span>
+            <span class="n">do_sample</span><span class="o">=</span><span class="n">do_sample</span><span class="p">,</span>
+            <span class="n">temperature</span><span class="o">=</span><span class="n">temperature</span><span class="p">,</span>
+            <span class="n">unnorm_key</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">unnorm_key</span><span class="p">,</span>
+            <span class="n">padding_idx</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">processor</span><span class="o">.</span><span class="n">tokenizer</span><span class="o">.</span><span class="n">pad_token_id</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="c1"># 填充到固定长度（与现有代码一致）</span>
+    <span class="n">idx</span> <span class="o">=</span> <span class="n">verl_F</span><span class="o">.</span><span class="n">pad_sequence_to_length</span><span class="p">(</span><span class="n">idx</span><span class="p">,</span> <span class="n">max_seq_len</span><span class="p">,</span> <span class="n">pad_token_id</span><span class="p">,</span> <span class="n">left_pad</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">attention_mask</span> <span class="o">=</span> <span class="n">verl_F</span><span class="o">.</span><span class="n">pad_sequence_to_length</span><span class="p">(</span><span class="n">attention_mask</span><span class="p">,</span> <span class="n">max_seq_len</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">left_pad</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s1">&#39;responses&#39;</span><span class="p">:</span> <span class="n">response</span><span class="p">,</span>
+        <span class="s1">&#39;input_ids&#39;</span><span class="p">:</span> <span class="n">idx</span><span class="p">,</span>
+        <span class="s1">&#39;attention_mask&#39;</span><span class="p">:</span> <span class="n">attention_mask</span><span class="p">,</span>
+        <span class="s1">&#39;pixel_values&#39;</span><span class="p">:</span> <span class="n">pixel_values</span><span class="p">,</span>
+        <span class="s1">&#39;action&#39;</span><span class="p">:</span> <span class="n">actions</span><span class="p">,</span>
+    <span class="p">}</span>
+</code></pre></div>
+
+<h3 id="74-level-3">7.4 Level 3：添加训练前向/反传路径</h3>
+<p><strong>文件</strong>：<code>verl/workers/actor/dp_rob.py</code></p>
+<p>在 <code>_forward_micro_batch()</code> 和 <code>_forward_micro_batch_update()</code> 中添加新 VLA 的 logits 提取逻辑：</p>
+<div class="codehilite"><pre><span></span><code><span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">vla</span> <span class="o">==</span> <span class="s2">&quot;your-vla&quot;</span><span class="p">:</span>
+    <span class="n">logits</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">actor_module</span><span class="p">(</span><span class="n">input_ids</span><span class="o">=</span><span class="n">input_ids_unpad</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
+    <span class="c1"># 根据你的 action token 在 vocab 中的位置截取 logits</span>
+    <span class="c1"># 例如：如果你的 action tokens 在 vocab 末尾 512 个位置</span>
+    <span class="n">logits</span> <span class="o">=</span> <span class="n">logits</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="o">-</span><span class="mi">512</span><span class="p">:]</span>  <span class="c1"># 调整为你的 action token 范围</span>
+    <span class="n">responses</span> <span class="o">=</span> <span class="n">responses</span> <span class="o">-</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">actor_module</span><span class="o">.</span><span class="n">vocab_size</span> <span class="o">-</span> <span class="mi">512</span><span class="p">)</span>
+    <span class="n">logits</span> <span class="o">=</span> <span class="n">logits</span><span class="o">.</span><span class="n">div</span><span class="p">(</span><span class="n">temperature</span><span class="p">)</span>
+    <span class="n">log_probs</span> <span class="o">=</span> <span class="n">logprobs_from_logits</span><span class="p">(</span><span class="n">logits</span><span class="p">,</span> <span class="n">responses</span><span class="p">)</span>
+    <span class="n">entropy</span> <span class="o">=</span> <span class="n">verl_F</span><span class="o">.</span><span class="n">entropy_from_logits</span><span class="p">(</span><span class="n">logits</span><span class="p">)</span>
+</code></pre></div>
+
+<p><strong>文件</strong>：<code>verl/workers/fsdp_workers.py</code></p>
+<p>确保 <code>_build_model_optimizer()</code> 中正确处理你的模型的 config override：</p>
+<div class="codehilite"><pre><span></span><code><span class="n">override_config_kwargs</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;bos_token_id&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">tokenizer</span><span class="o">.</span><span class="n">bos_token_id</span><span class="p">,</span>
+    <span class="s1">&#39;eos_token_id&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">tokenizer</span><span class="o">.</span><span class="n">eos_token_id</span><span class="p">,</span>
+    <span class="s1">&#39;pad_token_id&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">tokenizer</span><span class="o">.</span><span class="n">pad_token_id</span><span class="p">,</span>
+<span class="p">}</span>
+<span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">rollout</span><span class="o">.</span><span class="n">use_proprio</span><span class="p">:</span>
+    <span class="n">override_config_kwargs</span><span class="p">[</span><span class="s2">&quot;use_proprio&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">override_config_kwargs</span><span class="p">[</span><span class="s2">&quot;proprio_dim&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">action_token_len</span>
+</code></pre></div>
+
+<h3 id="75-level-4">7.5 Level 4：注册新仿真环境</h3>
+<p><strong>文件</strong>：<code>verl/workers/rollout/rob_rollout.py</code></p>
+<ol>
+<li>在 <code>RobHFRollout.__init__()</code> 的 <code>self.max_steps</code> 字典中添加新任务的 max_steps：</li>
+</ol>
+<div class="codehilite"><pre><span></span><code><span class="bp">self</span><span class="o">.</span><span class="n">max_steps</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="o">...</span>
+    <span class="s2">&quot;your_env_task1&quot;</span><span class="p">:</span> <span class="mi">300</span><span class="p">,</span>
+    <span class="s2">&quot;your_env_task2&quot;</span><span class="p">:</span> <span class="mi">500</span><span class="p">,</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<ol>
+<li>
+<p>（如果是全新仿真器）实现 <code>_generate_minibatch_yourenv()</code> 方法，参照 Libero 的多进程模式或 RoboTwin 的线程池模式。</p>
+</li>
+<li>
+<p>（如果是全新仿真器）在 <code>_generate_minibatch()</code> 中添加路由：</p>
+</li>
+</ol>
+<div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">_generate_minibatch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">prompts</span><span class="p">):</span>
+    <span class="k">if</span> <span class="s2">&quot;robotwin&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">task_suite_name</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_generate_minibatch_robotwin</span><span class="p">(</span><span class="n">prompts</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="s2">&quot;your_env&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">task_suite_name</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_generate_minibatch_yourenv</span><span class="p">(</span><span class="n">prompts</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_generate_minibatch_libero</span><span class="p">(</span><span class="n">prompts</span><span class="p">)</span>
+</code></pre></div>
+
+<ol>
+<li>如果是 RoboTwin 2.0 的新任务，按 SETUP.md 的步骤操作即可：<ul>
+<li><code>pre_collect_robotwin2_seed.sh</code> 收集可行种子</li>
+<li>在 <code>rob_dataset.py</code> 的 <code>all_task_names</code> 中添加任务名</li>
+<li>在 <code>rob_rollout.py</code> 的 <code>max_steps</code> 中添加 max_steps</li>
+<li>实现 <code>get_info()</code> 方法 → 参考 <code>modified_codes/robotwin2/envs/handover_block.py</code></li>
+</ul>
+</li>
+</ol>
+<h3 id="76-level-5">7.6 Level 5：数据管道</h3>
+<p><strong>文件</strong>：<code>verl/utils/dataset/rob_dataset.py</code></p>
+<p>为新环境实现 Dataset 类：</p>
+<div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">YourEnv_Dataset</span><span class="p">(</span><span class="n">Dataset</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">task_suite_name</span><span class="p">,</span> <span class="n">num_trials_per_task</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">train_val</span><span class="o">=</span><span class="s2">&quot;train&quot;</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">task_suite_name</span> <span class="o">=</span> <span class="n">task_suite_name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_trials_per_task</span> <span class="o">=</span> <span class="n">num_trials_per_task</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_read_files_and_tokenize</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_read_files_and_tokenize</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">dataframes</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">task_id</span><span class="p">,</span> <span class="n">task_name</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">all_task_names</span><span class="p">):</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">train_val</span> <span class="o">==</span> <span class="s2">&quot;train&quot;</span><span class="p">:</span>
+                <span class="n">trials</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_trials_per_task</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">trials</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_trials_per_task</span><span class="p">))</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">trials</span><span class="p">:</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="p">{</span>
+                    <span class="s2">&quot;task_suite_name&quot;</span><span class="p">:</span> <span class="n">task_name</span><span class="p">,</span>
+                    <span class="s2">&quot;task_id&quot;</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">task_id</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">int64</span><span class="p">)</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span>
+                    <span class="s2">&quot;trial_id&quot;</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">int64</span><span class="p">)</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span>
+                    <span class="s2">&quot;trial_seed&quot;</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">int64</span><span class="p">)</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span>
+                <span class="p">}</span>
+                <span class="n">dataframes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dataframe</span> <span class="o">=</span> <span class="n">dataframes</span>
+</code></pre></div>
+
+<p>然后在 <code>ray_trainer.py:_create_dataloader()</code> 中注册：</p>
+<div class="codehilite"><pre><span></span><code><span class="k">elif</span> <span class="s2">&quot;your_env&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">task_suite_name</span><span class="p">:</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">train_dataset</span> <span class="o">=</span> <span class="n">YourEnv_Dataset</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">task_suite_name</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">val_dataset</span> <span class="o">=</span> <span class="n">YourEnv_Dataset</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">task_suite_name</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="77-level-6">7.7 Level 6：训练脚本</h3>
+<p><strong>文件</strong>：<code>examples/run_yourmodel_rl_yourenv.sh</code></p>
+<p>参照 LIBERO 示例，关键配置项：</p>
+<div class="codehilite"><pre><span></span><code><span class="nb">export</span><span class="w"> </span><span class="nv">ROBOT_PLATFORM</span><span class="o">=</span>YOUR_PLATFORM
+
+python<span class="w"> </span>-u<span class="w"> </span>-m<span class="w"> </span>verl.trainer.main_ppo<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>data.task_suite_name<span class="o">=</span><span class="nv">$DATASET_NAME</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>data.n_samples<span class="o">=</span><span class="m">8</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>data.train_batch_size<span class="o">=</span><span class="m">64</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>data.val_batch_size<span class="o">=</span><span class="m">496</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>actor_rollout_ref.model.path<span class="o">=</span><span class="nv">$SFT_MODEL_PATH</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>actor_rollout_ref.model.vla<span class="o">=</span>your-vla<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>actor_rollout_ref.model.action_token_len<span class="o">=</span><span class="m">7</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>actor_rollout_ref.model.action_chunks_len<span class="o">=</span><span class="m">8</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>actor_rollout_ref.actor.clip_ratio_high<span class="o">=</span><span class="m">0</span>.28<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>actor_rollout_ref.actor.clip_ratio_low<span class="o">=</span><span class="m">0</span>.2<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>actor_rollout_ref.rollout.temperature<span class="o">=</span><span class="m">1</span>.6<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>actor_rollout_ref.rollout.task_suite_name<span class="o">=</span><span class="nv">$DATASET_NAME</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>algorithm.adv_estimator<span class="o">=</span>grpo<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>algorithm.kl_ctrl.kl_coef<span class="o">=</span><span class="m">0</span>.00<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>trainer.total_epochs<span class="o">=</span><span class="m">100</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>...
+</code></pre></div>
+
+<h3 id="78">7.8 适配清单</h3>
+<table>
+<thead>
+<tr>
+<th>层次</th>
+<th>需修改的文件</th>
+<th>核心工作</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>L1 模型注册</td>
+<td><code>vla_utils/your_model/*.py</code>, <code>fsdp_workers.py</code></td>
+<td>实现 <code>forward()</code> + <code>generate_action_verl()</code></td>
+</tr>
+<tr>
+<td>L2 推理接口</td>
+<td><code>rob_rollout.py</code></td>
+<td>添加 <code>_generate_one_step_yourmodel()</code></td>
+</tr>
+<tr>
+<td>L3 训练接口</td>
+<td><code>dp_rob.py</code></td>
+<td>添加 action token logits 截取逻辑</td>
+</tr>
+<tr>
+<td>L4 环境注册</td>
+<td><code>rob_rollout.py</code>, <code>rob_dataset.py</code></td>
+<td>添加 max_steps + 环境初始化逻辑</td>
+</tr>
+<tr>
+<td>L5 数据管道</td>
+<td><code>rob_dataset.py</code>, <code>ray_trainer.py</code></td>
+<td>实现 <code>YourEnv_Dataset</code> 类</td>
+</tr>
+<tr>
+<td>L6 训练脚本</td>
+<td><code>examples/run_*.sh</code></td>
+<td>创建训练启动脚本</td>
+</tr>
+</tbody>
+</table>
+<p><strong>最小适配路径</strong>（同一仿真器的新任务）：只需 L4 + L5 + L6。
+<strong>中等适配路径</strong>（同一仿真器 + 新 VLA 模型）：L1 + L2 + L3 + L6。
+<strong>完整适配路径</strong>（全新仿真器 + 新 VLA 模型）：全部 6 层。</p>
+<hr />
+<h2 id="_7">八、关键概念速查</h2>
+<table>
+<thead>
+<tr>
+<th>概念</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>VLA</strong></td>
+<td>Vision-Language-Action，多模态机器人操控模型</td>
+</tr>
+<tr>
+<td><strong>GRPO</strong></td>
+<td>Group Relative Policy Optimization，组内标准化消去 value function</td>
+</tr>
+<tr>
+<td><strong>Dynamic Sampling</strong></td>
+<td>过滤全成功/全失败 group，确保非零梯度</td>
+</tr>
+<tr>
+<td><strong>Clip Higher</strong></td>
+<td>将 PPO clip 上界从 0.2 提高到 0.28，鼓励低概率 token 探索</td>
+</tr>
+<tr>
+<td><strong>pushcut</strong></td>
+<td>push-driven shortcut，RL 训练中涌现的推挤式新动作策略</td>
+</tr>
+<tr>
+<td><strong>Outcome Reward</strong></td>
+<td>仅根据任务是否成功给出 0/1 奖励，无中间过程奖励</td>
+</tr>
+<tr>
+<td><strong>Action Chunking</strong></td>
+<td>一次推理输出多个连续动作（LIBERO: 8, RoboTwin: 25），减少推理频率</td>
+</tr>
+<tr>
+<td><strong>veRL</strong></td>
+<td>字节跳动的 LLM 通用 RL 框架，SimpleVLA-RL 的底层基础设施</td>
+</tr>
+<tr>
+<td><strong>OpenVLA-OFT</strong></td>
+<td>基于 OpenVLA 改进，action chunk + parallel decoding + cross-entropy loss 替代 L1 regression</td>
+</tr>
+<tr>
+<td><strong>FSDP Full Shard</strong></td>
+<td>Zero-3 级参数分片，使 7B 模型可在 8×A800 上进行全参数 RL 训练</td>
+</tr>
+</tbody>
+</table>
+  </div>
+</main>
+
+
+<script>
+(function() {
+  const sidebar = document.getElementById('sidebar');
+  const links = sidebar.querySelectorAll('a');
+  const headings = document.querySelectorAll('h1[id], h2[id], h3[id], h4[id]');
+  if (headings.length === 0) return;
+
+  const linkMap = new Map();
+  links.forEach(function(a) {
+    const href = a.getAttribute('href');
+    if (href && href.startsWith('#')) linkMap.set(href.slice(1), a);
+  });
+
+  function onScroll() {
+    let currentId = null;
+    const scrollTop = window.scrollY + 80;
+    headings.forEach(function(h) { if (h.offsetTop <= scrollTop) currentId = h.id; });
+    links.forEach(function(a) { a.classList.remove('active'); });
+    if (currentId && linkMap.has(currentId)) {
+      const el = linkMap.get(currentId);
+      el.classList.add('active');
+      const sr = sidebar.getBoundingClientRect();
+      const er = el.getBoundingClientRect();
+      if (er.bottom > sr.bottom || er.top < sr.top) {
+        el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+    }
+  }
+
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+})();
+</script>
+
+</body>
+</html>
