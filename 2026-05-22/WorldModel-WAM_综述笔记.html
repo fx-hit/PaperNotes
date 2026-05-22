@@ -7,8 +7,8 @@
 <!-- arxiv: -->
 <!-- venue: PaperNotes 综述 2026 -->
 <!-- tags: WAM, 世界模型, 机器人, 视频生成, 泛化 -->
-<!-- words-zh: 6674 -->
-<!-- words-en: 634 -->
+<!-- words-zh: 6634 -->
+<!-- words-en: 624 -->
 <!-- reading-time: 22 -->
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap');
@@ -248,7 +248,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <main class="main-wrapper">
   <div class="content-inner" id="main-content">
 <h1 id="world-models-and-world-action-models-a-survey-note">World Models and World Action Models: A Survey Note</h1>
-<div class="article-stats">6,674 字 · English 634 词 · 约 22 分钟阅读</div>
+<div class="article-stats">6,634 字 · English 624 词 · 约 22 分钟阅读</div>
 
 <blockquote>
 <p><strong>笔记信息</strong>
@@ -371,14 +371,8 @@ document.addEventListener('DOMContentLoaded', function() {
 <p>缺点是精细动作可能不够准。HarmoWAM 的动机实验把这个问题说得很清楚：Imagine-then-Execute 在 OOD 场景下能够可靠到达目标区域，但 Interaction 阶段容易因为 IDM 对接触、抓取点、插入深度的反推不准而失败。换句话说，视频预测能告诉机器人“应该去哪里”，但未必能告诉它“夹爪应该以多高精度、什么时序、什么接触姿态执行”。</p>
 <h3 id="42-joint-modeling">4.2 Joint Modeling：视频和动作共同去噪</h3>
 <p>Joint WAM 把未来视频 token 和动作 token 放进同一个 diffusion / flow matching 过程里，通过共享注意力让两者彼此条件化。DreamZero、Motus、Fast-WAM-Joint、X-WAM 都属于或接近这一类；HarmoWAM 本身不是纯 Joint Modeling 方法，而是把 Joint Modeling 与 Imagine-then-Execute 做系统对比后，再用双专家门控融合两者，因此这里主要用它的动机实验来说明 Joint Modeling 的优势和边界。</p>
-<table>
-<tr>
-<td width="38%"><img src="assets/worldmodel-wam/harmowam-motivation-left.jpg" width="100%"><br><em>图3(a)：两个动机任务，分别对应双臂插花和可乐罐堆叠，覆盖 OOD 移动和精细交互两类难点。</em></td>
-<td width="62%"><img src="assets/worldmodel-wam/harmowam-motivation-table.jpg" width="100%"><br><em>图3(b)：右侧表格单独裁出放大，按 ID / OOD Background / OOD Position / OOD Objects 分解 Transit 与 Interaction 成功次数。</em></td>
-</tr>
-</table>
-
-<p><em>图3：HarmoWAM 的动机图把 WAM 内部的一个关键 trade-off 可视化了：Imagine-then-Execute 在 Transit 阶段泛化很强，能在 OOD 背景、位置和对象变化下接近目标；Joint Modeling 在 Interaction 阶段更准，目标附近的抓取、插入、堆叠更稳定。图3(b) 的表格不是简单比较平均成功率，而是在回答“失败发生在哪个阶段”。这也是 HarmoWAM 后续采用双专家和门控机制的直接依据。</em></p>
+<p><img alt="图3：HarmoWAM 动机实验揭示两类 WAM 范式的阶段性互补" src="assets/worldmodel-wam/harmowam-motivation.jpg" /></p>
+<p><em>图3：HarmoWAM 的动机图展示了两类 WAM 范式在 Transit 和 Interaction 阶段的互补失败模式。上排是可乐罐堆叠，下排是双臂插花；每行都按时间推进展示从接近目标（Transit）到精细交互（Inter.）的过程。它不是表格，而是阶段过程对比图：Imagine-then-Execute 更擅长 OOD 场景下的大范围目标接近，Joint Modeling 更擅长目标附近的精细交互。这也是 HarmoWAM 后续采用双专家和门控机制的直接依据。</em></p>
 <p><img alt="图4：HarmoWAM 用世界模型统一预测型专家、反应式专家和过程自适应门控" src="assets/worldmodel-wam/harmowam-method.jpg" /></p>
 <p><em>图4：HarmoWAM 的架构图补上了动机实验之后的“怎么融合”。世界模型同时输出显式未来视频和隐式时空 latent；Predictive Expert 利用世界模型潜特征做精细动作预测，更适合 Interaction；Reactive Expert 利用预测帧和实时视觉做大范围目标接近，更适合 Transit；中间的 Process-Adaptive Gating 根据当前视觉状态在两个专家之间切换。这个图说明 HarmoWAM 不是把两类 WAM 简单平均，而是把“泛化移动”和“精细交互”拆成两个控制专家，再用阶段判断决定何时相信哪一路。</em></p>
 <p>优势是动作精度更高。动作不是后处理出来的，而是在联合 latent 空间里与视觉动态共同优化，因此视频状态和控制信号之间的对齐更紧。HarmoWAM 的实验显示，Joint Modeling 在 ID 场景中移动和交互都很强；当人为把机器人放到目标附近后，它在 OOD Interaction 阶段仍能保持 8 到 10 次成功中的高成功次数，说明“做得准”这件事并没有退化。</p>
@@ -387,35 +381,35 @@ document.addEventListener('DOMContentLoaded', function() {
 <p>Fast-WAM 和 GigaWorld-Policy 是当前最务实的一支：训练时仍然做视频和动作联合建模，用未来视频作为密集监督；推理时通过注意力掩码和缓存设计跳过未来视频生成，只保留动作解码。</p>
 <table>
 <tr>
-<td width="50%"><img src="assets/worldmodel-wam/fastwam-teaser.jpg" width="100%"><br><em>图4(a)：Fast-WAM 对比 Joint-modeling、Causal WAM 和自身 fast path。重点是训练时保留视频协同建模，推理时只保留动作分支。</em></td>
-<td width="50%"><img src="assets/worldmodel-wam/gigaworld-paradigms.jpg" width="100%"><br><em>图4(b)：GigaWorld-Policy 对比 VLA 辅助未来监督、联合动作-视频预测、两阶段预测和 action-centered WAM。动作 token 不依赖未来视频 token，因此推理时可以安全跳过视频生成。</em></td>
+<td width="50%"><img src="assets/worldmodel-wam/fastwam-teaser.jpg" width="100%"><br><em>图5(a)：Fast-WAM 对比 Joint-modeling、Causal WAM 和自身 fast path。重点是训练时保留视频协同建模，推理时只保留动作分支。</em></td>
+<td width="50%"><img src="assets/worldmodel-wam/gigaworld-paradigms.jpg" width="100%"><br><em>图5(b)：GigaWorld-Policy 对比 VLA 辅助未来监督、联合动作-视频预测、两阶段预测和 action-centered WAM。动作 token 不依赖未来视频 token，因此推理时可以安全跳过视频生成。</em></td>
 </tr>
 </table>
 
-<p><em>图4：两篇 action-centered WAM 的图放在一起看，信息非常一致：视频预测的价值主要体现在训练阶段，通过密集动态监督塑造动作表征；部署阶段则应尽量走短路径，避免每个控制周期都完整生成未来视频。Fast-WAM 强调“Do WAM need test-time future imagination?”，GigaWorld-Policy 强调动作中心的因果掩码，两者都把 WAM 从“慢速视觉想象器”推向“可实时控制的世界表征策略”。</em></p>
+<p><em>图5：两篇 action-centered WAM 的图放在一起看，信息非常一致：视频预测的价值主要体现在训练阶段，通过密集动态监督塑造动作表征；部署阶段则应尽量走短路径，避免每个控制周期都完整生成未来视频。Fast-WAM 强调“Do WAM need test-time future imagination?”，GigaWorld-Policy 强调动作中心的因果掩码，两者都把 WAM 从“慢速视觉想象器”推向“可实时控制的世界表征策略”。</em></p>
 <p>Fast-WAM 的核心结论很强：去掉 video co-training 的性能损失，远大于推理时跳过显式未来想象的损失。在 LIBERO 上，Fast-WAM 为 97.6%，Fast-WAM-Joint 为 98.5%，差距只有 0.9 个点；但去掉 video co-training 后下降到 93.5%。在 RoboTwin 上，Fast-WAM 为 91.8%，无 video co-training 变体下降到 83.8%。这说明视频预测更像是训练世界表征的监督，而不一定是每一步控制都必须执行的推理过程。</p>
 <p>GigaWorld-Policy 也沿着同一方向推进。它用 causal mask 保证动作 token 不依赖未来视频 token，而未来视频 token 可以以动作为条件。这样推理时可以安全删掉未来视频分支，只做 action-only。结果是推理延迟 360ms，远快于 Motus 的 3231ms，同时真实世界平均成功率 0.83，高于 Motus 的 0.76 和 <span class="math inline">$\pi_{0.5}$</span> 的 0.69。</p>
 <h3 id="44-object-addressable-wam">4.4 Object-Addressable WAM：把世界拆成可寻址对象</h3>
 <p>OA-WAM 关注的是另一个根本问题：整体图像或视频 token 会把目标对象、邻近物体、背景和光照纠缠在一起。当相机视角、布局、背景或噪声变化时，目标物体仍然可见，但动作解码器可能“找错对象”。</p>
-<p><img alt="图5：OA-WAM 用对象地址缓解整体世界表征的目标漂移" src="assets/worldmodel-wam/oa-wam-object-addressability.jpg" /></p>
-<p><em>图5：OA-WAM 的总览图对比了整体 WAM 和对象可寻址 WAM 在扰动场景下的差异。左侧列出 camera、layout、robot init、light、background、sensor noise 等常见部署扰动；右侧展示整体表征会把目标 mug 与背景和邻近物体混合，导致动作轨迹漂到错误对象，而对象地址约束让动作解码器稳定查询任务对象。这个图说明 WAM 的“世界”不应只是一张未来图像，还应该提供可查询、可绑定、可追踪的对象级状态。</em></p>
+<p><img alt="图6：OA-WAM 用对象地址缓解整体世界表征的目标漂移" src="assets/worldmodel-wam/oa-wam-object-addressability.jpg" /></p>
+<p><em>图6：OA-WAM 的总览图对比了整体 WAM 和对象可寻址 WAM 在扰动场景下的差异。左侧列出 camera、layout、robot init、light、background、sensor noise 等常见部署扰动；右侧展示整体表征会把目标 mug 与背景和邻近物体混合，导致动作轨迹漂到错误对象，而对象地址约束让动作解码器稳定查询任务对象。这个图说明 WAM 的“世界”不应只是一张未来图像，还应该提供可查询、可绑定、可追踪的对象级状态。</em></p>
 <p>OA-WAM 的做法是把每帧拆成 robot 槽和 object 槽，每个槽包含冻结身份地址 <span class="math inline">$\mathbf{addr}_k$</span> 和时变内容 <span class="math inline">$\mathbf{cnt}_k^t$</span>。注意力键只从身份地址投影，并在每层后重置地址流，从架构上保证“对哪个对象采取行动”和“对象现在是什么状态”分离。</p>
 <p>这类工作的重要性在于，它把 WAM 从“像素级未来预测器”推进到“对象级世界状态接口”。如果 WAM 要在真实家庭、工厂或仓储场景部署，只预测整体画面是不够的；策略需要稳定地指向任务对象，理解对象身份在视角变化和布局变化下保持不变。</p>
 <h3 id="45-4d-wam-2d">4.5 4D WAM：从 2D 视频到空间感知动态模拟器</h3>
 <p>X-WAM 将 WAM 从 2D RGB 视频扩展到 RGB-D、3D 点云和机器人状态。它基于 Wan2.2-TI2V-5B，预测未来多视角 RGB-D 视频、未来状态和动作，同时通过轻量深度分支提供几何信息。</p>
-<p><img alt="图6：X-WAM 将视频、深度、状态和动作统一到 4D 世界动作建模" src="assets/worldmodel-wam/x-wam-teaser.jpg" /></p>
-<p><em>图6：X-WAM 的总览图展示了一个更空间化的 WAM 形态：输入多视角 RGB、本体状态和语言指令，输出未来 RGB-D 视频、3D 重建和动作序列。下方结果同时报告策略成功率和重建指标，说明 X-WAM 不是把深度当成后处理可视化，而是把几何预测纳入同一个训练目标。这个图对综述的启发是：当任务需要插入、装配、包装等高空间精度时，2D 视频想象可能不够，WAM 需要显式几何接口。</em></p>
+<p><img alt="图7：X-WAM 将视频、深度、状态和动作统一到 4D 世界动作建模" src="assets/worldmodel-wam/x-wam-teaser.jpg" /></p>
+<p><em>图7：X-WAM 的总览图展示了一个更空间化的 WAM 形态：输入多视角 RGB、本体状态和语言指令，输出未来 RGB-D 视频、3D 重建和动作序列。下方结果同时报告策略成功率和重建指标，说明 X-WAM 不是把深度当成后处理可视化，而是把几何预测纳入同一个训练目标。这个图对综述的启发是：当任务需要插入、装配、包装等高空间精度时，2D 视频想象可能不够，WAM 需要显式几何接口。</em></p>
 <p>这个方向解决的是纯 2D 视频生成的物理幻觉问题。只看像素，模型可能生成看起来合理但几何上不可执行的未来；引入深度和点云后，策略可以利用空间结构做更稳定的操作。X-WAM 在 RoboCasa 上达到 79.2%，在 RoboTwin Clean / Randomized 上达到 89.8% / 90.7%，并在 Chamfer Distance 上显著优于后处理深度估计方案，说明端到端几何预测确实改善了世界建模质量。</p>
 <h3 id="46-adaptive-wam">4.6 Adaptive WAM：让系统知道何时相信想象</h3>
 <p>FFDC-WAM 和 Dynamic Consistency WAM 都在回答一个部署问题：WAM 预测了未来，但机器人应不应该一直相信它？</p>
 <table>
 <tr>
-<td width="50%"><img src="assets/worldmodel-wam/ffdc-overview-cropped.jpg" width="100%"><br><em>图7(a)：FFDC-WAM 在执行中持续验证预测未来与真实反馈是否一致，一致则继续执行，不一致则重规划。</em></td>
-<td width="50%"><img src="assets/worldmodel-wam/dynamic-consistency-demo.jpg" width="100%"><br><em>图7(b)：Dynamic Consistency WAM 展示预测未来、真实未来和一致性信号之间的关系，用于判断轨迹质量和选择候选分支。</em></td>
+<td width="50%"><img src="assets/worldmodel-wam/ffdc-overview-cropped.jpg" width="100%"><br><em>图8(a)：FFDC-WAM 在执行中持续验证预测未来与真实反馈是否一致，一致则继续执行，不一致则重规划。</em></td>
+<td width="50%"><img src="assets/worldmodel-wam/dynamic-consistency-demo.jpg" width="100%"><br><em>图8(b)：Dynamic Consistency WAM 展示预测未来、真实未来和一致性信号之间的关系，用于判断轨迹质量和选择候选分支。</em></td>
 </tr>
 </table>
 
-<p><em>图7：裁剪后的 FFDC-WAM 图与 Dynamic Consistency 图比例接近，可以并排阅读。FFDC 更偏工程部署：每个 check step 都用 verifier 决定 chunk 是否继续执行，从而把固定 chunk 改成自适应 chunk。Dynamic Consistency 更偏度量和选择：把预测未来与真实未来的相似性转化为无需 value head 的质量信号。二者都依赖同一个前提：WAM 输出的不只是动作，还包括可被现实检验的未来预期。</em></p>
+<p><em>图8：裁剪后的 FFDC-WAM 图与 Dynamic Consistency 图比例接近，可以并排阅读。FFDC 更偏工程部署：每个 check step 都用 verifier 决定 chunk 是否继续执行，从而把固定 chunk 改成自适应 chunk。Dynamic Consistency 更偏度量和选择：把预测未来与真实未来的相似性转化为无需 value head 的质量信号。二者都依赖同一个前提：WAM 输出的不只是动作，还包括可被现实检验的未来预期。</em></p>
 <p>FFDC-WAM 把执行过程变成 future-reality verification。WAM 一次输出长 horizon 的动作和未来视觉 token，轻量 verifier 在执行中持续比对真实观测、剩余动作、预测未来和语言指令。如果一致性高就继续执行，低就立即重规划。它在 RoboTwin hard 设置中把 Rand.hard 成功率从 Base-Motus 的 54.20% 提到 76.40%，平均推理调用从 5.47 次降到 1.69 次，实现了“简单阶段少想、困难阶段多想”。</p>
 <p>Dynamic Consistency WAM 则把预测未来与真实未来的一致性变成 value-free 信号。成功轨迹通常有更高的一致性，LingBot-VA 上仅凭一致性就能得到 AUC 0.88 的成败区分能力。但它也指出一个边界：background collapse 会让失败轨迹看起来一致性很高，因为系统已经卡住，未来几乎不变，预测静态背景很容易。因此一致性必须和 latent change 一起看，低动态下的高一致性不代表策略好。</p>
 <hr />
@@ -479,8 +473,8 @@ document.addEventListener('DOMContentLoaded', function() {
 <h3 id="61-vs">6.1 泛化移动 vs 精细交互</h3>
 <p>HarmoWAM 把这个矛盾讲得最直接：Imagine-then-Execute 的 Transit 很强，Joint Modeling 的 Interaction 很强，但单一范式很难同时兼得。泛化移动依赖视频世界模型的开放式先验，精细交互依赖动作和接触动态的高精度对齐。</p>
 <p>HarmoWAM 的解决方案是双专家门控：Reactive Expert 更适合 Transit，Predictive Expert 更适合 Interaction，由过程自适应门控在不同阶段切换。它在 OOD 下仅下降 7.9%，而基线下降 20.9 到 43.8 个点，说明“阶段化控制”可能比追求一个全能动作头更现实。</p>
-<p><img alt="图8：AttenA+ 用速度场强调低速关键动作" src="assets/worldmodel-wam/attena-workflow.jpg" /></p>
-<p><em>图8：AttenA+ 的流程图展示了另一种补足精细交互的方式：不改变 WAM 或 VLA 骨干，而是从真值动作序列中计算速度幅值，把低速段映射为更高损失权重。图中左侧是速度场统计，中间是权重映射，右侧是把权重乘到动作损失上。它对 WAM 的意义在于，世界模型提供了宏观动态先验，但成败往往发生在低速、接触、对齐、释放这些少数关键时间步；训练目标需要把这些步骤显式凸显出来。</em></p>
+<p><img alt="图9：AttenA+ 用速度场强调低速关键动作" src="assets/worldmodel-wam/attena-workflow.jpg" /></p>
+<p><em>图9：AttenA+ 的流程图展示了另一种补足精细交互的方式：不改变 WAM 或 VLA 骨干，而是从真值动作序列中计算速度幅值，把低速段映射为更高损失权重。图中左侧是速度场统计，中间是权重映射，右侧是把权重乘到动作损失上。它对 WAM 的意义在于，世界模型提供了宏观动态先验，但成败往往发生在低速、接触、对齐、释放这些少数关键时间步；训练目标需要把这些步骤显式凸显出来。</em></p>
 <p>这个结论也能解释为什么 AttenA+ 有效。机器人轨迹不是每个时间步都同等重要。低速精密动作往往决定成败，高速过渡动作容错更高。AttenA+ 只用速度场重加权损失，就让 Fast-WAM 在 RoboTwin 上从 91.80% 提升到 92.46%，在真机任务上平均从 92.5% 提到 97.0%。这说明 WAM 的下一步改进不一定总是更大模型，也可能是更准确地识别“哪些动作值得优化”。</p>
 <h3 id="62-vs">6.2 显式想象 vs 实时控制</h3>
 <p>WAM 最诱人的能力是生成未来，但机器人控制最苛刻的约束是实时闭环。显式想象越完整，推理越慢；推理越慢，控制越容易错过纠错窗口。</p>
