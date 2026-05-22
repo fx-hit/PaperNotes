@@ -4,12 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>World Models and World Action Models: A Survey Note</title>
-<!-- arxiv: -->
-<!-- venue: PaperNotes 综述 2026 -->
-<!-- tags: WAM, 世界模型, 机器人, 视频生成, 泛化 -->
-<!-- words-zh: 6634 -->
-<!-- words-en: 624 -->
-<!-- reading-time: 22 -->
+<!-- words-zh: 9502 -->
+<!-- words-en: 1163 -->
+<!-- reading-time: 33 -->
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
@@ -192,21 +189,99 @@ document.addEventListener('DOMContentLoaded', function() {
 <ul>
 </li>
 <li class="toc-h3"><a href="#41-imagine-then-execute">4.1 Imagine-then-Execute：先预测未来，再反推动作</a>
+<ul>
 </li>
-<li class="toc-h3"><a href="#42-joint-modeling">4.2 Joint Modeling：视频和动作共同去噪</a>
+<li class="toc-h4"><a href="#_3">核心思路</a>
 </li>
-<li class="toc-h3"><a href="#43-action-centered-wam">4.3 Action-Centered WAM：训练时学世界，推理时只出动作</a>
+<li class="toc-h4"><a href="#lingbot-va-">LingBot-VA 的因果视频-动作架构</a>
 </li>
-<li class="toc-h3"><a href="#44-object-addressable-wam">4.4 Object-Addressable WAM：把世界拆成可寻址对象</a>
-</li>
-<li class="toc-h3"><a href="#45-4d-wam-2d">4.5 4D WAM：从 2D 视频到空间感知动态模拟器</a>
-</li>
-<li class="toc-h3"><a href="#46-adaptive-wam">4.6 Adaptive WAM：让系统知道何时相信想象</a>
+<li class="toc-h4"><a href="#_4">实验表现与边界</a>
 </ul></li>
 </li>
-<li class="toc-h2"><a href="#_3">五、横向对比</a>
+<li class="toc-h3"><a href="#42-joint-modeling">4.2 Joint Modeling：视频和动作共同去噪</a>
+<ul>
 </li>
-<li class="toc-h2"><a href="#_4">六、三个核心矛盾</a>
+<li class="toc-h4"><a href="#_5">核心思路</a>
+</li>
+<li class="toc-h4"><a href="#dreamzero">DreamZero：大规模视频世界模型直出策略</a>
+</li>
+<li class="toc-h4"><a href="#dreamzero-flash">DreamZero-Flash：解耦噪声调度实现实时推理</a>
+</li>
+<li class="toc-h4"><a href="#_6">实验表现与边界</a>
+</li>
+<li class="toc-h4"><a href="#imagine-then-execute">与 Imagine-then-Execute 的系统对比</a>
+</ul></li>
+</li>
+<li class="toc-h3"><a href="#43-hybrid-expert-wam">4.3 Hybrid Expert WAM：把泛化移动和精细交互拆成两个专家</a>
+<ul>
+</li>
+<li class="toc-h4"><a href="#_7">核心思路</a>
+</li>
+<li class="toc-h4"><a href="#_8">架构详解</a>
+</li>
+<li class="toc-h4"><a href="#_9">训练策略</a>
+</li>
+<li class="toc-h4"><a href="#_10">实验表现与边界</a>
+</ul></li>
+</li>
+<li class="toc-h3"><a href="#44-action-centered-wam">4.4 Action-Centered WAM：训练时学世界，推理时只出动作</a>
+<ul>
+</li>
+<li class="toc-h4"><a href="#_11">核心思路</a>
+</li>
+<li class="toc-h4"><a href="#fast-wammot-">Fast-WAM：MoT + 结构化注意力的训练-推理解耦</a>
+</li>
+<li class="toc-h4"><a href="#gigaworld-policy-transformer">GigaWorld-Policy：单一共享 Transformer + 因果掩码</a>
+</li>
+<li class="toc-h4"><a href="#_12">实验核心结论</a>
+</ul></li>
+</li>
+<li class="toc-h3"><a href="#45-object-addressable-wam">4.5 Object-Addressable WAM：把世界拆成可寻址对象</a>
+<ul>
+</li>
+<li class="toc-h4"><a href="#_13">核心思路</a>
+</li>
+<li class="toc-h4"><a href="#oa-attention">槽分解与 OA Attention</a>
+</li>
+<li class="toc-h4"><a href="#_14">序列结构与训练</a>
+</li>
+<li class="toc-h4"><a href="#_15">实验表现与边界</a>
+</ul></li>
+</li>
+<li class="toc-h3"><a href="#46-4d-wam-2d">4.6 4D WAM：从 2D 视频到空间感知动态模拟器</a>
+<ul>
+</li>
+<li class="toc-h4"><a href="#_16">核心思路</a>
+</li>
+<li class="toc-h4"><a href="#_17">轻量深度分支与异步噪声调度</a>
+</li>
+<li class="toc-h4"><a href="#_18">实验表现与边界</a>
+</ul></li>
+</li>
+<li class="toc-h3"><a href="#47-adaptive-wam">4.7 Adaptive WAM：让系统知道何时相信想象</a>
+<ul>
+</li>
+<li class="toc-h4"><a href="#_19">核心思路</a>
+</li>
+<li class="toc-h4"><a href="#ffdc-wamfuture-reality-verification">FFDC-WAM：Future-Reality Verification</a>
+</li>
+<li class="toc-h4"><a href="#dynamic-consistency-wam-value-free">Dynamic Consistency WAM：预测-真实一致性作为 value-free 信号</a>
+</li>
+<li class="toc-h4"><a href="#background-collapse">Background Collapse：一致性的阿喀琉斯之踵</a>
+</ul></li>
+</li>
+<li class="toc-h3"><a href="#48-training-optimization">4.8 Training Optimization：动作重要性重加权与知识迁移</a>
+<ul>
+</li>
+<li class="toc-h4"><a href="#attena">AttenA+：用速度场发现关键动作</a>
+</li>
+<li class="toc-h4"><a href="#ckt-wam-wam">CKT-WAM：异构 WAM 之间的知识迁移</a>
+</ul></li>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_20">五、横向对比</a>
+</li>
+<li class="toc-h2"><a href="#_21">六、三个核心矛盾</a>
 <ul>
 </li>
 <li class="toc-h3"><a href="#61-vs">6.1 泛化移动 vs 精细交互</a>
@@ -216,17 +291,17 @@ document.addEventListener('DOMContentLoaded', function() {
 <li class="toc-h3"><a href="#63-vs">6.3 一致性信号 vs 真实成功</a>
 </ul></li>
 </li>
-<li class="toc-h2"><a href="#_5">七、关键技术脉络</a>
+<li class="toc-h2"><a href="#_22">七、关键技术脉络</a>
 <ul>
 </li>
 <li class="toc-h3"><a href="#71">7.1 视频预训练正在成为机器人世界先验</a>
 </li>
-<li class="toc-h3"><a href="#72">7.2 注意力掩码决定了“世界”和“动作”的因果关系</a>
+<li class="toc-h3"><a href="#72">7.2 注意力掩码决定了"世界"和"动作"的因果关系</a>
 </li>
 <li class="toc-h3"><a href="#73">7.3 世界模型不只是策略，也是接口</a>
 </ul></li>
 </li>
-<li class="toc-h2"><a href="#_6">八、目前的开放问题</a>
+<li class="toc-h2"><a href="#_23">八、目前的开放问题</a>
 <ul>
 </li>
 <li class="toc-h3"><a href="#81-wam-scaling-law">8.1 WAM 的 scaling law 还不清楚</a>
@@ -240,7 +315,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </li>
 <li class="toc-h2"><a href="#wam_1">九、个人理解：WAM 的合理定位</a>
 </li>
-<li class="toc-h2"><a href="#_7">十、关键概念速查</a>
+<li class="toc-h2"><a href="#_24">十、关键概念速查</a>
 </ul></li>
 </li></ul>
 </nav>
@@ -248,7 +323,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <main class="main-wrapper">
   <div class="content-inner" id="main-content">
 <h1 id="world-models-and-world-action-models-a-survey-note">World Models and World Action Models: A Survey Note</h1>
-<div class="article-stats">6,634 字 · English 624 词 · 约 22 分钟阅读</div>
+<div class="article-stats">9,502 字 · English 1,163 词 · 约 33 分钟阅读</div>
 
 <blockquote>
 <p><strong>笔记信息</strong>
@@ -260,14 +335,14 @@ document.addEventListener('DOMContentLoaded', function() {
 </blockquote>
 <hr />
 <h2 id="_1">一、核心结论</h2>
-<p>这一批论文共同指向一个清晰趋势：机器人策略正在从“直接把图像和语言映射成动作”的 VLA 范式，转向“先学习世界如何变化，再从世界变化中产生动作”的世界模型范式。WAM（World Action Model）是这个趋势在机器人操控中的具体形态：它把未来视觉、机器人状态和动作放进同一个生成式建模框架里，使策略不再只是行为克隆器，而是一个可以预测、诊断、选择和复用未来的控制系统。</p>
-<p>但这些工作也说明，WAM 的价值并不简单等同于“推理时一定要生成未来视频”。更准确的说法是：</p>
+<p>这一批论文共同指向一个清晰趋势：机器人策略正在从"直接把图像和语言映射成动作"的 VLA 范式，转向"先学习世界如何变化，再从世界变化中产生动作"的世界模型范式。WAM（World Action Model）是这个趋势在机器人操控中的具体形态：它把未来视觉、机器人状态和动作放进同一个生成式建模框架里，使策略不再只是行为克隆器，而是一个可以预测、诊断、选择和复用未来的控制系统。</p>
+<p>但这些工作也说明，WAM 的价值并不简单等同于"推理时一定要生成未来视频"。更准确的说法是：</p>
 <blockquote>
 <p><strong>未来视频预测是训练世界表征的强监督信号，也是诊断和规划的接口；但在实时控制时，显式生成未来视频可以被压缩、跳过、异步执行，甚至只作为训练时的辅助任务存在。</strong></p>
 </blockquote>
 <p><img alt="图1：DreamZero 将 World Action Model 定位为 zero-shot policy" src="assets/worldmodel-wam/dreamzero-header-v2.jpg" /></p>
-<p><em>图1：DreamZero 的总览图很好地概括了 WAM 相比 VLA 的核心差异。图中不是直接从当前观测回归动作，而是让模型先在视觉空间中生成未来交互过程，再从生成轨迹中得到可执行动作。这个图支持本文的主线判断：WAM 的“世界”部分并不是装饰性的辅助任务，而是策略泛化、跨具身迁移和未见任务执行的主要信息来源。需要注意的是，这类图通常强调显式视觉想象的可解释性，但后续 Fast-WAM 和 GigaWorld-Policy 会进一步说明，部署时未必每一步都要完整生成这些未来帧。</em></p>
-<p>从 DreamZero、LingBot-VA 到 Fast-WAM、GigaWorld-Policy，这条线索越来越明确：视频生成 backbone 提供通用物理先验，动作生成则需要面向实时性、精度和闭环反馈做结构化约束。WAM 的核心矛盾不是“要不要想象未来”，而是“什么时候显式想象、什么时候只保留想象塑造出的表征、什么时候必须用现实反馈打断想象”。</p>
+<p><em>图1：DreamZero 的总览图很好地概括了 WAM 相比 VLA 的核心差异。图中不是直接从当前观测回归动作，而是让模型先在视觉空间中生成未来交互过程，再从生成轨迹中得到可执行动作。这个图支持本文的主线判断：WAM 的"世界"部分并不是装饰性的辅助任务，而是策略泛化、跨具身迁移和未见任务执行的主要信息来源。需要注意的是，这类图通常强调显式视觉想象的可解释性，但后续 Fast-WAM 和 GigaWorld-Policy 会进一步说明，部署时未必每一步都要完整生成这些未来帧。</em></p>
+<p>从 DreamZero、LingBot-VA 到 Fast-WAM、GigaWorld-Policy，这条线索越来越明确：视频生成 backbone 提供通用物理先验，动作生成则需要面向实时性、精度和闭环反馈做结构化约束。WAM 的核心矛盾不是"要不要想象未来"，而是"什么时候显式想象、什么时候只保留想象塑造出的表征、什么时候必须用现实反馈打断想象"。</p>
 <hr />
 <h2 id="_2">二、资料范围</h2>
 <p>本综述只使用当前仓库中已整理过的笔记，不额外引入未读论文。<code>tags.html</code> 中 <code>WAM</code> 分组有 9 篇，<code>世界模型</code> 分组有 3 篇，其中 DreamZero 和 OA-WAM 与 WAM 分组重叠，因此合并后共有 11 篇。</p>
@@ -343,13 +418,13 @@ document.addEventListener('DOMContentLoaded', function() {
 <p><div class="math display">$$\pi(a_t \mid o_t, l)$$</div></p>
 <p>也就是给定当前视觉观测 <span class="math inline">$o_t$</span> 和语言指令 <span class="math inline">$l$</span>，直接输出动作 <span class="math inline">$a_t$</span>。这种形式很干净，但有三个先天缺口：</p>
 <ol>
-<li><strong>时序因果弱</strong>：单帧或短历史观测很难表达“刚刚做过什么”和“下一步会导致什么”。</li>
+<li><strong>时序因果弱</strong>：单帧或短历史观测很难表达"刚刚做过什么"和"下一步会导致什么"。</li>
 <li><strong>物理监督稀疏</strong>：动作标签只是低维控制信号，无法充分约束模型理解物体、接触和场景变化。</li>
 <li><strong>OOD 泛化脆弱</strong>：训练数据中没有覆盖的位置、背景、物体或任务组合，很容易让策略退化为模式匹配。</li>
 </ol>
 <p>WAM 把问题改写为联合建模：</p>
 <p><div class="math display">$$p(o_{t+1:t+H}, s_{t+1:t+H}, a_{t:t+K} \mid o_{\leq t}, s_{\leq t}, a_{&lt;t}, l)$$</div></p>
-<p>其中未来观测、未来状态和未来动作不再是分离模块，而是同一个生成式世界模型里的不同输出。这样做的好处是：未来视觉动态成为密集监督，动作可以从“世界会怎样变”中推导出来，模型也天然拥有可视化、可诊断、可选择的中间接口。</p>
+<p>其中未来观测、未来状态和未来动作不再是分离模块，而是同一个生成式世界模型里的不同输出。这样做的好处是：未来视觉动态成为密集监督，动作可以从"世界会怎样变"中推导出来，模型也天然拥有可视化、可诊断、可选择的中间接口。</p>
 <p><pre class="mermaid">flowchart LR
   A["VLA: current observation + language"] --> B["Direct action prediction"]
   B --> C["Fast, but weak world supervision"]
@@ -364,21 +439,90 @@ document.addEventListener('DOMContentLoaded', function() {
 <hr />
 <h2 id="wam">四、WAM 的主要范式</h2>
 <h3 id="41-imagine-then-execute">4.1 Imagine-then-Execute：先预测未来，再反推动作</h3>
-<p>LingBot-VA 和一部分 DreamZero 推理路径代表了这种思路：先生成未来视觉状态，再通过逆动力学模型或隐式 IDM 从未来帧中解码动作。</p>
+<h4 id="_3">核心思路</h4>
+<p>Imagine-then-Execute 遵循"先理解世界会怎么变，再从变化中推导动作"的两阶段逻辑。形式化为：</p>
+<p><div class="math display">$$\begin{aligned}
+\text{Stage 1 (Forward Dynamics):} &\quad o_{t+1:t+H} \sim p_\theta(\cdot \mid o_{\leq t}, l) \\
+\text{Stage 2 (Inverse Dynamics):} &\quad a_t = g_\psi(o_t, o_{t+1})
+\end{aligned}$$</div></p>
+<p>第一阶段用视频世界模型预测未来视觉状态，第二阶段通过逆动力学模型（IDM）或隐式 IDM 从预测帧中解码可执行动作。LingBot-VA 是这一范式的典型代表，DreamZero 的部分推理路径也遵循此模式。</p>
+<h4 id="lingbot-va-">LingBot-VA 的因果视频-动作架构</h4>
 <p><img alt="图2：LingBot-VA 的因果视频-动作世界模型框架" src="assets/worldmodel-wam/lingbot-framework.jpg" /></p>
-<p><em>图2：LingBot-VA 的框架图展示了“视频动态预测”和“动作逆推”如何被放进同一个自回归序列。图中 Video Stream 负责预测未来视觉 latent，Action Stream 以预测未来和历史观测为条件生成动作；两条流通过 Mixture-of-Transformers 交互，但又保留不同宽度和计算预算。这张图的关键不是模块很多，而是因果顺序很明确：模型先维护历史，再预测未来，再从未来中解码动作。它解释了 LingBot-VA 为什么在长 horizon 任务上优势更大，因为 KV cache 中的历史不是一次性输入，而是在闭环执行中持续积累。</em></p>
-<p>优势是泛化强。视频生成 backbone 通常来自大规模视频预训练，天然携带关于物体外观、空间关系和运动趋势的先验。DreamZero 在未见任务上明显优于 VLA，AgiBot 未见任务平均任务进度达到 39.5%，DROID 平均 49%，而 from-scratch VLA 接近 0，pretrained VLA 也只有 16.3% 或 31% 到 33% 的水平。LingBot-VA 在 RoboTwin 2.0 上达到 92.9% Easy / 91.6% Hard，在 LIBERO 平均 98.5%，说明因果视频-动作建模在长程任务中确实有优势。</p>
-<p>缺点是精细动作可能不够准。HarmoWAM 的动机实验把这个问题说得很清楚：Imagine-then-Execute 在 OOD 场景下能够可靠到达目标区域，但 Interaction 阶段容易因为 IDM 对接触、抓取点、插入深度的反推不准而失败。换句话说，视频预测能告诉机器人“应该去哪里”，但未必能告诉它“夹爪应该以多高精度、什么时序、什么接触姿态执行”。</p>
+<p><em>图2：LingBot-VA 的框架图展示了"视频动态预测"和"动作逆推"如何被放进同一个自回归序列。图中 Video Stream 负责预测未来视觉 latent，Action Stream 以预测未来和历史观测为条件生成动作；两条流通过 Mixture-of-Transformers 交互，但又保留不同宽度和计算预算。这张图的关键不是模块很多，而是因果顺序很明确：模型先维护历史，再预测未来，再从未来中解码动作。它解释了 LingBot-VA 为什么在长 horizon 任务上优势更大，因为 KV cache 中的历史不是一次性输入，而是在闭环执行中持续积累。</em></p>
+<p>LingBot-VA 的核心设计是把视频-动作序列交织成统一的 token 流：</p>
+<p><div class="math display">$$[z_t,\; a_{t,1},\; a_{t,2},\; a_{t,3},\; a_{t,4},\; z_{t+1},\; a_{t+1,1},\; \ldots]$$</div></p>
+<p>其中 <span class="math inline">$z_t$</span> 是视频 latent token，<span class="math inline">$a_{t,i}$</span> 是动作 token。时序步长 <span class="math inline">$\tau=4$</span>，即视频帧率 12.5Hz，动作频率 50Hz。架构采用 <strong>Mixture-of-Transformers（MoT）</strong>：</p>
+<ul>
+<li><strong>Video Stream</strong>：基于 Wan2.2-5B 初始化，30 层，隐维度 <span class="math inline">$d_v=3072$</span></li>
+<li><strong>Action Stream</strong>：同深度 30 层，隐维度 <span class="math inline">$d_a=768$</span>（约 350M 参数），远小于视频流</li>
+<li>两流独立做 QKV 投影，再通过维度投影做联合自注意力：</li>
+</ul>
+<p><div class="math display">$$\text{Attention}_{\text{joint}} = \text{softmax}\!\left(\frac{Q_{\text{proj}} K_{\text{proj}}^T}{\sqrt{d_{\text{proj}}}}\right) V_{\text{proj}}$$</div></p>
+<p>训练采用 <strong>chunk-wise 自回归 + intra-chunk 双向</strong> 的因果掩码：chunk 之间严格因果（历史不能看到未来 chunk），chunk 内双向（允许未来 token 之间互相看见）。这比纯自回归效率更高，比纯双向因果正确。</p>
+<p>三个关键训练/推理技巧：</p>
+<ol>
+<li><strong>Noisy History Augmentation</strong>：训练时 50% 概率把视频历史替换为加噪版本，迫使模型学会利用不完美的历史预测。推理时视频去噪只走到 <span class="math inline">$s=0.5\sim0.6$</span>（3 步 Euler），而非完全去噪到 <span class="math inline">$s=1.0$</span>，以匹配带噪训练分布。</li>
+<li><strong>Teacher Forcing with Block-Causal Mask</strong>：clean token 互相可见（block-causal），noise token 看到之前所有 clean token（不含自己），intra-chunk noise 双向。</li>
+<li><strong>FDM-Grounded Asynchronous Inference</strong>：异步执行时，当真实反馈到达，运行前向动态预测 <span class="math inline">$\text{FDM}(z_{t-1}^{\text{pred}}, a_t^{\text{real}})$</span> 产出一个"接地"的视觉状态，替换掉幻觉预测。这使得异步模式在 2 倍加速的同时保持成功率，而 naive async 在 horizon=3 时从 85.6% 跌至 32.9%。</li>
+</ol>
+<h4 id="_4">实验表现与边界</h4>
+<p>LingBot-VA 在 RoboTwin 2.0 上达到 92.9% Easy / 91.6% Hard（vs Motus 88.7%/87.0%，<span class="math inline">$\pi_{0.5}$</span> 82.7%/76.8%），在 LIBERO 平均 98.5%（LIBERO-Long 达到 SOTA）。在真机 6 任务上，Make Breakfast Progress Score 达 97.0%（+24.0pp vs <span class="math inline">$\pi_{0.5}$</span>），Unpack Delivery 成功率 65%（vs 25%）。KV cache 设计让模型在需要记忆的任务（如 Wipe Plate 计数、Search Box 搜索排除）上优势尤其明显。</p>
+<p>但这一范式的核心弱点在于 <strong>IDM 精度瓶颈</strong>。HarmoWAM 的动机实验（见 4.3 节）揭示了典型失败模式：Imagine-then-Execute 在 OOD Transit 阶段可靠（能走到目标区域），但 Interaction 阶段因 IDM 对接触点、抓取姿态、插入深度反推不准而失败。LingBot-VA 在 Fold Clothes 任务上 Progress Score 仅 48.8%（vs <span class="math inline">$\pi_{0.5}$</span> 62.9%），说明可变形物体和精细接触场景仍是薄弱环节。视频预测能告诉机器人"应该去哪里"，但不总能告诉它"夹爪应以什么精度、什么时序、什么接触姿态执行"。</p>
+<hr />
 <h3 id="42-joint-modeling">4.2 Joint Modeling：视频和动作共同去噪</h3>
-<p>Joint WAM 把未来视频 token 和动作 token 放进同一个 diffusion / flow matching 过程里，通过共享注意力让两者彼此条件化。DreamZero、Motus、Fast-WAM-Joint、X-WAM 都属于或接近这一类；HarmoWAM 本身不是纯 Joint Modeling 方法，而是把 Joint Modeling 与 Imagine-then-Execute 做系统对比后，再用双专家门控融合两者，因此这里主要用它的动机实验来说明 Joint Modeling 的优势和边界。</p>
+<h4 id="_5">核心思路</h4>
+<p>Joint Modeling 把未来视频 token 和动作 token 放进同一个生成式去噪过程，通过共享注意力机制让视觉动态与控制信号相互条件化。形式化为单一联合分布：</p>
+<p><div class="math display">$$p_\theta\!\left(o_{t+1:t+H},\; a_{t:t+K} \;\middle|\; o_{\leq t},\; s_{\leq t},\; a_{&lt;t},\; l\right)$$</div></p>
+<p>与 Imagine-then-Execute 的两阶段级联不同，Joint Modeling 中视觉预测和动作预测共享同一个 latent 空间和去噪调度，避免了 IDM 误差累积问题。DreamZero、Motus、Fast-WAM-Joint 和 X-WAM 都属于或接近这一类。</p>
+<p><img alt="DreamZero 模型架构：Joint Modeling 的典型设计" src="assets/worldmodel-wam/dreamzero-architecture.jpg" /></p>
+<p><em>DreamZero 模型架构图：展示了 Joint Modeling 的典型信息流。模型接受三种输入——视觉上下文（VAE 编码）、语言指令（Text Encoder）和本体感知（State Encoder）；自回归 DiT backbone 在 Flow Matching 框架下联合处理视频 latent 和动作 token（共享去噪时间步 <span class="math inline">$t$</span>）；训练时通过 Teacher Forcing 从 clean prior chunks 学习，推理时真实观测替换 KV-cache 中的预测 latent 实现闭环控制。Video Decoder 和 Action Decoder 分别输出未来帧和动作序列。这张图体现了 Joint Modeling 的核心设计：视频和动作在同一个生成过程中协同优化，而非先后级联。</em></p>
+<h4 id="dreamzero">DreamZero：大规模视频世界模型直出策略</h4>
+<p>DreamZero 基于 Wan2.1-I2V-14B（14B 图像到视频扩散 Transformer），将动作作为与视频 latent 等价的 token 流放入联合 flow matching 过程：</p>
+<p><div class="math display">$$\mathcal{L}_{\text{FM}} = \mathbb{E}_{t,\,x_0\sim p_0,\,x_1\sim p_1}\!\left[\left\|v_\theta(x_t, t) - (x_1 - x_0)\right\|^2\right]$$</div></p>
+<p>其中 <span class="math inline">$x_t = (1-t)x_0 + t x_1$</span> 沿线性路径插值，<span class="math inline">$v_\theta$</span> 预测速度场。视频和动作使用共享的去噪时间步 <span class="math inline">$t$</span>。</p>
+<p>架构上采用 <strong>自回归（AR）chunk 设计</strong>：每个 chunk 包含 <span class="math inline">$K=2$</span> 帧 latent 帧，动作 horizon 为 48（AgiBot, 30Hz）或 24（DROID, 15Hz），即 1.6 秒的动作序列。AR 的核心优势在于 KV-cache 推理加速（比双向快 3-4 倍）和历史感知。<strong>闭环设计</strong>是关键：执行完一个 action chunk 后，真实世界观测编码注入 KV cache，丢弃预测视频 latent，从根本上消除自回归视频生成误差累积。</p>
+<p>训练使用 100K 步、全局 batch size 128、全参数更新（LoRA 无效），数据为约 500 小时 AgiBot G1 遥操作数据（22 个环境）。</p>
+<h4 id="dreamzero-flash">DreamZero-Flash：解耦噪声调度实现实时推理</h4>
+<p>DreamZero-Flash 的核心发现是：训练和少步推理之间的分布不匹配，根源在于视频 token 和动作 token 对去噪精度的需求不同。动作需要精确去噪，视频则可以容忍更高噪声。因此提出解耦噪声调度：</p>
+<p><div class="math display">$$t_O \sim \text{Beta}(7, 1),\quad t_a \sim U(0,1)$$</div></p>
+<p>视频时间步偏向高噪声（均值 0.125），动作保持均匀。这使得单步去噪（150ms）能恢复 4 步性能的 89%。结合 CFG 并行化（2 GPU）、DiT 缓存（cosine 相似度超阈值时复用缓存速度）和 NVFP4 量化，最终在 2×GB200 上实现 <strong>7Hz 实时闭环控制</strong>。</p>
+<h4 id="_6">实验表现与边界</h4>
+<p>DreamZero 在未见任务 zero-shot 上显著优于 VLA：AgiBot 39.5%（vs pretrained VLA 16.3%），DROID 49%（vs VLA 31-33%）。跨具身迁移仅需 20 分钟无动作标签视频数据即可提升 42%+。14B 模型（50%）远强于 5B（21%），多样化数据（50%）远强于重复数据（33%）。</p>
+<p>失败分析给出了一个重要结论：<strong>大多数失败来自视频预测错误，而非动作提取错误</strong>。这意味着 WAM 策略能力的上限直接受视频 backbone 限制——视频生成领域的进步可能直接转化为机器人策略进步。</p>
+<p>Joint Modeling 的主要局限在于：推理速度（完整 joint denoising 延迟高，Motus 3231ms），以及 OOD Transit 弱——联合建模容易把训练数据中的空间分布、背景和对象布局内化为动作先验，目标位置落在分布外时可能"走不到"正确交互区域。</p>
+<h4 id="imagine-then-execute">与 Imagine-then-Execute 的系统对比</h4>
+<p>HarmoWAM 的动机实验为理解两类范式提供了迄今最清晰的证据。它揭示了两者在 <strong>Transit（大范围目标接近）</strong> 和 <strong>Interaction（精细接触操作）</strong> 两个阶段的能力互补：Imagine-then-Execute 的 Transit 泛化强（视频预训练先验），Interaction 精度弱（IDM 反推不准，交互阶段成功率 ~60%）；Joint Modeling 的 Interaction 精度强（动作与视觉动态在联合 latent 空间中对齐更紧，人为放到目标附近后 OOD Interaction 仍能保持 8-10/10 成功），Transit 弱（训练分布约束，Position OOD 下无法到达目标区域）。这一阶段互补性直接催生了 4.3 节讨论的混合专家方案。</p>
+<hr />
+<h3 id="43-hybrid-expert-wam">4.3 Hybrid Expert WAM：把泛化移动和精细交互拆成两个专家</h3>
+<h4 id="_7">核心思路</h4>
+<p>HarmoWAM 基于 4.2 节的动机发现，提出一个直接的问题：既然 Imagine-then-Execute 擅长 Transit、Joint Modeling 擅长 Interaction，能不能把两者放进同一个系统，让模型自己决定何时相信哪一路？核心形式化为：</p>
+<p><div class="math display">$$\pi(a_t \mid o_t, l) = s_t \cdot \pi_{\text{pred}}(a_t \mid F_t^V, o_t, l) \;+\; (1-s_t) \cdot \pi_{\text{react}}(a_t \mid \hat{o}_{t+1:t+H}, o_t, l)$$</div></p>
+<p>其中 <span class="math inline">$s_t \in [0,1]$</span> 是门控权重，<span class="math inline">$F_t^V \in \mathbb{R}^{B \times 80 \times 3072}$</span> 是世界模型的隐式时空 latent。</p>
 <p><img alt="图3：HarmoWAM 动机实验揭示两类 WAM 范式的阶段性互补" src="assets/worldmodel-wam/harmowam-motivation.jpg" /></p>
 <p><em>图3：HarmoWAM 的动机图展示了两类 WAM 范式在 Transit 和 Interaction 阶段的互补失败模式。上排是可乐罐堆叠，下排是双臂插花；每行都按时间推进展示从接近目标（Transit）到精细交互（Inter.）的过程。它不是表格，而是阶段过程对比图：Imagine-then-Execute 更擅长 OOD 场景下的大范围目标接近，Joint Modeling 更擅长目标附近的精细交互。这也是 HarmoWAM 后续采用双专家和门控机制的直接依据。</em></p>
 <p><img alt="图4：HarmoWAM 用世界模型统一预测型专家、反应式专家和过程自适应门控" src="assets/worldmodel-wam/harmowam-method.jpg" /></p>
-<p><em>图4：HarmoWAM 的架构图补上了动机实验之后的“怎么融合”。世界模型同时输出显式未来视频和隐式时空 latent；Predictive Expert 利用世界模型潜特征做精细动作预测，更适合 Interaction；Reactive Expert 利用预测帧和实时视觉做大范围目标接近，更适合 Transit；中间的 Process-Adaptive Gating 根据当前视觉状态在两个专家之间切换。这个图说明 HarmoWAM 不是把两类 WAM 简单平均，而是把“泛化移动”和“精细交互”拆成两个控制专家，再用阶段判断决定何时相信哪一路。</em></p>
-<p>优势是动作精度更高。动作不是后处理出来的，而是在联合 latent 空间里与视觉动态共同优化，因此视频状态和控制信号之间的对齐更紧。HarmoWAM 的实验显示，Joint Modeling 在 ID 场景中移动和交互都很强；当人为把机器人放到目标附近后，它在 OOD Interaction 阶段仍能保持 8 到 10 次成功中的高成功次数，说明“做得准”这件事并没有退化。</p>
-<p>缺点是探索空间受训练分布限制。Joint Modeling 容易把训练数据里的空间分布、背景和对象布局内化为动作先验。一旦目标位置或对象外观落到分布外，它可能“走不到”正确交互区域。HarmoWAM 的 Position OOD 案例中，Joint Modeling 的 Transit 失败非常明显，说明联合建模虽然精细，但容易受 SFT 数据覆盖范围约束。</p>
-<h3 id="43-action-centered-wam">4.3 Action-Centered WAM：训练时学世界，推理时只出动作</h3>
-<p>Fast-WAM 和 GigaWorld-Policy 是当前最务实的一支：训练时仍然做视频和动作联合建模，用未来视频作为密集监督；推理时通过注意力掩码和缓存设计跳过未来视频生成，只保留动作解码。</p>
+<p><em>图4：HarmoWAM 的架构图补上了动机实验之后的"怎么融合"。世界模型同时输出显式未来视频和隐式时空 latent；Predictive Expert 利用世界模型潜特征做精细动作预测，更适合 Interaction；Reactive Expert 利用预测帧和实时视觉做大范围目标接近，更适合 Transit；中间的 Process-Adaptive Gating 根据当前视觉状态在两个专家之间切换。这个图说明 HarmoWAM 不是把两类 WAM 简单平均，而是把"泛化移动"和"精细交互"拆成两个控制专家，再用阶段判断决定何时相信哪一路。</em></p>
+<h4 id="_8">架构详解</h4>
+<p><strong>共享世界模型</strong>：基于 Wan2.2-TI2V-5B，在约 190 万条机器人轨迹上预训练。推理时 5 步去噪，输出 13 帧未来视频（256×320）和隐式 latent <span class="math inline">$F^V$</span>。</p>
+<p><strong>Predictive Expert（1B Action DiT, 28 层）</strong>：以世界模型当前帧的隐特征 <span class="math inline">$F_t^V$</span> 为条件（通过 cross-attention），同时融合 SigLIP 视觉特征和文本嵌入，输出 action chunk（horizon=12）。这一路本质是 Joint Modeling 的"精细交互"能力：动作在联合 latent 空间里与视觉动态直接对齐，精度高。</p>
+<p><strong>Reactive Expert（DINOv2 + 多尺度卷积解码器）</strong>：从世界模型预测的每帧未来图像中提取 DINOv2 patch 级几何特征，与下采样 latent 表征拼接，经多尺度卷积解码器映射到动作。这一路本质是 Imagine-then-Execute 的"泛化移动"能力：从显式视觉预测中提取目标方向，不受训练分布约束。</p>
+<p><strong>Process-Adaptive Gating</strong>：轻量 MLP 以当前视觉 token <span class="math inline">$F_t^{\text{img}}$</span> 为输入，输出置信度 <span class="math inline">$s_t$</span>。<span class="math inline">$s_t > 0.5$</span> 路由到 Predictive Expert，否则路由到 Reactive Expert。门控标签由本体感知自动生成（基于夹爪状态变化、末端高度阈值、±20 帧时间窗口），在留出的 1637 帧上达到 <strong>96.95% 帧级准确率</strong>，验证了任务阶段确实可以从视觉特征中可靠识别。</p>
+<h4 id="_9">训练策略</h4>
+<p>两阶段训练：Stage 1 全量微调世界模型（conditional flow matching），让世界模型同时学会显式视频生成和隐式 latent 提取；Stage 2 冻结世界模型，联合训练两个专家和门控网络：</p>
+<p><div class="math display">$$\mathcal{L} = \mathcal{L}_{\text{pred}} + 0.1 \cdot \mathcal{L}_{\text{react}} + 0.05 \cdot \mathcal{L}_{\text{gate}}$$</div></p>
+<p>预测专家的损失权重远高于反应专家，体现了"精度优先、泛化兜底"的设计哲学。</p>
+<h4 id="_10">实验表现与边界</h4>
+<p>在 Franka FR3 真机上：In-Domain（6 任务）平均 <strong>89%</strong>（vs Cosmos-Policy 78%，<span class="math inline">$\pi_{0.5}$</span> 74%），双机械臂子集 85%。OOD 泛化平均 <strong>82%</strong>（Background 81%，Position 80%，Objects 85%），<strong>ID→OOD 仅下降 7.9%</strong>，而基线下降 20.9-43.8%。Position OOD 中 <span class="math inline">$\pi_{0.5}$</span> 仅 32%，Cosmos-Policy 仅 26%，HarmoWAM 达 80%。</p>
+<p>消融实验极具说服力：移除 Reactive Expert → ID 降至 74%，Position OOD 暴跌至 14%（验证 Transit 泛化完全依赖该路）；移除 Predictive Expert → ID 降至 65%，Position OOD 56%（验证 Interaction 精度依赖联合建模）；移除隐式视频 latent 特征 → Predictive Expert 从 95% 跌至 62%。</p>
+<p>去噪步数 5 步达 85%（3 步 80%，50 步仅 87%），说明世界模型的边际收益递减。48Hz 动作生成频率确保实时控制。边界方面：固定 13 帧预测 horizon 限制了对更长任务的规划能力；像素级生成仍有计算开销（8×H20 GPU 训练）；特定失败模式（倾斜堆叠、插入错位、拉链滑脱）仍存在。</p>
+<hr />
+<h3 id="44-action-centered-wam">4.4 Action-Centered WAM：训练时学世界，推理时只出动作</h3>
+<h4 id="_11">核心思路</h4>
+<p>这一范式的核心问题来自一个看似简单的追问：<strong>WAM 的性能提升到底来自训练时的视频协同建模，还是来自推理时的显式未来想象？</strong> Fast-WAM 和 GigaWorld-Policy 独立得出了相同答案：<strong>来自训练时</strong>。形式化为训练-推理非对称架构：</p>
+<p><div class="math display">$$\begin{aligned}
+\text{Training:}&\quad \mathcal{L} = \mathcal{L}_{\text{action}}(a \mid o, l) + \lambda \cdot \mathcal{L}_{\text{video}}(o_{\text{future}} \mid o, a, l) \\
+\text{Inference:}&\quad a_{t:t+K} = \pi_{\text{action-only}}(o_t, l),\quad \text{不使用未来视频分支}
+\end{aligned}$$</div></p>
 <table>
 <tr>
 <td width="50%"><img src="assets/worldmodel-wam/fastwam-teaser.jpg" width="100%"><br><em>图5(a)：Fast-WAM 对比 Joint-modeling、Causal WAM 和自身 fast path。重点是训练时保留视频协同建模，推理时只保留动作分支。</em></td>
@@ -386,22 +530,72 @@ document.addEventListener('DOMContentLoaded', function() {
 </tr>
 </table>
 
-<p><em>图5：两篇 action-centered WAM 的图放在一起看，信息非常一致：视频预测的价值主要体现在训练阶段，通过密集动态监督塑造动作表征；部署阶段则应尽量走短路径，避免每个控制周期都完整生成未来视频。Fast-WAM 强调“Do WAM need test-time future imagination?”，GigaWorld-Policy 强调动作中心的因果掩码，两者都把 WAM 从“慢速视觉想象器”推向“可实时控制的世界表征策略”。</em></p>
-<p>Fast-WAM 的核心结论很强：去掉 video co-training 的性能损失，远大于推理时跳过显式未来想象的损失。在 LIBERO 上，Fast-WAM 为 97.6%，Fast-WAM-Joint 为 98.5%，差距只有 0.9 个点；但去掉 video co-training 后下降到 93.5%。在 RoboTwin 上，Fast-WAM 为 91.8%，无 video co-training 变体下降到 83.8%。这说明视频预测更像是训练世界表征的监督，而不一定是每一步控制都必须执行的推理过程。</p>
-<p>GigaWorld-Policy 也沿着同一方向推进。它用 causal mask 保证动作 token 不依赖未来视频 token，而未来视频 token 可以以动作为条件。这样推理时可以安全删掉未来视频分支，只做 action-only。结果是推理延迟 360ms，远快于 Motus 的 3231ms，同时真实世界平均成功率 0.83，高于 Motus 的 0.76 和 <span class="math inline">$\pi_{0.5}$</span> 的 0.69。</p>
-<h3 id="44-object-addressable-wam">4.4 Object-Addressable WAM：把世界拆成可寻址对象</h3>
-<p>OA-WAM 关注的是另一个根本问题：整体图像或视频 token 会把目标对象、邻近物体、背景和光照纠缠在一起。当相机视角、布局、背景或噪声变化时，目标物体仍然可见，但动作解码器可能“找错对象”。</p>
-<p><img alt="图6：OA-WAM 用对象地址缓解整体世界表征的目标漂移" src="assets/worldmodel-wam/oa-wam-object-addressability.jpg" /></p>
-<p><em>图6：OA-WAM 的总览图对比了整体 WAM 和对象可寻址 WAM 在扰动场景下的差异。左侧列出 camera、layout、robot init、light、background、sensor noise 等常见部署扰动；右侧展示整体表征会把目标 mug 与背景和邻近物体混合，导致动作轨迹漂到错误对象，而对象地址约束让动作解码器稳定查询任务对象。这个图说明 WAM 的“世界”不应只是一张未来图像，还应该提供可查询、可绑定、可追踪的对象级状态。</em></p>
-<p>OA-WAM 的做法是把每帧拆成 robot 槽和 object 槽，每个槽包含冻结身份地址 <span class="math inline">$\mathbf{addr}_k$</span> 和时变内容 <span class="math inline">$\mathbf{cnt}_k^t$</span>。注意力键只从身份地址投影，并在每层后重置地址流，从架构上保证“对哪个对象采取行动”和“对象现在是什么状态”分离。</p>
-<p>这类工作的重要性在于，它把 WAM 从“像素级未来预测器”推进到“对象级世界状态接口”。如果 WAM 要在真实家庭、工厂或仓储场景部署，只预测整体画面是不够的；策略需要稳定地指向任务对象，理解对象身份在视角变化和布局变化下保持不变。</p>
-<h3 id="45-4d-wam-2d">4.5 4D WAM：从 2D 视频到空间感知动态模拟器</h3>
-<p>X-WAM 将 WAM 从 2D RGB 视频扩展到 RGB-D、3D 点云和机器人状态。它基于 Wan2.2-TI2V-5B，预测未来多视角 RGB-D 视频、未来状态和动作，同时通过轻量深度分支提供几何信息。</p>
-<p><img alt="图7：X-WAM 将视频、深度、状态和动作统一到 4D 世界动作建模" src="assets/worldmodel-wam/x-wam-teaser.jpg" /></p>
-<p><em>图7：X-WAM 的总览图展示了一个更空间化的 WAM 形态：输入多视角 RGB、本体状态和语言指令，输出未来 RGB-D 视频、3D 重建和动作序列。下方结果同时报告策略成功率和重建指标，说明 X-WAM 不是把深度当成后处理可视化，而是把几何预测纳入同一个训练目标。这个图对综述的启发是：当任务需要插入、装配、包装等高空间精度时，2D 视频想象可能不够，WAM 需要显式几何接口。</em></p>
-<p>这个方向解决的是纯 2D 视频生成的物理幻觉问题。只看像素，模型可能生成看起来合理但几何上不可执行的未来；引入深度和点云后，策略可以利用空间结构做更稳定的操作。X-WAM 在 RoboCasa 上达到 79.2%，在 RoboTwin Clean / Randomized 上达到 89.8% / 90.7%，并在 Chamfer Distance 上显著优于后处理深度估计方案，说明端到端几何预测确实改善了世界建模质量。</p>
-<h3 id="46-adaptive-wam">4.6 Adaptive WAM：让系统知道何时相信想象</h3>
-<p>FFDC-WAM 和 Dynamic Consistency WAM 都在回答一个部署问题：WAM 预测了未来，但机器人应不应该一直相信它？</p>
+<p><em>图5：两篇 action-centered WAM 的图放在一起看，信息非常一致：视频预测的价值主要体现在训练阶段，通过密集动态监督塑造动作表征；部署阶段则应尽量走短路径，避免每个控制周期都完整生成未来视频。Fast-WAM 强调"Do WAM need test-time future imagination?"，GigaWorld-Policy 强调动作中心的因果掩码，两者都把 WAM 从"慢速视觉想象器"推向"可实时控制的世界表征策略"。</em></p>
+<h4 id="fast-wammot-">Fast-WAM：MoT + 结构化注意力的训练-推理解耦</h4>
+<p>Fast-WAM 同样采用 Mixture-of-Transformers：Video DiT（Wan2.2-5B, 30 层, dim=3072）+ Action DiT（1B, 30 层, dim=1024），总 6B 参数。关键在于 <strong>结构化注意力掩码</strong>：</p>
+<ul>
+<li>Clean 首帧 token：不看任何 token（仅作为视觉锚点）</li>
+<li>带噪未来视频 token：在视频流内双向，<strong>不能访问动作 token</strong></li>
+<li>动作 token：在动作流内双向，可以访问 clean 首帧，<strong>不能访问未来视频 token</strong></li>
+</ul>
+<p>这个掩码的关键结果是：推理时可以安全删除整个未来视频分支。KV-cache 推理流程为 prefill 首帧的视频 DiT 编码作为每层 K/V cache，动作去噪在每步复用缓存的视频 K/V。这让 Fast-WAM 推理延迟降至 <strong>190ms</strong>（vs Fast-WAM-IDM 两阶段推理 810ms）。</p>
+<h4 id="gigaworld-policy-transformer">GigaWorld-Policy：单一共享 Transformer + 因果掩码</h4>
+<p>GigaWorld-Policy 采用更简洁的设计：单一共享 Transformer block，所有 token 类型共享 Q/K/V 投影矩阵（不同 position encoding：2D 给视觉，1D 时序给动作/状态）。因果自注意力掩码为：</p>
+<p><div class="math display">$$T_a \rightarrow \{T_s, T_o\}, \quad T_a \not\rightarrow T_f, \quad T_f \rightarrow \{T_s, T_o, T_a\}$$</div></p>
+<p>即动作 token 看状态和当前观测但不看未来视频，未来视频 token 可以看所有（包括动作）。预训练数据约 <strong>10,000 小时</strong>（EgoDex、Agibot、EGO4D、DROID、OXE 等），6000 GPU 小时。Flow Matching 损失权重 <span class="math inline">$\lambda_{\text{action}}=5,\;\lambda_{\text{video}}=1$</span>，体现"动作优先"定位。推理延迟 <strong>360ms</strong>（vs Motus 3231ms，约 9 倍加速）。</p>
+<h4 id="_12">实验核心结论</h4>
+<p>Fast-WAM 的消融实验是这一范式最有力的证据。去掉 video co-training 的性能损失（LIBERO −4.1pp, RoboTwin −8.0pp）远大于推理时跳过显式未来想象的损失（LIBERO −0.9pp）。在真实毛巾折叠任务上，无 co-training 变体成功率仅约 10%。GigaWorld-Policy 的真机实验中，最优未来帧预测数 K=4（间隔 Δ=12），SR=0.83；K=0（无视频）降至 0.60。仅需 10% 训练数据即可匹配 VLA 基线的全量数据性能。Action-Centered WAM 的部署代价是失去了显式未来视频作为在线诊断接口，通常需要额外的 verifier（见 4.7 节）来补充监控能力。</p>
+<hr />
+<h3 id="45-object-addressable-wam">4.5 Object-Addressable WAM：把世界拆成可寻址对象</h3>
+<h4 id="_13">核心思路</h4>
+<p>整体图像/视频 token 会把目标对象、邻近物体、背景和光照纠缠在一起，导致动作解码器在场景扰动下"找错对象"。OA-WAM 将这一问题形式化为 <strong>对象可寻址性（Object Addressability）</strong> 缺失，并提出将世界表征拆分为可查询、可绑定、可追踪的对象槽。</p>
+<h4 id="oa-attention">槽分解与 OA Attention</h4>
+<p>每帧分解为 <span class="math inline">$N+1$</span> 个槽（1 个 robot + <span class="math inline">$N$</span> 个 object），每个槽：</p>
+<p><div class="math display">$$s_k^t = [\underbrace{\mathbf{addr}_k}_{\mathbb{R}^{32}} \;\|\; \underbrace{\mathbf{cnt}_k^t}_{\mathbb{R}^{256}} \;\|\; \underbrace{\pi^t}_{\mathbb{R}^{16}} \;\|\; \underbrace{\rho_k}_{\mathbb{R}^{16}}] \in \mathbb{R}^{320}$$</div></p>
+<ul>
+<li><span class="math inline">$\mathbf{addr}_k$</span>（32 维）：<strong>冻结</strong>身份地址，episode 开始时从语言标签和 DINOv3 特征计算一次，全程不更新。</li>
+<li><span class="math inline">$\mathbf{cnt}_k^t$</span>（256 维）：时变内容，每帧由 SAM3 + DINOv3 + 姿态估计重新计算。</li>
+</ul>
+<p><strong>OA Attention</strong> 通过两个约束保证身份与内容分离：</p>
+<ol>
+<li><strong>Addr-only Key Projection</strong>：<span class="math inline">$K_k^{(l)} = W_K \cdot \text{mask}_{\leq 32}(x_k)$</span>，注意力键仅从槽的前 32 维（地址部分）投影。</li>
+<li><strong>Per-layer Address-Stream Reset</strong>：<span class="math inline">$x_k^{(l+1)} \leftarrow [\mathbf{addr}_k \;\|\; x_k^{(l+1)}[32:]]$</span>，每层后用 forward hook 将残差流前 32 维强制写回地址，逐层刷新。</li>
+</ol>
+<p>OA 约束在预训练前 5000 步从 soft 退火到 hard 形式。地址容量：32 维单位超球面可容纳约 1000 个方向（LIBERO 最多 16 对象，LIBERO-Plus 最多 24，利用率始终 ≤3%）。</p>
+<p><img alt="图6：OA-WAM 模型架构总览" src="assets/worldmodel-wam/oa-wam-architecture.jpg" /></p>
+<p><em>图6：OA-WAM 架构总览，包含三个子图。(a) 多模态 Tokenization：六路并行编码——名词短语（Qwen3-VL-4B → SAM3 prompt）、BPE 文本（Chameleon text tokenizer）、VQ-GAN 图像码（256 tokens）、对象槽（SAM3 + DINOv3 + 姿态估计 → Slot Adapter 320→4096）、本体感知（7 维末端位姿）、历史动作。(b) Block-causal 序列组装与 Slot-Aware Trunk：masked_scatter 按模板拼装序列，7B Chameleon 主干（32 层, 4096 隐维度）在 OA 约束下处理——注意力键仅从地址维度投影，每层后地址流重置。(c) 三路预测头：World Head（内容 MLP 4096→256 + 姿态 MLP 4096→9）、Action Head（8-block 残差 MLP, conditional flow matching, 16 步 chunk, 4 步 Euler）、Image-VQ Head（复用 lm_head，零新增参数）。</em></p>
+<h4 id="_14">序列结构与训练</h4>
+<p>六路 tokenization：名词短语（Qwen3-VL-4B）、BPE 文本、VQ-GAN 图像码（256 tokens）、对象槽（Slot Adapter 320→4096）、本体感知（7 维）、历史动作。7B Chameleon 式主干（32 层，4096 隐维度），<span class="math inline">$T=4$</span> 帧约 1200 tokens。三阶段训练：Stage 0（7B 主干预训练，2.5T tokens，384×A100 ~18 天）→ Stage I（Slot Adapter 对齐，23.8M，3-4 天）→ Stage II（LoRA 全系统，127M，3-4 天）。</p>
+<h4 id="_15">实验表现与边界</h4>
+<p>LIBERO <strong>97.8%</strong>，SimplerEnv <strong>79.3%</strong>。LIBERO-Plus OOD zero-shot：Geometric Avg（Camera/Robot Init/Layout）<strong>84.3%</strong>（+4.8pp vs <span class="math inline">$\pi_{0.5}$</span>）。OA 约束在 LIBERO-Plus 上带来 +7.7pp，但在标准 LIBERO 上仅 +2.4pp——说明对象寻址的收益主要在 OOD 场景。Swap Binding 实验（交换地址重定向 87% 动作，基线 ≤9%）验证了地址机制确实在控制注意力路由。局限：仅仿真验证；感知栈在小型、反光、透明物体上失败（Sensor Noise −17.1pp）；推理延迟约 233ms（感知 138ms 主导）。</p>
+<hr />
+<h3 id="46-4d-wam-2d">4.6 4D WAM：从 2D 视频到空间感知动态模拟器</h3>
+<h4 id="_16">核心思路</h4>
+<p>纯 2D WAM 存在物理几何幻觉：模型可能生成视觉上合理但 3D 空间上不可执行的未来。X-WAM 将 WAM 从 RGB 像素空间扩展到含深度的 4D 空间：</p>
+<p><div class="math display">$$p_\theta\!\left(o_{1:H}^{\text{RGB}},\; D_{1:H},\; s_{1:H},\; a_{1:K} \;\middle|\; o_0,\; D_0,\; s_0,\; l\right)$$</div></p>
+<p>其中 <span class="math inline">$H=8$</span> 帧 RGB + 深度视频，<span class="math inline">$K=32$</span> 步动作（4 倍视频帧率）。</p>
+<p><img alt="图7：X-WAM 4D 世界动作模型架构" src="assets/worldmodel-wam/x-wam-framework.jpg" /></p>
+<p><em>图7：X-WAM 架构图，展示从多模态输入到 4D 预测的完整信息流。左侧输入多视角 RGB（加可学习视角嵌入）、深度和本体状态，经 VAE 编码和文本嵌入后进入 Wan2.2-TI2V-5B DiT backbone。核心创新包括：(a) Interleaved Depth Branch——复制主干后 <span class="math inline">$M=10$</span> 层为并行深度分支，通过单向 cross-attention 从 RGB 分支读取信息（depth 看 RGB，RGB 不受影响），可按需开关来平衡几何感知和推理速度；(b) Asynchronous Noise Sampling（ANS）——耦合 <span class="math inline">$(t_O, t_a)$</span> 噪声调度且强制 <span class="math inline">$t_O \geq t_a$</span>，推理时 <span class="math inline">$T_a=10$</span> 步完成动作解码、视频继续到 <span class="math inline">$T_O=50$</span> 步，实现 4.5 倍加速。右侧输出未来 RGB-D 视频、3D 点云重建、本体状态和动作序列，说明几何预测与策略学习在同一个训练目标中联合优化。</em></p>
+<h4 id="_17">轻量深度分支与异步噪声调度</h4>
+<p>基于 Wan2.2-TI2V-5B，两个关键创新：</p>
+<p><strong>Interleaved Depth Branch</strong>：复制主干最后 <span class="math inline">$M=10$</span> 个 DiT block 作为并行深度分支。每个深度 block 通过单向 cross-attention 读取对应 RGB block 的输入：</p>
+<p><div class="math display">$$\text{DepthBlock}_m(x_{\text{depth}}) = \text{CrossAttn}\!\left(x_{\text{depth}},\; \text{RGBBlock}_m(x_{\text{rgb}})\right)$$</div></p>
+<p>单向性（depth 看 RGB，RGB 不看 depth）保护预训练权重。深度分支可按需开关，引入几何感知几乎不增加延迟（1033ms vs 无深度基线）。</p>
+<p><strong>Asynchronous Noise Sampling（ANS）</strong>：耦合采样 <span class="math inline">$(t_O, t_a)$</span> 并强制 <span class="math inline">$t_O \geq t_a$</span>。50% 概率 <span class="math inline">$t_a=0, t_O \sim U(0,1)$</span>（模拟动作条件视频生成），50% 概率 <span class="math inline">$t_a \sim U(0,1), t_O = t_a + (1-t_a) \cdot b, b \sim \text{Beta}(1.5, 1)$</span>。推理时 <span class="math inline">$T_a=10$</span> 步联合去噪完成动作解码，视频继续到 <span class="math inline">$T_O=50$</span> 步。比同步采样快 <strong>4.5 倍</strong>（4665ms→1033ms），视频质量不降（PSNR 23.46 vs 23.53）。</p>
+<p>训练数据约 149 万条轨迹、5874 小时，深度由 Video Depth Anything 伪标签。</p>
+<h4 id="_18">实验表现与边界</h4>
+<p>RoboCasa（24 厨房任务）<strong>79.2%</strong>（vs Cosmos Policy 67.1%、GR00T-N1.5 64.1%）。RoboTwin 2.0：Clean <strong>89.8%</strong>，Randomized <strong>90.7%</strong>（随机化成功率高于清洁——3D 感知对视觉外观变化天然鲁棒）。4D 重建 Chamfer Distance <strong>0.0049</strong>（vs DreamZero+DA3 0.0680，<strong>13.9 倍提升</strong>）。真机（AC One，耳机盒包装）8 步异步去噪 + RTC ≈ 300ms 延迟、15Hz 控制，<strong>93.8%</strong> Progress Score。消融：Interleaved 深度分支 +4.8pp 成功率不增加延迟（vs 序列拼接 +5.7pp 但延迟 1888ms）。局限：固定长度观测窗口、~300ms 推理延迟仍需优化、需要 256 H20 预训练。</p>
+<hr />
+<h3 id="47-adaptive-wam">4.7 Adaptive WAM：让系统知道何时相信想象</h3>
+<h4 id="_19">核心思路</h4>
+<p>FFDC-WAM 和 Dynamic Consistency WAM 都在回答：WAM 预测了未来，但机器人应不应该一直相信它？两者都利用 WAM 的未来预测与现实反馈之间的一致性作为控制信号，但角度不同：FFDC 偏执行控制（continue or replan），Dynamic Consistency 偏质量度量（成功 or 失败）。</p>
+<h4 id="ffdc-wamfuture-reality-verification">FFDC-WAM：Future-Reality Verification</h4>
+<p>FFDC-WAM 把固定长度 action chunk 的盲执行改为自适应决策循环。WAM 输出 <span class="math inline">$(A_{t+1:t+H},\; O_{t+1:t+H})$</span> 后，轻量 verifier 在每个控制周期检查：</p>
+<p><div class="math display">$$e_t = \mu_\phi\!\left(O_t^{\text{real}},\; A_t^{\text{remaining}},\; O_{t+1:t+H}^{\text{pred}},\; L\right) \in [0,1]$$</div></p>
+<p>若 <span class="math inline">$e_t \geq 0.5$</span> 继续执行，否则触发重规划。核心设计：</p>
+<p><strong>FFDC（Future Forward Dynamics Causal Attention）</strong>：轻量 Transformer verifier，布尔可见性矩阵强制因果结构——未来视觉只能看时间对齐的动作和更早的未来视觉。KV-cache 验证模式下，WAM 预测 token 一次计算缓存，每次验证仅编码最新观测、做轻量注意力。</p>
+<p><strong>Mixture-of-Horizon 训练</strong>：从 episode 均匀采样起始时间步，避免只在短 horizon 过拟合。<strong>合成负样本</strong>：4 种扰动生成负样本（时序交换、夹爪翻转、后期高斯噪声、尾部缩放）。</p>
+<p><strong>表现</strong>：RoboTwin hard 成功率 <strong>76.40%</strong>（vs Base-Motus 54.20%，+22.2pp），WAM 调用降至 <strong>1.69 次</strong>（−69.1%）。简单任务减少 21-37% 完成时间。真机（Astribot S1）达 <strong>80%</strong>（vs LC-16 45%，+35pp）。表现出"运输长 chunk + 精调高频重规划"的智能自适应行为。</p>
 <table>
 <tr>
 <td width="50%"><img src="assets/worldmodel-wam/ffdc-overview-cropped.jpg" width="100%"><br><em>图8(a)：FFDC-WAM 在执行中持续验证预测未来与真实反馈是否一致，一致则继续执行，不一致则重规划。</em></td>
@@ -410,10 +604,31 @@ document.addEventListener('DOMContentLoaded', function() {
 </table>
 
 <p><em>图8：裁剪后的 FFDC-WAM 图与 Dynamic Consistency 图比例接近，可以并排阅读。FFDC 更偏工程部署：每个 check step 都用 verifier 决定 chunk 是否继续执行，从而把固定 chunk 改成自适应 chunk。Dynamic Consistency 更偏度量和选择：把预测未来与真实未来的相似性转化为无需 value head 的质量信号。二者都依赖同一个前提：WAM 输出的不只是动作，还包括可被现实检验的未来预期。</em></p>
-<p>FFDC-WAM 把执行过程变成 future-reality verification。WAM 一次输出长 horizon 的动作和未来视觉 token，轻量 verifier 在执行中持续比对真实观测、剩余动作、预测未来和语言指令。如果一致性高就继续执行，低就立即重规划。它在 RoboTwin hard 设置中把 Rand.hard 成功率从 Base-Motus 的 54.20% 提到 76.40%，平均推理调用从 5.47 次降到 1.69 次，实现了“简单阶段少想、困难阶段多想”。</p>
-<p>Dynamic Consistency WAM 则把预测未来与真实未来的一致性变成 value-free 信号。成功轨迹通常有更高的一致性，LingBot-VA 上仅凭一致性就能得到 AUC 0.88 的成败区分能力。但它也指出一个边界：background collapse 会让失败轨迹看起来一致性很高，因为系统已经卡住，未来几乎不变，预测静态背景很容易。因此一致性必须和 latent change 一起看，低动态下的高一致性不代表策略好。</p>
+<h4 id="dynamic-consistency-wam-value-free">Dynamic Consistency WAM：预测-真实一致性作为 value-free 信号</h4>
+<p>把一致性量化为可比较标量：</p>
+<p><div class="math display">$$c_t = \exp\!\left(-\alpha \cdot d(o_{t+\Delta},\; \hat{o}_{t+\Delta})\right),\quad \alpha=0.1$$</div></p>
+<p>其中 <span class="math inline">$d$</span> 是 VAE latent 空间的 MSE。Consistency-Consensus（可部署模式）取 <span class="math inline">$N$</span> 个预测的均值为"共识未来"，选最接近的分支（Winner-Takes-All）。LingBot-VA 上 Cohen's d=0.99，AUC=<strong>0.88</strong>。Consensus Best-of-N 将 LingBot-VA 从 90.2% 提升至 <strong>93.0%</strong>（+2.8pp），仅约 0.7ms 计算开销（N=8）。</p>
+<h4 id="background-collapse">Background Collapse：一致性的阿喀琉斯之踵</h4>
+<p>Dynamic Consistency WAM 发现了一个关键失效模式：当策略卡住，未来几乎不变，预测静态背景变得非常容易，导致虚高一致性。latent 变化量 <span class="math inline">$\Delta z$</span> 与一致性呈负相关（Cosmos-Policy Pearson −0.47）。这意味着<strong>低动态下的高一致性是假信号，一致性必须和 latent change 一起校准</strong>。FFDC 因此同时检查语言指令、剩余动作和未来视觉的因果一致性，而非仅看像素相似度。</p>
 <hr />
-<h2 id="_3">五、横向对比</h2>
+<h3 id="48-training-optimization">4.8 Training Optimization：动作重要性重加权与知识迁移</h3>
+<h4 id="attena">AttenA+：用速度场发现关键动作</h4>
+<p>前面 7 个范式都在改进架构，AttenA+ 则从训练目标角度提出了一个正交且通用的改进：机器人轨迹中存在"Action Inequality"——不同时间步对任务成败的影响相差悬殊，但标准训练对所有时间步平等对待。形式化为：</p>
+<p><div class="math display">$$v_t = \|a_t^{\text{gt}}\|_2 \quad (\text{仅取位置自由度 } D_{\text{pos}})$$</div></p>
+<p><div class="math display">$$w_t = 1 / v_t^2 \quad (\text{Inverse Squared, 默认策略})$$</div></p>
+<p><div class="math display">$$\mathcal{L}_{\text{AttenA+}} = \frac{1}{T}\sum_t w_t \cdot \ell(a_t, \hat{a}_t), \quad w_t \in [1/\text{clip\_max},\; \text{clip\_max}]$$</div></p>
+<p>直觉：低速动作（精密抓取、对准、放置）容错低，应获得更高损失权重；高速动作（自由空间转移）容错高，权重可降低。速度 <span class="math inline">$v_t$</span> 是廉价且有效的关键性代理指标。</p>
+<p><img alt="图9：AttenA+ 用速度场强调低速关键动作" src="assets/worldmodel-wam/attena-workflow.jpg" /></p>
+<p><em>图9：AttenA+ 的流程图展示了不改变 WAM 或 VLA 骨干的训练优化方式：从真值动作序列中计算速度幅值，把低速段映射为更高损失权重。图中左侧是速度场统计，中间是权重映射，右侧是把权重乘到动作损失上。它对 WAM 的意义在于，世界模型提供了宏观动态先验，但成败往往发生在低速、接触、对齐、释放这些少数关键时间步；训练目标需要把这些步骤显式凸显出来。</em></p>
+<p>AttenA+ 是<strong>范式无关</strong>的，支持三种训练范式即插即用：AttenA+Disc（加权 L1）、AttenA+FM（加权 flow matching）、AttenA+Diff（加权扩散去噪）。</p>
+<p><strong>实验表现</strong>：LIBERO OpenVLA-OFT 97.10% → <strong>98.60%</strong>（+1.5pp）；<span class="math inline">$\pi_{0.5}$</span> 96.85% → <strong>97.95%</strong>（+1.1pp）；RoboTwin Fast-WAM 91.80% → <strong>92.46%</strong>（+0.66pp），超越 LingBot-VA 且无需 embodied 预训练；真机基線 92.5% → <strong>97.0%</strong>（+4.5pp）。clip_max=2.0-3.0 一致改善，超过 50 个随机种子验证了统计显著性。<strong>边界</strong>：依赖手工启发式，不适用高速动态任务；仅用速度幅值，忽略力/力矩/接触/加加速度。</p>
+<h4 id="ckt-wam-wam">CKT-WAM：异构 WAM 之间的知识迁移</h4>
+<p>CKT-WAM 解决如何在两个<strong>冻结、异构</strong>的 WAM（如 DreamZero-14B 教师和 Cosmos-Policy-2B 学生）之间迁移世界知识。核心公式：</p>
+<p><div class="math display">$$C_A = \text{LQCA}\!\left(\text{Proj}(H_T^{l^*})\right),\quad H_T \in \mathbb{R}^{N \times 5120},\; C_A \in \mathbb{R}^{2K \times d_{\text{student}}}$$</div></p>
+<p>LQCA Compressor 用两个可学习 query bank（通用 + 专用，各 <span class="math inline">$K=32$</span>）对教师中间层 <span class="math inline">$l^*=20$</span>（共 40 层）的 hidden state 做 multi-head cross-attention，将变长 token 压缩为固定长度上下文 token。双分支 adapter（Generalized + top-2 Sparse Routing）进一步提升灵活性。仅 <strong>1.17% 参数</strong>（187.4M/16B）可训练。注入方式：<span class="math inline">$C_A$</span> 拼接到学生文本嵌入后，通过 cross-attention 注入每个 DiT 层，单行 forward hook 实现。</p>
+<p><strong>表现</strong>：LIBERO-Plus OOD zero-shot <strong>86.1%</strong>（vs 学生基线 82.2%，+3.9pp），参数效率显著优于所有 PEFT 方法（LoRA/DoRA/MiLoRA/Mona/GOAT）。LIBERO 标准 <strong>98.8%</strong>。真机 4 长程任务平均 <strong>83.3%</strong>（水果分拣 +4.5pp, 方块存储 +6.7pp, 零售 +6.6pp vs <span class="math inline">$\pi_{0.5}$</span>）。衣物折叠 73.3%（vs <span class="math inline">$\pi_{0.5}$</span> 77.8%），再次说明可变形物体的共性问题。</p>
+<hr />
+<h2 id="_20">五、横向对比</h2>
 <table>
 <thead>
 <tr>
@@ -432,15 +647,21 @@ document.addEventListener('DOMContentLoaded', function() {
 </tr>
 <tr>
 <td>联合视频动作建模</td>
-<td>DreamZero, X-WAM, Motus 类方法</td>
+<td>DreamZero, Motus, Fast-WAM-Joint</td>
 <td>动作和视觉动态对齐更紧，精细控制更强</td>
-<td>推理慢，OOD 探索可能被训练分布限制</td>
+<td>推理慢，OOD Transit 受训练分布约束</td>
+</tr>
+<tr>
+<td>混合专家</td>
+<td>HarmoWAM</td>
+<td>兼得 Transit 泛化和 Interaction 精度，OOD 仅降 7.9%</td>
+<td>双专家训练复杂，门控依赖本体感知标签，固定预测 horizon</td>
 </tr>
 <tr>
 <td>Action-centered</td>
 <td>Fast-WAM, GigaWorld-Policy</td>
 <td>保留视频训练监督，推理实时性显著提升</td>
-<td>失去显式未来视频作为在线诊断接口，需额外 verifier 或选择器</td>
+<td>失去显式未来视频作为在线诊断接口</td>
 </tr>
 <tr>
 <td>对象可寻址</td>
@@ -461,27 +682,31 @@ document.addEventListener('DOMContentLoaded', function() {
 <td>一致性信号会被低动态 collapse 欺骗，需要校准</td>
 </tr>
 <tr>
-<td>训练重加权 / 迁移</td>
-<td>AttenA+, CKT-WAM</td>
-<td>低成本提升精度或复用强教师 WAM</td>
-<td>不改变基础世界建模边界，依赖已有 WAM 质量</td>
+<td>训练重加权</td>
+<td>AttenA+</td>
+<td>范式无关、零架构成本提升关键动作精度</td>
+<td>依赖手工启发式，不适用高速动态任务</td>
+</tr>
+<tr>
+<td>知识迁移</td>
+<td>CKT-WAM</td>
+<td>冻结异构 WAM 间高效迁移，仅 1.17% 参数可训练</td>
+<td>依赖教师中间层质量，不改变学生建模边界</td>
 </tr>
 </tbody>
 </table>
 <hr />
-<h2 id="_4">六、三个核心矛盾</h2>
+<h2 id="_21">六、三个核心矛盾</h2>
 <h3 id="61-vs">6.1 泛化移动 vs 精细交互</h3>
 <p>HarmoWAM 把这个矛盾讲得最直接：Imagine-then-Execute 的 Transit 很强，Joint Modeling 的 Interaction 很强，但单一范式很难同时兼得。泛化移动依赖视频世界模型的开放式先验，精细交互依赖动作和接触动态的高精度对齐。</p>
-<p>HarmoWAM 的解决方案是双专家门控：Reactive Expert 更适合 Transit，Predictive Expert 更适合 Interaction，由过程自适应门控在不同阶段切换。它在 OOD 下仅下降 7.9%，而基线下降 20.9 到 43.8 个点，说明“阶段化控制”可能比追求一个全能动作头更现实。</p>
-<p><img alt="图9：AttenA+ 用速度场强调低速关键动作" src="assets/worldmodel-wam/attena-workflow.jpg" /></p>
-<p><em>图9：AttenA+ 的流程图展示了另一种补足精细交互的方式：不改变 WAM 或 VLA 骨干，而是从真值动作序列中计算速度幅值，把低速段映射为更高损失权重。图中左侧是速度场统计，中间是权重映射，右侧是把权重乘到动作损失上。它对 WAM 的意义在于，世界模型提供了宏观动态先验，但成败往往发生在低速、接触、对齐、释放这些少数关键时间步；训练目标需要把这些步骤显式凸显出来。</em></p>
-<p>这个结论也能解释为什么 AttenA+ 有效。机器人轨迹不是每个时间步都同等重要。低速精密动作往往决定成败，高速过渡动作容错更高。AttenA+ 只用速度场重加权损失，就让 Fast-WAM 在 RoboTwin 上从 91.80% 提升到 92.46%，在真机任务上平均从 92.5% 提到 97.0%。这说明 WAM 的下一步改进不一定总是更大模型，也可能是更准确地识别“哪些动作值得优化”。</p>
+<p>HarmoWAM 的解决方案是双专家门控（详见 4.3 节）：Reactive Expert 更适合 Transit，Predictive Expert 更适合 Interaction，由过程自适应门控在不同阶段切换。它在 OOD 下仅下降 7.9%，而基线下降 20.9 到 43.8 个点，说明"阶段化控制"可能比追求一个全能动作头更现实。</p>
+<p>从另一个角度，AttenA+（详见 4.8 节）提供了架构无关的补充手段：不改变 WAM 骨干，只通过速度场重加权损失来强调低速关键动作。这说明精细交互的改善不一定总是更大模型——更准确地识别"哪些动作值得优化"可能同样有效。</p>
 <h3 id="62-vs">6.2 显式想象 vs 实时控制</h3>
 <p>WAM 最诱人的能力是生成未来，但机器人控制最苛刻的约束是实时闭环。显式想象越完整，推理越慢；推理越慢，控制越容易错过纠错窗口。</p>
 <p>Fast-WAM、GigaWorld-Policy 和 DreamZero-Flash 给出的答案都不是放弃世界模型，而是压缩想象的部署成本。Fast-WAM 把推理延迟降到 190ms，GigaWorld-Policy 用 action-only 推理达到 360ms，DreamZero-Flash 通过噪声调度修正让单步推理在 150ms 下恢复 4 步性能的 89%。LingBot-VA 则通过异步流水线让计算和执行重叠，FDM-grounded Async 用真实反馈修正异步幻觉。</p>
-<p>这些结果共同说明：未来 WAM 部署很可能采用“训练时充分想象，推理时分层想象”的系统设计。宏观规划阶段可以生成未来，局部控制阶段只保留压缩表征，异常检测阶段再调用 verifier 或重规划器。</p>
+<p>这些结果共同说明：未来 WAM 部署很可能采用"训练时充分想象，推理时分层想象"的系统设计。宏观规划阶段可以生成未来，局部控制阶段只保留压缩表征，异常检测阶段再调用 verifier 或重规划器。</p>
 <h3 id="63-vs">6.3 一致性信号 vs 真实成功</h3>
-<p>一致性是 WAM 独有的诊断接口。VLA 直接输出动作，很难知道模型为什么失败；WAM 能比较“模型以为会发生什么”和“现实实际发生什么”。</p>
+<p>一致性是 WAM 独有的诊断接口。VLA 直接输出动作，很难知道模型为什么失败；WAM 能比较"模型以为会发生什么"和"现实实际发生什么"。</p>
 <p>但一致性不是万能 reward。Dynamic Consistency WAM 的 background collapse 说明，如果机器人卡住不动，未来确实会很容易预测，模型可能得到虚高一致性。FFDC-WAM 也需要用因果结构把语言、动作、未来视觉和当前观测一起检查，而不是只看像素相似度。</p>
 <p>因此，一致性更适合作为 value-free filter 或 verifier，而不是完整价值函数。可靠的在线选择至少需要同时考虑：</p>
 <ol>
@@ -491,11 +716,11 @@ document.addEventListener('DOMContentLoaded', function() {
 <li>当前阶段是 Transit 还是 Interaction，不同阶段对一致性的要求不同。</li>
 </ol>
 <hr />
-<h2 id="_5">七、关键技术脉络</h2>
+<h2 id="_22">七、关键技术脉络</h2>
 <h3 id="71">7.1 视频预训练正在成为机器人世界先验</h3>
 <p>DreamZero、LingBot-VA、Fast-WAM、GigaWorld-Policy 和 X-WAM 都大量依赖 Wan 系列或类似视频扩散 backbone。它们的共同假设是：大规模视频模型已经学到关于物体、运动、时空连续性和视觉语义的通用结构；机器人数据则用于把这些结构对齐到可执行动作。</p>
 <p>DreamZero 的失败分析尤其关键：大多数失败来自视频预测错误，而不是动作提取错误。这意味着 WAM 策略能力的上限很大程度受视频 backbone 限制。视频生成领域的进步可能直接变成机器人策略进步，这也是 WAM 相比传统 VLA 最有想象力的地方。</p>
-<h3 id="72">7.2 注意力掩码决定了“世界”和“动作”的因果关系</h3>
+<h3 id="72">7.2 注意力掩码决定了"世界"和"动作"的因果关系</h3>
 <p>这些论文反复使用结构化注意力掩码来规定信息流：</p>
 <ul>
 <li>GigaWorld-Policy 让动作 token 看当前观测和状态，但不能看未来视频 token。</li>
@@ -504,7 +729,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <li>OA-WAM 对 slot 位置的 key projection 加约束，让身份地址主导跨槽路由。</li>
 <li>FFDC-WAM 用 future forward dynamics causal attention 防止 verifier 看到不该看到的信息。</li>
 </ul>
-<p>这说明 WAM 的架构设计重点已经从“把所有 token 拼起来”转向“精确定义哪些 token 能看哪些 token”。信息流的因果结构直接决定模型能不能在推理时删分支、能不能避免信息泄漏、能不能解释失败。</p>
+<p>这说明 WAM 的架构设计重点已经从"把所有 token 拼起来"转向"精确定义哪些 token 能看哪些 token"。信息流的因果结构直接决定模型能不能在推理时删分支、能不能避免信息泄漏、能不能解释失败。</p>
 <h3 id="73">7.3 世界模型不只是策略，也是接口</h3>
 <p>WAM 的一个长期价值是接口化：</p>
 <ul>
@@ -514,9 +739,9 @@ document.addEventListener('DOMContentLoaded', function() {
 <li><strong>对象接口</strong>：OA-WAM 把世界拆成可寻址对象槽。</li>
 <li><strong>几何接口</strong>：X-WAM 输出深度和点云，让策略拥有 3D 状态。</li>
 </ul>
-<p>这比“端到端策略网络”更适合真实部署，因为真实机器人系统需要的不只是动作，还需要监控、解释、重试、迁移和安全边界。</p>
+<p>这比"端到端策略网络"更适合真实部署，因为真实机器人系统需要的不只是动作，还需要监控、解释、重试、迁移和安全边界。</p>
 <hr />
-<h2 id="_6">八、目前的开放问题</h2>
+<h2 id="_23">八、目前的开放问题</h2>
 <h3 id="81-wam-scaling-law">8.1 WAM 的 scaling law 还不清楚</h3>
 <p>DreamZero 显示 14B 比 5B 明显更强，任务进度从 21% 到 50%，数据多样性也比重复数据重要。但 WAM 的 scaling law 还没有像 LLM 那样清晰：模型规模、视频数据规模、具身数据规模、动作维度、上下文长度和去噪步数之间如何权衡，目前仍是开放问题。</p>
 <h3 id="82">8.2 视频质量和动作质量并非单调一致</h3>
@@ -527,7 +752,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <p>FFDC 和 Dynamic Consistency 证明 verifier 有用，但一致性会失效。真实机器人部署中，可能需要多层 verifier：视觉一致性、对象状态一致性、动作可达性、碰撞风险、语言目标一致性和阶段进度。WAM 提供了可检查的中间表示，但如何把这些检查组合成可靠安全系统，还没有标准答案。</p>
 <hr />
 <h2 id="wam_1">九、个人理解：WAM 的合理定位</h2>
-<p>如果把 WAM 理解成“会生成视频的策略”，会低估它。更合理的定位是：</p>
+<p>如果把 WAM 理解成"会生成视频的策略"，会低估它。更合理的定位是：</p>
 <blockquote>
 <p><strong>WAM 是一种把机器人控制问题重新表述为可生成、可验证、可迁移的世界状态建模问题的框架。</strong></p>
 </blockquote>
@@ -539,9 +764,9 @@ document.addEventListener('DOMContentLoaded', function() {
 <li>Verifier / consistency path 负责诊断和重规划。</li>
 <li>Object / 4D / memory interfaces 支撑真实场景中的泛化和安全。</li>
 </ol>
-<p>这一批论文的共同贡献，是把“世界模型能否用于机器人”推进到了更具体的问题：“世界模型的哪些部分该在训练时用，哪些该在推理时用，哪些该暴露给系统做诊断，哪些该压缩进动作表征”。这比单纯比较 VLA 和 WAM 的成功率更重要。</p>
+<p>这一批论文的共同贡献，是把"世界模型能否用于机器人"推进到了更具体的问题："世界模型的哪些部分该在训练时用，哪些该在推理时用，哪些该暴露给系统做诊断，哪些该压缩进动作表征"。这比单纯比较 VLA 和 WAM 的成功率更重要。</p>
 <hr />
-<h2 id="_7">十、关键概念速查</h2>
+<h2 id="_24">十、关键概念速查</h2>
 <table>
 <thead>
 <tr>
