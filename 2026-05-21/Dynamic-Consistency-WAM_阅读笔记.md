@@ -91,9 +91,12 @@ $$c_t(o_{t+\Delta}, \hat{o}_{t+\Delta}) = \exp\big(-\alpha \cdot d(o_{t+\Delta},
 
 ### 3.2 RQ1：一致性与任务成败的关系
 
-![图3：一致性 KDE 分布——成功 vs 失败轨迹](assets/dynamic-consistency-wam/cosmos_zscore.jpg)
+<table><tr>
+<td width="50%"><img src="assets/dynamic-consistency-wam/cosmos_zscore.jpg" width="100%"><br><em>(a) Cosmos-Policy</em></td>
+<td width="50%"><img src="assets/dynamic-consistency-wam/lingbot_zscore.jpg" width="100%"><br><em>(b) LingBot-VA</em></td>
+</tr></table>
 
-*图3：成功与失败轨迹的 action-state consistency 核密度估计（KDE）分布对比，左子图为 Cosmos-Policy（RoboCasa），右子图为 LingBot-VA（RoboTwin 2.0）。*
+*图3：成功与失败轨迹的 action-state consistency 核密度估计（KDE）分布对比，左子图 (a) 为 Cosmos-Policy（RoboCasa），右子图 (b) 为 LingBot-VA（RoboTwin 2.0）。*
 
 ***坐标轴和含义：*** 横轴为归一化后的一致性 z-score——为了跨任务可比，每个任务内部先计算 episode 级一致性的均值和标准差，再将每个 episode 的一致性转为 z-score（$(c - \mu_{\text{task}}) / \sigma_{\text{task}}$）。因此 z-score = 0 代表该 episode 的一致性处于该任务的均值水平，正值表示高于均值，负值表示低于均值。纵轴为核密度估计的密度值。蓝色曲线为成功轨迹（Success）的分布，橙色曲线为失败轨迹（Failure）的分布。
 
@@ -138,7 +141,10 @@ $$c_t(o_{t+\Delta}, \hat{o}_{t+\Delta}) = \exp\big(-\alpha \cdot d(o_{t+\Delta},
 
 两者呈**负相关**：场景变化越大，一致性越低；场景越静止，一致性越高。时序分析显示两者随时间朝相反方向演化——当 $\Delta z_t$ 上升时，一致性下降；$\Delta z_t$ 下降时，一致性上升。
 
-![图6：Latent Change 分解——对齐 vs 错位任务](assets/dynamic-consistency-wam/cosmos_latent_change_comparison.jpg)
+<table><tr>
+<td width="50%"><img src="assets/dynamic-consistency-wam/cosmos_latent_change_comparison.jpg" width="100%"><br><em>(a) Cosmos-Policy</em></td>
+<td width="50%"><img src="assets/dynamic-consistency-wam/lingbot_latent_change_comparison.jpg" width="100%"><br><em>(b) LingBot-VA</em></td>
+</tr></table>
 
 *图6：将 latent change（$\Delta z_t$）按两个维度分解——任务类型（对齐 Aligned / 错位 Misaligned）和轨迹结果（成功 Success / 失败 Failure），形成四组曲线的时间序列对比。左子图 (a) 为 Cosmos-Policy，右子图 (b) 为 LingBot-VA。*
 
