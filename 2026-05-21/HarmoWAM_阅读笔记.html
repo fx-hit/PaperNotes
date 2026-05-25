@@ -441,6 +441,44 @@ document.addEventListener('DOMContentLoaded', function() {
 <li><strong>训练准确率</strong>：在 1,637 帧的 held-out 测试集上达到 <strong>96.95%</strong> 的帧级分类准确率</li>
 <li><strong>损失函数</strong>：二值交叉熵（BCE）</li>
 </ul>
+<h4>两个专家与 WAM 两类范式的对应关系</h4>
+<p>论文 Related Work 将现有 WAM 分为两条路线，其中 Joint Modeling 内部实际包含两种做法：</p>
+<table>
+<thead>
+<tr>
+<th>WAM 范式</th>
+<th>细分</th>
+<th>代表工作</th>
+<th>做法</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Imagine-then-Execute</td>
+<td>—</td>
+<td>DreamGen, WoW</td>
+<td>世界模型预测未来帧 → IDM 从帧推断动作</td>
+</tr>
+<tr>
+<td>Joint Modeling</td>
+<td><strong>类型 A：Latent-as-condition</strong></td>
+<td>VPP, Video2Act, Genie Envisioner</td>
+<td>视频模型抽 latent → 作为条件注入独立动作模型</td>
+</tr>
+<tr>
+<td>Joint Modeling</td>
+<td><strong>类型 B：联合去噪</strong></td>
+<td>Cosmos-Policy, UVA, UWM, Motus</td>
+<td>视频 latent 和 action 在同一生成框架中一起去噪</td>
+</tr>
+</tbody>
+</table>
+<p>HarmoWAM 两个专家与上述范式的对应：</p>
+<ul>
+<li><strong>Predictive Expert → Joint Modeling 类型 A（Latent-as-condition）</strong>：世界模型当前帧潜特征 $\mathcal{F}^{\mathbf{V}}_{t}$ 通过 cross-attention 注入独立的 1B Action DiT。视频和动作分开建模，不做联合去噪——这与 VPP/Video2Act 一脉相承，而非 Cosmos-Policy 的联合去噪路线。</li>
+<li><strong>Reactive Expert → Imagine-then-Execute（升级版）</strong>：继承"看预测帧推断动作"的思路，但不止于纯 IDM 看像素——还融合了世界模型对应帧的潜表征 $\mathcal{F}^{\mathbf{V}}_{s}$，获得高层时空知识来增强泛化移动能力。</li>
+</ul>
+<p>核心设计：两个专家共享同一个世界模型的输出（显式视频帧 + 隐式潜表征），由 Process-Adaptive Gating 按任务阶段动态路由——不是简单拼接两个旧范式。</p>
 <hr />
 <h2 id="_3">三、训练目标</h2>
 <p>HarmoWAM 采用<strong>两阶段训练</strong>范式：</p>
