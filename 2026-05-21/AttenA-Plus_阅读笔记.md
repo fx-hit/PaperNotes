@@ -182,9 +182,15 @@ $$\phi^* = \arg\min_\phi \mathbb{E}_{\substack{(\mathcal{I}, L, \mathcal{A}^{gt}
 
 在 Franka Panda 机械臂上进行 4 类任务的真实世界验证：
 
+| Model | Close Draw | Put Cube | Multi-object | Long |
+|-------|:----------:|:--------:|:------------:|:----:|
+| OpenVLA-OFT | 50/50 | 48/50 | 45/50 | 42/50 |
+| AttenA+OFT | 50/50 | 50/50 | 49/50 | 45/50 |
+| Improvement | 0% | 4% ↑ | 8% ↑ | 6% ↑ |
+
 ![图4：真机实验结果。](assets/attena-plus/real_bins2.jpg)
 
-*图4：Franka 真机实验结果。左侧表格为定量成功率对比（每个任务测试 50 次），右侧为定性可视化。*
+*图4：Franka 真机实验结果。**(a)** 定量成功率对比（每个任务测试 50 次）；**(b)** 定性可视化。*
 
 - **Close Draw（关闭抽屉）**：两项均为 100%（50/50），这是个简单任务，基线已饱和
 - **Put Cube（放方块）**：AttenA+OFT 达 100%（50/50），基线为 96%（48/50），提升 4%

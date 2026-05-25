@@ -557,8 +557,42 @@ document.addEventListener('DOMContentLoaded', function() {
 </ol>
 <h3 id="36">3.6 真机实验</h3>
 <p>在 Franka Panda 机械臂上进行 4 类任务的真实世界验证：</p>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th style="text-align: center;">Close Draw</th>
+<th style="text-align: center;">Put Cube</th>
+<th style="text-align: center;">Multi-object</th>
+<th style="text-align: center;">Long</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>OpenVLA-OFT</td>
+<td style="text-align: center;">50/50</td>
+<td style="text-align: center;">48/50</td>
+<td style="text-align: center;">45/50</td>
+<td style="text-align: center;">42/50</td>
+</tr>
+<tr>
+<td>AttenA+OFT</td>
+<td style="text-align: center;">50/50</td>
+<td style="text-align: center;">50/50</td>
+<td style="text-align: center;">49/50</td>
+<td style="text-align: center;">45/50</td>
+</tr>
+<tr>
+<td>Improvement</td>
+<td style="text-align: center;">0%</td>
+<td style="text-align: center;">4% ↑</td>
+<td style="text-align: center;">8% ↑</td>
+<td style="text-align: center;">6% ↑</td>
+</tr>
+</tbody>
+</table>
 <p><img alt="图4：真机实验结果。" src="assets/attena-plus/real_bins2.jpg" /></p>
-<p><em>图4：Franka 真机实验结果。左侧表格为定量成功率对比（每个任务测试 50 次），右侧为定性可视化。</em></p>
+<p><em>图4：Franka 真机实验结果。<strong>(a)</strong> 定量成功率对比（每个任务测试 50 次）；<strong>(b)</strong> 定性可视化。</em></p>
 <ul>
 <li><strong>Close Draw（关闭抽屉）</strong>：两项均为 100%（50/50），这是个简单任务，基线已饱和</li>
 <li><strong>Put Cube（放方块）</strong>：AttenA+OFT 达 100%（50/50），基线为 96%（48/50），提升 4%</li>
