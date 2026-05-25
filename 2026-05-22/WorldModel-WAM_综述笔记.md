@@ -21,9 +21,14 @@
 
 > **未来视频预测是训练世界表征的强监督信号，也是诊断和规划的接口；但在实时控制时，显式生成未来视频可以被压缩、跳过、异步执行，甚至只作为训练时的辅助任务存在。**
 
-![图1：DreamZero 将 World Action Model 定位为 zero-shot policy](assets/worldmodel-wam/dreamzero-header-v2.jpg)
+<table>
+<tr>
+<td width="50%"><img src="assets/worldmodel-wam/fastwam-teaser.jpg" width="100%"><br><em>图1(a)：Fast-WAM 对比 Joint-modeling、Causal WAM 和自身 fast path。核心问题是"WAM 需要测试时想象未来吗？"——答案是训练时保留视频协同建模，推理时只走动作分支。</em></td>
+<td width="50%"><img src="assets/worldmodel-wam/gigaworld-paradigms.jpg" width="100%"><br><em>图1(b)：GigaWorld-Policy 对比四种从视频到动作的范式。Action-Centered WAM 中动作 token 不依赖未来视频 token，推理时可以安全跳过视频生成，但训练时视频监督带来的性能收益仍然完整保留。</em></td>
+</tr>
+</table>
 
-*图1：DreamZero 的总览图很好地概括了 WAM 相比 VLA 的核心差异。图中不是直接从当前观测回归动作，而是让模型先在视觉空间中生成未来交互过程，再从生成轨迹中得到可执行动作。这个图支持本文的主线判断：WAM 的"世界"部分并不是装饰性的辅助任务，而是策略泛化、跨具身迁移和未见任务执行的主要信息来源。需要注意的是，这类图通常强调显式视觉想象的可解释性，但后续 Fast-WAM 和 GigaWorld-Policy 会进一步说明，部署时未必每一步都要完整生成这些未来帧。*
+*图1：Fast-WAM 和 GigaWorld-Policy 独立回答了同一个问题——WAM 的性能提升来自训练时的视频协同建模，而非推理时的显式未来想象。这两张图放在一起，直接点明了本文的主线判断：WAM 的"世界"部分不是装饰性的辅助任务，也不是每个控制周期都要完整生成的未来视频；它的核心价值在于用视频动态作为密集训练监督来塑造动作表征，部署时则可以压缩、跳过或异步执行。换句话说，WAM 的关键不是"想象未来"，而是"用未来想象训练一个更懂物理世界的策略"。*
 
 从 DreamZero、LingBot-VA 到 Fast-WAM、GigaWorld-Policy，这条线索越来越明确：视频生成 backbone 提供通用物理先验，动作生成则需要面向实时性、精度和闭环反馈做结构化约束。WAM 的核心矛盾不是"要不要想象未来"，而是"什么时候显式想象、什么时候只保留想象塑造出的表征、什么时候必须用现实反馈打断想象"。
 
