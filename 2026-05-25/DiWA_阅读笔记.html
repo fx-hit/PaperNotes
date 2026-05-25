@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DiWA: Diffusion Policy Adaptation with World Models</title>
+<!-- arxiv: 2508.03645 -->
+<!-- venue: CoRL 2025 -->
+<!-- tags: 机器人, 世界模型, 策略学习, 强化学习 -->
+<!-- words-zh: 3194 -->
+<!-- words-en: 483 -->
+<!-- reading-time: 12 -->
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #ffffff;
+    --text: #1a1a2e;
+    --text-secondary: #555;
+    --border: #e1e4e8;
+    --link: #0969da;
+    --table-stripe: #f6f8fa;
+    --heading: #0d1117;
+    --blockquote-border: #0969da;
+    --blockquote-bg: #f0f6ff;
+    --inline-code: #d73a49;
+    --inline-code-bg: #f6f8fa;
+    --sidebar-width: 260px;
+    --toc-active: #0969da;
+    --content-max-width: 900px;
+    --content-padding: 48px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "Inter", "Noto Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 16px;
+    line-height: 1.75;
+    color: var(--text);
+    background: var(--bg);
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    width: var(--sidebar-width);
+    overflow-y: auto;
+    padding: 28px 20px 40px;
+    background: #fafbfc;
+    border-right: 1px solid var(--border);
+    z-index: 10;
+    scrollbar-width: thin;
+  }
+  .sidebar-title {
+    font-size: 13px; font-weight: 700; color: var(--text-secondary);
+    margin-bottom: 16px; letter-spacing: 0.06em; text-transform: uppercase;
+  }
+  .toc-list { list-style: none; padding: 0; margin: 0; }
+  .toc-list ul { list-style: none; padding-left: 14px; }
+  .toc-list li { margin: 1px 0; }
+  .toc-list a {
+    display: block; padding: 4px 12px; font-size: 13.5px; line-height: 1.45;
+    color: var(--text-secondary); text-decoration: none; border-radius: 4px;
+    border-left: 2px solid transparent; transition: all 0.15s;
+  }
+  .toc-list a:hover { color: var(--link); background: #e8f0fe; }
+  .toc-list a.active {
+    color: var(--toc-active); font-weight: 600;
+    border-left-color: var(--toc-active); background: #e8f0fe;
+  }
+  .toc-h1 a { font-weight: 600; color: var(--heading); font-size: 14px; }
+  .toc-h3 a { padding-left: 24px; font-size: 13px; }
+  .toc-h4 a { padding-left: 36px; font-size: 12.5px; }
+  .toc-empty { color: var(--text-secondary); font-size: 13px; font-style: italic; }
+
+  .main-wrapper {
+    margin-left: var(--sidebar-width);
+    min-height: 100vh;
+    display: flex; justify-content: center;
+  }
+  .content-inner {
+    width: 100%;
+    max-width: var(--content-max-width);
+    padding: 40px var(--content-padding) 80px;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    color: var(--heading); font-weight: 700; line-height: 1.3;
+    margin-top: 2em; margin-bottom: 0.6em; scroll-margin-top: 24px;
+  }
+  h1 { font-size: 2em; border-bottom: 2px solid var(--border); padding-bottom: 0.3em; margin-top: 0; }
+  h2 { font-size: 1.5em; border-bottom: 1px solid var(--border); padding-bottom: 0.25em; }
+  h3 { font-size: 1.25em; }
+  h4 { font-size: 1.1em; }
+  p { margin-bottom: 1em; }
+  a { color: var(--link); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  strong { font-weight: 600; }
+
+  blockquote {
+    border-left: 4px solid var(--blockquote-border);
+    background: var(--blockquote-bg);
+    padding: 12px 20px; margin: 1em 0;
+    border-radius: 0 6px 6px 0; color: var(--text-secondary);
+  }
+  blockquote p:last-child { margin-bottom: 0; }
+
+  code {
+    font-family: "JetBrains Mono", "SF Mono", "Fira Code", monospace;
+    font-size: 0.875em; background: var(--inline-code-bg);
+    padding: 2px 6px; border-radius: 4px; color: var(--inline-code);
+  }
+  pre {
+    background: #1e1e2e; color: #cdd6f4;
+    border-radius: 8px; padding: 16px 20px; overflow-x: auto;
+    margin: 1em 0; font-size: 14px; line-height: 1.55;
+  }
+  pre code { background: none; padding: 0; border-radius: 0; color: inherit; font-size: inherit; }
+
+  .codehilite { background: #1e1e2e; border-radius: 8px; padding: 16px 20px; overflow-x: auto; margin: 1em 0; }
+  .codehilite pre { background: none; padding: 0; margin: 0; border-radius: 0; }
+  .codehilite .hll { background-color: #2a2a3e; }
+  .codehilite .c  { color: #6c7086; font-style: italic; }
+  .codehilite .k  { color: #cba6f7; }
+  .codehilite .o  { color: #89b4fa; }
+  .codehilite .s  { color: #a6e3a1; }
+  .codehilite .n  { color: #cdd6f4; }
+  .codehilite .p  { color: #bac2de; }
+  .codehilite .mi { color: #fab387; }
+  .codehilite .nf { color: #89b4fa; }
+  .codehilite .nb { color: #f38ba8; }
+  .codehilite .nc { color: #f9e2af; }
+  .codehilite .bp { color: #f38ba8; }
+
+  table { width: 100%; border-collapse: collapse; margin: 1em 0; font-size: 0.925em; }
+  th, td { border: 1px solid var(--border); padding: 10px 14px; text-align: left; }
+  th { background: var(--table-stripe); font-weight: 600; color: var(--heading); }
+  tr:nth-child(even) td { background: var(--table-stripe); }
+
+  .math.display { display: block; overflow-x: auto; padding: 12px 0; margin: 1em 0; }
+  ul, ol { padding-left: 1.5em; margin-bottom: 1em; }
+  li { margin-bottom: 0.3em; }
+  hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+  img { max-width: 100%; height: auto; border-radius: 6px; margin: 0; }
+  p:has(img) { text-align: center; margin-top: 0.6em; margin-bottom: 0; }
+  p:has(img) + p { text-align: center; font-size: 0.9em; color: var(--text-secondary); margin-top: 0.15em; margin-bottom: 0.6em; }
+  .mermaid { text-align: center; margin: 1.5em 0; background: #fafbfc; border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+  .article-stats {
+    font-size: 0.85rem; color: var(--text-secondary);
+    padding: 10px 18px; margin-bottom: 28px;
+    background: #f8f9fa; border: 1px solid var(--border); border-radius: 8px;
+  }
+
+  @media (max-width: 1024px) {
+    .sidebar { position: static; width: 100%; height: auto; max-height: 35vh; border-right: none; border-bottom: 1px solid var(--border); }
+    .main-wrapper { margin-left: 0; display: block; }
+    .content-inner { max-width: none; padding: 24px 20px 60px; }
+  }
+</style>
+
+<script>
+MathJax = {
+  tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']], processEscapes: true, tags: 'none' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] }
+};
+</script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  mermaid.initialize({ startOnLoad: true, theme: 'neutral', securityLevel: 'loose' });
+});
+</script>
+
+</head>
+<body>
+
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-title">目录</div>
+  <ul class="toc-list">
+<li class="toc-h1"><a href="#diwa-diffusion-policy-adaptation-with-world-models">DiWA: Diffusion Policy Adaptation with World Models</a>
+<ul>
+</li>
+<li class="toc-h2"><a href="#_1">一、核心问题</a>
+</li>
+<li class="toc-h2"><a href="#_2">二、核心思路 / 方法</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#21">2.1 整体框架：四阶段训练</a>
+</li>
+<li class="toc-h3"><a href="#22-dreamerv2-rssm">2.2 世界模型：DreamerV2 风格 RSSM</a>
+</li>
+<li class="toc-h3"><a href="#23">2.3 扩散策略预训练</a>
+</li>
+<li class="toc-h3"><a href="#24">2.4 潜在奖励估计</a>
+</li>
+<li class="toc-h3"><a href="#25-dream-diffusion-mdp">2.5 Dream Diffusion MDP：核心创新</a>
+</li>
+<li class="toc-h3"><a href="#26-ppo-bc">2.6 PPO 微调 + BC 正则化</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_3">三、训练目标</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#31-elbo">3.1 世界模型（ELBO）</a>
+</li>
+<li class="toc-h3"><a href="#32-bc">3.2 扩散策略 BC 预训练</a>
+</li>
+<li class="toc-h3"><a href="#33-contrastive-ce">3.3 奖励分类器（Contrastive + CE）</a>
+</li>
+<li class="toc-h3"><a href="#34-dream-diffusion-mdp">3.4 Dream Diffusion MDP 策略梯度</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_4">四、实验与结果</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#41-calvin-benchmark8">4.1 仿真实验：CALVIN Benchmark（8 个任务）</a>
+</li>
+<li class="toc-h3"><a href="#42-dppo">4.2 DPPO 各变体详细对比</a>
+</li>
+<li class="toc-h3"><a href="#43-3">4.3 真机实验（3 个任务）</a>
+</li>
+<li class="toc-h3"><a href="#44-libero-90-4">4.4 LIBERO-90 实验（4 个任务）</a>
+</li>
+<li class="toc-h3"><a href="#45-bc">4.5 BC 正则化消融实验</a>
+</li>
+<li class="toc-h3"><a href="#46-rollout">4.6 世界模型 Rollout 可视化</a>
+</li>
+<li class="toc-h3"><a href="#47">4.7 高斯策略微调（验证框架通用性）</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_5">五、关键洞察与技术亮点</a>
+</li>
+<li class="toc-h2"><a href="#_6">六、代码实现解读</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#61">6.1 代码架构总览</a>
+</li>
+<li class="toc-h3"><a href="#62">6.2 核心推理/训练流程</a>
+</li>
+<li class="toc-h3"><a href="#63">6.3 关键代码映射</a>
+</li>
+<li class="toc-h3"><a href="#64-dream-diffusion-mdp">6.4 Dream Diffusion MDP 单步展开流程</a>
+</li>
+<li class="toc-h3"><a href="#65-scriptsrewclstrain_contrastivepy">6.5 奖励分类器训练（scripts/rewcls/train_contrastive.py）</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_7">七、局限性</a>
+</li>
+<li class="toc-h2"><a href="#_8">八、关键概念速查</a>
+</ul></li>
+</li></ul>
+</nav>
+
+<main class="main-wrapper">
+  <div class="content-inner" id="main-content">
+<h1 id="diwa-diffusion-policy-adaptation-with-world-models">DiWA: Diffusion Policy Adaptation with World Models</h1>
+<div class="article-stats">3,194 字 · English 483 词 · 约 12 分钟阅读</div>
+
+<blockquote>
+<p><strong>论文信息</strong>
+- 作者：Akshay L Chandra<span class="math inline">$^{*}$</span>, Iman Nematollahi<span class="math inline">$^{*}$</span>, Chenguang Huang, Tim Welschehold, Wolfram Burgard, Abhinav Valada
+- 通讯作者：Abhinav Valada（University of Freiburg）
+- 投稿方向：CoRL 2025
+- arXiv ID：2508.03645
+- 项目主页：https://diwa.cs.uni-freiburg.de
+- 代码：https://github.com/acl21/diwa</p>
+</blockquote>
+<hr />
+<h2 id="_1">一、核心问题</h2>
+<p>扩散策略（Diffusion Policy）在机器人模仿学习中表现优异，但纯 Behavior Cloning 训练的策略受限于专家数据的覆盖范围和质量，面对分布偏移（distribution shift）时容易失败。自然地，可以用强化学习（RL）对预训练策略进行微调。</p>
+<p>现有 SOTA 方法 <strong>DPPO</strong>（Diffusion Policy Policy Optimization）将扩散去噪过程建模为多步 MDP，用 PPO 进行在线微调，但存在致命缺陷：<strong>需要数百万次真实环境交互</strong>，在实际机器人场景中既不安全也不可行。</p>
+<p>本文核心问题：<strong>能否完全离线地微调扩散策略，而不需要任何真实或仿真环境交互？</strong></p>
+<p><img alt="图1：研究动机对比" src="assets/diwa/diwa_cover.jpg" /></p>
+<p><em>图1：三种扩散策略学习范式对比。</em><em>(a)</em><em> 标准扩散策略通过 Behavior Cloning 从离线数据中学习，受限于数据质量。</em><em>(b)</em><em> DPPO 通过在线环境交互微调扩散策略，需要数百万步物理交互，成本高且有安全隐患。</em><em>(c)</em><em> DiWA 通过学习到的世界模型（world model）中的"想象 rollout"完全离线地微调扩散策略，无需任何物理交互即可实现策略改进。</em></p>
+<hr />
+<h2 id="_2">二、核心思路 / 方法</h2>
+<h3 id="21">2.1 整体框架：四阶段训练</h3>
+<p>DiWA 的训练分为四个阶段（图 2）：</p>
+<ol>
+<li><strong>世界模型训练</strong>：在无标签的 play 数据 <span class="math inline">$\mathcal{D}_{\text{play}}$</span> 上训练 latent dynamics model，学习环境的紧凑隐空间表征</li>
+<li><strong>扩散策略预训练</strong>：在专家演示 <span class="math inline">$\mathcal{D}_{\text{exp}}$</span> 上通过 Behavior Cloning 预训练扩散策略（使用 WM 编码的 latent 作为输入）</li>
+<li><strong>奖励分类器训练</strong>：在 latent 空间训练二分类器 <span class="math inline">$C_\psi$</span>，从专家数据中学习任务成功/失败的判别信号</li>
+<li><strong>Dream Diffusion MDP 中微调</strong>：在 WM 的 latent 空间中展开想象 rollout，用 PPO + BC 正则化微调扩散策略</li>
+</ol>
+<p><img alt="图2：DiWA 框架总览" src="assets/diwa/architecture_compressed.jpg" /></p>
+<p><em>图2：DiWA 完整框架图。四阶段流程清晰展示了从 play 数据到最终部署的全链路：(1) 从无结构 play 数据学习世界模型；(2) 用 WM encoder 提取 latent 表征，预训练扩散策略；(3) 在 latent 空间训练 success classifier 作为奖励函数；(4) 在 Dream Diffusion MDP 中通过 PPO + BC 正则化完全离线微调策略。推理时直接将微调后的策略部署到真实机器人上。</em></p>
+<h3 id="22-dreamerv2-rssm">2.2 世界模型：DreamerV2 风格 RSSM</h3>
+<p>世界模型 <span class="math inline">$\mathcal{M}_{\text{wm}} = (\mathcal{Z}, \mathcal{A}, P_\phi)$</span> 采用 DreamerV2 的 recurrent state-space model（RSSM）架构：</p>
+<ul>
+<li><strong>编码器</strong>：双路视觉编码（static camera + wrist camera），特征拼接后送入 RSSM</li>
+<li><strong>确定性状态</strong> <span class="math inline">$h_t$</span>：1024 维，通过 GRU 式循环更新</li>
+<li><strong>随机状态</strong> <span class="math inline">$z_t$</span>：32 个 categorical 变量，每变量 32 类 → 稀疏 1024 维 one-hot</li>
+<li><strong>总 latent 维度</strong>：<span class="math inline">$k = 2048$</span>（<span class="math inline">$h_t$</span> 和 <span class="math inline">$z_t$</span> 拼接）</li>
+<li><strong>解码器</strong>：从 latent 重建 RGB 图像</li>
+<li><strong>训练目标</strong>：负 ELBO，带 KL balancing（<span class="math inline">$\delta = 0.8$</span>）稳定训练</li>
+</ul>
+<p>世界模型在约 50 万步 play 数据上一次性训练完成，<strong>训练后冻结</strong>，不再更新。</p>
+<h3 id="23">2.3 扩散策略预训练</h3>
+<ul>
+<li>使用世界模型 encoder 将原始观测编码为 2048 维 latent 向量</li>
+<li>策略架构：3 层 MLP（每层 512 维），DDPM 去噪，<span class="math inline">$K = 20$</span> 步</li>
+<li>观察窗口 1 步，预测 <span class="math inline">$T_p = 4$</span> 步未来动作，执行 <span class="math inline">$T_a = 4$</span> 步</li>
+<li>每 skill 仅需 50 条专家演示</li>
+<li>训练 5000 epochs，使用 EMA（decay=0.995）稳定权重</li>
+</ul>
+<h3 id="24">2.4 潜在奖励估计</h3>
+<p>在 latent 空间训练成功分类器 <span class="math inline">$C_\psi$</span>：</p>
+<ul>
+<li><strong>双组件架构</strong>：Embedding MLP（[512,512]）→ 对比学习（NT-Xent） + Classification MLP（[512,512]）→ 交叉熵</li>
+<li><strong>联合损失</strong>：<span class="math inline">$\mathcal{L}_{\text{reward}} = \mathcal{L}_{\text{NT-Xent}} + \mathcal{L}_{\text{CE}}$</span></li>
+<li><strong>精度</strong>：平均 precision 0.89，recall 0.98（仅需 50 demonstrations/skill）</li>
+<li><strong>对比</strong>：ResNet-18 视觉分类器 precision 仅 0.41（recall 相同 0.98）</li>
+</ul>
+<p>关键洞察：WM 的时序结构化 latent 空间自带强归纳偏置，使得奖励分类器即使在小样本下也能高精度区分成功/失败状态。</p>
+<h3 id="25-dream-diffusion-mdp">2.5 Dream Diffusion MDP：核心创新</h3>
+<p>这是 DiWA 最核心的理论贡献。将扩散去噪过程嵌入世界模型 MDP，形成一个统一的 <strong>Dream Diffusion MDP</strong> <span class="math inline">$\mathcal{M}_{\text{DD}}$</span>：</p>
+<ul>
+<li><strong>双层时间索引</strong> <span class="math inline">$\bar{t}(t,k) = tK + (K-k)$</span>：外层是世界模型时间步 <span class="math inline">$t$</span>，内层是去噪步 <span class="math inline">$k$</span>（从 <span class="math inline">$K$</span> 递减到 <span class="math inline">$1$</span>）</li>
+<li><strong>状态</strong>：<span class="math inline">$\bar{s}_{\bar{t}(t,k)} = (z_t, \bar{a}_t^{k})$</span>——latent 状态 + 当前噪声动作</li>
+<li><strong>动作</strong>：<span class="math inline">$\bar{a}_{\bar{t}(t,k)} = \bar{a}_t^{k-1}$</span>——去噪一步后的动作</li>
+<li><strong>奖励</strong>：只在 <span class="math inline">$k=1$</span>（最终去噪步）时给 reward classifier 的输出，其余去噪步为 0</li>
+<li><strong>转移</strong>：<ul>
+<li><span class="math inline">$k > 1$</span> 时：在 latent 空间内去噪（Dirac delta 转移）</li>
+<li><span class="math inline">$k = 1$</span> 时：执行动作 <span class="math inline">$a_t^0$</span>，通过世界模型转移到 <span class="math inline">$z_{t+1}$</span>，并从新噪声开始下一轮扩散</li>
+</ul>
+</li>
+</ul>
+<h3 id="26-ppo-bc">2.6 PPO 微调 + BC 正则化</h3>
+<p>微调目标 = PPO clip loss + BC 正则化项：</p>
+<p><div class="math display">$$\mathcal{L}_\theta = \mathcal{L}_\text{PPO} - \alpha_\text{BC} \ \mathbb{E}\left[\sum_{k=1}^{K} \log \pi_{\theta_\text{pre}}(\bar{a}_t^{k-1} \mid z_t, \bar{a}_t^{k})\right]$$</div></p>
+<ul>
+<li><strong>去噪折扣</strong> <span class="math inline">$\gamma_\text{denoise}$</span>：对早期（噪声更大的）去噪步的 advantage 进行衰减，因为早期去噪步对最终动作的影响较小</li>
+<li><strong>BC 正则化</strong> <span class="math inline">$\alpha_\text{BC}$</span>（默认 0.05）：约束微调后的策略不要偏离预训练策略太远，防止利用 WM 的建模误差（model exploitation）</li>
+<li><strong>仅微调最后 <span class="math inline">$K'=10$</span> 步去噪</strong>：前 <span class="math inline">$K-K'=10$</span> 步保持冻结，减少计算量</li>
+<li><strong>GAE</strong>：仅在 <span class="math inline">$k=1$</span> 步计算，然后用去噪折扣传播到更早的去噪步</li>
+</ul>
+<hr />
+<h2 id="_3">三、训练目标</h2>
+<h3 id="31-elbo">3.1 世界模型（ELBO）</h3>
+<p><div class="math display">$$\min_{\phi}\; \mathbb{E}_{q_\phi}\left[\sum_{t=1}^T -\log p_\phi(x_t \mid s_t) + \beta \, \text{KL}\left(q_\phi(z_t \mid h_t, x_t)\, \| \, p_\phi(z_t \mid h_t)\right)\right]$$</div></p>
+<h3 id="32-bc">3.2 扩散策略 BC 预训练</h3>
+<p><div class="math display">$$\mathcal{L}_\text{BC}(\theta) = \mathbb{E}_{\mathcal{D}_\text{exp}} \left[\sum_{t=1}^{T} \sum_{k=1}^{K} - \log \pi_\theta(a_t^{k-1} \mid z_t, a_t^k)\right]$$</div></p>
+<h3 id="33-contrastive-ce">3.3 奖励分类器（Contrastive + CE）</h3>
+<p><div class="math display">$$\mathcal{L}_{\text{reward}} = \mathcal{L}_{\text{NT-Xent}} + \mathcal{L}_{\text{CE}}$$</div></p>
+<h3 id="34-dream-diffusion-mdp">3.4 Dream Diffusion MDP 策略梯度</h3>
+<p><div class="math display">$$\nabla_\theta \bar{\mathcal{J}}(\bar{\pi}_\theta) = \mathbb{E}^{\bar{\pi}_\theta, \bar{P}}\left[\sum_{\bar{t} \geq 0} \nabla_\theta \log \bar{\pi}_\theta(\bar{a}_{\bar{t}} \mid \bar{s}_{\bar{t}}) \, \bar{r}(\bar{s}_{\bar{t}}, \bar{a}_{\bar{t}})\right]$$</div></p>
+<hr />
+<h2 id="_4">四、实验与结果</h2>
+<h3 id="41-calvin-benchmark8">4.1 仿真实验：CALVIN Benchmark（8 个任务）</h3>
+<table>
+<thead>
+<tr>
+<th>任务</th>
+<th>预训练 SR</th>
+<th>DiWA 微调 SR</th>
+<th>DPPO (WM Enc) 需多少步追上</th>
+<th>DPPO (Vision) 需多少步追上</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Open Drawer</td>
+<td>57.78</td>
+<td><strong>74.44</strong></td>
+<td>117,600</td>
+<td>134,400</td>
+</tr>
+<tr>
+<td>Close Drawer</td>
+<td>59.14</td>
+<td><strong>91.95</strong></td>
+<td>345,600</td>
+<td>1,545,600</td>
+</tr>
+<tr>
+<td>Left Slider</td>
+<td>62.15</td>
+<td><strong>83.33</strong></td>
+<td>270,933</td>
+<td>1,377,600</td>
+</tr>
+<tr>
+<td>Right Slider</td>
+<td>62.55</td>
+<td><strong>82.76</strong></td>
+<td>249,600</td>
+<td>537,600</td>
+</tr>
+<tr>
+<td>Light On</td>
+<td>60.61</td>
+<td><strong>91.92</strong></td>
+<td>302,933</td>
+<td>588,000</td>
+</tr>
+<tr>
+<td>Light Off</td>
+<td>35.63</td>
+<td><strong>77.01</strong></td>
+<td>327,066</td>
+<td>1,260,000</td>
+</tr>
+<tr>
+<td>LED On</td>
+<td>48.43</td>
+<td><strong>86.21</strong></td>
+<td>494,933</td>
+<td>2,251,200</td>
+</tr>
+<tr>
+<td>LED Off</td>
+<td>55.25</td>
+<td><strong>82.33</strong></td>
+<td>277,333</td>
+<td>184,800</td>
+</tr>
+<tr>
+<td><strong>总物理交互</strong></td>
+<td>—</td>
+<td><strong>0</strong></td>
+<td>~2.5M</td>
+<td>~8M</td>
+</tr>
+</tbody>
+</table>
+<p><strong>关键发现</strong>：</p>
+<ul>
+<li>DiWA 在所有 8 个任务上一致提升，物理交互次数为 <strong>0</strong></li>
+<li>DPPO 需要数十万到数百万步在线交互才能达到同等性能</li>
+<li>DPPO (Vision WM Encoder) 变体始终优于 DPPO (Vision) 变体，说明 WM latent 表征比 ViT 编码更丰富</li>
+</ul>
+<p><img alt="图3：世界模型变体对比" src="assets/diwa/visionwm-vs-hybridwm.jpg" /></p>
+<p><em>图3：三种 DiWA 变体在 8 个 CALVIN 任务上的微调性能对比。</em><em>蓝色（Vision WM）</em><em>：仅用视觉输入训练世界模型，依赖学习到的奖励分类器——这是主实验的标准配置，因为它仅需视觉观测即可部署到真实机器人。</em><em>绿色（Hybrid WM + Reward Classifier）</em><em>：在训练时额外引入场景状态（scene state）监督，使 latent dynamics 更准确，但仍使用学习到的奖励分类器。</em><em>红色（Hybrid WM + Latent Decoder）</em><em>：使用场景状态增强的 latent，并直接从 latent 解码状态变量来计算奖励（无需学到的分类器），奖励信号最准确。</em></p>
+<p><em>结果趋势清晰：更准确的世界模型 + 更可靠的奖励信号 → 更强的微调性能。Hybrid WM + Latent Decoder 在多数任务上最优，验证了"WM 精度"和"奖励质量"是决定离线微调上限的两个关键因素。Vision WM（蓝色）作为纯视觉方案，虽然绝对性能略低，但优势在于完全兼容真实机器人部署（无需 scene state）。</em></p>
+<h3 id="42-dppo">4.2 DPPO 各变体详细对比</h3>
+<p><img alt="图S1：DPPO 各输入模态在线学习曲线 vs DiWA" src="assets/diwa/dppo-online.jpg" /></p>
+<p><em>图S1：DPPO 三种输入模态变体的在线学习曲线对比。</em><em>DPPO (State, 灰色)</em><em>：直接使用仿真器 ground-truth 状态（51 维），在部分任务上学习最快但波动大。</em><em>DPPO (Vision, 红色)</em><em>：使用 ViT 编码原始 RGB 图像（64×64×6），学习最慢——在 Close Drawer 任务上需要超过 150 万步才能追上 DiWA。</em><em>DPPO (Vision WM Encoder, 绿色)</em><em>：使用与 DiWA 相同的 frozen WM encoder 处理视觉输入，性能最强且最稳定，学习速度明显快于纯 ViT 变体。</em></p>
+<p><em>DiWA（蓝色水平带）作为离线方法，不需要任何环境交互——其性能在图中显示为恒定水平线。关键对比：DPPO (Vision WM Encoder) 虽然最终可以逼近甚至超过 DiWA，但每个 skill 平均需要数百到数千次在线 episode。在真实机器人上，这些交互对应数小时甚至数天的物理操作，且存在安全风险。DiWA 用几小时一次性 play 数据 + 少量 expert demo 就能消除所有这些在线交互需求。</em></p>
+<h3 id="43-3">4.3 真机实验（3 个任务）</h3>
+<p>在 Franka Emika Panda 机器人上测试了 3 个任务（开抽屉、关抽屉、推滑条），使用 4 小时 teleoperation play 数据（~45 万步）+ 每 skill 50 条 expert demo。</p>
+<p><img alt="图4：真机实验" src="assets/diwa/real_skills.jpg" /></p>
+<p><em>图4a：三个真实世界操作任务的可视化——Open Drawer、Close Drawer、Push Slider Right。实验使用 Franka Emika Panda 7-DoF 机械臂，配备 static Azure Kinect + wrist Realsense D415 双摄像头。</em></p>
+<p><img alt="图5：真机微调结果" src="assets/diwa/real-adaptation.jpg" /></p>
+<p><em>图5b：三个真机任务上的微调前后成功率对比（20 次 rollout × 3 seeds）。蓝色柱为预训练扩散策略的成功率，绿色/红色/紫色柱为在 WM 中微调 ~2M imagination steps 后的成功率。每个任务都观察到了显著提升：Open Drawer 从 ~25% → ~70%，Close Drawer 从 ~30% → ~80%，Push Slider 从 ~20% → ~65%。这些提升完全离线实现，</em><em>零次真实环境交互</em><em>——微调后的策略直接 zero-shot 部署到真实机器人上。</em></p>
+<h3 id="44-libero-90-4">4.4 LIBERO-90 实验（4 个任务）</h3>
+<table>
+<thead>
+<tr>
+<th>任务</th>
+<th>预训练 SR</th>
+<th>DiWA 微调 SR</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Open Top Drawer (scene 1)</td>
+<td>40.67</td>
+<td><strong>77.33</strong></td>
+</tr>
+<tr>
+<td>Turn On Stove (scene 3)</td>
+<td>54.00</td>
+<td><strong>91.33</strong></td>
+</tr>
+<tr>
+<td>Close Bottom Drawer (scene 4)</td>
+<td>27.33</td>
+<td><strong>78.00</strong></td>
+</tr>
+<tr>
+<td>Close Top Drawer (scene 5)</td>
+<td>75.33</td>
+<td><strong>100.00</strong></td>
+</tr>
+</tbody>
+</table>
+<p>LIBERO-90 场景多样但每场景交互数据稀疏，DiWA 仍能在此条件下有效微调（不同任务需要不同的微调步数：1M–3M）。</p>
+<h3 id="45-bc">4.5 BC 正则化消融实验</h3>
+<p><img alt="图S2：BC 正则化强度消融" src="assets/diwa/bc-loss.jpg" /></p>
+<p><em>图S2：BC 正则化系数 <span class="math inline">$\alpha_\text{BC}$</span> 对微调效果的影响。</em><em><span class="math inline">$\alpha_\text{BC} = 0.0$</span>（无正则化）</em><em>：策略在想象环境中表现很好，但部署到真实环境时成功率急剧下降——典型的 model exploitation，策略学会了利用 WM 的不准确性来获得虚假的高奖励。</em><em><span class="math inline">$\alpha_\text{BC} = 0.5$</span>（过强正则化）</em><em>：策略几乎没有改进，因为约束太强，PPO 无法有效调整策略。</em><em>中间值（0.025–0.10）</em><em>：在"适应新任务"和"保持预训练行为"之间取得最佳平衡，使策略既能从 RL 中获益，又不会过拟合 WM 的建模误差。</em></p>
+<h3 id="46-rollout">4.6 世界模型 Rollout 可视化</h3>
+<p><img alt="图S3：世界模型长期预测" src="assets/diwa/wm-rollouts.jpg" /></p>
+<p><em>图S3：学习到的世界模型在真实世界 hold-out 轨迹上的长期预测。每行是一个技能的片段，展示 static 和 gripper 两个视角的解码重建图像。模型仅用前 2 帧建立初始上下文，然后通过 latent 空间的循环动力学前向预测 80 步（尽管训练序列长度仅 50 步）。预测图像保持视觉连贯性和时序一致性，准确追踪机械臂和操作物体的运动——说明 WM 从 play 数据中学到了有意义的物理动态，且能外推到训练序列长度之外。</em></p>
+<h3 id="47">4.7 高斯策略微调（验证框架通用性）</h3>
+<table>
+<thead>
+<tr>
+<th>任务</th>
+<th>预训练 SR</th>
+<th>微调后 SR</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Open Drawer</td>
+<td>50.00</td>
+<td><strong>71.67</strong></td>
+</tr>
+<tr>
+<td>Close Drawer</td>
+<td>55.17</td>
+<td><strong>98.28</strong></td>
+</tr>
+<tr>
+<td>Left Slider</td>
+<td>54.86</td>
+<td><strong>82.64</strong></td>
+</tr>
+<tr>
+<td>Right Slider</td>
+<td>55.52</td>
+<td><strong>87.93</strong></td>
+</tr>
+<tr>
+<td>Light On</td>
+<td>54.55</td>
+<td><strong>95.96</strong></td>
+</tr>
+<tr>
+<td>Light Off</td>
+<td>62.07</td>
+<td><strong>77.59</strong></td>
+</tr>
+<tr>
+<td>LED On</td>
+<td>44.83</td>
+<td><strong>77.59</strong></td>
+</tr>
+<tr>
+<td>LED Off</td>
+<td>40.94</td>
+<td><strong>79.69</strong></td>
+</tr>
+</tbody>
+</table>
+<p>框架也可用于简单的高斯策略，验证了 Dream Diffusion MDP 的设计与策略架构无关。</p>
+<hr />
+<h2 id="_5">五、关键洞察与技术亮点</h2>
+<ol>
+<li>
+<p><strong>Dream Diffusion MDP</strong>：将扩散去噪过程的 <span class="math inline">$K$</span> 步与 WM 的时间步统一建模为一个分层 MDP，使 PPO 的策略梯度可以自然传播——这是首次在 WM 中对扩散策略做策略梯度微调。</p>
+</li>
+<li>
+<p><strong>Latent 奖励分类器优于视觉分类器</strong>：通过对比学习 + 交叉熵联合训练，在 WM 的时序结构化 latent 空间中学到的奖励分类器（precision 0.89）远优于直接基于像素的 ResNet-18（precision 0.41）。时序 consistent 的 latent 表征本身就是一个强先验。</p>
+</li>
+<li>
+<p><strong>BC 正则化防止 model exploitation</strong>：纯 PPO 微调会使策略学会利用 WM 的不准确性来获得虚假的高奖励（在想象中成功率高，部署到真实环境失败）。BC 正则化约束策略靠近预训练行为，是离线微调成功的关键。</p>
+</li>
+<li>
+<p><strong>仅微调最后 <span class="math inline">$K'$</span> 步去噪</strong>：前 <span class="math inline">$K-K'$</span> 步去噪与预训练策略共享，大幅减少计算量，同时不影响微调效果——因为早期去噪步骤主要决定动作的大致方向，而精细调整集中在后期。</p>
+</li>
+<li>
+<p><strong>去噪折扣 <span class="math inline">$\gamma_\text{denoise}$</span></strong>：直觉上，去噪早期步骤（<span class="math inline">$k$</span> 大）的动作仍然很 noisy，对最终动作的贡献有限，应该对它们的 advantage 做折扣。这一设计使得梯度信号集中在影响最大的去噪步骤上。</p>
+</li>
+<li>
+<p><strong>一次训练、多任务复用</strong>：世界模型在 task-agnostic play 数据上只训练一次，后续可以为任意新 skill 训练奖励分类器并微调策略——实现了 WM 的一次性投入、多任务复用。</p>
+</li>
+</ol>
+<hr />
+<h2 id="_6">六、代码实现解读</h2>
+<h3 id="61">6.1 代码架构总览</h3>
+<div class="codehilite"><pre><span></span><code>diwa/
+├── diwa/
+│   ├── agent/
+│   │   ├── pretrain/        # 扩散策略 BC 预训练
+│   │   │   ├── train_agent.py
+│   │   │   ├── train_diffusion_agent.py
+│   │   │   └── train_gaussian_agent.py
+│   │   ├── finetune/        # PPO 微调
+│   │   │   ├── train_agent.py
+│   │   │   ├── train_ppo_agent.py
+│   │   │   ├── train_ppo_diffusion_agent.py          # DPPO 在线微调
+│   │   │   ├── train_ppo_diffusion_img_agent.py      # DPPO (Vision) 变体
+│   │   │   └── train_mb_ppo_diffusion_agent_visionwm.py  # ★ DiWA 核心
+│   │   └── eval/
+│   ├── model/
+│   │   ├── diffusion/
+│   │   │   ├── diffusion.py         # DDPM/DDIM 核心实现
+│   │   │   ├── diffusion_vpg.py     # VPG 基类
+│   │   │   ├── diffusion_ppo.py     # PPO loss + BC 正则化 ★
+│   │   │   ├── mlp_diffusion.py     # MLP 去噪网络
+│   │   │   └── diffusion_eval.py    # 推理/采样
+│   │   ├── gaussian/
+│   │   └── rewcls/                  # 奖励分类器
+│   │       └── contrastive.py
+│   ├── wm/
+│   │   ├── encoder/
+│   │   │   └── visionwm.py          # WM encoder（观测 → latent）
+│   │   └── wrapper/
+│   │       ├── visionwm_cls.py      # Vision WM + reward classifier ★
+│   │       ├── hybridwm.py          # Hybrid WM 变体
+│   │       └── base.py
+│   ├── env/
+│   └── utils/
+├── lumos/                           # WM 训练子模块
+└── config/
+    ├── calvin/finetune/             # 各 skill 微调配置
+    └── dataset/
+</code></pre></div>
+
+<h3 id="62">6.2 核心推理/训练流程</h3>
+<div class="codehilite"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────────────┐
+│                        DiWA 训练主循环                                     │
+│  train_mb_ppo_diffusion_agent_visionwm.py :: run()                       │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐               │
+│  │ 1. 获取初始   │───▶│ 2. WM encoder │───▶│ 3. 扩散策略   │               │
+│  │   观测 obs   │    │   obs→latent  │    │   采样 action │               │
+│  └──────────────┘    └──────────────┘    └──────┬───────┘               │
+│                                                  │                       │
+│                                                  ▼                       │
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐               │
+│  │ 6. 检查 done │◀───│ 5. 计算奖励   │◀───│ 4. WM multi_  │               │
+│  │   重置/继续   │    │   rewcls→r   │    │   step(lat,a)│               │
+│  └──────┬───────┘    └──────────────┘    └──────────────┘               │
+│         │ done_envs → get_init_obs → WM encoder → 新 latent              │
+│         ▼                                                                │
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐               │
+│  │ 7. 收集 buffer│───▶│ 8. PPO update│───▶│ 9. BC 正则化 │               │
+│  │   obs,chains,│    │   计算 ratio │    │   logprob 约 │               │
+│  │   rewards,.. │    │   clip loss  │    │   束策略更新  │               │
+│  └──────────────┘    └──────────────┘    └──────────────┘               │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="63">6.3 关键代码映射</h3>
+<table>
+<thead>
+<tr>
+<th>论文概念</th>
+<th>代码位置</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Dream Diffusion MDP <span class="math inline">$\mathcal{M}_{\text{DD}}$</span></td>
+<td><code>train_mb_ppo_diffusion_agent_visionwm.py:161-169</code></td>
+<td>扩散策略在 latent 空间采样 action，然后通过 <code>wme.multi_step()</code> 在世界模型中执行</td>
+</tr>
+<tr>
+<td>世界模型 multi_step</td>
+<td><code>wm/wrapper/visionwm_cls.py:45-62</code></td>
+<td>逐 action step 前向 WM 动力学，最后用 reward classifier 计算奖励</td>
+</tr>
+<tr>
+<td>PPO + BC 联合 loss</td>
+<td><code>model/diffusion/diffusion_ppo.py:58-194</code></td>
+<td><code>loss()</code> 函数同时计算 pg_loss、v_loss、bc_loss</td>
+</tr>
+<tr>
+<td>去噪折扣 <span class="math inline">$\gamma_\text{denoise}$</span></td>
+<td><code>diffusion_ppo.py:137-142</code></td>
+<td><code>discount = gamma_denoising**i</code>，对早期去噪步的 advantage 做指数衰减</td>
+</tr>
+<tr>
+<td>BC 正则化项</td>
+<td><code>diffusion_ppo.py:101-123</code></td>
+<td>用 base policy 重新采样，计算当前 policy 下 teacher action 的 logprob</td>
+</tr>
+<tr>
+<td>仅微调 <span class="math inline">$K'=10$</span> 步</td>
+<td><code>diffusion_ppo.py:93-95</code></td>
+<td><code>newlogprobs[:, :reward_horizon, :]</code> 限制梯度只回传到前 <code>reward_horizon</code> 步</td>
+</tr>
+<tr>
+<td>奖励分类器</td>
+<td><code>model/rewcls/contrastive.py</code></td>
+<td>Embedding MLP + Classification MLP，联合 NT-Xent + CE loss</td>
+</tr>
+<tr>
+<td>PPO clip 系数指数衰减</td>
+<td><code>diffusion_ppo.py:149-156</code></td>
+<td>对越靠后的去噪步使用越小的 clip 范围，减少后期步的策略变化</td>
+</tr>
+</tbody>
+</table>
+<h3 id="64-dream-diffusion-mdp">6.4 Dream Diffusion MDP 单步展开流程</h3>
+<div class="codehilite"><pre><span></span><code>时间步 t（外层 WM），去噪步 k（内层 diffusion）
+
+  k=20  k=19  ...  k=2       k=1              k=20  k=19  ...
+  │      │          │          │                 │      │
+  ▼      ▼          ▼          ▼                 ▼      ▼
+  ┌─┐   ┌─┐       ┌─┐       ┌─┐              ┌─┐   ┌─┐
+  │ā²⁰│→│ā¹⁹│→ ...→│ā¹│→────┤ā⁰│──action──▶  │ā²⁰│→│ā¹⁹│→ ...
+  └─┘   └─┘       └─┘       └─┘              └─┘   └─┘
+  z_t   z_t        z_t       z_t    ──▶ z_{t+1}   z_{t+1}
+                                │
+                       reward = C_ψ(z_{t+1})
+                       仅在 k=1 时给奖励
+</code></pre></div>
+
+<ul>
+<li><span class="math inline">$k > 1$</span>：策略去噪一步 <span class="math inline">$ā_t^{k} \to ā_t^{k-1}$</span>，latent 状态不变 <span class="math inline">$z_t$</span>，奖励为 0</li>
+<li><span class="math inline">$k = 1$</span>：最终动作 <span class="math inline">$ā_t^0$</span> 执行到 WM，转移至 <span class="math inline">$z_{t+1} = P_\phi(z_{t+1} \mid z_t, ā_t^0)$</span>，奖励 = <span class="math inline">$C_\psi(z_{t+1})$</span>，从新噪声 <span class="math inline">$\mathcal{N}(0,I)$</span> 开始新一轮 <span class="math inline">$K$</span> 步去噪</li>
+</ul>
+<h3 id="65-scriptsrewclstrain_contrastivepy">6.5 奖励分类器训练（<code>scripts/rewcls/train_contrastive.py</code>）</h3>
+<div class="codehilite"><pre><span></span><code>输入：WM latent z_t（2048 维）
+  │
+  ▼
+┌─────────────────┐
+│ Embedding MLP    │  [512, 512] + ReLU
+│ f_ψ(z_t) → emb  │
+└────────┬────────┘
+         │
+    ┌────┴────┐
+    ▼         ▼
+┌───────┐ ┌───────┐
+│NT-Xent│ │  CE   │
+│ Loss  │ │ Loss  │
+└───┬───┘ └───┬───┘
+    └────┬────┘
+         ▼
+    L_reward = L_NT-Xent + L_CE
+</code></pre></div>
+
+<hr />
+<h2 id="_7">七、局限性</h2>
+<ol>
+<li>
+<p><strong>WM 冻结不可更新</strong>：世界模型在 play 数据上一次性训练后冻结，建模误差在微调过程中持续存在，策略可能过拟合这些误差（model exploitation）。未来可探索混合方法——离线预训练 + 少量在线交互逐步修正 WM。</p>
+</li>
+<li>
+<p><strong>想象性能 ≠ 真实性能</strong>：在 WM 中微调时看到的性能提升不一定能完全转移到真实环境，需要在真实机器人上评估中间 checkpoint 才能确定真实效果。</p>
+</li>
+<li>
+<p><strong>WM 数据需求</strong>：需要数小时的无结构 play 数据训练 WM（CALVIN ~6 小时/50 万步，真机 ~4 小时/45 万步），虽然远少于在线交互，但仍需要一定的数据采集成本。</p>
+</li>
+<li>
+<p><strong>每 skill 需要少量专家演示</strong>：虽然只需 50 条 demo/skill，但这 50 条需要包含成功标注（用于训练奖励分类器），在某些场景下收集成本不低。</p>
+</li>
+</ol>
+<hr />
+<h2 id="_8">八、关键概念速查</h2>
+<table>
+<thead>
+<tr>
+<th>概念</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Dream Diffusion MDP</strong></td>
+<td>将 <span class="math inline">$K$</span> 步扩散去噪嵌入 WM MDP 形成的双层 MDP，外层是 WM 时间步、内层是去噪步</td>
+</tr>
+<tr>
+<td><strong>RSSM</strong></td>
+<td>Recurrent State-Space Model，DreamerV2 风格的 latent dynamics model</td>
+</tr>
+<tr>
+<td><strong>DPPO</strong></td>
+<td>Diffusion Policy Policy Optimization，将扩散去噪视为多步 MDP 用 PPO 微调</td>
+</tr>
+<tr>
+<td><strong>BC 正则化</strong></td>
+<td>Behavior Cloning regularization，约束微调策略不偏离预训练策略太远</td>
+</tr>
+<tr>
+<td><strong>去噪折扣 <span class="math inline">$\gamma_\text{denoise}$</span></strong></td>
+<td>对更早（噪声更大）的去噪步的 advantage 做衰减</td>
+</tr>
+<tr>
+<td><strong><span class="math inline">$K'$</span> / fine-tuned denoising steps</strong></td>
+<td>仅微调最后 <span class="math inline">$K'$</span> 步去噪（默认 10），前 <span class="math inline">$K-K'$</span> 步保持冻结</td>
+</tr>
+<tr>
+<td><strong>KL balancing</strong></td>
+<td>用不同权重分别正则化 prior 和 posterior，加速 prior 收敛</td>
+</tr>
+<tr>
+<td><strong>GAE</strong></td>
+<td>Generalized Advantage Estimation，在 <span class="math inline">$k=1$</span> 步计算后通过去噪折扣传播</td>
+</tr>
+</tbody>
+</table>
+  </div>
+</main>
+
+
+<script>
+(function() {
+  const sidebar = document.getElementById('sidebar');
+  const links = sidebar.querySelectorAll('a');
+  const headings = document.querySelectorAll('h1[id], h2[id], h3[id], h4[id]');
+  if (headings.length === 0) return;
+
+  const linkMap = new Map();
+  links.forEach(function(a) {
+    const href = a.getAttribute('href');
+    if (href && href.startsWith('#')) linkMap.set(href.slice(1), a);
+  });
+
+  function onScroll() {
+    let currentId = null;
+    const scrollTop = window.scrollY + 80;
+    headings.forEach(function(h) { if (h.offsetTop <= scrollTop) currentId = h.id; });
+    links.forEach(function(a) { a.classList.remove('active'); });
+    if (currentId && linkMap.has(currentId)) {
+      const el = linkMap.get(currentId);
+      el.classList.add('active');
+      const sr = sidebar.getBoundingClientRect();
+      const er = el.getBoundingClientRect();
+      if (er.bottom > sr.bottom || er.top < sr.top) {
+        el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+    }
+  }
+
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+})();
+</script>
+
+</body>
+</html>
