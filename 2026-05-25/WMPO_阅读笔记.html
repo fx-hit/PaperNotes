@@ -7,9 +7,9 @@
 <!-- arxiv: 2511.09515 -->
 <!-- venue: ICLR 2026 -->
 <!-- tags: 机器人, VLA, 世界模型, 强化学习, 视频生成, 策略学习 -->
-<!-- words-zh: 2661 -->
-<!-- words-en: 304 -->
-<!-- reading-time: 9 -->
+<!-- words-zh: 7868 -->
+<!-- words-en: 602 -->
+<!-- reading-time: 25 -->
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
@@ -240,13 +240,13 @@ document.addEventListener('DOMContentLoaded', function() {
 <main class="main-wrapper">
   <div class="content-inner" id="main-content">
 <h1 id="wmpo-world-model-based-policy-optimization-for-vision-language-action-models">WMPO: World Model-based Policy Optimization for Vision-Language-Action Models</h1>
-<div class="article-stats">2,661 字 · English 304 词 · 约 9 分钟阅读</div>
+<div class="article-stats">7,868 字 · English 602 词 · 约 25 分钟阅读</div>
 
 <blockquote>
 <p><strong>论文信息</strong>
 - 作者：Fangqi Zhu<sup>1,2</sup>, Zhengyang Yan<sup>1</sup>, Zicong Hong<sup>1</sup>, Quanxin Shou<sup>1</sup>, Xiao Ma<sup>2<em></sup>, Song Guo<sup>1</em></sup>
 - 通讯作者：Xiao Ma (ByteDance Seed), Song Guo (HKUST)
-- 投稿方向：ICLR 2026（投稿中）
+- 投稿方向：ICLR 2026
 - arXiv ID：2511.09515
 - 代码：<a href="https://WM-PO.github.io">github.com/WM-PO</a>（基于 verl + OpenSora，完整开源）
 - 项目页：https://wm-po.github.io/</p>
@@ -262,7 +262,13 @@ document.addEventListener('DOMContentLoaded', function() {
 <blockquote>
 <p>论文的核心洞察：利用<strong>像素空间</strong>（而非潜空间）的视频生成世界模型来模拟环境动力学，使 VLA 策略可以在"想象"中进行 on-policy RL，从而与预训练 VLA 的视觉表征保持一致。</p>
 </blockquote>
-<p><img alt="Figure 1：三种 VLA 训练范式对比 —— (a) 模仿学习只能从人类演示学习，无法处理失败和自纠正；(b) 真实环境 RL 采样成本高、难以规模化；(c) WMPO 通过预训练世界模型，在想象中实现样本高效的 on-policy RL。" src="assets/wmpo/introduction.jpg" /></p>
+<p><img alt="Figure 1：三种 VLA 训练范式对比。从左到右分别展示了 (a) 模仿学习、(b) 真实环境 RL、和 (c) WMPO 的完整训练流程与数据流向。" src="assets/wmpo/introduction.jpg" /></p>
+<p><strong>子图 (a) 模仿学习（Imitation Learning）</strong>：数据流从左侧的"专家演示数据集"出发，经过训练直接得到 VLA 策略并部署到机器人。这条路径的核心问题是数据与部署之间存在单向鸿沟 —— 策略部署后产生的失败轨迹（failure trajectories）无法回流到训练循环中。IL 本质上是"看一遍就上岗"，不会从错误中学习。</p>
+<p><strong>子图 (b) 真实环境 RL（Real-World RL）</strong>：相比 IL，增加了从部署环境回传轨迹的反馈回路。策略可以在真实机器人上采集 rollout 数据、计算奖励并更新自身。但这条路径标注了"high sampling costs"——真实环境的物理交互极其昂贵，难以扩展到大规模训练。</p>
+<p><strong>子图 (c) WMPO</strong>：在真实环境与策略之间插入了一个"Learned World Model"。世界模型先在 OXE 等大规模机器人数据上预训练，然后在少量策略自采数据上做 Policy Behavior Alignment。此后，整个 RL 循环（Policy → 想象轨迹 → 奖励 → 更新）完全在世界模型内部完成，不再需要真实环境交互。论文称这个设计为"无环境交互的 on-policy RL"。</p>
+<blockquote>
+<p>这张图的价值在于清晰对比了三种范式的核心差异：IL 只有单向数据流（演示→策略），缺乏反馈能力；真实环境 RL 有反馈但被物理交互瓶颈限制；WMPO 通过世界模型将反馈回路"搬进 GPU"，实现了可扩展的闭环学习。</p>
+</blockquote>
 <hr />
 <h2 id="_2">二、核心思路 / 方法</h2>
 <h3 id="21">2.1 总体框架</h3>
@@ -272,7 +278,14 @@ document.addEventListener('DOMContentLoaded', function() {
 <li><strong>轨迹采样（Trajectory Sampling）</strong>：对同一初始状态采样多条轨迹，用奖励模型 <span class="math inline">$R_\psi$</span> 评估成功/失败</li>
 <li><strong>策略更新（Policy Update）</strong>：使用 GRPO（Group Relative Policy Optimization）在"想象轨迹"上优化策略参数</li>
 </ol>
-<p><img alt="Figure 2：WMPO 总体框架。从初始状态 s₀ 开始，(1) VLA 策略预测动作块 → 世界模型生成未来帧 → 交替交互形成想象轨迹；(2) 多次采样并评估；(3) 通过 GRPO 更新策略参数。" src="assets/wmpo/method.jpg" /></p>
+<p><img alt="Figure 2：WMPO 训练流程总览。从初始状态 s₀ 出发，策略 π_θ_old 与世界模型 p_φ 交替交互生成想象轨迹，多条轨迹经奖励模型 R_ψ 评估后，通过 GRPO 更新策略参数。" src="assets/wmpo/method.jpg" /></p>
+<p><strong>图片拆解</strong>：该图以从左到右的流程展示了 WMPO 的一次完整训练迭代。</p>
+<p><strong>阶段 1（左侧黄色区域）—— 想象轨迹生成</strong>：给定来自真实环境数据集的初始状态 <span class="math inline">$s_0$</span>（包含初始图像 <span class="math inline">$I_{0:c}$</span> 和语言指令），旧的 VLA 策略 <span class="math inline">$\pi_{\theta_{\text{old}}}$</span> 预测第一个动作块 <span class="math inline">$a_{0:K}$</span>，世界模型 <span class="math inline">$p_\phi$</span> 基于条件帧和动作块生成下一段视频帧 <span class="math inline">$I_{K:2K}$</span>。这个过程交替重复，逐步自回归地生成一整条完整的"想象轨迹" <span class="math inline">$\tau$</span>。图中用"Imagine Trajectory <span class="math inline">$\tau$</span>"的箭头清晰标注了这个交替交互模式。</p>
+<p><strong>阶段 2（中间蓝色区域）—— 轨迹采样</strong>：对同一初始状态，策略以一定温度采样多条（<span class="math inline">$G=8$</span> 条）不同的想象轨迹。图中以不同颜色的轨迹线表示这种多样性。每条轨迹输入奖励模型 <span class="math inline">$R_\psi$</span>，获得成功/失败（Smile/Frown）的二元标签。这里还用到了 Dynamic Sampling：如果 <span class="math inline">$G$</span> 条轨迹全部成功或全部失败，该组被丢弃并重新采样，避免梯度为零。</p>
+<p><strong>阶段 3（右侧绿色区域）—— 策略更新</strong>：所有有效的轨迹组被收集起来，按照 GRPO 公式计算组内相对优势 <span class="math inline">$\hat{A}_i$</span> 和策略比率 <span class="math inline">$r_{i,t}(\theta)$</span>，通过最小化裁剪后的替代目标（clipped surrogate objective）来更新策略参数 <span class="math inline">$\theta$</span>。更新完成后，旧策略参数 <span class="math inline">$\theta_{\text{old}}$</span> 被新参数替代，进入下一轮迭代。</p>
+<blockquote>
+<p>整个流程的循环特性是 WMPO 的核心优势：策略在想象中越练越好，世界模型保持固定（因为在想象中策略的输入始终是模型生成的帧），这保证了训练稳定性和可扩展性。</p>
+</blockquote>
 <h3 id="22">2.2 问题形式化</h3>
 <p>将 VLA 操控任务形式化为 MDP <span class="math inline">$\mathcal{M} = (\mathcal{S}, \mathcal{A}, P, R)$</span>：</p>
 <ul>
@@ -313,13 +326,13 @@ document.addEventListener('DOMContentLoaded', function() {
 </table>
 <p><strong>帧级动作控制</strong>的具体实现：对每帧 <span class="math inline">$i$</span> 的动作 <span class="math inline">$a_i$</span>，MLP 生成调制系数 <span class="math inline">$\gamma_1^i$</span>、<span class="math inline">$\beta_1^i$</span>（LayerNorm 的 scale/shift）、<span class="math inline">$\alpha_1^i$</span>（残差连接的 scale）：</p>
 <p><div class="math display">$$\mathbf{x}^i = \mathbf{x}^i + (1 + \alpha_1^i) \cdot \text{Block}\bigl(\gamma_1^i \cdot \text{LayerNorm}(\mathbf{x}^i) + \beta_1^i\bigr)$$</div></p>
-<p><strong>Policy Behavior Alignment（策略行为对齐）</strong>：这是 WMPO 的关键创新之一。世界模型先在 OXE（Open X-Embodiment，百万级机器人轨迹）上预训练，再在下游任务的策略自采数据上微调。这一步解决了专家演示与策略 rollout 之间的状态分布不匹配问题 —— 世界模型需要见过策略自己的失败模式才能忠实模拟。</p>
+<p><strong>Policy Behavior Alignment（策略行为对齐）</strong>：世界模型先在 OXE（Open X-Embodiment，百万级机器人轨迹）上预训练 1200 万步，再在下游任务的策略自采数据上微调 300 万步。这一步解决了两个分布不匹配问题：(1) OXE 以成功轨迹为主，缺乏失败案例；(2) 下游策略的行为模式可能与 OXE 中的演示者不同。如果不做这一步对齐，世界模型在遇到策略的失败行为时会生成不真实的想象，导致 RL 训练失效。</p>
 <h3 id="24">2.4 奖励模型</h3>
 <ul>
 <li><strong>架构</strong>：VideoMAE-base 编码器 + 线性分类头</li>
-<li><strong>训练</strong>：二分类交叉熵，以轨迹末端 clip 为正样本，轨迹中间 clip 和失败轨迹 clip 为负样本；batch 内正负样本平衡</li>
-<li><strong>推理</strong>：对整个想象轨迹以 stride=1 滑动窗口扫描，任一时序窗口的预测概率超过阈值 <span class="math inline">$\tau_{\text{thr}}$</span> 即判定成功</li>
-<li><strong>效果</strong>：所有任务上 F1 &gt; 0.95</li>
+<li><strong>训练</strong>：二分类交叉熵。正样本为成功轨迹的最后 <span class="math inline">$L$</span> 帧 clip，负样本来自成功轨迹的中间片段和失败轨迹的任意片段。batch 内正负样本强制 1:1 平衡，缓解类不平衡</li>
+<li><strong>推理</strong>：对整条想象轨迹以 stride=1 滑动窗口扫描（窗口长度 <span class="math inline">$L=8$</span>），任一时序窗口的预测概率超过阈值 <span class="math inline">$\tau_{\text{thr}}$</span> 即判定为成功。该阈值通过验证集 grid search 确定</li>
+<li><strong>效果</strong>：所有任务上 F1 &gt; 0.95，意味着奖励信号高度可靠，有效防止 reward hacking</li>
 </ul>
 <h3 id="25-on-policy-grpo">2.5 On-Policy GRPO 优化</h3>
 <p>采用 GRPO（Group Relative Policy Optimization），关键设计选择：</p>
@@ -327,30 +340,32 @@ document.addEventListener('DOMContentLoaded', function() {
 <li><strong>组内相对优势</strong>：从同一初始状态采样 <span class="math inline">$G=8$</span> 条轨迹，用组内标准化计算优势：<span class="math inline">$\hat{A}_i = \frac{R_i - \text{mean}(\{R_i\})}{\text{std}(\{R_i\})}$</span></li>
 <li><strong>去除 KL 散度正则</strong>（遵循 DAPO）：不使用参考模型，减少显存消耗，鼓励策略探索</li>
 <li><strong>动态采样（Dynamic Sampling）</strong>：若一组轨迹全部成功或全部失败，丢弃该组重新采样 —— 避免梯度消失</li>
-<li><strong>不对称裁剪</strong>：<span class="math inline">$\epsilon_{\text{low}}=0.20$</span>，<span class="math inline">$\epsilon_{\text{high}}=0.28$</span></li>
+<li><strong>不对称裁剪</strong>：<span class="math inline">$\epsilon_{\text{low}}=0.20$</span>，<span class="math inline">$\epsilon_{\text{high}}=0.28$</span>（上界更宽松，给正向更新更大空间）</li>
 </ul>
 <p><div class="math display">$$\mathcal{J}(\theta) = \mathbb{E}\left[\frac{1}{G}\sum_{i=1}^G \frac{1}{T}\sum_{t=0}^{T} \min\!\Big(r_{i,t}(\theta)\hat{A}_i, \operatorname{clip}(r_{i,t}(\theta), 1-\epsilon_{\text{low}}, 1+\epsilon_{\text{high}})\hat{A}_i\Big)\right]$$</div></p>
 <hr />
 <h2 id="_3">三、实验与结果</h2>
 <h3 id="31">3.1 实验设置</h3>
 <ul>
-<li><strong>模拟环境</strong>：Mimicgen，4 个精细操控任务：Coffee_D0、StackThree_D0、ThreePieceAssembly_D0、Square_D0</li>
-<li><strong>基础策略</strong>：OpenVLA-OFT 在每任务 300 条专家演示上微调</li>
-<li><strong>Rollout 预算</strong>：<span class="math inline">$P=128$</span> 和 <span class="math inline">$P=1280$</span>，代表可用于优化的真实轨迹数量</li>
-<li><strong>评估</strong>：每任务 128 个不同初始状态，报告平均成功率</li>
-<li><strong>GPU</strong>：SFT 8×H100，世界模型和策略优化 32×H100</li>
+<li><strong>模拟环境</strong>：Mimicgen，4 个精细操控任务：Coffee_D0（端咖啡）、StackThree_D0（堆叠三个方块）、ThreePieceAssembly_D0（三件组装）、Square_D0（将方柱插入方孔）</li>
+<li><strong>基础策略</strong>：OpenVLA-OFT 在每任务 300 条专家演示上做 SFT</li>
+<li><strong>Rollout 预算</strong>：<span class="math inline">$P=128$</span> 和 <span class="math inline">$P=1280$</span>，代表可用于优化的<strong>真实轨迹数量</strong></li>
+<li><strong>评估</strong>：每任务 128 个不同初始状态，报告平均成功率（%）</li>
+<li><strong>硬件</strong>：SFT 8×H100，世界模型预训练 + 策略优化 32×H100</li>
+<li><strong>世界模型预训练</strong>：OXE 数据集上 1200 万步；Policy Behavior Alignment 微调 300 万步</li>
 </ul>
 <h3 id="32">3.2 主要对比结果</h3>
+<p>论文以表格形式（Table 1）报告了 WMPO 与基线和消融方法的全面对比。以下为完整的数字结果：</p>
 <table>
 <thead>
 <tr>
-<th style="text-align: center;">Rollout 预算</th>
+<th style="text-align: center;">Rollout 预算 <span class="math inline">$P$</span></th>
 <th style="text-align: left;">方法</th>
 <th style="text-align: center;">Coffee</th>
 <th style="text-align: center;">StackThree</th>
 <th style="text-align: center;">ThreePieceAssembly</th>
 <th style="text-align: center;">Square</th>
-<th style="text-align: center;">平均</th>
+<th style="text-align: center;">平均 (%)</th>
 </tr>
 </thead>
 <tbody>
@@ -383,7 +398,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </tr>
 <tr>
 <td style="text-align: center;">128</td>
-<td style="text-align: left;"><strong>WMPO</strong></td>
+<td style="text-align: left;"><strong>WMPO（本文）</strong></td>
 <td style="text-align: center;"><strong>61.7</strong></td>
 <td style="text-align: center;"><strong>56.3</strong></td>
 <td style="text-align: center;"><strong>37.5</strong></td>
@@ -410,7 +425,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </tr>
 <tr>
 <td style="text-align: center;">1280</td>
-<td style="text-align: left;"><strong>WMPO</strong></td>
+<td style="text-align: left;"><strong>WMPO（本文）</strong></td>
 <td style="text-align: center;"><strong>75.0</strong></td>
 <td style="text-align: center;"><strong>64.1</strong></td>
 <td style="text-align: center;"><strong>46.1</strong></td>
@@ -419,31 +434,65 @@ document.addEventListener('DOMContentLoaded', function() {
 </tr>
 </tbody>
 </table>
-<p><strong>关键发现</strong>：</p>
-<ol>
-<li><strong>小预算高效</strong>：<span class="math inline">$P=128$</span> 时 WMPO 比最强基线 DPO 高 +9.8 个百分点，比 base policy 高 +13.5 个百分点</li>
-<li><strong>扩展性强</strong>：预算从 128 增至 1280 时，WMPO 提升 +10.5 个百分点（47.1→57.6），DPO 仅提升 +5.1（37.3→42.4）</li>
-<li><strong>GRPO 在真实环境中受限</strong>：<span class="math inline">$P=128$</span> 时 GRPO 甚至低于 base policy（33.2 vs 33.6），因为在线 GRPO 需要大量实时交互，小预算下采样不足</li>
-</ol>
-<h3 id="33">3.3 涌现行为：自纠正</h3>
-<p><img alt="Figure 3：Square 任务（将方块插入立柱）的行为分析。基础策略（上排）碰到立柱后持续推挤直到超时失败；WMPO（下排）学会了抬起方块、重新对齐、正确插入——这是一从未在演示数据中出现过的自纠正行为。" src="assets/wmpo/behavior.jpg" /></p>
-<p><strong>自纠正行为分析</strong>：</p>
+<p><strong>逐项解读</strong>：</p>
+<p><strong>Row 1 — Base Policy（SFT 基线）</strong>：不做任何 RL，直接用 300 条专家演示微调 OpenVLA-OFT。平均成功率 33.6%，Coffee 和 StackThree 相对容易（43.8%/46.9%），ThreePieceAssembly 和 Square 非常困难（19.5%/24.2%）。这说明精细操控对纯 IL 来说极具挑战性。</p>
+<p><strong>Row 2-4 — <span class="math inline">$P=128$</span>（小样本场景）</strong>：</p>
 <ul>
-<li><strong>基策略行为</strong>：当方块偏离正确轨迹与立柱碰撞时，基策略只知道继续向前推（模仿所见过的演示），最终超时失败</li>
-<li><strong>WMPO 行为</strong>：世界模型生成的"想象轨迹"中包含了大量碰撞、偏离等失败情形，策略通过学习哪些动作序列能获得成功奖励，涌现出"抬起→重新对齐→再插"的自纠正策略</li>
-<li><strong>为什么重要</strong>：这种能力无法通过单纯的模仿学习获得，因为它需要见过失败并从中学习恢复 —— 这正是 RL 的核心价值</li>
+<li>GRPO（在线 RL，直接在仿真中交互）：平均 33.2%，低于 base policy。原因很明确——<span class="math inline">$P=128$</span> 条轨迹不足以支撑在线 GRPO 的批量训练需求（一次更新就需要 <span class="math inline">$64 \times 8 = 512$</span> 条轨迹），加上 Dynamic Sampling 过滤掉的无效组，模型只能更新 1-2 次。Coffee 任务上甚至降到 38.3%（vs base 43.8%），说明数据不足时 GRPO 可能破坏既有能力。</li>
+<li>DPO（离线 RL，对比偏好优化）：平均 37.3%（+3.7 vs base），利用了所有数据做重复训练，但无法在线更新策略。</li>
+<li>WMPO：平均 <strong>47.1%</strong>（<strong>+13.5 vs base</strong>，<strong>+9.8 vs 最强基线 DPO</strong>）。在 Coffee 任务上提升尤其显著（43.8%→61.7%，+17.9），因为世界模型能从少量自采数据中学习有效的环境动态。</li>
 </ul>
+<p><strong>Row 5-7 — <span class="math inline">$P=1280$</span>（充足样本场景）</strong>：</p>
+<ul>
+<li>GRPO：平均 37.1%（+3.5 vs base）。有更多数据后 GRPO 恢复了一些能力，但离 WMPO 差距巨大（37.1% vs 57.6%，差 20.5 个百分点）。</li>
+<li>DPO：平均 42.4%（+8.8 vs base）。DPO 受限于离线数据的固有能力上限，即使数据量扩大 10 倍也仅增加了 5.1 个百分点。</li>
+<li>WMPO：平均 <strong>57.6%</strong>（<strong>+24.0 vs base</strong>，<strong>+15.2 vs 最强基线</strong>）。在 Coffee 任务上达到 75.0%，比基线的 43.8% 高出 31.2 个百分点——几乎翻倍。即使最难的 ThreePieceAssembly（19.5%→46.1%）也提升了 26.6 个百分点。</li>
+</ul>
+<p><strong>跨任务趋势</strong>：WMPO 在所有任务上都一致优于所有基线，且性能增益不随任务难度饱和。即便基线已经很高（如 <span class="math inline">$P=128$</span> 的 DPO 在 StackThree 上达到 53.9%），WMPO 仍能进一步推高。这表明 WMPO 的增益来自 RL 本身的学习能力，而非简单的数据利用效率差异。</p>
+<blockquote>
+<p>表格直接支持了论文的核心主张：WMPO 既具样本效率（小预算下大幅领先），又具可扩展性（大预算下优势进一步扩大）。GRPO 在真实环境中的困境恰恰反衬出世界模型的价值 —— 不是 GRPO 算法不好，而是没有足够数据时 on-policy RL 在物理世界中根本无法运作。</p>
+</blockquote>
+<h3 id="33">3.3 涌现行为：自纠正</h3>
+<p><img alt="Figure 3：Square 任务上的行为序列对比。上排为基础策略的执行过程，下排为 WMPO 优化的策略。图中展示了从初始状态到最终结果的关键帧序列，清晰揭示了 WMPO 策略的自纠正能力。" src="assets/wmpo/behavior.jpg" /></p>
+<p><strong>图片结构</strong>：该图以两行并行的方式对比了 Base Policy（上排）和 WMPO（下排）在 Square 任务中遭遇相同碰撞场景时的行为序列。每排约 5-6 个关键帧，按时间从左到右排列。最右侧标注了最终结果：Base Policy 为红色叉号（任务失败），WMPO 为绿色勾号（任务成功）。</p>
+<p><strong>Base Policy（上排）逐帧分析</strong>：</p>
+<ul>
+<li><strong>帧 1-2（接近立柱）</strong>：策略正确地将方块移向立柱方向。</li>
+<li><strong>帧 3（碰撞发生）</strong>：方块接触到立柱边缘，出现偏移。此时是关键决策点——策略需要感知到偏移并做出调整。</li>
+<li><strong>帧 4-5（持续推挤）</strong>：策略继续向前施加压力，方块被立柱挡住无法移动，形成"卡住"状态。由于 IL 训练只见过成功的插入轨迹，从未在训练中遇到"被挡住"的情形，策略无法识别这是一个需要修正的状态。</li>
+<li><strong>帧 6（超时失败）</strong>：直到最大步数（Square 任务为 184 步），方块仍卡在立柱外，任务失败。</li>
+</ul>
+<p><strong>WMPO（下排）逐帧分析</strong>：</p>
+<ul>
+<li><strong>帧 1-2（接近立柱）</strong>：与 Base Policy 相似，方块移向立柱。</li>
+<li><strong>帧 3（碰撞发生）</strong>：同样出现了偏移和碰撞。</li>
+<li><strong>帧 4（抬起）</strong>：WMPO 策略做出了一个关键动作——将方块<strong>向上抬起</strong>，脱离与立柱的卡住状态。这个行为在专家演示数据中<strong>从未出现</strong>（演示者总是直接插入，不会先碰撞再抬起）。</li>
+<li><strong>帧 5（重新对齐）</strong>：方块在空中被重新调整位置，对准立柱的方孔。</li>
+<li><strong>帧 6（成功插入）</strong>：方块从正确位置顺利插入立柱，任务完成。</li>
+</ul>
+<p><strong>为什么这是"涌现"行为</strong>：WMPO 策略在专家演示中没有见过碰撞→恢复的序列，也没有见过"抬起→对齐→再插"的动作模式。这一行为完全是通过在世界模型中反复"想象"失败轨迹并学习从失败中恢复而自发产生的。这是 RL 相对于 IL 本质优势的最强有力的定性证据 —— RL 不仅可以模仿好的行为，还可以从坏的行为中学习如何变好。</p>
 <h3 id="34">3.4 轨迹效率提升</h3>
-<p><img alt="Figure 5：不同策略成功轨迹的相对平均长度（Base Policy = 100%）。WMPO 训练的轨迹显著更短，因为策略学会避免&quot;卡住&quot;的次优状态，不仅提高成功率也提升了执行效率。" src="assets/wmpo/length.jpg" /></p>
-<p>WMPO 成功轨迹的平均长度明显短于基策略。原因是 WMPO 抑制了"卡住"（stuck）行为 —— 该行为在 IL 中常见，不仅降低效率，还经常导致超时失败。更短的轨迹意味着策略执行更流畅、更高效。</p>
+<p><img alt="Figure 5：不同策略成功轨迹的相对平均长度对比（以 Base Policy 为 100% 基准）。横轴为方法名称，纵轴为相对轨迹长度百分比。数值越低表示策略越高效。" src="assets/wmpo/length.jpg" /></p>
+<p><strong>图片结构</strong>：该图为垂直柱状图（或水平柱状图），横轴列出 Base Policy、GRPO、DPO、WMPO 四种方法，纵轴为<strong>相对平均轨迹长度</strong>（百分比），以 Base Policy 的成功轨迹平均长度为 100% 基准。</p>
+<p><strong>数据解读</strong>：</p>
+<ul>
+<li><strong>Base Policy = 100%</strong>：基准线。这代表 IL 策略完成任务的典型步数。IL 策略在遇到不确定状态时容易犹豫（vacillation），表现为臂端反复微调、停顿等待等"粘滞"行为，推高了轨迹长度。</li>
+<li><strong>GRPO 和 DPO</strong>：轨迹长度与 Base Policy 接近或略短。这两种方法主要优化的是"是否成功"，对执行效率没有直接优化信号。在某些情况下，追求成功率的策略可能会选择更谨慎、更慢的执行方式，反而增加轨迹长度。</li>
+<li><strong>WMPO</strong>：轨迹长度显著短于所有其他方法。原因在于 WMPO 的奖励模型对轨迹长度有隐式惩罚——"卡住"行为会增加轨迹步数，而更长的轨迹在推理时需要更多轮次的世界模型自回归生成，累积误差更大，更容易被判定为失败。这种隐式机制驱动策略学习更快、更果断的执行方式。</li>
+</ul>
+<p><strong>为什么这很重要</strong>：更短的轨迹不仅意味着更高的效率（同样时间内完成更多任务），更重要的是它说明 WMPO 抑制了"卡住"（stuck）行为 —— 这种行为在纯 IL 中非常普遍，因为 IL 策略在遇到不同于训练分布的状态时，缺乏明确的纠错方向，只能不断尝试类似的动作直到超时。WMPO 通过在想象中反复经历各种失败模式，学会了在不确定时果断调整而非原地犹豫。</p>
+<blockquote>
+<p>论文将这种行为特征总结为"fast and smooth execution without noticeable stalls"，这正是人类专家操控的标志。</p>
+</blockquote>
 <h3 id="35">3.5 泛化能力</h3>
-<p>WMPO 在三种分布偏移（Distribution Shift）下测试泛化：</p>
+<p>WMPO 在三种根本不同的分布偏移（Distribution Shift）下测试泛化能力，每种偏移都旨在评估策略是否学到了可迁移的操控技能，而非依赖于训练数据的表面视觉特征。</p>
 <table><tr>
-<td width="33%"><img src="assets/wmpo/generalization_a.jpg" width="100%"><br><em>(a) 位置偏移（Position Disruption）：Square 任务，立柱位置从固定变为矩形内随机</em></td>
-<td width="33%"><img src="assets/wmpo/generalization_b.jpg" width="100%"><br><em>(b) 背景偏移（Background Disruption）：StackThree 任务，桌面换为灰色背景</em></td>
-<td width="33%"><img src="assets/wmpo/generalization_c.jpg" width="100%"><br><em>(c) 纹理偏移（Texture Disruption）：ThreePieceAssembly 任务，红色底座换为深色木纹</em></td>
+<td width="33%"><img src="assets/wmpo/generalization_a.jpg" width="100%"><br><em>(a) 位置偏移：立柱在矩形区域内随机放置，而非训练时的固定位置</em></td>
+<td width="33%"><img src="assets/wmpo/generalization_b.jpg" width="100%"><br><em>(b) 背景偏移：灰色桌面替代了训练时的原有桌面背景</em></td>
+<td width="33%"><img src="assets/wmpo/generalization_c.jpg" width="100%"><br><em>(c) 纹理偏移：深色木纹底座替代了红色塑料底座</em></td>
 </tr></table>
 
+<p><strong>泛化实验结果</strong>：</p>
 <table>
 <thead>
 <tr>
@@ -485,42 +534,108 @@ document.addEventListener('DOMContentLoaded', function() {
 </tr>
 </tbody>
 </table>
-<p><strong>关键发现</strong>：DPO 虽然在分布内有所提升，但在背景和纹理偏移下<strong>退化</strong>（甚至低于 base policy），说明它可能学到了对特定视觉线索的过拟合；WMPO 在三种偏移下全部最优，证明了在世界模型中训练有助于学到更泛化的操控技能。</p>
+<p><strong>子图 (a) 位置偏移（Position Disruption）—— Square 任务</strong>：训练时立柱固定在桌面特定位置。测试时立柱位置在附近矩形区域内随机采样，要求策略具备空间泛化能力——根据视觉输入实时调整末端执行器的移动方向，而非记忆固定轨迹。WMPO 达到 22.3%，比 Base Policy（14.1%）高出 8.2 个百分点，比 DPO（16.4%）高出 5.9 个百分点。所有方法的成功率都显著低于分布内设置（Square 原任务约 24-45%），说明位置偏移对所有方法都是巨大的挑战。但 WMPO 相对 Base Policy 的优势比例（+58%）远高于其他方法，证明世界模型让策略学到了更灵活的空间推理。</p>
+<p><strong>子图 (b) 背景偏移（Background Disruption）—— StackThree 任务</strong>：训练时桌面为木纹纹理。测试时将桌面背景替换为纯灰色。这项测试的核心目的是区分"学到了操控技能"和"学到了背景关联"——如果策略完全依赖桌面纹理来定位物体，换背景后应大幅退化。Base Policy 从 46.9%（分布内）降至 46.1%，基本没有退化，说明 OpenVLA-OFT 本身对背景变化有一定的鲁棒性。但 DPO 从 57.0% 骤降至 34.4%（<strong>-22.6 个百分点</strong>），严重退化——这是 DPO 过拟合的明显信号：DPO 优化可能在无意中放大了策略对特定视觉线索的依赖。WMPO 达到 50.0%，在所有方法中最高，且相对其分布内表现（StackThree <span class="math inline">$P=1280$</span> 时 64.1%）退化幅度最小。</p>
+<p><strong>子图 (c) 纹理偏移（Texture Disruption）—— ThreePieceAssembly 任务</strong>：训练时组装底座为红色塑料材质。测试时替换为深色木纹底座。这项测试与背景偏移互为补充——背景偏移调的是环境上下文，纹理偏移调的是交互物体的材质。ThreePieceAssembly 是四个任务中最难的（base 仅 19.5%），加上纹理偏移后更加困难。Base Policy 仅 10.9%，几乎随机。DPO 在分布内还有 26.7% (<span class="math inline">$P{=}1280$</span>)，但在纹理偏移下骤降至 7.8%，甚至比 base 还差——说明 DPO 在 ThreePieceAssembly 上学到的很可能是"识别红色底座"而非"组装物体的空间关系"。WMPO 达到 16.4%，虽然绝对值仍低，但相比 Base Policy 提升超过 50%，是唯一在该偏移下保持正向效果的方法。</p>
+<p><strong>方法间对比的关键规律</strong>：</p>
+<ul>
+<li><strong>DPO 的过拟合模式</strong>最为突出：在分布内设置中 DPO 往往有可观的提升（特别是大预算下），但在背景和纹理偏移下大幅退化甚至低于 base。这符合 DPO 作为离线方法的局限——它只能从已有的轨迹数据中学习，不可避免地会利用数据中的 spurious correlations 而非本质操控技能。</li>
+<li><strong>GRPO 与 Base Policy 表现接近</strong>：在三种偏移下 GRPO 基本与 base 持平。考虑到它在分布内设置中也提升有限（甚至低于 base），这表明真实环境 GRPO 在有限的 rollout 预算下连分布内能力都未能显著提升，更谈不上泛化。</li>
+<li><strong>WMPO 是唯一在三类偏移下都保持正向提升的方法</strong>：无论是空间、背景还是纹理变化，WMPO 都优于其他方法。核心原因在于，世界模型生成的"想象轨迹"本身包含了大量的视觉变化（扩散模型生成时天然带有多样性），相当于在想象中做了大规模数据增强，使策略学会关注操控本身而非特定视觉特征。</li>
+</ul>
+<blockquote>
+<p>泛化实验是 WMPO 方法中最有说服力的部分之一。它不仅证明了"在想象中训练优于在真实数据上训练"，而且通过 DPO 的退化现象揭示了离线 RL 的一个深层缺陷：离线方法优化的是数据利用效率，而非技能本身的泛化性。</p>
+</blockquote>
 <h3 id="36-lifelong-learning">3.6 终身学习（Lifelong Learning）</h3>
-<p><img alt="Figure 6：StackThree 任务上的终身学习。WMPO 通过迭代收集真实轨迹→世界模型优化→更新策略→重新收集，实现了稳定的持续改进。DPO 无法迭代提升（训练不稳定），而 base policy 即使用更多专家演示也提升有限。" src="assets/wmpo/lifelong.jpg" /></p>
+<p><img alt="Figure 6：StackThree 任务上的终身学习曲线。横轴为迭代轮次，纵轴为成功率。三条曲线分别对应 WMPO、DPO 和不同专家演示量（300/428/556）训练的 Base Policy。" src="assets/wmpo/lifelong.jpg" /></p>
+<p><strong>实验设计</strong>：这是一个模拟"部署→改进→再部署"闭环的实验：</p>
+<ol>
+<li>用基策略收集 <span class="math inline">$P=128$</span> 条真实轨迹</li>
+<li>用 WMPO/DPO 优化策略</li>
+<li>用优化后的策略重新收集 <span class="math inline">$P=128$</span> 条轨迹</li>
+<li>重复步骤 2-3</li>
+</ol>
+<p>同时对比了用更多专家演示（428 条 vs 300 条、556 条 vs 300 条）训练的 Base Policy，作为"是否应该花时间收集更多演示而非做 RL"的对照组。</p>
+<p><strong>图片结构</strong>：横轴为迭代轮次（或训练数据量），纵轴为 StackThree 任务的成功率（%）。图中应包含三条曲线：</p>
 <ul>
-<li>每轮收集 <span class="math inline">$P=128$</span> 真实轨迹 → WMPO 优化策略 → 用新策略收集下一轮数据</li>
-<li>WMPO 三轮后稳定提升，DPO 由于离线训练的固有不稳定性无法迭代改进</li>
-<li>Base Policy 即使使用 556 条专家演示（vs 基础 300 条），提升也远不及 WMPO —— 说明自动探索比增加演示更有效</li>
+<li><strong>WMPO 曲线</strong>：起点约 56%（第一轮 WMPO 优化后），随后持续上升</li>
+<li><strong>DPO 曲线</strong>：起点约 54%，随后波动甚至下降</li>
+<li><strong>Base Policy 参考线</strong>：三条水平线（或点），分别标注为 300 demos、428 demos、556 demos</li>
 </ul>
+<p><strong>数据解读</strong>：</p>
+<ul>
+<li><strong>WMPO 三轮后的趋势</strong>：WMPO 实现了稳定的逐步提升，每一轮都在前一轮的基础上继续改进。这是因为：(1) 优化后的策略收集到更多样的数据（包括更多成功案例和新的失败模式），(2) 用新数据再次做 Policy Behavior Alignment，世界模型的模拟能力也同步提升，(3) 形成良性循环。</li>
+<li><strong>DPO 无法迭代</strong>：DPO 在第二轮后性能停滞甚至下降。原因在于 DPO 是离线方法，每次优化只能从已有数据中学，而离线数据覆盖的策略行为空间有限。更严重的是，DPO 的优化不稳定（preference optimization 容易产生策略坍缩），多轮迭代会累积这种不稳定。</li>
+<li><strong>增加专家演示 vs WMPO</strong>：即使用 556 条专家演示（比基础 300 条多出 85%），Base Policy 的提升也远不如 WMPO 的第一轮优化。这从经济学角度证明了 WMPO 的价值——专家演示需要人类操作员的时间和精力，而 WMPO 所需的自采数据由策略自己生成，成本接近于零。<strong>自动探索比增加人类演示更有效</strong>。</li>
+</ul>
+<blockquote>
+<p>终身学习实验的直接含义是：WMPO 可以让机器人在部署过程中持续自我改进，无需人工干预。这是一个从"一次性训练→固定部署"到"持续学习→持续提升"的范式转变。</p>
+</blockquote>
 <h3 id="37">3.7 真机实验</h3>
-<p><img alt="Figure 7：真机实验（&quot;将方块插入立柱&quot;，间隙仅 5mm）。上排：基策略在真实环境中的执行；下排：世界模型对同一初始状态的&quot;想象&quot;预测。尽管从未见过这条轨迹，世界模型准确预测了未来演化。Base / DPO / WMPO 的 30 次试验成功率分别为 53% / 60% / 70%。" src="assets/wmpo/real_success.jpg" /></p>
+<p><img alt="Figure 7：真实机器人实验 —— &quot;将方块插入立柱&quot;，方块与立柱间隙仅 5mm。上排为基策略在真实世界中的执行过程（真实相机拍摄），下排为世界模型从同一初始状态出发的&quot;想象&quot;预测。两排序列展示了世界模型对物理动力学的惊人保真度。" src="assets/wmpo/real_success.jpg" /></p>
+<p><strong>实验设置与图片结构</strong>：</p>
 <ul>
-<li><strong>平台</strong>：Cobot Mobile ALOHA</li>
-<li><strong>任务</strong>：高精度插入（方块与立柱间隙仅 5mm）</li>
-<li><strong>结果</strong>：Base 53% → DPO 60% → WMPO <strong>70%</strong></li>
-<li><strong>世界模型保真度</strong>：即使在从未见过的场景中，世界模型也能准确预测物体交互和运动</li>
+<li><strong>平台</strong>：Cobot Mobile ALOHA 双臂机器人</li>
+<li><strong>任务</strong>：将一金属方块精确插入立柱上的方孔，方块与孔壁间隙仅 5mm——对视觉感知和运动控制的精度要求极高</li>
+<li><strong>训练数据</strong>：200 条高质量专家演示 → 基策略 SFT；128 条策略自采数据 → WMPO/DPO 优化</li>
+<li><strong>评估</strong>：每种方法 30 次试验，固定光照和初始条件</li>
+<li><strong>图片结构</strong>：上排为基策略在真实环境中的执行帧序列，下排为世界模型对同一初始状态生成的"想象"轨迹帧序列</li>
 </ul>
+<p><strong>上排（真实世界执行）的观察</strong>：基策略在真实机器人上的执行过程。从初始状态（方块在桌面上，立柱在前方），机械臂抓取方块后向立柱移动。可以观察到基策略的特点：动作相对缓慢、谨慎，在某些帧可能有微调或犹豫。这条轨迹最终是否成功取决于具体的试验——论文报告的基策略成功率为 53%。</p>
+<p><strong>下排（世界模型"想象"）的观察</strong>：从完全相同的初始帧出发，世界模型生成的视频预测。需要特别指出的是：世界模型在训练时<strong>从未见过这条具体轨迹</strong>——这不是对训练数据的复述，而是从初始状态出发、结合策略动作的全新生成。尽管如此，世界模型准确地预测了：(1) 机械臂的运动轨迹（包括关节角度和末端位置），(2) 方块被抓起后与立柱的空间关系，(3) 整体场景的光照、阴影和纹理一致性。这说明世界模型真正学到了任务的核心物理动态，而不是简单的视频插值。</p>
+<p><strong>定量结果</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th style="text-align: center;">成功率</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Base Policy (SFT, 200 demos)</td>
+<td style="text-align: center;">53%</td>
+</tr>
+<tr>
+<td>DPO (+128 self-collected)</td>
+<td style="text-align: center;">60%</td>
+</tr>
+<tr>
+<td><strong>WMPO (+128 self-collected)</strong></td>
+<td style="text-align: center;"><strong>70%</strong></td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>WMPO 比基策略高出 <strong>17 个百分点</strong>（53%→70%）</li>
+<li>WMPO 比 DPO 高出 <strong>10 个百分点</strong>（60%→70%）</li>
+<li>仅用 128 条自采数据（无人工标注），WMPO 带来了 1.32× 的相对提升</li>
+</ul>
+<p><strong>为什么真机实验特别重要</strong>：仿真环境（Mimicgen）中的成功不一定能转移到真实机器人，因为真实世界存在仿真无法精确建模的物理因素（摩擦力变化、光照变化、机械间隙等）。WMPO 在真机上取得 70% 的成功率，说明：(1) 世界模型能有效弥合 sim-to-real gap——它从少量真实数据中学到的物理动态足以支撑策略优化；(2) 70% 的成功率在 5mm 间隙的高精度插入任务上已经是实用水平的性能。</p>
+<p><strong>额外分析：世界模型的失败预测能力</strong>：论文附录中还展示了世界模型成功预测失败场景的案例（Fig. A1），以及一个罕见的预测失败案例（Fig. A2，因为微妙扰动未能捕捉方块被卡住的瞬间）。总体而言，世界模型在验证集上的失败预测错误率很低，说明它能够忠实地辨别成功和失败轨迹，这对于策略学习至关重要——如果世界模型无法准确判断"什么是失败"，策略也无法学会"如何避免失败"。</p>
 <hr />
 <h2 id="_4">四、关键洞察与技术亮点</h2>
 <ol>
 <li>
-<p><strong>像素空间 &gt; 潜空间</strong>：WMPO 坚持在像素空间生成视频，而非像 Dreamer 系列那样在潜空间学动力学。理由是 VLA 的视觉编码器用海量互联网图片预训练，包含丰富的语义理解 —— 在潜空间中重新训练会导致表征失配</p>
+<p><strong>像素空间 &gt; 潜空间</strong>：WMPO 坚持在像素空间生成视频，而非像 Dreamer 系列那样在潜空间学动力学。理由是 VLA 的视觉编码器用海量互联网图片预训练，包含丰富的语义理解 —— 在潜空间中重新训练会导致表征失配。这个设计选择虽然增加了计算开销（扩散模型在像素空间开销大），但从根本上保证了 VLA 预训练知识可以无损地用于理解想象轨迹。</p>
 </li>
 <li>
-<p><strong>Policy Behavior Alignment 是必需组件</strong>：仅用专家演示训练世界模型无法模拟策略可能遇到的失败状态，必须用策略自身的 rollout 数据微调世界模型</p>
+<p><strong>Policy Behavior Alignment 是必需组件</strong>：仅用专家演示训练世界模型无法模拟策略可能遇到的失败状态。必须用策略自身的 rollout 数据微调世界模型。这与模仿学习中的 DAgger（Dataset Aggregation）思想同源——训练数据应来自当前策略的分布，而非仅来自专家。</p>
 </li>
 <li>
-<p><strong>噪声条件帧</strong>：自回归视频预测中，先前生成的帧带有伪影和误差，使用干净的帧作为条件会导致训练-推理分布不一致。给条件帧加噪声（50/1000 步扩散噪声）让模型学会容忍不完美的条件输入</p>
+<p><strong>噪声条件帧</strong>：自回归视频预测中，先前生成的帧带有伪影和误差，使用干净的帧作为条件会导致训练-推理分布不一致（train-test mismatch）。给条件帧加噪声（50/1000 步扩散噪声）是一个非常优雅的解决方案——它本质上是在训练时模拟推理时的"不完美条件"，让模型学会鲁棒地处理累积误差。</p>
 </li>
 <li>
-<p><strong>GRPO + 世界模型 = 天然匹配</strong>：GRPO 要求从同一初始状态采样多条轨迹来计算组内相对优势，这在真实世界中几乎不可能（无法精确复现同一初始状态），但在世界模型中可以轻松重复采样</p>
+<p><strong>GRPO + 世界模型 = 天然匹配</strong>：GRPO 要求从同一初始状态采样多条轨迹来计算组内相对优势，这在真实世界中几乎不可能（无法精确复现同一初始状态），但在世界模型中可以轻松重复采样。这种"reset-to-same-state" 的能力是虚拟化训练的独特优势。</p>
 </li>
 <li>
-<p><strong>自纠正 = RL 价值的体现</strong>：WMPO 涌现的自纠正行为是论文最有力的定性证据 —— 策略学会了演示数据中完全没有的动作模式（抬起→对齐→再插），证明了 RL 相对于 IL 的本质优势</p>
+<p><strong>自纠正 = RL 价值的体现</strong>：WMPO 涌现的自纠正行为是论文最有力的定性证据 —— 策略学会了演示数据中完全没有的动作模式（抬起→对齐→再插），证明了 RL 相对于 IL 的本质优势不是"更好地模仿"，而是"学会解决新问题"。</p>
 </li>
 <li>
-<p><strong>终身学习闭环</strong>：WMPO 支持策略→收集→世界模型更新→策略优化的迭代循环，这是真实环境中难以实现的</p>
+<p><strong>终身学习闭环</strong>：WMPO 支持策略→收集→世界模型更新→策略优化的迭代循环。每一轮迭代中：(1) 更好的策略收集到更丰富的自采数据，(2) 更丰富的自采数据强化世界模型的模拟能力，(3) 更强的世界模型支撑更好的策略优化。这个良性循环是 WMPO 区别于一次性优化方法的核心竞争力。</p>
+</li>
+<li>
+<p><strong>隐式效率优化</strong>：WMPO 的奖励模型没有任何对轨迹长度的显式奖励，但策略仍然学会了更短的执行路径。这是通过一个隐式机制实现的——在世界模型中，长轨迹需要多轮自回归生成，累积误差逐渐增大，导致更容易被判定为失败。策略因此学会了"快刀斩乱麻"。</p>
 </li>
 </ol>
 <hr />
@@ -563,6 +678,7 @@ document.addEventListener('DOMContentLoaded', function() {
 └──────────────────────────────────────────────────────────────────────────────┘
 </code></pre></div>
 
+<p><strong>架构说明</strong>：系统通过 Ray 管理多 GPU 分布式训练。<code>RobWMActorRolloutRefWorker</code> 是 WMPO 的核心 Worker，内部同时持有 VLA 策略、世界模型、奖励模型和 VAE 编码器/解码器。<code>main_ppo.py:153</code> 通过 <code>config.actor_rollout_ref.wm.enable</code> 开关切换世界模型模式和真实环境模式。<code>RayTrainer</code> 负责协调多 Worker 之间的数据流（rollout → reward → advantage → update）。</p>
 <h3 id="52-rollout-robwm_rolloutpy">5.2 世界模型 Rollout 流程（robwm_rollout.py）</h3>
 <p>这是 WMPO 的核心代码，<code>RobWMHFRollout</code> 类实现了"在想象中做 RL"的完整流程：</p>
 <div class="codehilite"><pre><span></span><code>  初始状态 s₀ ────┐
@@ -602,6 +718,12 @@ document.addEventListener('DOMContentLoaded', function() {
    └───────────────────────────┘
 </code></pre></div>
 
+<p><strong>逐步骤解释</strong>：</p>
+<p><strong>步骤 1（编码初始状态）</strong>：初始 RGB 帧 <span class="math inline">$I_{0:1}$</span> 通过 SDXL 2D VAE 编码为潜变量（latent）。这个 latent 被复制 <code>queue_len=4</code> 次作为初始的 <code>image_history_tensor</code>，为第一轮扩散生成提供条件。代码位置：<code>robwm_rollout.py:355-357</code>。</p>
+<p><strong>步骤 2（VLA 策略推理）</strong>：将当前帧 resize 到 224×224，通过 <code>process_input()</code> 构建 VLA 输入（图像 token + 语言指令 prompt）。<code>_generate_one_step()</code> 调用 OpenVLA-OFT 的 <code>generate_action_verl()</code> 方法，输出动作块（8 个动作 × 7 维 = 56 个 token），同时返回归一化动作 <code>normalized_actions</code>。代码位置：<code>robwm_rollout.py:362-376</code>。</p>
+<p><strong>步骤 3（世界模型扩散生成）</strong>：这是最核心的步骤。将潜变量历史 <code>image_history_tensor</code> (shape: B×C×4×H_l×W_l) 与随机噪声 <code>z</code> (shape: B×C×8×H_l×W_l) 在时序维度拼接，得到 z_combined。构建一个二值 mask，对历史帧标记为 0（条件帧，不需要去噪），对新帧标记为 1（需要去噪）。调用扩散调度器 <code>scheduler.sample()</code> 执行去噪过程，以动作 <code>y</code> 为条件信号（通过 AdaLN 注入）。去噪完成后取后 8 帧作为生成的潜变量，用 VAE 解码回像素空间。代码位置：<code>robwm_rollout.py:378-399</code>。</p>
+<p><strong>步骤 4（奖励模型评估）</strong>：对生成完成的完整视频（max_steps+1 帧），使用 <code>predict_success()</code> 方法以滑动窗口（窗口长 <span class="math inline">$L=8$</span>，stride=1）扫描。每一窗口输入 VideoMAE 模型，输出成功概率。如果任一时序窗口的概率超过阈值，该轨迹判定为成功，并记录 <code>finish_step</code>（最早达到成功标准的步数）。代码位置：<code>robwm_rollout.py:237-287</code>。</p>
+<p><strong>步骤 5（GRPO 更新）</strong>：将所有轨迹的 complete/finish_step 信息组织为 DataProto，由 RayTrainer 调度到所有 Worker 执行 GRPO 更新。核心逻辑在 <code>core_algos.py</code> 中，计算策略比率 <span class="math inline">$r_{i,t}(\theta)$</span>、组内标准化优势 <span class="math inline">$\hat{A}_i$</span>、裁剪后的替代损失。代码位置：<code>core_algos.py</code> + <code>ray_trainer.py</code>。</p>
 <p><strong>代码关键函数映射</strong>：</p>
 <table>
 <thead>
@@ -617,38 +739,41 @@ document.addEventListener('DOMContentLoaded', function() {
 </tr>
 <tr>
 <td>世界模型条件扩散</td>
-<td><code>robwm_rollout.py:339-395</code>（scheduler.sample + vae.decode）</td>
+<td><code>robwm_rollout.py:339-395</code></td>
 </tr>
 <tr>
-<td>帧级动作控制 (Eq.2)</td>
-<td>OpenSora 的 AdaLN 扩展（在 world model 的 transformer block 中）</td>
+<td>帧级动作控制（AdaLN 调制）</td>
+<td>OpenSora transformer block 中的 AdaLN 扩展</td>
 </tr>
 <tr>
-<td>奖励模型推理</td>
+<td>奖励模型滑动窗口推理</td>
 <td><code>robwm_rollout.py:predict_success()</code></td>
 </tr>
 <tr>
-<td>GRPO 目标 (Eq.3+4)</td>
+<td>GRPO 目标函数 (Eq.3+4)</td>
 <td><code>core_algos.py</code> + <code>ray_trainer.py</code></td>
 </tr>
 <tr>
-<td>动态采样（DAPO 策略）</td>
-<td><code>ray_trainer.py</code>（过滤全成功/全失败组）</td>
+<td>动态采样过滤无效组</td>
+<td><code>ray_trainer.py</code>（DAPO 策略）</td>
 </tr>
 <tr>
 <td>Policy Behavior Alignment</td>
-<td>世界模型在 <code>train_wmpo_*.sh</code> 的训练脚本中实现</td>
+<td>通过 <code>train_wmpo_*.sh</code> 训练脚本，在 OXE 预训练后用策略数据微调</td>
 </tr>
 </tbody>
 </table>
 <h3 id="53-videomaepy">5.3 奖励模型训练（videomae.py）</h3>
 <ul>
-<li><strong>数据构造</strong>：<code>SuccessWindowDataset</code> 类从 webdataset tar 中提取滑动窗口 clips<ul>
-<li>正样本：轨迹末端 <span class="math inline">$[T-W, T]$</span> 的 clip（label=1，仅成功轨迹）</li>
-<li>负样本：轨迹中间窗口（<span class="math inline">$[T-S, W-1]$</span> 范围）的 clips + 失败轨迹的任意 clips</li>
+<li><strong>数据构造</strong>：<code>SuccessWindowDataset</code> 类从 webdataset tar 文件中提取滑动窗口 clips<ul>
+<li><strong>正样本</strong>（label=1）：仅取成功轨迹的末端 <span class="math inline">$[T-W, T]$</span> 窗口（<span class="math inline">$W=8$</span>）</li>
+<li><strong>负样本</strong>（label=0）：来自两个来源：(1) 成功轨迹的中间片段（<span class="math inline">$[W, T-S]$</span> 范围内随机采样），(2) 失败轨迹的任意片段</li>
+<li>训练时 batch 内正负样本强制 1:1 平衡</li>
 </ul>
 </li>
-<li><strong>训练</strong>：DDP，每 1000 步验证一次，grid search 确定最优阈值 <span class="math inline">$\tau_{\text{thr}}$</span></li>
+<li><strong>模型</strong>：VideoMAE-base（<code>MCG-NJU/videomae-base</code>），最后加 2 类线性分类头</li>
+<li><strong>训练</strong>：DDP 多卡训练，最多 20 万步，每 1000 步验证一次。在 20 个阈值（0.3-1.0 均匀采样）上 grid search F1，取最优阈值</li>
+<li><strong>最优阈值选择</strong>：通过 <code>find_thre.py</code> 在预留验证集上确定 <span class="math inline">$\tau_{\text{thr}}$</span>，针对每个任务独立选择</li>
 </ul>
 <h3 id="54-rollout">5.4 双模式 Rollout</h3>
 <p>WMPO 代码同时支持两种 rollout 模式：</p>
@@ -664,22 +789,28 @@ document.addEventListener('DOMContentLoaded', function() {
 <tr>
 <td><strong>世界模型 Rollout</strong></td>
 <td><code>RobWMActorRolloutRefWorker</code> (继承 <code>RobWMHFRollout</code>)</td>
-<td>WMPO 主线：在"想象"中训练</td>
+<td>WMPO 主线：策略在世界模型"想象"中训练</td>
 </tr>
 <tr>
 <td><strong>真实环境 Rollout</strong></td>
 <td><code>RobActorRolloutRefWorker</code> (继承 <code>RobHFRollout</code>)</td>
-<td>基线（GRPO）：在 Mimicgen 仿真中直接交互</td>
+<td>基线（GRPO）：策略在 Mimicgen 仿真中直接交互</td>
 </tr>
 </tbody>
 </table>
-<p>切换方式：配置 <code>actor_rollout_ref.wm.enable = true/false</code>（见 <code>main_ppo.py:153</code>）。</p>
+<p>切换方式：配置 <code>actor_rollout_ref.wm.enable = true/false</code>（见 <code>main_ppo.py:153</code>）。这两种模式共享相同的 GRPO 训练后端（<code>core_algos.py</code>），唯一区别是 rollout 的来源。</p>
 <hr />
 <h2 id="_6">六、局限性</h2>
 <ol>
-<li><strong>动作表征</strong>：当前仅支持离散化动作（每维 256 bins），未扩展到 flow-matching 等连续/更表达性的策略类（如 π₀）</li>
-<li><strong>计算开销</strong>：世界模型预训练需 1200 万步（32×H100），总体资源需求相当可观。不过论文指出，相比真实机器人 rollout 的成本（不可扩展、有安全风险），算力是可灵活扩展的资源</li>
-<li><strong>基线覆盖</strong>：仅对比 GRPO 和 DPO，缺少与 DreamerV3 等潜空间世界模型方法的对比。但这部分是由于现有潜空间方法不直接兼容 VLA 设置</li>
+<li>
+<p><strong>动作表征</strong>：当前仅支持离散化动作（每维 256 bins），未扩展到 flow-matching 等连续/更表达性的策略类（如 π₀）。论文提到未来将探索 FlowGRPO 以支持连续动作空间。</p>
+</li>
+<li>
+<p><strong>计算开销</strong>：世界模型预训练需 1200 万步（32×H100），每任务还需 300 万步微调。总体 GPU 时数相当可观。不过论文从经济学角度提出了合理的反驳——真实机器人 rollout 的成本（硬件磨损、安全风险、人工监督）在时间维度上是线性的且不可压缩，而算力是高度可并行和可扩展的。在实际部署中，用 GPU 时换机器人时通常是值得的。</p>
+</li>
+<li>
+<p><strong>基线覆盖</strong>：仅对比 GRPO 和 DPO，缺少与 DreamerV3 等潜空间世界模型方法的对比。但这部分是由于现有潜空间方法不直接兼容 VLA 设置（潜空间和 VLA 的视觉编码器不匹配）。WMPO 本身是首个将视频扩散世界模型用于 VLA RL 的工作，在方法论上本身就是新的基线。</p>
+</li>
 </ol>
 <hr />
 <h2 id="_7">七、关键概念速查</h2>
@@ -701,35 +832,35 @@ document.addEventListener('DOMContentLoaded', function() {
 </tr>
 <tr>
 <td><strong>Noisy Frame Conditioning</strong></td>
-<td>训练时对条件帧加扩散噪声，提升自回归预测的鲁棒性</td>
+<td>训练时对条件帧加扩散噪声（50/1000 步），提升自回归预测的鲁棒性</td>
 </tr>
 <tr>
 <td><strong>Frame-Level Action Control</strong></td>
-<td>扩展 AdaLN，以帧粒度注入动作信号，确保长序列中的动作-帧对齐</td>
+<td>扩展 AdaLN，以帧粒度注入动作信号，确保长序列中的动作-帧一一对齐</td>
 </tr>
 <tr>
 <td><strong>VideoMAE Reward Model</strong></td>
-<td>以滑动窗口扫描想象视频，输出轨迹成功/失败的二值判断（F1&gt;0.95）</td>
+<td>以滑动窗口扫描想象视频，输出轨迹成功/失败的二值判断（F1 &gt; 0.95）</td>
 </tr>
 <tr>
 <td><strong>GRPO (Group Relative Policy Optimization)</strong></td>
-<td>从同一初始状态采样多条轨迹，用组内相对优势做策略优化</td>
+<td>从同一初始状态采样多条轨迹（<span class="math inline">$G=8$</span>），用组内相对优势做策略优化</td>
 </tr>
 <tr>
 <td><strong>Dynamic Sampling (DAPO)</strong></td>
-<td>丢弃全成功/全失败的轨迹组（梯度为零），重新采样</td>
+<td>丢弃全成功/全失败的轨迹组（梯度为零），重新采样直到凑满 batch</td>
 </tr>
 <tr>
 <td><strong>SDXL 2D VAE</strong></td>
-<td>替代 OpenSora 的 3D VAE，保留更好的细粒度运动细节</td>
+<td>替代 OpenSora 的 3D VAE，保留更好的帧间细粒度运动细节</td>
+</tr>
+<tr>
+<td><strong>OXE (Open X-Embodiment)</strong></td>
+<td>百万级跨机器人/跨任务操控数据集，用于世界模型预训练</td>
 </tr>
 <tr>
 <td><strong>Mimicgen</strong></td>
-<td>仿真基准，包含 4 个精细操控任务</td>
-</tr>
-<tr>
-<td><strong>OXE</strong></td>
-<td>Open X-Embodiment 数据集，用于世界模型预训练</td>
+<td>robosuite 生态下的精细操控仿真基准，提供多种难度的操控任务</td>
 </tr>
 </tbody>
 </table>
