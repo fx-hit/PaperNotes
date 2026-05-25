@@ -34,7 +34,7 @@ World4RL 包含三个核心组件，分为两个阶段训练：
 2. **Reward Classifier** $C_\psi$：二分类器，判断当前状态是否为成功状态，提供稀疏奖励信号
 3. **RL-refined Policy** $\pi_\xi$：以 BC 策略为初始化的 PPO 优化策略
 
-![图 1：World4RL 框架总览](arXiv-2509.19080v2/fig/framework.jpg)
+![图 1：World4RL 框架总览](assets/world4rl/framework.jpg)
 
 *图 1：World4RL 框架整体架构，采用上下两栏分别展示 Stage 1（Pre-training）和 Stage 2（Policy Optimization）的完整数据流。*
 
@@ -140,7 +140,7 @@ $$\mathcal{L}_V(\phi) = \mathbb{E}_t [(V_\phi(x_t) - (r_t + \gamma V_\phi(x_{t+1
 
 > ST = Single-Task，即单任务训练评估。World4RL 在所有指标上全面领先，且不是靠模型规模取胜（330M 并非最大）。DiWA 在 multi-task 场景下表现极差，甚至会出现跨任务场景混淆。
 
-![图 2：世界模型预测可视化对比](arXiv-2509.19080v2/fig/WorldModel_Compare.jpg)
+![图 2：世界模型预测可视化对比](assets/world4rl/WorldModel_Compare.jpg)
 
 *图 2：Coffee-Pull-v2 任务上各模型自回归预测 rollout 的视觉对比，行=模型，列=时间步（从左到右推进）。*
 
@@ -174,7 +174,7 @@ $$\mathcal{L}_V(\phi) = \mathbb{E}_t [(V_\phi(x_t) - (r_t + \gamma V_\phi(x_{t+1
 - 离线 RL 方法（TD3+BC、IQL）受限于固定数据集，提升有限
 - 基于世界模型的方法中，IRASim 需要测试时规划（推理成本高达 40×），DiWA 受 RSSM 架构限制
 
-![图 3：在线样本效率对比](arXiv-2509.19080v2/fig/average_data_linear_horizontal_expert_rollout_online_scaled10.jpg)
+![图 3：在线样本效率对比](assets/world4rl/average_data_linear_horizontal_expert_rollout_online_scaled10.jpg)
 
 *图 3：在线样本效率对比——水平堆积条形图，展示不同方法达到特定成功率所需的总数据量（单位为 10k steps）。*
 
@@ -190,23 +190,23 @@ $$\mathcal{L}_V(\phi) = \mathbb{E}_t [(V_\phi(x_t) - (r_t + \gamma V_\phi(x_{t+1
 
 ### 4.4 真机实验
 
-![图 4：真机任务设置](arXiv-2509.19080v2/fig/open_drawer_compressed.jpg)
+![图 4：真机任务设置](assets/world4rl/open_drawer_compressed.jpg)
 
 *图 4：六个真实世界操作任务的实验场景设置，使用 Franka Emika Panda 7 自由度机械臂，配备平行夹爪和 RealSense 深度相机（固定于机械臂上方提供第三视角观测）。所有任务采用 HIL-SERL 协议通过 Space Mouse 遥操作采集数据，初始场景配置和机器人起始位姿在训练/评估过程中保持固定。以下逐任务分析各场景的物理配置和操作难点：*
 
 <!-- 6个子图，3行2列布局 -->
 <table>
 <tr>
-<td width="50%"><img src="arXiv-2509.19080v2/fig/open_drawer_compressed.jpg" width="100%"><br><em>(a) Open Drawer — 打开抽屉</em></td>
-<td width="50%"><img src="arXiv-2509.19080v2/fig/close_drawer_compressed.jpg" width="100%"><br><em>(b) Close Drawer — 关闭抽屉</em></td>
+<td width="50%"><img src="assets/world4rl/open_drawer_compressed.jpg" width="100%"><br><em>(a) Open Drawer — 打开抽屉</em></td>
+<td width="50%"><img src="assets/world4rl/close_drawer_compressed.jpg" width="100%"><br><em>(b) Close Drawer — 关闭抽屉</em></td>
 </tr>
 <tr>
-<td width="50%"><img src="arXiv-2509.19080v2/fig/pick_bread_in_compressed.jpg" width="100%"><br><em>(c) Pick Bread In — 将面包放入容器</em></td>
-<td width="50%"><img src="arXiv-2509.19080v2/fig/pick_bread_out_compressed.jpg" width="100%"><br><em>(d) Pick Bread Out — 将面包从容器取出</em></td>
+<td width="50%"><img src="assets/world4rl/pick_bread_in_compressed.jpg" width="100%"><br><em>(c) Pick Bread In — 将面包放入容器</em></td>
+<td width="50%"><img src="assets/world4rl/pick_bread_out_compressed.jpg" width="100%"><br><em>(d) Pick Bread Out — 将面包从容器取出</em></td>
 </tr>
 <tr>
-<td width="50%"><img src="arXiv-2509.19080v2/fig/pick_apple_compressed.jpg" width="100%"><br><em>(e) Pick Apple — 抓取苹果</em></td>
-<td width="50%"><img src="arXiv-2509.19080v2/fig/press_button_compressed.jpg" width="100%"><br><em>(f) Press Button — 按下按钮</em></td>
+<td width="50%"><img src="assets/world4rl/pick_apple_compressed.jpg" width="100%"><br><em>(e) Pick Apple — 抓取苹果</em></td>
+<td width="50%"><img src="assets/world4rl/press_button_compressed.jpg" width="100%"><br><em>(f) Press Button — 按下按钮</em></td>
 </tr>
 </table>
 
@@ -257,7 +257,7 @@ $$\mathcal{L}_V(\phi) = \mathbb{E}_t [(V_\phi(x_t) - (r_t + \gamma V_\phi(x_{t+1
 
 **策略优化设计消融**
 
-![图 5：策略优化消融实验](arXiv-2509.19080v2/fig/exp_3abl.jpg)
+![图 5：策略优化消融实验](assets/world4rl/exp_3abl.jpg)
 
 *图 5：策略优化消融实验，对比完整方法（Full）与两个消融变体在 Door-lock-v2（左）和 Lever-pull-v2（右）上的训练曲线。横轴为训练 Epoch，纵轴为 Success Rate。三条曲线分别对应：Full Method（实线）、w/o action std clipping（虚线）、w/o random rollouts（点划线）。阴影区域表示多个随机种子下的标准差/方差。*
 
