@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>World Action Models: The Next Frontier in Embodied AI</title>
+<!-- arxiv: 2605.12090 -->
+<!-- venue: arXiv 综述 2026 -->
+<!-- tags: WAM, 世界模型, VLA, 机器人, 视频生成 -->
+<!-- words-zh: 4404 -->
+<!-- words-en: 632 -->
+<!-- reading-time: 16 -->
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #ffffff;
+    --text: #1a1a2e;
+    --text-secondary: #555;
+    --border: #e1e4e8;
+    --link: #0969da;
+    --table-stripe: #f6f8fa;
+    --heading: #0d1117;
+    --blockquote-border: #0969da;
+    --blockquote-bg: #f0f6ff;
+    --inline-code: #d73a49;
+    --inline-code-bg: #f6f8fa;
+    --sidebar-width: 260px;
+    --toc-active: #0969da;
+    --content-max-width: 900px;
+    --content-padding: 48px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "Inter", "Noto Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 16px;
+    line-height: 1.75;
+    color: var(--text);
+    background: var(--bg);
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    width: var(--sidebar-width);
+    overflow-y: auto;
+    padding: 28px 20px 40px;
+    background: #fafbfc;
+    border-right: 1px solid var(--border);
+    z-index: 10;
+    scrollbar-width: thin;
+  }
+  .sidebar-title {
+    font-size: 13px; font-weight: 700; color: var(--text-secondary);
+    margin-bottom: 16px; letter-spacing: 0.06em; text-transform: uppercase;
+  }
+  .toc-list { list-style: none; padding: 0; margin: 0; }
+  .toc-list ul { list-style: none; padding-left: 14px; }
+  .toc-list li { margin: 1px 0; }
+  .toc-list a {
+    display: block; padding: 4px 12px; font-size: 13.5px; line-height: 1.45;
+    color: var(--text-secondary); text-decoration: none; border-radius: 4px;
+    border-left: 2px solid transparent; transition: all 0.15s;
+  }
+  .toc-list a:hover { color: var(--link); background: #e8f0fe; }
+  .toc-list a.active {
+    color: var(--toc-active); font-weight: 600;
+    border-left-color: var(--toc-active); background: #e8f0fe;
+  }
+  .toc-h1 a { font-weight: 600; color: var(--heading); font-size: 14px; }
+  .toc-h3 a { padding-left: 24px; font-size: 13px; }
+  .toc-h4 a { padding-left: 36px; font-size: 12.5px; }
+  .toc-empty { color: var(--text-secondary); font-size: 13px; font-style: italic; }
+
+  .main-wrapper {
+    margin-left: var(--sidebar-width);
+    min-height: 100vh;
+    display: flex; justify-content: center;
+  }
+  .content-inner {
+    width: 100%;
+    max-width: var(--content-max-width);
+    padding: 40px var(--content-padding) 80px;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    color: var(--heading); font-weight: 700; line-height: 1.3;
+    margin-top: 2em; margin-bottom: 0.6em; scroll-margin-top: 24px;
+  }
+  h1 { font-size: 2em; border-bottom: 2px solid var(--border); padding-bottom: 0.3em; margin-top: 0; }
+  h2 { font-size: 1.5em; border-bottom: 1px solid var(--border); padding-bottom: 0.25em; }
+  h3 { font-size: 1.25em; }
+  h4 { font-size: 1.1em; }
+  p { margin-bottom: 1em; }
+  a { color: var(--link); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  strong { font-weight: 600; }
+
+  blockquote {
+    border-left: 4px solid var(--blockquote-border);
+    background: var(--blockquote-bg);
+    padding: 12px 20px; margin: 1em 0;
+    border-radius: 0 6px 6px 0; color: var(--text-secondary);
+  }
+  blockquote p:last-child { margin-bottom: 0; }
+
+  code {
+    font-family: "JetBrains Mono", "SF Mono", "Fira Code", monospace;
+    font-size: 0.875em; background: var(--inline-code-bg);
+    padding: 2px 6px; border-radius: 4px; color: var(--inline-code);
+  }
+  pre {
+    background: #1e1e2e; color: #cdd6f4;
+    border-radius: 8px; padding: 16px 20px; overflow-x: auto;
+    margin: 1em 0; font-size: 14px; line-height: 1.55;
+  }
+  pre code { background: none; padding: 0; border-radius: 0; color: inherit; font-size: inherit; }
+
+  .codehilite { background: #1e1e2e; border-radius: 8px; padding: 16px 20px; overflow-x: auto; margin: 1em 0; }
+  .codehilite pre { background: none; padding: 0; margin: 0; border-radius: 0; }
+  .codehilite .hll { background-color: #2a2a3e; }
+  .codehilite .c  { color: #6c7086; font-style: italic; }
+  .codehilite .k  { color: #cba6f7; }
+  .codehilite .o  { color: #89b4fa; }
+  .codehilite .s  { color: #a6e3a1; }
+  .codehilite .n  { color: #cdd6f4; }
+  .codehilite .p  { color: #bac2de; }
+  .codehilite .mi { color: #fab387; }
+  .codehilite .nf { color: #89b4fa; }
+  .codehilite .nb { color: #f38ba8; }
+  .codehilite .nc { color: #f9e2af; }
+  .codehilite .bp { color: #f38ba8; }
+
+  table { width: 100%; border-collapse: collapse; margin: 1em 0; font-size: 0.925em; }
+  th, td { border: 1px solid var(--border); padding: 10px 14px; text-align: left; }
+  th { background: var(--table-stripe); font-weight: 600; color: var(--heading); }
+  tr:nth-child(even) td { background: var(--table-stripe); }
+
+  .math.display { display: block; overflow-x: auto; padding: 12px 0; margin: 1em 0; }
+  ul, ol { padding-left: 1.5em; margin-bottom: 1em; }
+  li { margin-bottom: 0.3em; }
+  hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+  img { max-width: 100%; height: auto; border-radius: 6px; margin: 0; }
+  p:has(img) { text-align: center; margin-top: 0.6em; margin-bottom: 0; }
+  p:has(img) + p { text-align: center; font-size: 0.9em; color: var(--text-secondary); margin-top: 0.15em; margin-bottom: 0.6em; }
+  .mermaid { text-align: center; margin: 1.5em 0; background: #fafbfc; border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+  .article-stats {
+    font-size: 0.85rem; color: var(--text-secondary);
+    padding: 10px 18px; margin-bottom: 28px;
+    background: #f8f9fa; border: 1px solid var(--border); border-radius: 8px;
+  }
+
+  @media (max-width: 1024px) {
+    .sidebar { position: static; width: 100%; height: auto; max-height: 35vh; border-right: none; border-bottom: 1px solid var(--border); }
+    .main-wrapper { margin-left: 0; display: block; }
+    .content-inner { max-width: none; padding: 24px 20px 60px; }
+  }
+</style>
+
+<script>
+MathJax = {
+  tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']], processEscapes: true, tags: 'none' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] }
+};
+</script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  mermaid.initialize({ startOnLoad: true, theme: 'neutral', securityLevel: 'loose' });
+});
+</script>
+
+</head>
+<body>
+
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-title">目录</div>
+  <ul class="toc-list">
+<li class="toc-h1"><a href="#world-action-models-the-next-frontier-in-embodied-ai">World Action Models: The Next Frontier in Embodied AI</a>
+<ul>
+</li>
+<li class="toc-h2"><a href="#_1">一、核心问题</a>
+</li>
+<li class="toc-h2"><a href="#_2">二、核心思路 / 方法</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#21">2.1 形式化定义</a>
+</li>
+<li class="toc-h3"><a href="#22">2.2 概念辨析</a>
+</li>
+<li class="toc-h3"><a href="#23">2.3 架构分类</a>
+</li>
+<li class="toc-h3"><a href="#24">2.4 数据生态系统</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_3">三、架构详解</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#31-cascaded-wam">3.1 Cascaded WAM</a>
+<ul>
+</li>
+<li class="toc-h4"><a href="#311">3.1.1 显式规划（像素空间）</a>
+</li>
+<li class="toc-h4"><a href="#312">3.1.2 隐式规划（潜表征）</a>
+</ul></li>
+</li>
+<li class="toc-h3"><a href="#32-joint-wam">3.2 Joint WAM</a>
+<ul>
+</li>
+<li class="toc-h4"><a href="#321">3.2.1 自回归生成</a>
+</li>
+<li class="toc-h4"><a href="#322">3.2.2 扩散式生成</a>
+</ul></li>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_4">四、数据生态</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#41">4.1 机器人遥操作数据</a>
+</li>
+<li class="toc-h3"><a href="#42-umi">4.2 便携式人类演示（UMI 风格）</a>
+</li>
+<li class="toc-h3"><a href="#43">4.3 仿真数据</a>
+</li>
+<li class="toc-h3"><a href="#44">4.4 人类/自我中心数据</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_5">五、评估协议</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#51">5.1 世界建模能力评估</a>
+</li>
+<li class="toc-h3"><a href="#52">5.2 动作策略评估</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_6">六、关键洞察与技术亮点</a>
+</li>
+<li class="toc-h2"><a href="#_7">七、开放挑战</a>
+</li>
+<li class="toc-h2"><a href="#_8">八、关键概念速查</a>
+</ul></li>
+</li></ul>
+</nav>
+
+<main class="main-wrapper">
+  <div class="content-inner" id="main-content">
+<h1 id="world-action-models-the-next-frontier-in-embodied-ai">World Action Models: The Next Frontier in Embodied AI</h1>
+<div class="article-stats">4,404 字 · English 632 词 · 约 16 分钟阅读</div>
+
+<blockquote>
+<p><strong>论文信息</strong>
+- 作者：Siyin Wang, Junhao Shi, Zhaoyang Fu, Xinzhe He, Feihong Liu, Chenchen Yang, Yikang Zhou, Zhaoye Fei, Jingjing Gong, Jinlan Fu, Mike Zheng Shou, Xuanjing Huang, Xipeng Qiu, Yu-Gang Jiang
+- 通讯作者：Yu-Gang Jiang（复旦大学）
+- 投稿方向：技术报告 / 综述（arXiv）
+- arXiv ID：2605.12090
+- 项目主页：https://openmoss.github.io/Awesome-WAM
+- 代码：https://github.com/OpenMOSS/Awesome-WAM</p>
+</blockquote>
+<hr />
+<h2 id="_1">一、核心问题</h2>
+<p>当前 Vision-Language-Action (VLA) 模型（如 RT-2、OpenVLA、π₀）在具身策略学习中取得了很强的语义泛化能力，但它们学习的是<strong>反应式的 observation→action 映射</strong>，没有显式建模物理世界在干预下如何演化。这导致模型缺乏预测性物理推理能力，在需要预判未来状态的场景（如接触丰富的操作、长时序任务）中泛化受限。</p>
+<p>越来越多的工作开始在策略管线中集成世界模型（World Model），通过预测环境动力学为 agent 提供物理"远见"。然而文献在架构、学习目标和应用场景上高度碎片化，缺乏统一的概念框架。</p>
+<p>本文首次对这一新兴范式进行系统化梳理，将其正式命名为 <strong>World Action Models (WAMs)</strong>——统一预测性状态建模与动作生成的具身基础模型，目标是对未来状态和动作的联合分布建模，而非仅预测动作。</p>
+<hr />
+<h2 id="_2">二、核心思路 / 方法</h2>
+<p><img alt="图1：WAM 方法的时间演进与分类全景图" src="assets/worldactionmodels/tree_map.jpg" /></p>
+<p><em>图1：WAM 代表性工作的时间演进与分类全景图。左分支展示了 </em><em>Joint WAM</em><em> 架构的演进轨迹——将世界预测与动作生成紧密耦合，分为</em><em>自回归（Autoregressive）</em><em>和</em><em>扩散式（Diffusion-based）</em><em>两条技术路线，其中扩散式进一步分叉为 Unified Stream（Uni. Stream）和 Multi-Stream 两种 backbone 设计。右分支总结了 </em><em>Cascaded WAM</em><em> 管线的发展——世界建模和动作执行解耦，沿</em><em>显式（Explicit）</em><em>和</em><em>隐式（Implicit）</em><em>两条表示对齐轨迹演进。底部时间轴从 2023 年底延伸至 2025 年中，清晰展示了该领域不到两年内的爆发式增长：从 2023 年底 GR-1、UniPi 等早期探索，到 2024 年 VPP、CoT-VLA、PAD、UWM 等多样化架构涌现，再到 2025 年 DreamZero、Motus、Cosmos Policy、FLARE、Fast-WAM 等大规模系统级工作。这些结构策略代表了领域在架构耦合方面的主要探索方向，而非严格的序列替代关系。</em></p>
+<h3 id="21">2.1 形式化定义</h3>
+<p>WAM 必须满足两个核心标准：</p>
+<ol>
+<li><strong>前向预测建模</strong>：模型必须预测环境的物理演化，生成或利用未来状态 <span class="math inline">$o'$</span> 的可量化表征（可以是像素级视频帧、密集光流，或物理 grounded 的潜空间）。</li>
+<li><strong>耦合动作生成</strong>：动作命令 <span class="math inline">$a$</span> 必须严格对齐于预期的未来状态 <span class="math inline">$o'$</span>，体现为联合概率输出或潜架构中的策略条件。</li>
+</ol>
+<p>形式化目标：</p>
+<p><div class="math display">$$\mathcal{L}_{\text{WAM}} = \mathbb{E}_{(o, l, o', a) \sim \mathcal{D}} \left[-\log p(o', a \mid o, l)\right]$$</div></p>
+<p><img alt="图2：WAM 概念定义与相关概念对比" src="assets/worldactionmodels/def.jpg" /></p>
+<p><em>图2：WAM 的概念定义及与相关范式的对比。左半部分对比了 VLA、WAM 和标准 World Model (WM) 的输入-输出公式，突出 WAM 的核心能力——联合预测动作和未来观测。VLA 仅建模 <span class="math inline">$p(a \mid o, l)$</span>（当前→动作），WM 建模 <span class="math inline">$p(o' \mid o, a)$</span>（状态+动作→未来），而 WAM 建模 <span class="math inline">$p(o', a \mid o, l)$</span>（当前+指令→未来+动作）。右半部分展示了 WAM 与 Video Action Models (VAMs) 和 Video Policies 的概念范围关系。关键区分在于：VAM 与视频格式绑定，是 WAM 的子集；Video Policies 仅继承视频模型的结构化先验但不一定做前向预测；WAM 是模态无关的，可以基于视频、点云、触觉等多模态进行状态预测。</em></p>
+<h3 id="22">2.2 概念辨析</h3>
+<p>本文在三个维度上区分了 WAM 与易混淆概念：</p>
+<table>
+<thead>
+<tr>
+<th>概念</th>
+<th>核心区别</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>VLA</strong></td>
+<td>VLA 学习 <span class="math inline">$p(a \mid o, l)$</span>，不做前向状态预测；WAM 要求显式建模 <span class="math inline">$o'$</span></td>
+</tr>
+<tr>
+<td><strong>Video Action Models (VAMs)</strong></td>
+<td>VAM 是 WAM 的子集（限定视频模态），WAM 模态无关</td>
+</tr>
+<tr>
+<td><strong>Video Policies</strong></td>
+<td>Video Policies 利用视频生成 backbone 的时空表征，但可以不做前向预测；WAM 必须有预测性承诺</td>
+</tr>
+<tr>
+<td><strong>Action World Models (AWM)</strong></td>
+<td>早期文献的命名，WAM 命名将系统重新定位为"Agent"（而非增强的 Simulator），强调 World 和 Action 是并列组件</td>
+</tr>
+</tbody>
+</table>
+<h3 id="23">2.3 架构分类</h3>
+<p>本文将 WAM 架构分为两大范式：</p>
+<p><strong>（1）Cascaded WAM（级联式）</strong></p>
+<p>显式分解为两阶段：<span class="math inline">$p(o', a \mid o, l) = p(a \mid o', o, l) p(o' \mid o, l)$</span></p>
+<ul>
+<li>世界模型先合成未来视觉计划 → 动作模型从中解码机器人指令</li>
+<li>优势：自然解耦（世界模型不需理解运动学，动作模型不需做长时预测）</li>
+<li>劣势：两阶段的耦合引入延迟和误差传播</li>
+<li>按中间计划载体分为：显式规划（像素空间）、隐式规划（潜表征）</li>
+</ul>
+<p><strong>（2）Joint WAM（联合式）</strong></p>
+<p>单一模型同时预测未来状态和动作，世界建模与动作生成在统一目标下联合训练：</p>
+<ul>
+<li>按生成方式分为：自回归生成（Autoregressive）、扩散式生成（Diffusion-based）</li>
+<li>扩散式可进一步分为：Unified Stream（单流）、Multi-Stream（多流——Cross-Attention 耦合、Hidden-State 耦合、Shared Representation）</li>
+</ul>
+<h3 id="24">2.4 数据生态系统</h3>
+<p>WAM 的独特优势在于<strong>统一数据消化能力</strong>：既能利用高质量的 <span class="math inline">$(o_t, a_t, o_{t+1})$</span> 三元组进行紧密耦合，又能在架构上灵活消化海量<strong>非配对</strong>数据（如无动作标注的视频用于学习视觉物理）。</p>
+<p>四大数据来源：</p>
+<ol>
+<li><strong>机器人遥操作数据</strong>：精确的运动学 ground truth，zero sim-to-real gap</li>
+<li><strong>便携式人类演示数据（UMI 风格）</strong>：低成本、野外环境，桥接人类灵巧性与真实交互</li>
+<li><strong>仿真数据</strong>：无限程序性变化、特权空间监督</li>
+<li><strong>人类和以自我为中心的视频数据</strong>：近乎无限的真实世界物理先验</li>
+</ol>
+<hr />
+<h2 id="_3">三、架构详解</h2>
+<h3 id="31-cascaded-wam">3.1 Cascaded WAM</h3>
+<p><img alt="图3：级联式 WAM 的三种结构模式对比" src="assets/worldactionmodels/cascaded.jpg" /></p>
+<p><em>图3：级联式 WAM 的三种结构模式。</em><em>1(a) Learned Action</em><em>：世界模型生成像素空间的未来计划，由学习到的逆动力学模型（IDM）或动作模型映射为动作（代表工作：UniPi、VLP、Gen2Act、π₀.₇ 等）。</em><em>1(b) Geometric Extraction</em><em>：显式视觉计划通过光流计算或姿态跟踪等几何方式转换为动作（代表工作：AVDC、NovaFlow、Dreamitate 等），特点是无需动作标注训练。</em><em>2(a) Latent Representation</em><em>：中间计划载体为潜表征而非 RGB 帧，下游动作模型从中解码指令（代表工作：VPP、mimic-video、S-VAM 等），避免了像素级合成的计算开销。三种模式的核心权衡是：像素空间（可解释性强但计算量大）→ 几何提取（无需学习但依赖结构化表示）→ 潜表征（高效但可解释性弱）。</em></p>
+<h4 id="311">3.1.1 显式规划（像素空间）</h4>
+<p><strong>Learned Action Extraction 类方法对比</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th>Stage-1 Backbone</th>
+<th>Stage-2</th>
+<th>关键创新</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>UniPi</td>
+<td>Video U-Net</td>
+<td>CNN+MLP IDM</td>
+<td>奠基性两阶段蓝图</td>
+</tr>
+<tr>
+<td>VLP</td>
+<td>Video U-Net + PaLM-E 12B</td>
+<td>LAVA</td>
+<td>VLM 做层次化子动作生成+树搜索</td>
+</tr>
+<tr>
+<td>π₀.₇</td>
+<td>BAGEL</td>
+<td>预训练 VLA</td>
+<td>用 VLA 替代 IDM，上下文学习泛化</td>
+</tr>
+<tr>
+<td>Gen2Act</td>
+<td>VideoPoet（零样本）</td>
+<td>闭环神经策略</td>
+<td>零样本泛化，无需微调</td>
+</tr>
+<tr>
+<td>Veo-Act</td>
+<td>Veo-3</td>
+<td>Multi-head IDM + VLA</td>
+<td>门控机制：粗导航+接触阶段切换 VLA</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Geometric Extraction 类方法对比</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th>中间表示</th>
+<th>关键特点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>AVDC</td>
+<td>像素 RGB → 光流</td>
+<td>完全不需动作标注</td>
+</tr>
+<tr>
+<td>NovaFlow</td>
+<td>3D 物体级光流</td>
+<td>零训练，即插即用</td>
+</tr>
+<tr>
+<td>Dreamitate</td>
+<td>工具 6-DoF 姿态</td>
+<td>通过工具的位姿跟踪桥接人-机器人</td>
+</tr>
+<tr>
+<td>4DGen</td>
+<td>RGB-D + 4D 点图</td>
+<td>多视角一致的生成</td>
+</tr>
+<tr>
+<td>LVP</td>
+<td>3D 手势重建</td>
+<td>Diffusion Forcing 提升时序一致性</td>
+</tr>
+</tbody>
+</table>
+<h4 id="312">3.1.2 隐式规划（潜表征）</h4>
+<ul>
+<li><strong>VPP</strong>：首个达到实时控制的隐式规划方案，VAE 编码→扩散预测未来潜序列→轻量策略网络</li>
+<li><strong>S-VAM</strong>：通过自蒸馏弥合单步推理与多步精度的 gap，QFormer 风格感知器聚合特征</li>
+<li><strong>mimic-video</strong>：流匹配替代 DDPM + 部分去噪策略</li>
+<li><strong>LAPA</strong>：无监督潜在动作预训练，VQ-VAE 从无标签视频学习"状态-潜在动作"先验</li>
+<li><strong>MWM</strong>：用未来语义掩码潜变量替代 RGB 预测，对极端视觉偏移鲁棒</li>
+<li><strong>OmniVTA</strong>：将隐式规划扩展到视觉-触觉领域</li>
+</ul>
+<h3 id="32-joint-wam">3.2 Joint WAM</h3>
+<p><img alt="图4：扩散式 Joint WAM 的主要架构模式分类" src="assets/worldactionmodels/arch.jpg" /></p>
+<p><em>图4：扩散式 Joint WAM 的四种架构模式。</em><em>1(a) Unified Stream 显式预测</em><em>：World 和 Action 变量统一在单个 DiT 中联合去噪，未来帧或潜替代物为直接预测目标（代表：PAD、DreamZero、Cosmos Policy、UWM）。</em><em>1(b) Unified Stream 隐式预测</em><em>：通过学习到的未来 token 在潜空间中对齐未来观测的嵌入，而非生成未来帧（代表：FLARE、FRAPPE）。</em><em>2(a) Multi-Stream Cross-Attention 耦合</em><em>：Video DiT 和 Action DiT 两路分支通过显式交叉注意力交换信息（代表：CoVAR、Motus、LingBot-VA）。</em><em>2(b) Multi-Stream Hidden-State 耦合</em><em>：Video 分支的中间隐状态传递给 Action 分支作为条件信号（代表：DiT4DiT、Fast-WAM、Act2Goal）。</em><em>2(c) Multi-Stream Shared Representation</em><em>：视觉和动作首先通过统一编码器融合为共享潜表示，再分别解码（代表：UVA、PhysGen）。核心权衡：Unified Stream 保证最紧密的同步但计算重，Multi-Stream 模块化但需显式设计耦合接口。</em></p>
+<h4 id="321">3.2.1 自回归生成</h4>
+<p>分三个子范式：</p>
+<p><strong>（a）Explicit Decoupled Representation</strong>（显式解耦表示）</p>
+<p>保持模态异构格式，通过注入控制 token（[ACT]、[OBS]）路由到独立输出头：</p>
+<ul>
+<li><strong>GR-1</strong>：Transformer 预训练视频重建→微调联合解码未来图像块+连续动作</li>
+<li><strong>GR-2</strong>：切换到 VQGAN 离散视觉 token + CVAE 动作分块</li>
+<li><strong>GR-MG</strong>：引入 [PROG] token，宏观/微观步层次化解耦</li>
+</ul>
+<p><strong>（b）Unified Discrete Representations</strong>（统一离散表示）</p>
+<p>完全量化到同构 token 空间，共享 next-token 预测头：</p>
+<ul>
+<li><strong>CoT-VLA</strong>：因果注意力生成视觉 CoT → 全注意力同步预测动作</li>
+<li><strong>WorldVLA</strong>：模态特定因果掩码，禁止当前动作 token 关注同块内的先前动作</li>
+<li><strong>RynnVLA-002</strong>：离散 MLLM 主干 + 轻量连续 Action Transformer 头</li>
+<li><strong>F₁</strong>：Mixture-of-Transformer，Generation expert 做预测，Action expert 做控制</li>
+</ul>
+<p><strong>（c）Predictive Latent Representations</strong>（预测性潜在表示）</p>
+<ul>
+<li><strong>VLA-JEPA</strong>：连续潜在动作 token 条件化自回归世界模型，预测未来表征（冻结目标网络）。避免"像素匹配捷径"，优先语义抽象</li>
+</ul>
+<h4 id="322">3.2.2 扩散式生成</h4>
+<p><strong>Unified Stream（单流）</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th>Backbone</th>
+<th>关键设计</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PAD</td>
+<td>ImageNet DiT</td>
+<td>多模态统一潜序列，动作填充+注意力掩码利用无动作视频</td>
+</tr>
+<tr>
+<td>UWM</td>
+<td>Single DiT</td>
+<td>World 和 Action 独立噪声调度，一个模型多种工作模式</td>
+</tr>
+<tr>
+<td>DreamZero</td>
+<td>Wan2.1-14B</td>
+<td>KV-cache 观测替换+异步执行+量化优化→~7Hz</td>
+</tr>
+<tr>
+<td>Cosmos Policy</td>
+<td>Cosmos-Predict2</td>
+<td>潜帧注入：同时做策略、世界模型、价值函数</td>
+</tr>
+<tr>
+<td>FLARE</td>
+<td>GR00T DiT</td>
+<td>可学习未来 token，对齐冻结教师编码器的未来嵌入</td>
+</tr>
+<tr>
+<td>FRAPPE</td>
+<td>RDT-1B</td>
+<td>Mixture-of-Prefix-and-LoRA 多专家对齐，阶段性训练</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Multi-Stream（多流）</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>耦合方式</th>
+<th>代表方法</th>
+<th>特点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Cross-Attention</td>
+<td>Motus (8B)</td>
+<td>Wan2.2 + Qwen3-VL，三模态联合注意力（World+VLA+语义）</td>
+</tr>
+<tr>
+<td>Cross-Attention</td>
+<td>LingBot-VA</td>
+<td>KV-cache 跨块累积，异步预测+执行</td>
+</tr>
+<tr>
+<td>Cross-Attention</td>
+<td>DUST</td>
+<td>World/Action 独立噪声时间步+独立流匹配损失</td>
+</tr>
+<tr>
+<td>Hidden-State</td>
+<td>DiT4DiT</td>
+<td>Hook 算子从 Video DiT 提取中间隐状态→Action DiT cross-attention</td>
+</tr>
+<tr>
+<td>Hidden-State</td>
+<td>Fast-WAM</td>
+<td>训练时保留 Video 分支做流匹配，推理时移除</td>
+</tr>
+<tr>
+<td>Hidden-State</td>
+<td>Act2Goal</td>
+<td>多尺度时间哈希，HER 风格目标重新标记+在线 LoRA 微调</td>
+</tr>
+<tr>
+<td>Shared Repr.</td>
+<td>UVA</td>
+<td>共享 Transformer 编码→两个轻量扩散头分别解码</td>
+</tr>
+<tr>
+<td>Shared Repr.</td>
+<td>PhysGen</td>
+<td>NOVA 自回归视频 backbone + Action-DiT 解码器</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="_4">四、数据生态</h2>
+<p><img alt="图5：WAM 训练数据全景图" src="assets/worldactionmodels/data_overview.jpg" /></p>
+<p><em>图5：具身数据全景图，按 Transfer Difficulty（Y 轴，从低到高表示从仿真到真实场景的迁移难度）和 Scaling Difficulty（X 轴，从低到高表示数据采集和扩展难度）两个维度组织。</em><em>右下角 Internet Videos</em><em>（如 Ego4D、HowTo100M）：扩展难度低（海量被动采集）、迁移难度高（无动作标注、领域 gap 大），用于学习被动世界动力学先验。</em><em>左下角 Simulation</em><em>（如 RoboCasa、MimicGen）：扩展难度中等、迁移难度中等，提供无限程序性变化和特权信息（深度、6D 姿态、碰撞边界）。</em><em>右上角 Robot Teleoperation</em><em>（如 OXE、DROID）：扩展难度高（成本高、需实验室环境）、迁移难度低（零 sim-to-real gap），提供精确的物理 grounding。</em><em>左上角 UMI-style</em><em>（如 FastUMI-100K、RealOmin）：便携式人类演示，兼具野外多样性和厘米级动作约束，扩展难度和迁移难度居中。WAM 的核心数据优势在于可混合这四类来源——利用非配对数据进行世界建模，配对数据进行动作 grounding。</em></p>
+<h3 id="41">4.1 机器人遥操作数据</h3>
+<table>
+<thead>
+<tr>
+<th>数据集</th>
+<th>规模</th>
+<th>关键贡献</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>OXE</td>
+<td>1M+ 轨迹 / 22 机器人</td>
+<td>统一多平台聚合标准</td>
+</tr>
+<tr>
+<td>ARIO</td>
+<td>3M+ 轨迹 / 35 机器人</td>
+<td>迄今最大规模</td>
+</tr>
+<tr>
+<td>DROID</td>
+<td>76k 轨迹 / 564 场景</td>
+<td>野外多样性</td>
+</tr>
+<tr>
+<td>AgiBot World</td>
+<td>1M+ 轨迹</td>
+<td>多模态（RGB+D+触觉+本体感知）</td>
+</tr>
+</tbody>
+</table>
+<h3 id="42-umi">4.2 便携式人类演示（UMI 风格）</h3>
+<ul>
+<li><strong>FastUMI-100K</strong>：100K+ 轨迹，丰富多模态文本标注</li>
+<li><strong>RealOmin</strong>：百万级，3000+ 真实家庭环境，含 IMU 和触觉</li>
+<li><strong>RDT2</strong>：约 10,000 小时演示，100+ 场景</li>
+</ul>
+<h3 id="43">4.3 仿真数据</h3>
+<ul>
+<li><strong>SynGrasp-1B</strong>：1000 万抓取轨迹——反映 WAM 预训练的巨大数据需求</li>
+<li><strong>TesserAct</strong>：285K RGB-D-N 视频片段，专门针对 4D 具身世界建模</li>
+<li><strong>RoboTwin 2.0</strong>：100K+ 轨迹，高保真 3D 资产+照片级渲染</li>
+</ul>
+<h3 id="44">4.4 人类/自我中心数据</h3>
+<ul>
+<li><strong>EgoScale</strong>：20,854 小时，含本体感知地面真值</li>
+<li><strong>HumanNet</strong>：100 万小时，720K+ 任务</li>
+<li><strong>DreamDojo-HV</strong>：43,827 小时，6015 项活动</li>
+<li><strong>EgoDex</strong>：829 小时，194 任务，高保真 3D 手指追踪</li>
+</ul>
+<hr />
+<h2 id="_5">五、评估协议</h2>
+<p><img alt="图6：世界模型在 VLA 学习和评估中的作用" src="assets/worldactionmodels/wm.jpg" /></p>
+<p><em>图6：世界模型在 VLA 的四个关键应用场景。</em><em>(a) Imitation Learning</em><em>：世界模型生成或筛选训练轨迹以增强模仿学习数据，如 Ctrl-World 使 π₀.₅ 成功率提升 44.7%。</em><em>(b) Reinforcement Learning</em><em>：世界模型作为替代环境进行想象 rollout，policy 在想象轨迹上训练。</em><em>(c) Reward Modeling</em><em>：从预训练生成世界模型中导出奖励信号（如 VIPER、Diffusion Reward、SRPO），或直接在世界模型中联合建模奖励（RoboScape-R）。</em><em>(d) Policy Evaluation</em><em>：世界模型作为数据驱动仿真器，支持可扩展、可复现、安全的策略评估。Veo Robotics 还利用生成式图像编辑合成 OOD 场景进行泛化测试和红队安全测试。</em></p>
+<h3 id="51">5.1 世界建模能力评估</h3>
+<p>三个维度：</p>
+<p><strong>（1）视觉保真度（Visual Fidelity）</strong></p>
+<table>
+<thead>
+<tr>
+<th>指标</th>
+<th>评估内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PSNR / SSIM</td>
+<td>像素级重建保真度和结构相似性</td>
+</tr>
+<tr>
+<td>LPIPS</td>
+<td>深度特征空间中的感知相似性</td>
+</tr>
+<tr>
+<td>DreamSim</td>
+<td>人类对齐的感知相似性（基于三元组标注训练）</td>
+</tr>
+<tr>
+<td>DINO 相似度</td>
+<td>语义/实例级对齐（余弦相似度）</td>
+</tr>
+<tr>
+<td>FVD</td>
+<td>分布级真实感和时序质量（Fréchet 距离）</td>
+</tr>
+</tbody>
+</table>
+<p><strong>（2）物理常识（Physical Commonsense）</strong></p>
+<ul>
+<li><strong>VideoPhy</strong>：固-固、固-液、液-液交互场景，人工二值标注物理合理性</li>
+<li><strong>PhyGenBench</strong>：PhyGenEval 自动评估——关键物理现象检测、物理顺序验证、整体自然度</li>
+<li><strong>WorldModelBench</strong>：五项物理定律检查：牛顿第一定律、质量守恒、流体力学、不可穿透性、重力</li>
+<li><strong>Physics-IQ</strong>：从真实视频中预测物理事件演化的空间/时空 IoU</li>
+</ul>
+<p><strong>（3）动作合理性（Action Plausibility）</strong>——WAM 最独特的评估维度</p>
+<ul>
+<li><strong>WorldSimBench</strong>：隐性操作评估——检查生成的视频是否保留足够信息支持控制推理</li>
+<li><strong>Wow, wo, val!</strong>：IDM 图灵测试——在生成视频上应用 IDM 推断动作序列，以真实世界执行成功率评估。结果显示许多视觉逼真的模型在此测试下成功率接近零</li>
+</ul>
+<h3 id="52">5.2 动作策略评估</h3>
+<p>40+ 主流 benchmark 按机器人形态分类：</p>
+<ul>
+<li><strong>通用操作</strong>：LIBERO (130 任务)、ManiSkill3 (10K+ 物体, 62 任务)、RoboCasa (2509 物体, 100 任务)</li>
+<li><strong>双臂与人形</strong>：RoboTwin、HumanoidBench (27 任务, 448 触觉传感点)</li>
+<li><strong>移动操作</strong>：BEHAVIOR-1K (1000 日常任务)</li>
+<li><strong>接触与变形物体操作</strong>：SoftGym、TacSL/ManiFeel（引入触觉评估）</li>
+<li><strong>真实机器人</strong>：Maniparena (10,812 轨迹，迄今最大规模)</li>
+</ul>
+<hr />
+<h2 id="_6">六、关键洞察与技术亮点</h2>
+<ol>
+<li>
+<p><strong>WAM 的命名哲学</strong>：从 Action World Model (AWM) 改为 World Action Model (WAM)，将系统从"增强的仿真器"重新定位为"Agent"，强调 World（预测物理）和 Action（运动控制）是并列组件，直接将 WAM 定位为 VLA 的概念继承者。</p>
+</li>
+<li>
+<p><strong>"先想再做"优于纯反应</strong>：即使是只有 1 个 latent token 的 Latent CoT 也优于纯 Action-Only 基线（96.2% vs 95.0%），验证了预测性推理本身就有正向收益——不仅仅是预测精度带来的好处。</p>
+</li>
+<li>
+<p><strong>预测监督在推理时可丢弃</strong>：某些 WAM 中世界建模的主要效用来自训练时提供的辅助梯度，而非推理时生成未来帧。多个框架证明在测试时移除未来预测头不会降低控制性能——这暗示了一条计算高效的新路径（潜预测而非显式像素重建）。</p>
+</li>
+<li>
+<p><strong>无动作视频数据的利用</strong>：WAM 的架构灵活性使其能消化海量无动作标注的互联网视频进行世界建模，同时用少量配对数据做动作 grounding，大幅扩展了数据基础。</p>
+</li>
+<li>
+<p><strong>光流/几何提取作为免学习替代方案</strong>：AVDC、NovaFlow 等方法完全不需要动作标注即可提取动作，将策略学习问题转化为几何计算问题。</p>
+</li>
+<li>
+<p><strong>IDM 图灵测试揭示的 gap</strong>：Wow, wo, val! 的实验表明视觉逼真的视频生成与可执行的机器人行为之间存在巨大鸿沟——这是当前评估体系的核心盲区。</p>
+</li>
+<li>
+<p><strong>数据混合设计的层次化框架</strong>：提出将非机器人数据的价值按可迁移知识层级理解：(1) 低级物理先验（物体永存性、重力约束）、(2) 中级因果动力学（交互与物理结果的因果关系）、(3) 高级任务逻辑（任务相关的时间依赖）。</p>
+</li>
+</ol>
+<hr />
+<h2 id="_7">七、开放挑战</h2>
+<ol>
+<li>
+<p><strong>架构耦合</strong>：缺乏在匹配规模和评估条件下的系统化对比研究。显式视觉预测是否严格必要？级联与联合架构何时产生实质差异？需要严格的消融实验和理论分析。</p>
+</li>
+<li>
+<p><strong>多模态物理状态表征</strong>：现有 WAM 几乎全部预测 RGB 模态的未来状态，但接触丰富操作最关键的信息（触觉分布、接触力、声学信号、材料顺应性）在像素空间中不可见。需要扩展到触觉、力、本体感知的联合预测。</p>
+</li>
+<li>
+<p><strong>数据利用与混合设计</strong>：各数据源的边际贡献如何随规模变化？人类视频预训练的收益是语义性的还是动力学性的？需要从经验性超参数调优转向原则性信息论视角。</p>
+</li>
+<li>
+<p><strong>长时规划与时序抽象</strong>：需要层次化 World-Action 建模——连接高层语义任务分解和低层物理预测。三条互补路径：模块化层级、内建层次化 WAM、时序上下文扩展。</p>
+</li>
+<li>
+<p><strong>推理延迟与计算效率</strong>：DreamZero 通过系统优化将 WAM 推理推至 7Hz，但仍远低于非生成 VLA 策略的 50Hz 标准。提出"任务自适应预测保真度"概念——为不同任务动态调整预测深度和分辨率。</p>
+</li>
+<li>
+<p><strong>评估方法论</strong>：当前评估中世界建模和动作生成严重脱钩——PSNR/FVD 无法捕捉物理正确性，任务成功率不反映视觉预测质量。提出 Counterfactual Consistency（反事实一致性）和 Foresight-Conditioned Success（远见条件成功率）等耦合指标。</p>
+</li>
+<li>
+<p><strong>安全性与可靠物理部署</strong>：WAM 的预测能力既是优势也是风险——错误想象物理未来可能导致难以中断的延展动作序列。提出 prediction-integrated safety——将想象未来的不确定性估计作为安全监控的一等输入。</p>
+</li>
+</ol>
+<hr />
+<h2 id="_8">八、关键概念速查</h2>
+<table>
+<thead>
+<tr>
+<th>术语</th>
+<th>简要定义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>VLA</strong></td>
+<td>Vision-Language-Action：学习 <span class="math inline">$p(a \mid o, l)$</span> 的具身基础模型</td>
+</tr>
+<tr>
+<td><strong>WM</strong></td>
+<td>World Model：预测环境动力学的模型 <span class="math inline">$p(o' \mid o, a)$</span></td>
+</tr>
+<tr>
+<td><strong>WAM</strong></td>
+<td>World Action Model：联合预测未来状态和动作 <span class="math inline">$p(o', a \mid o, l)$</span></td>
+</tr>
+<tr>
+<td><strong>Cascaded WAM</strong></td>
+<td>级联式：<span class="math inline">$p(a \mid o', o, l) p(o' \mid o, l)$</span>，先预测未来再解码动作</td>
+</tr>
+<tr>
+<td><strong>Joint WAM</strong></td>
+<td>联合式：单一模型同时输出未来状态和动作</td>
+</tr>
+<tr>
+<td><strong>Explicit Planning</strong></td>
+<td>像素空间的中间计划载体</td>
+</tr>
+<tr>
+<td><strong>Implicit Planning</strong></td>
+<td>潜表征作为中间计划载体</td>
+</tr>
+<tr>
+<td><strong>Unified Stream</strong></td>
+<td>单 DiT 统一处理 World 和 Action</td>
+</tr>
+<tr>
+<td><strong>Multi-Stream</strong></td>
+<td>多个 DiT 分支通过 Cross-Attention / Hidden-State / Shared Repr. 耦合</td>
+</tr>
+<tr>
+<td><strong>IDM</strong></td>
+<td>Inverse Dynamics Model：从视频帧对回归动作</td>
+</tr>
+<tr>
+<td><strong>UMI</strong></td>
+<td>Universal Manipulation Interface：便携式手持夹爪数据采集范式</td>
+</tr>
+<tr>
+<td><strong>JEPA</strong></td>
+<td>Joint-Embedding Predictive Architecture：在潜空间做预测而非像素重建</td>
+</tr>
+<tr>
+<td><strong>FVD</strong></td>
+<td>Fréchet Video Distance：视频生成的分布级质量指标</td>
+</tr>
+<tr>
+<td><strong>RSSM / TSSM</strong></td>
+<td>Recurrent / Transformer State-Space Model：潜动力学建模架构</td>
+</tr>
+</tbody>
+</table>
+  </div>
+</main>
+
+
+<script>
+(function() {
+  const sidebar = document.getElementById('sidebar');
+  const links = sidebar.querySelectorAll('a');
+  const headings = document.querySelectorAll('h1[id], h2[id], h3[id], h4[id]');
+  if (headings.length === 0) return;
+
+  const linkMap = new Map();
+  links.forEach(function(a) {
+    const href = a.getAttribute('href');
+    if (href && href.startsWith('#')) linkMap.set(href.slice(1), a);
+  });
+
+  function onScroll() {
+    let currentId = null;
+    const scrollTop = window.scrollY + 80;
+    headings.forEach(function(h) { if (h.offsetTop <= scrollTop) currentId = h.id; });
+    links.forEach(function(a) { a.classList.remove('active'); });
+    if (currentId && linkMap.has(currentId)) {
+      const el = linkMap.get(currentId);
+      el.classList.add('active');
+      const sr = sidebar.getBoundingClientRect();
+      const er = el.getBoundingClientRect();
+      if (er.bottom > sr.bottom || er.top < sr.top) {
+        el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+    }
+  }
+
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+})();
+</script>
+
+</body>
+</html>
