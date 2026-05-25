@@ -3,7 +3,7 @@
 > **论文信息**
 > - 作者：Fangqi Zhu<sup>1,2</sup>, Zhengyang Yan<sup>1</sup>, Zicong Hong<sup>1</sup>, Quanxin Shou<sup>1</sup>, Xiao Ma<sup>2*</sup>, Song Guo<sup>1*</sup>
 > - 通讯作者：Xiao Ma (ByteDance Seed), Song Guo (HKUST)
-> - 投稿方向：ICLR 2026（投稿中）
+> - 投稿方向：ICLR 2026
 > - arXiv ID：2511.09515
 > - 代码：[github.com/WM-PO](https://WM-PO.github.io)（基于 verl + OpenSora，完整开源）
 > - 项目页：https://wm-po.github.io/
