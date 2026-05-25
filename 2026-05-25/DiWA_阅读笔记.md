@@ -215,31 +215,21 @@ $$\nabla_\theta \bar{\mathcal{J}}(\bar{\pi}_\theta) = \mathbb{E}^{\bar{\pi}_\the
 
 在 Franka Emika Panda 机器人上测试了 3 个任务（开抽屉、关抽屉、推滑条），使用 4 小时 teleoperation play 数据（~45 万步）+ 每 skill 50 条 expert demo。
 
-![图4：真机任务与结果](assets/diwa/real_skills.jpg)
+<!-- 真机实验：子图(a)任务可视化 + 子图(b)微调结果，并排 -->
+<table><tr>
+<td width="50%"><img src="assets/diwa/real_skills.jpg" width="100%"><br><em>(a) Real-world Manipulation Skills</em></td>
+<td width="50%"><img src="assets/diwa/real-adaptation.jpg" width="100%"><br><em>(b) Real-World Fine-Tuning Results</em></td>
+</tr></table>
 
-*图4a：三个真实世界操作任务的可视化。实验平台为 Franka Emika Panda 7-DoF 机械臂，桌面场景包含柜子和抽屉。观测来自双摄像头——static Azure Kinect（第三人称全景）和 wrist-mounted Realsense D415（夹爪视角近景），分辨率 200×200，下采样至 64×64 用于训练。三个任务的设计覆盖了不同的操作类型：*
+*图4：真机实验任务与微调结果。论文中两者为同一 figure 的子图 (a) 和 (b)，此处并排展示。*
 
-*— **Open Drawer**：夹爪抓住抽屉把手向外拉出。挑战在于需要精确对准把手位置、稳定抓握后施加足够的拉力。预训练策略常因把手定位不准而失败。*
+***子图 (a) — 真实世界操作任务**：三个任务的 RGB 观测可视化——Open Drawer（左）、Close Drawer（中）、Push Slider Right（右）。实验平台为 Franka Emika Panda 7-DoF 机械臂，桌面场景包含柜子和抽屉。观测来自双摄像头——static Azure Kinect（第三人称全景）和 wrist-mounted Realsense D415（夹爪视角近景），分辨率 200×200，下采样至 64×64 用于训练。三个任务共享同一世界模型（4 小时 play 数据训练），分别微调各自的扩散策略（每 skill 仅需 50 条 expert demo）。任务难点各有不同：Open Drawer 需精确对准把手并施加拉力，预训练策略常因把手定位不准而失败；Close Drawer 需判断抽屉开合程度并控制推力方向，过度用力可能导致碰撞；Push Slider Right 需沿滑轨方向精确推动，方向偏差会导致卡阻。*
 
-*— **Close Drawer**：将打开的抽屉推回关闭。看似简单但需要判断抽屉当前开合程度、施加适当的推力方向。过度用力可能导致机械臂碰撞柜体。*
+***子图 (b) — 微调前后成功率对比**：横轴为 3 个任务（Open Drawer / Close Drawer / Push Slider），纵轴为 Success Rate（%）。每个任务有两组柱——蓝色为 Pre-trained（BC 预训练扩散策略），彩色（橙/绿/紫）为 DiWA Fine-tuned（在 WM 中微调 ~2M imagination steps）。每组内的多个细柱子对应微调过程中保存的不同 checkpoint 的成功率，展示微调的渐进改进趋势。评估方式：每 task 20 次 rollout，固定初始场景配置和机械臂起始位置，3 个随机 seed 平均。*
 
-*— **Push Slider Right**：将柜子上的水平滑块向右推动。挑战在于滑块的位置变异性大、推动方向必须与滑轨平行，否则会导致卡阻。*
+*逐任务结果：**Open Drawer（蓝→橙）**——预训练 SR 约 25%，微调后最高约 70%（+~45pp），橙柱呈上升趋势，最早 checkpoint 已优于基线（~45%），说明 PPO 在想象环境中能快速找到改进方向。**Close Drawer（蓝→绿）**——预训练 SR 约 30%，微调后最高约 80%（+~50pp），绿柱波动小、学习稳定。**Push Slider Right（蓝→紫）**——预训练 SR 约 20%（最低），微调后最高约 65%（+~45pp），因为滑块操作的方向精确性要求使 BC 策略对初始位置变化特别脆弱，微调使策略学会了自适应调整推动角度。*
 
-*三个任务共享同一世界模型（4 小时 play 数据训练），分别微调各自的扩散策略。每 skill 仅收集 50 条 teleoperation 专家演示用于 BC 预训练和奖励分类器训练。*
-
-![图5：真机微调结果](assets/diwa/real-adaptation.jpg)
-
-*图5b：三个真机任务的微调前后成功率对比。横轴为 3 个任务，纵轴为 Success Rate（%）。每个任务有 2 组柱——蓝色为 Pre-trained（BC 预训练扩散策略），橙/绿/紫色为 DiWA Fine-tuned（在 WM 中微调 ~2M imagination steps 后）。每组柱包含多个细柱子，对应微调过程中保存的不同 checkpoint 的成功率，展示微调过程中性能的渐进变化。评估方式：每个 task 执行 20 次 rollout，使用固定的初始场景配置和机械臂起始位置，3 个随机 seed 平均。*
-
-*逐任务结果：*
-
-*— **Open Drawer（蓝色 → 橙色）**：预训练 SR 约 25%，微调后 SR 最高约 70%（提升 ~45pp）。多个橙柱呈上升趋势，说明随着微调步数增加，策略持续改进。最早 checkpoint 已显著优于预训练基线（~45%），证明 PPO 在想象环境中能快速找到改进方向。*
-
-*— **Close Drawer（蓝色 → 绿色）**：预训练 SR 约 30%，微调后 SR 最高约 80%（提升 ~50pp）。绿柱波动较小，学习过程稳定。该任务预训练基线略高于 Open Drawer（因为"推"比"拉"更容易从 BC 数据中学习），但微调增益仍然巨大。*
-
-*— **Push Slider Right（蓝色 → 紫色）**：预训练 SR 约 20%，微调后 SR 最高约 65%（提升 ~45pp）。三个任务中预训练基线最低——滑块操作的精确方向要求使得 BC 策略在面对初始位置变化时特别脆弱。微调使策略学会了根据当前滑块位置自适应调整推动角度。*
-
-*核心结论：三个真机任务的预训练成功率均不高于 30%，DiWA 微调后均提升至 65-80%——所有提升完全在 WM 想象空间中完成，**部署时为零次真实环境交互**。这首次证明了扩散策略在真实世界世界模型中离线微调后可以 zero-shot 迁移到物理机器人。*
+*核心结论：三个真机任务的预训练成功率均不高于 30%，DiWA 微调后均提升至 65-80%——所有提升完全在 WM 想象空间中完成，部署时**零次真实环境交互**。首次证明扩散策略在真实世界世界模型中离线微调后可 zero-shot 迁移到物理机器人。*
 
 ### 4.4 LIBERO-90 实验（4 个任务）
 
