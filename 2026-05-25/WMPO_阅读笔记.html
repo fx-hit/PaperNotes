@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WMPO: World Model-based Policy Optimization for Vision-Language-Action Models</title>
+<!-- arxiv: 2511.09515 -->
+<!-- venue: ICLR 2026（投稿中） -->
+<!-- tags: 机器人, VLA, 世界模型, 强化学习, 视频生成, 策略学习 -->
+<!-- words-zh: 2661 -->
+<!-- words-en: 304 -->
+<!-- reading-time: 9 -->
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #ffffff;
+    --text: #1a1a2e;
+    --text-secondary: #555;
+    --border: #e1e4e8;
+    --link: #0969da;
+    --table-stripe: #f6f8fa;
+    --heading: #0d1117;
+    --blockquote-border: #0969da;
+    --blockquote-bg: #f0f6ff;
+    --inline-code: #d73a49;
+    --inline-code-bg: #f6f8fa;
+    --sidebar-width: 260px;
+    --toc-active: #0969da;
+    --content-max-width: 900px;
+    --content-padding: 48px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "Inter", "Noto Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 16px;
+    line-height: 1.75;
+    color: var(--text);
+    background: var(--bg);
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    width: var(--sidebar-width);
+    overflow-y: auto;
+    padding: 28px 20px 40px;
+    background: #fafbfc;
+    border-right: 1px solid var(--border);
+    z-index: 10;
+    scrollbar-width: thin;
+  }
+  .sidebar-title {
+    font-size: 13px; font-weight: 700; color: var(--text-secondary);
+    margin-bottom: 16px; letter-spacing: 0.06em; text-transform: uppercase;
+  }
+  .toc-list { list-style: none; padding: 0; margin: 0; }
+  .toc-list ul { list-style: none; padding-left: 14px; }
+  .toc-list li { margin: 1px 0; }
+  .toc-list a {
+    display: block; padding: 4px 12px; font-size: 13.5px; line-height: 1.45;
+    color: var(--text-secondary); text-decoration: none; border-radius: 4px;
+    border-left: 2px solid transparent; transition: all 0.15s;
+  }
+  .toc-list a:hover { color: var(--link); background: #e8f0fe; }
+  .toc-list a.active {
+    color: var(--toc-active); font-weight: 600;
+    border-left-color: var(--toc-active); background: #e8f0fe;
+  }
+  .toc-h1 a { font-weight: 600; color: var(--heading); font-size: 14px; }
+  .toc-h3 a { padding-left: 24px; font-size: 13px; }
+  .toc-h4 a { padding-left: 36px; font-size: 12.5px; }
+  .toc-empty { color: var(--text-secondary); font-size: 13px; font-style: italic; }
+
+  .main-wrapper {
+    margin-left: var(--sidebar-width);
+    min-height: 100vh;
+    display: flex; justify-content: center;
+  }
+  .content-inner {
+    width: 100%;
+    max-width: var(--content-max-width);
+    padding: 40px var(--content-padding) 80px;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    color: var(--heading); font-weight: 700; line-height: 1.3;
+    margin-top: 2em; margin-bottom: 0.6em; scroll-margin-top: 24px;
+  }
+  h1 { font-size: 2em; border-bottom: 2px solid var(--border); padding-bottom: 0.3em; margin-top: 0; }
+  h2 { font-size: 1.5em; border-bottom: 1px solid var(--border); padding-bottom: 0.25em; }
+  h3 { font-size: 1.25em; }
+  h4 { font-size: 1.1em; }
+  p { margin-bottom: 1em; }
+  a { color: var(--link); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  strong { font-weight: 600; }
+
+  blockquote {
+    border-left: 4px solid var(--blockquote-border);
+    background: var(--blockquote-bg);
+    padding: 12px 20px; margin: 1em 0;
+    border-radius: 0 6px 6px 0; color: var(--text-secondary);
+  }
+  blockquote p:last-child { margin-bottom: 0; }
+
+  code {
+    font-family: "JetBrains Mono", "SF Mono", "Fira Code", monospace;
+    font-size: 0.875em; background: var(--inline-code-bg);
+    padding: 2px 6px; border-radius: 4px; color: var(--inline-code);
+  }
+  pre {
+    background: #1e1e2e; color: #cdd6f4;
+    border-radius: 8px; padding: 16px 20px; overflow-x: auto;
+    margin: 1em 0; font-size: 14px; line-height: 1.55;
+  }
+  pre code { background: none; padding: 0; border-radius: 0; color: inherit; font-size: inherit; }
+
+  .codehilite { background: #1e1e2e; border-radius: 8px; padding: 16px 20px; overflow-x: auto; margin: 1em 0; }
+  .codehilite pre { background: none; padding: 0; margin: 0; border-radius: 0; }
+  .codehilite .hll { background-color: #2a2a3e; }
+  .codehilite .c  { color: #6c7086; font-style: italic; }
+  .codehilite .k  { color: #cba6f7; }
+  .codehilite .o  { color: #89b4fa; }
+  .codehilite .s  { color: #a6e3a1; }
+  .codehilite .n  { color: #cdd6f4; }
+  .codehilite .p  { color: #bac2de; }
+  .codehilite .mi { color: #fab387; }
+  .codehilite .nf { color: #89b4fa; }
+  .codehilite .nb { color: #f38ba8; }
+  .codehilite .nc { color: #f9e2af; }
+  .codehilite .bp { color: #f38ba8; }
+
+  table { width: 100%; border-collapse: collapse; margin: 1em 0; font-size: 0.925em; }
+  th, td { border: 1px solid var(--border); padding: 10px 14px; text-align: left; }
+  th { background: var(--table-stripe); font-weight: 600; color: var(--heading); }
+  tr:nth-child(even) td { background: var(--table-stripe); }
+
+  .math.display { display: block; overflow-x: auto; padding: 12px 0; margin: 1em 0; }
+  ul, ol { padding-left: 1.5em; margin-bottom: 1em; }
+  li { margin-bottom: 0.3em; }
+  hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+  img { max-width: 100%; height: auto; border-radius: 6px; margin: 0; }
+  p:has(img) { text-align: center; margin-top: 0.6em; margin-bottom: 0; }
+  p:has(img) + p { text-align: center; font-size: 0.9em; color: var(--text-secondary); margin-top: 0.15em; margin-bottom: 0.6em; }
+  .mermaid { text-align: center; margin: 1.5em 0; background: #fafbfc; border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+  .article-stats {
+    font-size: 0.85rem; color: var(--text-secondary);
+    padding: 10px 18px; margin-bottom: 28px;
+    background: #f8f9fa; border: 1px solid var(--border); border-radius: 8px;
+  }
+
+  @media (max-width: 1024px) {
+    .sidebar { position: static; width: 100%; height: auto; max-height: 35vh; border-right: none; border-bottom: 1px solid var(--border); }
+    .main-wrapper { margin-left: 0; display: block; }
+    .content-inner { max-width: none; padding: 24px 20px 60px; }
+  }
+</style>
+
+<script>
+MathJax = {
+  tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']], processEscapes: true, tags: 'none' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] }
+};
+</script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  mermaid.initialize({ startOnLoad: true, theme: 'neutral', securityLevel: 'loose' });
+});
+</script>
+
+</head>
+<body>
+
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-title">目录</div>
+  <ul class="toc-list">
+<li class="toc-h1"><a href="#wmpo-world-model-based-policy-optimization-for-vision-language-action-models">WMPO: World Model-based Policy Optimization for Vision-Language-Action Models</a>
+<ul>
+</li>
+<li class="toc-h2"><a href="#_1">一、核心问题</a>
+</li>
+<li class="toc-h2"><a href="#_2">二、核心思路 / 方法</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#21">2.1 总体框架</a>
+</li>
+<li class="toc-h3"><a href="#22">2.2 问题形式化</a>
+</li>
+<li class="toc-h3"><a href="#23">2.3 生成式世界模型</a>
+</li>
+<li class="toc-h3"><a href="#24">2.4 奖励模型</a>
+</li>
+<li class="toc-h3"><a href="#25-on-policy-grpo">2.5 On-Policy GRPO 优化</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_3">三、实验与结果</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#31">3.1 实验设置</a>
+</li>
+<li class="toc-h3"><a href="#32">3.2 主要对比结果</a>
+</li>
+<li class="toc-h3"><a href="#33">3.3 涌现行为：自纠正</a>
+</li>
+<li class="toc-h3"><a href="#34">3.4 轨迹效率提升</a>
+</li>
+<li class="toc-h3"><a href="#35">3.5 泛化能力</a>
+</li>
+<li class="toc-h3"><a href="#36-lifelong-learning">3.6 终身学习（Lifelong Learning）</a>
+</li>
+<li class="toc-h3"><a href="#37">3.7 真机实验</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_4">四、关键洞察与技术亮点</a>
+</li>
+<li class="toc-h2"><a href="#_5">五、代码实现解读</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#51">5.1 系统架构</a>
+</li>
+<li class="toc-h3"><a href="#52-rollout-robwm_rolloutpy">5.2 世界模型 Rollout 流程（robwm_rollout.py）</a>
+</li>
+<li class="toc-h3"><a href="#53-videomaepy">5.3 奖励模型训练（videomae.py）</a>
+</li>
+<li class="toc-h3"><a href="#54-rollout">5.4 双模式 Rollout</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_6">六、局限性</a>
+</li>
+<li class="toc-h2"><a href="#_7">七、关键概念速查</a>
+</ul></li>
+</li></ul>
+</nav>
+
+<main class="main-wrapper">
+  <div class="content-inner" id="main-content">
+<h1 id="wmpo-world-model-based-policy-optimization-for-vision-language-action-models">WMPO: World Model-based Policy Optimization for Vision-Language-Action Models</h1>
+<div class="article-stats">2,661 字 · English 304 词 · 约 9 分钟阅读</div>
+
+<blockquote>
+<p><strong>论文信息</strong>
+- 作者：Fangqi Zhu<sup>1,2</sup>, Zhengyang Yan<sup>1</sup>, Zicong Hong<sup>1</sup>, Quanxin Shou<sup>1</sup>, Xiao Ma<sup>2<em></sup>, Song Guo<sup>1</em></sup>
+- 通讯作者：Xiao Ma (ByteDance Seed), Song Guo (HKUST)
+- 投稿方向：ICLR 2026（投稿中）
+- arXiv ID：2511.09515
+- 代码：<a href="https://WM-PO.github.io">github.com/WM-PO</a>（基于 verl + OpenSora，完整开源）
+- 项目页：https://wm-po.github.io/</p>
+</blockquote>
+<hr />
+<h2 id="_1">一、核心问题</h2>
+<p>VLA（Vision-Language-Action）模型在机器人操控领域展现了巨大潜力，但存在两个根本性瓶颈：</p>
+<ol>
+<li><strong>模仿学习（IL）的脆弱性</strong>：现有 VLA 主要依赖专家演示做行为克隆，遭遇 OOD（分布外）状态时会产生级联错误，无法自纠正和从失败中学习。</li>
+<li><strong>真实环境 RL 的采样低效</strong>：直接在真实机器人上做 RL 需要数百万次交互，成本高、不安全、不可扩展。而构建精确仿真器又面临巨大的工程开销。</li>
+</ol>
+<p><strong>核心矛盾</strong>：IL 无法从失败中学习，RL 无法高效采样 —— 如何在不接触真实环境的情况下，让 VLA 策略获得 RL 的自我改进能力？</p>
+<blockquote>
+<p>论文的核心洞察：利用<strong>像素空间</strong>（而非潜空间）的视频生成世界模型来模拟环境动力学，使 VLA 策略可以在"想象"中进行 on-policy RL，从而与预训练 VLA 的视觉表征保持一致。</p>
+</blockquote>
+<p><img alt="Figure 1：三种 VLA 训练范式对比 —— (a) 模仿学习只能从人类演示学习，无法处理失败和自纠正；(b) 真实环境 RL 采样成本高、难以规模化；(c) WMPO 通过预训练世界模型，在想象中实现样本高效的 on-policy RL。" src="assets/wmpo/introduction.jpg" /></p>
+<hr />
+<h2 id="_2">二、核心思路 / 方法</h2>
+<h3 id="21">2.1 总体框架</h3>
+<p>WMPO 将 VLA RL 完全建立在<strong>动作条件视频生成世界模型</strong>之上。训练流程包含三个核心组件：</p>
+<ol>
+<li><strong>想象轨迹生成（Imagined Trajectory Generation）</strong>：策略 <span class="math inline">$\pi_\theta$</span> 与世界模型 <span class="math inline">$p_\phi$</span> 交替交互，自回归地生成完整轨迹</li>
+<li><strong>轨迹采样（Trajectory Sampling）</strong>：对同一初始状态采样多条轨迹，用奖励模型 <span class="math inline">$R_\psi$</span> 评估成功/失败</li>
+<li><strong>策略更新（Policy Update）</strong>：使用 GRPO（Group Relative Policy Optimization）在"想象轨迹"上优化策略参数</li>
+</ol>
+<p><img alt="Figure 2：WMPO 总体框架。从初始状态 s₀ 开始，(1) VLA 策略预测动作块 → 世界模型生成未来帧 → 交替交互形成想象轨迹；(2) 多次采样并评估；(3) 通过 GRPO 更新策略参数。" src="assets/wmpo/method.jpg" /></p>
+<h3 id="22">2.2 问题形式化</h3>
+<p>将 VLA 操控任务形式化为 MDP <span class="math inline">$\mathcal{M} = (\mathcal{S}, \mathcal{A}, P, R)$</span>：</p>
+<ul>
+<li><strong>状态空间</strong> <span class="math inline">$\mathcal{S} = \mathcal{I} \times \mathcal{G}$</span>：图像观测序列 <span class="math inline">$I_{0:K}$</span> + 语言指令</li>
+<li><strong>动作空间</strong> <span class="math inline">$\mathcal{A}$</span>：动作块（action chunk），每个动作有 <span class="math inline">$D$</span> 个自由度，每维离散化为 256 bins</li>
+<li><strong>转移函数</strong> <span class="math inline">$P$</span>：由参数化世界模型 <span class="math inline">$s_{t+1} \sim p_\phi(s_{t+1} \mid s_t, a_t)$</span> 实现</li>
+<li><strong>奖励函数</strong> <span class="math inline">$R_\psi$</span>：训练好的 VideoMAE 分类器，输出轨迹是否成功的二值判断</li>
+</ul>
+<p>优化目标：</p>
+<p><div class="math display">$$\max_\theta \mathbb{E}_{\tau \sim \pi_\theta, p_\phi}\left[R_\psi(\tau)\right]$$</div></p>
+<h3 id="23">2.3 生成式世界模型</h3>
+<p><strong>架构选择</strong>：基于 OpenSora（STDiT-v3 视频扩散模型），做出三项关键修改：</p>
+<table>
+<thead>
+<tr>
+<th>修改</th>
+<th>动机</th>
+<th>效果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>3D VAE → 2D VAE（SDXL）</strong></td>
+<td>3D VAE 的时序压缩会丢失细粒度运动细节</td>
+<td>更好地保留机器人-物体交互的精细运动</td>
+</tr>
+<tr>
+<td><strong>噪声条件帧（Noisy Frame Conditioning）</strong></td>
+<td>自回归生成中误差累积导致长期预测崩溃</td>
+<td>训练时对条件帧加 50/1000 步扩散噪声，提升鲁棒性</td>
+</tr>
+<tr>
+<td><strong>帧级动作控制（Frame-Level Action Control）</strong></td>
+<td>需要精确的动作-帧对齐</td>
+<td>扩展 AdaLN 块，以帧粒度注入动作信号</td>
+</tr>
+</tbody>
+</table>
+<p><strong>帧级动作控制</strong>的具体实现：对每帧 <span class="math inline">$i$</span> 的动作 <span class="math inline">$a_i$</span>，MLP 生成调制系数 <span class="math inline">$\gamma_1^i$</span>、<span class="math inline">$\beta_1^i$</span>（LayerNorm 的 scale/shift）、<span class="math inline">$\alpha_1^i$</span>（残差连接的 scale）：</p>
+<p><div class="math display">$$\mathbf{x}^i = \mathbf{x}^i + (1 + \alpha_1^i) \cdot \text{Block}\bigl(\gamma_1^i \cdot \text{LayerNorm}(\mathbf{x}^i) + \beta_1^i\bigr)$$</div></p>
+<p><strong>Policy Behavior Alignment（策略行为对齐）</strong>：这是 WMPO 的关键创新之一。世界模型先在 OXE（Open X-Embodiment，百万级机器人轨迹）上预训练，再在下游任务的策略自采数据上微调。这一步解决了专家演示与策略 rollout 之间的状态分布不匹配问题 —— 世界模型需要见过策略自己的失败模式才能忠实模拟。</p>
+<h3 id="24">2.4 奖励模型</h3>
+<ul>
+<li><strong>架构</strong>：VideoMAE-base 编码器 + 线性分类头</li>
+<li><strong>训练</strong>：二分类交叉熵，以轨迹末端 clip 为正样本，轨迹中间 clip 和失败轨迹 clip 为负样本；batch 内正负样本平衡</li>
+<li><strong>推理</strong>：对整个想象轨迹以 stride=1 滑动窗口扫描，任一时序窗口的预测概率超过阈值 <span class="math inline">$\tau_{\text{thr}}$</span> 即判定成功</li>
+<li><strong>效果</strong>：所有任务上 F1 &gt; 0.95</li>
+</ul>
+<h3 id="25-on-policy-grpo">2.5 On-Policy GRPO 优化</h3>
+<p>采用 GRPO（Group Relative Policy Optimization），关键设计选择：</p>
+<ul>
+<li><strong>组内相对优势</strong>：从同一初始状态采样 <span class="math inline">$G=8$</span> 条轨迹，用组内标准化计算优势：<span class="math inline">$\hat{A}_i = \frac{R_i - \text{mean}(\{R_i\})}{\text{std}(\{R_i\})}$</span></li>
+<li><strong>去除 KL 散度正则</strong>（遵循 DAPO）：不使用参考模型，减少显存消耗，鼓励策略探索</li>
+<li><strong>动态采样（Dynamic Sampling）</strong>：若一组轨迹全部成功或全部失败，丢弃该组重新采样 —— 避免梯度消失</li>
+<li><strong>不对称裁剪</strong>：<span class="math inline">$\epsilon_{\text{low}}=0.20$</span>，<span class="math inline">$\epsilon_{\text{high}}=0.28$</span></li>
+</ul>
+<p><div class="math display">$$\mathcal{J}(\theta) = \mathbb{E}\left[\frac{1}{G}\sum_{i=1}^G \frac{1}{T}\sum_{t=0}^{T} \min\!\Big(r_{i,t}(\theta)\hat{A}_i, \operatorname{clip}(r_{i,t}(\theta), 1-\epsilon_{\text{low}}, 1+\epsilon_{\text{high}})\hat{A}_i\Big)\right]$$</div></p>
+<hr />
+<h2 id="_3">三、实验与结果</h2>
+<h3 id="31">3.1 实验设置</h3>
+<ul>
+<li><strong>模拟环境</strong>：Mimicgen，4 个精细操控任务：Coffee_D0、StackThree_D0、ThreePieceAssembly_D0、Square_D0</li>
+<li><strong>基础策略</strong>：OpenVLA-OFT 在每任务 300 条专家演示上微调</li>
+<li><strong>Rollout 预算</strong>：<span class="math inline">$P=128$</span> 和 <span class="math inline">$P=1280$</span>，代表可用于优化的真实轨迹数量</li>
+<li><strong>评估</strong>：每任务 128 个不同初始状态，报告平均成功率</li>
+<li><strong>GPU</strong>：SFT 8×H100，世界模型和策略优化 32×H100</li>
+</ul>
+<h3 id="32">3.2 主要对比结果</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: center;">Rollout 预算</th>
+<th style="text-align: left;">方法</th>
+<th style="text-align: center;">Coffee</th>
+<th style="text-align: center;">StackThree</th>
+<th style="text-align: center;">ThreePieceAssembly</th>
+<th style="text-align: center;">Square</th>
+<th style="text-align: center;">平均</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center;"><em>—</em></td>
+<td style="text-align: left;"><em>Base Policy (SFT)</em></td>
+<td style="text-align: center;">43.8</td>
+<td style="text-align: center;">46.9</td>
+<td style="text-align: center;">19.5</td>
+<td style="text-align: center;">24.2</td>
+<td style="text-align: center;">33.6</td>
+</tr>
+<tr>
+<td style="text-align: center;">128</td>
+<td style="text-align: left;">GRPO</td>
+<td style="text-align: center;">38.3</td>
+<td style="text-align: center;">52.3</td>
+<td style="text-align: center;">17.2</td>
+<td style="text-align: center;">25.0</td>
+<td style="text-align: center;">33.2</td>
+</tr>
+<tr>
+<td style="text-align: center;">128</td>
+<td style="text-align: left;">DPO</td>
+<td style="text-align: center;">43.8</td>
+<td style="text-align: center;">53.9</td>
+<td style="text-align: center;">23.4</td>
+<td style="text-align: center;">28.1</td>
+<td style="text-align: center;">37.3</td>
+</tr>
+<tr>
+<td style="text-align: center;">128</td>
+<td style="text-align: left;"><strong>WMPO</strong></td>
+<td style="text-align: center;"><strong>61.7</strong></td>
+<td style="text-align: center;"><strong>56.3</strong></td>
+<td style="text-align: center;"><strong>37.5</strong></td>
+<td style="text-align: center;"><strong>32.8</strong></td>
+<td style="text-align: center;"><strong>47.1</strong></td>
+</tr>
+<tr>
+<td style="text-align: center;">1280</td>
+<td style="text-align: left;">GRPO</td>
+<td style="text-align: center;">47.7</td>
+<td style="text-align: center;">54.7</td>
+<td style="text-align: center;">20.3</td>
+<td style="text-align: center;">25.8</td>
+<td style="text-align: center;">37.1</td>
+</tr>
+<tr>
+<td style="text-align: center;">1280</td>
+<td style="text-align: left;">DPO</td>
+<td style="text-align: center;">52.3</td>
+<td style="text-align: center;">57.0</td>
+<td style="text-align: center;">26.7</td>
+<td style="text-align: center;">33.6</td>
+<td style="text-align: center;">42.4</td>
+</tr>
+<tr>
+<td style="text-align: center;">1280</td>
+<td style="text-align: left;"><strong>WMPO</strong></td>
+<td style="text-align: center;"><strong>75.0</strong></td>
+<td style="text-align: center;"><strong>64.1</strong></td>
+<td style="text-align: center;"><strong>46.1</strong></td>
+<td style="text-align: center;"><strong>45.3</strong></td>
+<td style="text-align: center;"><strong>57.6</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>关键发现</strong>：</p>
+<ol>
+<li><strong>小预算高效</strong>：<span class="math inline">$P=128$</span> 时 WMPO 比最强基线 DPO 高 +9.8 个百分点，比 base policy 高 +13.5 个百分点</li>
+<li><strong>扩展性强</strong>：预算从 128 增至 1280 时，WMPO 提升 +10.5 个百分点（47.1→57.6），DPO 仅提升 +5.1（37.3→42.4）</li>
+<li><strong>GRPO 在真实环境中受限</strong>：<span class="math inline">$P=128$</span> 时 GRPO 甚至低于 base policy（33.2 vs 33.6），因为在线 GRPO 需要大量实时交互，小预算下采样不足</li>
+</ol>
+<h3 id="33">3.3 涌现行为：自纠正</h3>
+<p><img alt="Figure 3：Square 任务（将方块插入立柱）的行为分析。基础策略（上排）碰到立柱后持续推挤直到超时失败；WMPO（下排）学会了抬起方块、重新对齐、正确插入——这是一从未在演示数据中出现过的自纠正行为。" src="assets/wmpo/behavior.jpg" /></p>
+<p><strong>自纠正行为分析</strong>：</p>
+<ul>
+<li><strong>基策略行为</strong>：当方块偏离正确轨迹与立柱碰撞时，基策略只知道继续向前推（模仿所见过的演示），最终超时失败</li>
+<li><strong>WMPO 行为</strong>：世界模型生成的"想象轨迹"中包含了大量碰撞、偏离等失败情形，策略通过学习哪些动作序列能获得成功奖励，涌现出"抬起→重新对齐→再插"的自纠正策略</li>
+<li><strong>为什么重要</strong>：这种能力无法通过单纯的模仿学习获得，因为它需要见过失败并从中学习恢复 —— 这正是 RL 的核心价值</li>
+</ul>
+<h3 id="34">3.4 轨迹效率提升</h3>
+<p><img alt="Figure 5：不同策略成功轨迹的相对平均长度（Base Policy = 100%）。WMPO 训练的轨迹显著更短，因为策略学会避免&quot;卡住&quot;的次优状态，不仅提高成功率也提升了执行效率。" src="assets/wmpo/length.jpg" /></p>
+<p>WMPO 成功轨迹的平均长度明显短于基策略。原因是 WMPO 抑制了"卡住"（stuck）行为 —— 该行为在 IL 中常见，不仅降低效率，还经常导致超时失败。更短的轨迹意味着策略执行更流畅、更高效。</p>
+<h3 id="35">3.5 泛化能力</h3>
+<p>WMPO 在三种分布偏移（Distribution Shift）下测试泛化：</p>
+<table><tr>
+<td width="33%"><img src="assets/wmpo/generalization_a.jpg" width="100%"><br><em>(a) 位置偏移（Position Disruption）：Square 任务，立柱位置从固定变为矩形内随机</em></td>
+<td width="33%"><img src="assets/wmpo/generalization_b.jpg" width="100%"><br><em>(b) 背景偏移（Background Disruption）：StackThree 任务，桌面换为灰色背景</em></td>
+<td width="33%"><img src="assets/wmpo/generalization_c.jpg" width="100%"><br><em>(c) 纹理偏移（Texture Disruption）：ThreePieceAssembly 任务，红色底座换为深色木纹</em></td>
+</tr></table>
+
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th style="text-align: center;">位置偏移</th>
+<th style="text-align: center;">背景偏移</th>
+<th style="text-align: center;">纹理偏移</th>
+<th style="text-align: center;">平均</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Base Policy</td>
+<td style="text-align: center;">14.1</td>
+<td style="text-align: center;">46.1</td>
+<td style="text-align: center;">10.9</td>
+<td style="text-align: center;">23.7</td>
+</tr>
+<tr>
+<td>GRPO</td>
+<td style="text-align: center;">15.6</td>
+<td style="text-align: center;">47.7</td>
+<td style="text-align: center;">10.9</td>
+<td style="text-align: center;">24.7</td>
+</tr>
+<tr>
+<td>DPO</td>
+<td style="text-align: center;">16.4</td>
+<td style="text-align: center;">34.4</td>
+<td style="text-align: center;">7.8</td>
+<td style="text-align: center;">19.5</td>
+</tr>
+<tr>
+<td><strong>WMPO</strong></td>
+<td style="text-align: center;"><strong>22.3</strong></td>
+<td style="text-align: center;"><strong>50.0</strong></td>
+<td style="text-align: center;"><strong>16.4</strong></td>
+<td style="text-align: center;"><strong>29.6</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>关键发现</strong>：DPO 虽然在分布内有所提升，但在背景和纹理偏移下<strong>退化</strong>（甚至低于 base policy），说明它可能学到了对特定视觉线索的过拟合；WMPO 在三种偏移下全部最优，证明了在世界模型中训练有助于学到更泛化的操控技能。</p>
+<h3 id="36-lifelong-learning">3.6 终身学习（Lifelong Learning）</h3>
+<p><img alt="Figure 6：StackThree 任务上的终身学习。WMPO 通过迭代收集真实轨迹→世界模型优化→更新策略→重新收集，实现了稳定的持续改进。DPO 无法迭代提升（训练不稳定），而 base policy 即使用更多专家演示也提升有限。" src="assets/wmpo/lifelong.jpg" /></p>
+<ul>
+<li>每轮收集 <span class="math inline">$P=128$</span> 真实轨迹 → WMPO 优化策略 → 用新策略收集下一轮数据</li>
+<li>WMPO 三轮后稳定提升，DPO 由于离线训练的固有不稳定性无法迭代改进</li>
+<li>Base Policy 即使使用 556 条专家演示（vs 基础 300 条），提升也远不及 WMPO —— 说明自动探索比增加演示更有效</li>
+</ul>
+<h3 id="37">3.7 真机实验</h3>
+<p><img alt="Figure 7：真机实验（&quot;将方块插入立柱&quot;，间隙仅 5mm）。上排：基策略在真实环境中的执行；下排：世界模型对同一初始状态的&quot;想象&quot;预测。尽管从未见过这条轨迹，世界模型准确预测了未来演化。Base / DPO / WMPO 的 30 次试验成功率分别为 53% / 60% / 70%。" src="assets/wmpo/real_success.jpg" /></p>
+<ul>
+<li><strong>平台</strong>：Cobot Mobile ALOHA</li>
+<li><strong>任务</strong>：高精度插入（方块与立柱间隙仅 5mm）</li>
+<li><strong>结果</strong>：Base 53% → DPO 60% → WMPO <strong>70%</strong></li>
+<li><strong>世界模型保真度</strong>：即使在从未见过的场景中，世界模型也能准确预测物体交互和运动</li>
+</ul>
+<hr />
+<h2 id="_4">四、关键洞察与技术亮点</h2>
+<ol>
+<li>
+<p><strong>像素空间 &gt; 潜空间</strong>：WMPO 坚持在像素空间生成视频，而非像 Dreamer 系列那样在潜空间学动力学。理由是 VLA 的视觉编码器用海量互联网图片预训练，包含丰富的语义理解 —— 在潜空间中重新训练会导致表征失配</p>
+</li>
+<li>
+<p><strong>Policy Behavior Alignment 是必需组件</strong>：仅用专家演示训练世界模型无法模拟策略可能遇到的失败状态，必须用策略自身的 rollout 数据微调世界模型</p>
+</li>
+<li>
+<p><strong>噪声条件帧</strong>：自回归视频预测中，先前生成的帧带有伪影和误差，使用干净的帧作为条件会导致训练-推理分布不一致。给条件帧加噪声（50/1000 步扩散噪声）让模型学会容忍不完美的条件输入</p>
+</li>
+<li>
+<p><strong>GRPO + 世界模型 = 天然匹配</strong>：GRPO 要求从同一初始状态采样多条轨迹来计算组内相对优势，这在真实世界中几乎不可能（无法精确复现同一初始状态），但在世界模型中可以轻松重复采样</p>
+</li>
+<li>
+<p><strong>自纠正 = RL 价值的体现</strong>：WMPO 涌现的自纠正行为是论文最有力的定性证据 —— 策略学会了演示数据中完全没有的动作模式（抬起→对齐→再插），证明了 RL 相对于 IL 的本质优势</p>
+</li>
+<li>
+<p><strong>终身学习闭环</strong>：WMPO 支持策略→收集→世界模型更新→策略优化的迭代循环，这是真实环境中难以实现的</p>
+</li>
+</ol>
+<hr />
+<h2 id="_5">五、代码实现解读</h2>
+<p>WMPO 代码基于三个开源项目构建：<strong>verl</strong>（RL 训练框架）、<strong>OpenSora</strong>（世界模型）、<strong>OpenVLA-OFT</strong>（VLA 策略）。</p>
+<h3 id="51">5.1 系统架构</h3>
+<div class="codehilite"><pre><span></span><code>┌──────────────────────────────────────────────────────────────────────────────┐
+│                           WMPO Training System                                │
+├──────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  ┌─────────────────────── Ray Cluster ───────────────────────────────────┐   │
+│  │                                                                       │   │
+│  │  ┌─────────────────┐   ┌─────────────────┐   ┌─────────────────┐     │   │
+│  │  │ RobWMActorRollout│   │  CriticWorker   │   │ RobWMActorRollout│     │   │
+│  │  │   Worker (GPU)   │   │    (GPU)         │   │   (RefPolicy)    │     │   │
+│  │  │                  │   │                  │   │                  │     │   │
+│  │  │ ┌─────────────┐  │   │ ┌─────────────┐  │   │ ┌─────────────┐  │     │   │
+│  │  │ │ VLA Policy  │  │   │ │Value Network│  │   │ │ Old Policy  │  │     │   │
+│  │  │ │ (OpenVLA)   │  │   │ │  (optional)  │  │   │ │  (frozen)   │  │     │   │
+│  │  │ └─────────────┘  │   │ └─────────────┘  │   │ └─────────────┘  │     │   │
+│  │  │ ┌─────────────┐  │   │                  │   │                  │     │   │
+│  │  │ │ World Model │  │   │                  │   │                  │     │   │
+│  │  │ │(OpenSora)   │  │   │                  │   │                  │     │   │
+│  │  │ └─────────────┘  │   │                  │   │                  │     │   │
+│  │  │ ┌─────────────┐  │   │                  │   │                  │     │   │
+│  │  │ │ Reward Model│  │   │                  │   │                  │     │   │
+│  │  │ │ (VideoMAE)  │  │   │                  │   │                  │     │   │
+│  │  │ └─────────────┘  │   │                  │   │                  │     │   │
+│  │  └─────────────────┘   └─────────────────┘   └─────────────────┘     │   │
+│  └───────────────────────────────────────────────────────────────────────┘   │
+│                                                                              │
+│  关键文件映射:                                                                 │
+│  ├── verl/trainer/main_ppo.py            # 训练入口，配置 Ray + Worker         │
+│  ├── verl/workers/rollout/robwm_rollout.py  # 世界模型 rollout（核心）         │
+│  ├── verl/workers/rollout/rob_rollout.py    # 真实环境 rollout（baseline）      │
+│  ├── verl/workers/fsdp_workers.py        # FSDP 分布式 Worker 实现             │
+│  ├── verl/trainer/ppo/core_algos.py      # GRPO 核心算法                       │
+│  ├── verl/trainer/ppo/ray_trainer.py     # Ray 分布式训练调度                   │
+│  └── reward_model/videomae.py            # 奖励模型训练                         │
+└──────────────────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="52-rollout-robwm_rolloutpy">5.2 世界模型 Rollout 流程（robwm_rollout.py）</h3>
+<p>这是 WMPO 的核心代码，<code>RobWMHFRollout</code> 类实现了"在想象中做 RL"的完整流程：</p>
+<div class="codehilite"><pre><span></span><code>  初始状态 s₀ ────┐
+                 │
+   ┌─────────────▼─────────────┐
+   │ 1) encode(s₀) → VAE latent│
+   │    image_history = repeat │
+   │      (latent, queue_len)  │
+   └─────────────┬─────────────┘
+                 │
+   ┌─────────────▼─────────────┐
+   │ 2) VLA π_θ(current_frame) │   _generate_one_step()
+   │    → action chunk (8 dim)  │   论文: 公式 π_θ(a_t|s_t)
+   └─────────────┬─────────────┘
+                 │
+   ┌─────────────▼─────────────┐
+   │ 3) World Model p_φ:       │   scheduler.sample(
+   │    z = concat(history,     │     model=world_model,
+   │         noise)             │     y=actions,
+   │    latent = denoise(z|     │     mask=[0..0,1..1])
+   │             action)        │   论文: 公式 I~p_φ(I|c,a)
+   │    frame = vae.decode()    │
+   └─────────────┬─────────────┘
+                 │
+                 ▼  重复直到 max_steps
+                 │
+   ┌─────────────▼─────────────┐
+   │ 4) Reward Model R_ψ:      │   predict_success()
+   │    slide_window(video)     │   滑动窗口 L=w=8, stride=1
+   │    → complete / fail       │   论文: 二值分类 R_ψ(τ)∈{0,1}
+   └─────────────┬─────────────┘
+                 │
+   ┌─────────────▼─────────────┐
+   │ 5) GRPO Update:            │   core_algos.py
+   │    adv = (R-mean)/std       │   论文: 公式 Eq.(4)
+   │    loss = clip_ratio * adv  │
+   └───────────────────────────┘
+</code></pre></div>
+
+<p><strong>代码关键函数映射</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>论文公式/概念</th>
+<th>代码位置</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>想象轨迹生成 (Eq.1)</td>
+<td><code>robwm_rollout.py:run_wm_inference()</code></td>
+</tr>
+<tr>
+<td>世界模型条件扩散</td>
+<td><code>robwm_rollout.py:339-395</code>（scheduler.sample + vae.decode）</td>
+</tr>
+<tr>
+<td>帧级动作控制 (Eq.2)</td>
+<td>OpenSora 的 AdaLN 扩展（在 world model 的 transformer block 中）</td>
+</tr>
+<tr>
+<td>奖励模型推理</td>
+<td><code>robwm_rollout.py:predict_success()</code></td>
+</tr>
+<tr>
+<td>GRPO 目标 (Eq.3+4)</td>
+<td><code>core_algos.py</code> + <code>ray_trainer.py</code></td>
+</tr>
+<tr>
+<td>动态采样（DAPO 策略）</td>
+<td><code>ray_trainer.py</code>（过滤全成功/全失败组）</td>
+</tr>
+<tr>
+<td>Policy Behavior Alignment</td>
+<td>世界模型在 <code>train_wmpo_*.sh</code> 的训练脚本中实现</td>
+</tr>
+</tbody>
+</table>
+<h3 id="53-videomaepy">5.3 奖励模型训练（videomae.py）</h3>
+<ul>
+<li><strong>数据构造</strong>：<code>SuccessWindowDataset</code> 类从 webdataset tar 中提取滑动窗口 clips<ul>
+<li>正样本：轨迹末端 <span class="math inline">$[T-W, T]$</span> 的 clip（label=1，仅成功轨迹）</li>
+<li>负样本：轨迹中间窗口（<span class="math inline">$[T-S, W-1]$</span> 范围）的 clips + 失败轨迹的任意 clips</li>
+</ul>
+</li>
+<li><strong>训练</strong>：DDP，每 1000 步验证一次，grid search 确定最优阈值 <span class="math inline">$\tau_{\text{thr}}$</span></li>
+</ul>
+<h3 id="54-rollout">5.4 双模式 Rollout</h3>
+<p>WMPO 代码同时支持两种 rollout 模式：</p>
+<table>
+<thead>
+<tr>
+<th>模式</th>
+<th>Worker 类</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>世界模型 Rollout</strong></td>
+<td><code>RobWMActorRolloutRefWorker</code> (继承 <code>RobWMHFRollout</code>)</td>
+<td>WMPO 主线：在"想象"中训练</td>
+</tr>
+<tr>
+<td><strong>真实环境 Rollout</strong></td>
+<td><code>RobActorRolloutRefWorker</code> (继承 <code>RobHFRollout</code>)</td>
+<td>基线（GRPO）：在 Mimicgen 仿真中直接交互</td>
+</tr>
+</tbody>
+</table>
+<p>切换方式：配置 <code>actor_rollout_ref.wm.enable = true/false</code>（见 <code>main_ppo.py:153</code>）。</p>
+<hr />
+<h2 id="_6">六、局限性</h2>
+<ol>
+<li><strong>动作表征</strong>：当前仅支持离散化动作（每维 256 bins），未扩展到 flow-matching 等连续/更表达性的策略类（如 π₀）</li>
+<li><strong>计算开销</strong>：世界模型预训练需 1200 万步（32×H100），总体资源需求相当可观。不过论文指出，相比真实机器人 rollout 的成本（不可扩展、有安全风险），算力是可灵活扩展的资源</li>
+<li><strong>基线覆盖</strong>：仅对比 GRPO 和 DPO，缺少与 DreamerV3 等潜空间世界模型方法的对比。但这部分是由于现有潜空间方法不直接兼容 VLA 设置</li>
+</ol>
+<hr />
+<h2 id="_7">七、关键概念速查</h2>
+<table>
+<thead>
+<tr>
+<th>概念</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>WMPO</strong></td>
+<td>在视频生成世界模型中进行 on-policy VLA RL，无需真实环境交互</td>
+</tr>
+<tr>
+<td><strong>Policy Behavior Alignment</strong></td>
+<td>用策略自己的 rollout 数据微调世界模型，解决专家演示与策略行为的状态分布不匹配</td>
+</tr>
+<tr>
+<td><strong>Noisy Frame Conditioning</strong></td>
+<td>训练时对条件帧加扩散噪声，提升自回归预测的鲁棒性</td>
+</tr>
+<tr>
+<td><strong>Frame-Level Action Control</strong></td>
+<td>扩展 AdaLN，以帧粒度注入动作信号，确保长序列中的动作-帧对齐</td>
+</tr>
+<tr>
+<td><strong>VideoMAE Reward Model</strong></td>
+<td>以滑动窗口扫描想象视频，输出轨迹成功/失败的二值判断（F1&gt;0.95）</td>
+</tr>
+<tr>
+<td><strong>GRPO (Group Relative Policy Optimization)</strong></td>
+<td>从同一初始状态采样多条轨迹，用组内相对优势做策略优化</td>
+</tr>
+<tr>
+<td><strong>Dynamic Sampling (DAPO)</strong></td>
+<td>丢弃全成功/全失败的轨迹组（梯度为零），重新采样</td>
+</tr>
+<tr>
+<td><strong>SDXL 2D VAE</strong></td>
+<td>替代 OpenSora 的 3D VAE，保留更好的细粒度运动细节</td>
+</tr>
+<tr>
+<td><strong>Mimicgen</strong></td>
+<td>仿真基准，包含 4 个精细操控任务</td>
+</tr>
+<tr>
+<td><strong>OXE</strong></td>
+<td>Open X-Embodiment 数据集，用于世界模型预训练</td>
+</tr>
+</tbody>
+</table>
+  </div>
+</main>
+
+
+<script>
+(function() {
+  const sidebar = document.getElementById('sidebar');
+  const links = sidebar.querySelectorAll('a');
+  const headings = document.querySelectorAll('h1[id], h2[id], h3[id], h4[id]');
+  if (headings.length === 0) return;
+
+  const linkMap = new Map();
+  links.forEach(function(a) {
+    const href = a.getAttribute('href');
+    if (href && href.startsWith('#')) linkMap.set(href.slice(1), a);
+  });
+
+  function onScroll() {
+    let currentId = null;
+    const scrollTop = window.scrollY + 80;
+    headings.forEach(function(h) { if (h.offsetTop <= scrollTop) currentId = h.id; });
+    links.forEach(function(a) { a.classList.remove('active'); });
+    if (currentId && linkMap.has(currentId)) {
+      const el = linkMap.get(currentId);
+      el.classList.add('active');
+      const sr = sidebar.getBoundingClientRect();
+      const er = el.getBoundingClientRect();
+      if (er.bottom > sr.bottom || er.top < sr.top) {
+        el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+    }
+  }
+
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+})();
+</script>
+
+</body>
+</html>
