@@ -210,7 +210,6 @@
   </div>
 </header>
 
-<div class="pagination" id="pagination-top"></div>
 
 <div class="date-group">
   <div class="date-label">2026-05-25</div>
@@ -408,7 +407,6 @@
       html += (p === page) ? '<span class="current">' + p + '</span>' : '<a href="#' + p + '">' + p + '</a>';
     }
     html += (page < totalPages) ? '<a href="#' + (page + 1) + '">下一页 &rarr;</a>' : '<span class="disabled">下一页 &rarr;</span>';
-    document.getElementById('pagination-top').innerHTML = html;
     document.getElementById('pagination-bottom').innerHTML = html;
     currentPage = page;
   }
