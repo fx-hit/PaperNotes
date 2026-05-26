@@ -35,6 +35,7 @@ from pathlib import Path
 MODE = sys.argv[1]
 ROOT = Path.cwd()
 TAG_PAGE_MIN_COUNT = 2
+
 TAG_ALIASES = {
     "World Action Model": "WAM",
     "World-Action Model": "WAM",
@@ -314,6 +315,53 @@ INDEX_EXTRA_STYLE = """
     font-size: 0.75rem;
     color: #9ca3af;
     margin-left: 8px;
+  }
+
+  .pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+    margin: 36px 0;
+    flex-wrap: wrap;
+  }
+  .pagination a,
+  .pagination .current,
+  .pagination .disabled,
+  .pagination span.page-info {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 36px;
+    padding: 0 12px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    text-decoration: none;
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    background: var(--card-bg);
+    transition: all 0.15s;
+  }
+  .pagination a:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .pagination .current {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .pagination .disabled {
+    opacity: 0.35;
+    pointer-events: none;
+  }
+  .pagination span.page-info {
+    border: none;
+    background: none;
+    font-size: 0.8rem;
+    color: #9ca3af;
+    margin-right: 8px;
   }"""
 
 
@@ -517,7 +565,75 @@ def note_meta(note: Note, include_reading: bool, include_updated: bool) -> str:
     return meta
 
 
+def index_page_script() -> list[str]:
+    return [
+        "<script>",
+        "(function() {",
+        "  var PAGE_SIZE = 10;",
+        "  var cards = document.querySelectorAll('.paper-card');",
+        "  var total = cards.length;",
+        "  if (total === 0) return;",
+        "  var totalPages = Math.ceil(total / PAGE_SIZE);",
+        "  if (totalPages <= 1) {",
+        "    var ph = document.querySelectorAll('.pagination');",
+        "    for (var i = 0; i < ph.length; i++) ph[i].style.display = 'none';",
+        "    return;",
+        "  }",
+        "",
+        "  function getPage() {",
+        "    var m = window.location.hash.match(/^#(\\d+)$/);",
+        "    if (m) {",
+        "      var p = parseInt(m[1], 10);",
+        "      if (p >= 1 && p <= totalPages) return p;",
+        "    }",
+        "    if (window.location.hash) {",
+        "      history.replaceState(null, '', window.location.pathname);",
+        "    }",
+        "    return 1;",
+        "  }",
+        "",
+        "  var currentPage = getPage();",
+        "",
+        "  function showPage(page) {",
+        "    var start = (page - 1) * PAGE_SIZE;",
+        "    var end = Math.min(page * PAGE_SIZE, total);",
+        "    for (var i = 0; i < cards.length; i++) {",
+        "      cards[i].style.display = (i >= start && i < end) ? '' : 'none';",
+        "    }",
+        "    var groups = document.querySelectorAll('.date-group');",
+        "    for (var g = 0; g < groups.length; g++) {",
+        "      var gc = groups[g].querySelectorAll('.paper-card');",
+        "      var allHidden = true;",
+        "      for (var c = 0; c < gc.length; c++) {",
+        "        if (gc[c].style.display !== 'none') { allHidden = false; break; }",
+        "      }",
+        "      groups[g].style.display = allHidden ? 'none' : '';",
+        "    }",
+        "    var info = '第 ' + page + ' 页 / 共 ' + totalPages + ' 页（' + (start + 1) + '-' + end + ' / ' + total + ' 篇）';",
+        "    var html = '<span class=\"page-info\">' + info + '</span>';",
+        "    html += (page > 1) ? '<a href=\"#' + (page - 1) + '\">&larr; 上一页</a>' : '<span class=\"disabled\">&larr; 上一页</span>';",
+        "    for (var p = 1; p <= totalPages; p++) {",
+        "      html += (p === page) ? '<span class=\"current\">' + p + '</span>' : '<a href=\"#' + p + '\">' + p + '</a>';",
+        "    }",
+        "    html += (page < totalPages) ? '<a href=\"#' + (page + 1) + '\">下一页 &rarr;</a>' : '<span class=\"disabled\">下一页 &rarr;</span>';",
+        "    document.getElementById('pagination-top').innerHTML = html;",
+        "    document.getElementById('pagination-bottom').innerHTML = html;",
+        "    currentPage = page;",
+        "  }",
+        "",
+        "  showPage(currentPage);",
+        "",
+        "  window.addEventListener('hashchange', function() {",
+        "    var p = getPage();",
+        "    if (p !== currentPage) showPage(p);",
+        "  });",
+        "})();",
+        "</script>",
+    ]
+
+
 def render_index(notes: list[Note]) -> str:
+    ordered = chronological_notes(notes)
     lines = document_head("PaperNotes — 论文阅读笔记", INDEX_EXTRA_STYLE)
     lines += header(
         "一个由人类审阅、Claude Code 和 Codex 协作更新的论文阅读笔记站。",
@@ -525,8 +641,10 @@ def render_index(notes: list[Note]) -> str:
         "Agent 负责生成初稿和维护页面，我负责检查理解是否正确、指出问题并推动修改。这里不是自动摘要合集，而是人类判断与 AI 执行力共同产出的阅读记录。",
     )
 
+    lines.append('<div class="pagination" id="pagination-top"></div>')
+
     current_date = None
-    for note in chronological_notes(notes):
+    for note in ordered:
         if note.date != current_date:
             if current_date is not None:
                 lines.append("</div>")
@@ -553,6 +671,8 @@ def render_index(notes: list[Note]) -> str:
     if current_date is not None:
         lines.append("</div>")
 
+    lines.append('<div class="pagination" id="pagination-bottom"></div>')
+    lines += index_page_script()
     lines += footer()
     return "\n".join(lines) + "\n"
 
@@ -569,7 +689,11 @@ def render_tags(notes: list[Note]) -> str:
     anchors = {tag: tag_anchor(tag, used_anchors) for tag in tags}
 
     lines = document_head("按标签浏览 — PaperNotes", TAGS_EXTRA_STYLE)
-    lines += header("按论文标签分组浏览", "tags")
+    lines += header(
+        "一个由人类审阅、Claude Code 和 Codex 协作更新的论文阅读笔记站。",
+        "tags",
+        "Agent 负责生成初稿和维护页面，我负责检查理解是否正确、指出问题并推动修改。这里不是自动摘要合集，而是人类判断与 AI 执行力共同产出的阅读记录。",
+    )
 
     lines.append('<div class="tag-nav" id="top">')
     for tag in tags:
@@ -616,4 +740,5 @@ elif MODE == "--tags":
 elif MODE == "--site":
     (ROOT / "index.html").write_text(render_index(notes), encoding="utf-8")
     (ROOT / "tags.html").write_text(render_tags(notes), encoding="utf-8")
+    print(f"Wrote index.html + tags.html, {len(notes)} notes")
 PY
