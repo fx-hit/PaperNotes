@@ -616,7 +616,6 @@ def index_page_script() -> list[str]:
         "      html += (p === page) ? '<span class=\"current\">' + p + '</span>' : '<a href=\"#' + p + '\">' + p + '</a>';",
         "    }",
         "    html += (page < totalPages) ? '<a href=\"#' + (page + 1) + '\">下一页 &rarr;</a>' : '<span class=\"disabled\">下一页 &rarr;</span>';",
-        "    document.getElementById('pagination-top').innerHTML = html;",
         "    document.getElementById('pagination-bottom').innerHTML = html;",
         "    currentPage = page;",
         "  }",
@@ -640,8 +639,6 @@ def render_index(notes: list[Note]) -> str:
         "index",
         "Agent 负责生成初稿和维护页面，我负责检查理解是否正确、指出问题并推动修改。这里不是自动摘要合集，而是人类判断与 AI 执行力共同产出的阅读记录。",
     )
-
-    lines.append('<div class="pagination" id="pagination-top"></div>')
 
     current_date = None
     for note in ordered:
