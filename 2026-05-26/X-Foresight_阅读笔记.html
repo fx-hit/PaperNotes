@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>X-Foresight: A Joint Vision-Action Causal Forecasting Network via Predictive World Modeling</title>
+<!-- arxiv: 2605.24892 -->
+<!-- venue: NeurIPS 2025（投稿中） -->
+<!-- tags: 自动驾驶, VLA, 世界模型, 视频生成 -->
+<!-- words-zh: 7812 -->
+<!-- words-en: 878 -->
+<!-- reading-time: 27 -->
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #ffffff;
+    --text: #1a1a2e;
+    --text-secondary: #555;
+    --border: #e1e4e8;
+    --link: #0969da;
+    --table-stripe: #f6f8fa;
+    --heading: #0d1117;
+    --blockquote-border: #0969da;
+    --blockquote-bg: #f0f6ff;
+    --inline-code: #d73a49;
+    --inline-code-bg: #f6f8fa;
+    --sidebar-width: 260px;
+    --toc-active: #0969da;
+    --content-max-width: 900px;
+    --content-padding: 48px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "Inter", "Noto Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 16px;
+    line-height: 1.75;
+    color: var(--text);
+    background: var(--bg);
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    width: var(--sidebar-width);
+    overflow-y: auto;
+    padding: 28px 20px 40px;
+    background: #fafbfc;
+    border-right: 1px solid var(--border);
+    z-index: 10;
+    scrollbar-width: thin;
+  }
+  .sidebar-title {
+    font-size: 13px; font-weight: 700; color: var(--text-secondary);
+    margin-bottom: 16px; letter-spacing: 0.06em; text-transform: uppercase;
+  }
+  .toc-list { list-style: none; padding: 0; margin: 0; }
+  .toc-list ul { list-style: none; padding-left: 14px; }
+  .toc-list li { margin: 1px 0; }
+  .toc-list a {
+    display: block; padding: 4px 12px; font-size: 13.5px; line-height: 1.45;
+    color: var(--text-secondary); text-decoration: none; border-radius: 4px;
+    border-left: 2px solid transparent; transition: all 0.15s;
+  }
+  .toc-list a:hover { color: var(--link); background: #e8f0fe; }
+  .toc-list a.active {
+    color: var(--toc-active); font-weight: 600;
+    border-left-color: var(--toc-active); background: #e8f0fe;
+  }
+  .toc-h1 a { font-weight: 600; color: var(--heading); font-size: 14px; }
+  .toc-h3 a { padding-left: 24px; font-size: 13px; }
+  .toc-h4 a { padding-left: 36px; font-size: 12.5px; }
+  .toc-empty { color: var(--text-secondary); font-size: 13px; font-style: italic; }
+
+  .main-wrapper {
+    margin-left: var(--sidebar-width);
+    min-height: 100vh;
+    display: flex; justify-content: center;
+  }
+  .content-inner {
+    width: 100%;
+    max-width: var(--content-max-width);
+    padding: 40px var(--content-padding) 80px;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    color: var(--heading); font-weight: 700; line-height: 1.3;
+    margin-top: 2em; margin-bottom: 0.6em; scroll-margin-top: 24px;
+  }
+  h1 { font-size: 2em; border-bottom: 2px solid var(--border); padding-bottom: 0.3em; margin-top: 0; }
+  h2 { font-size: 1.5em; border-bottom: 1px solid var(--border); padding-bottom: 0.25em; }
+  h3 { font-size: 1.25em; }
+  h4 { font-size: 1.1em; }
+  p { margin-bottom: 1em; }
+  a { color: var(--link); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  strong { font-weight: 600; }
+
+  blockquote {
+    border-left: 4px solid var(--blockquote-border);
+    background: var(--blockquote-bg);
+    padding: 12px 20px; margin: 1em 0;
+    border-radius: 0 6px 6px 0; color: var(--text-secondary);
+  }
+  blockquote p:last-child { margin-bottom: 0; }
+
+  code {
+    font-family: "JetBrains Mono", "SF Mono", "Fira Code", monospace;
+    font-size: 0.875em; background: var(--inline-code-bg);
+    padding: 2px 6px; border-radius: 4px; color: var(--inline-code);
+  }
+  pre {
+    background: #1e1e2e; color: #cdd6f4;
+    border-radius: 8px; padding: 16px 20px; overflow-x: auto;
+    margin: 1em 0; font-size: 14px; line-height: 1.55;
+  }
+  pre code { background: none; padding: 0; border-radius: 0; color: inherit; font-size: inherit; }
+
+  .codehilite { background: #1e1e2e; border-radius: 8px; padding: 16px 20px; overflow-x: auto; margin: 1em 0; }
+  .codehilite pre { background: none; padding: 0; margin: 0; border-radius: 0; }
+  .codehilite .hll { background-color: #2a2a3e; }
+  .codehilite .c  { color: #6c7086; font-style: italic; }
+  .codehilite .k  { color: #cba6f7; }
+  .codehilite .o  { color: #89b4fa; }
+  .codehilite .s  { color: #a6e3a1; }
+  .codehilite .n  { color: #cdd6f4; }
+  .codehilite .p  { color: #bac2de; }
+  .codehilite .mi { color: #fab387; }
+  .codehilite .nf { color: #89b4fa; }
+  .codehilite .nb { color: #f38ba8; }
+  .codehilite .nc { color: #f9e2af; }
+  .codehilite .bp { color: #f38ba8; }
+
+  table { width: 100%; border-collapse: collapse; margin: 1em 0; font-size: 0.925em; }
+  th, td { border: 1px solid var(--border); padding: 10px 14px; text-align: left; }
+  th { background: var(--table-stripe); font-weight: 600; color: var(--heading); }
+  tr:nth-child(even) td { background: var(--table-stripe); }
+
+  .math.display { display: block; overflow-x: auto; padding: 12px 0; margin: 1em 0; }
+  ul, ol { padding-left: 1.5em; margin-bottom: 1em; }
+  li { margin-bottom: 0.3em; }
+  hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+  img { max-width: 100%; height: auto; border-radius: 6px; margin: 0; }
+  p:has(img) { text-align: center; margin-top: 0.6em; margin-bottom: 0; }
+  p:has(img) + p { text-align: center; font-size: 0.9em; color: var(--text-secondary); margin-top: 0.15em; margin-bottom: 0.6em; }
+  .mermaid { text-align: center; margin: 1.5em 0; background: #fafbfc; border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+  .article-stats {
+    font-size: 0.85rem; color: var(--text-secondary);
+    padding: 10px 18px; margin-bottom: 28px;
+    background: #f8f9fa; border: 1px solid var(--border); border-radius: 8px;
+  }
+
+  @media (max-width: 1024px) {
+    .sidebar { position: static; width: 100%; height: auto; max-height: 35vh; border-right: none; border-bottom: 1px solid var(--border); }
+    .main-wrapper { margin-left: 0; display: block; }
+    .content-inner { max-width: none; padding: 24px 20px 60px; }
+  }
+</style>
+
+<script>
+MathJax = {
+  tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']], processEscapes: true, tags: 'none' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] }
+};
+</script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  mermaid.initialize({ startOnLoad: true, theme: 'neutral', securityLevel: 'loose' });
+});
+</script>
+
+</head>
+<body>
+
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-title">目录</div>
+  <ul class="toc-list">
+<li class="toc-h1"><a href="#x-foresight-a-joint-vision-action-causal-forecasting-network-via-predictive-world-modeling">X-Foresight: A Joint Vision-Action Causal Forecasting Network via Predictive World Modeling</a>
+<ul>
+</li>
+<li class="toc-h2"><a href="#_1">一、核心问题</a>
+</li>
+<li class="toc-h2"><a href="#_2">二、核心思路 / 方法</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#21-long-horizon-chunk-wise-auto-regressive-strategy">2.1 Long-Horizon Chunk-Wise Auto-Regressive Strategy</a>
+</li>
+<li class="toc-h3"><a href="#22-multi-modal-prompt-design">2.2 Multi-Modal Prompt Design</a>
+</li>
+<li class="toc-h3"><a href="#23-three-stage-training-pipeline">2.3 Three-Stage Training Pipeline</a>
+</li>
+<li class="toc-h3"><a href="#24">2.4 关键训练设计</a>
+<ul>
+</li>
+<li class="toc-h4"><a href="#curriculum-learning">Curriculum Learning（课程学习）</a>
+</li>
+<li class="toc-h4"><a href="#temporal-importance-sampling">Temporal Importance Sampling（时间重要性采样）</a>
+</li>
+<li class="toc-h4"><a href="#semi-causal-block-sparse-attention-bsa">Semi-Causal Block-Sparse Attention (BSA)</a>
+</ul></li>
+</li>
+<li class="toc-h3"><a href="#25">2.5 训练目标</a>
+</li>
+<li class="toc-h3"><a href="#26-vision-renderer">2.6 Vision Renderer</a>
+</li>
+<li class="toc-h3"><a href="#27">2.7 推理流程</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_3">三、实验与结果</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#31">3.1 评估指标</a>
+</li>
+<li class="toc-h3"><a href="#32">3.2 训练视界的影响</a>
+</li>
+<li class="toc-h3"><a href="#33-clclef-tis">3.3 CL、CLEF 和 TIS 消融实验</a>
+</li>
+<li class="toc-h3"><a href="#34-production-scale">3.4 Production-Scale 最终对比</a>
+</li>
+<li class="toc-h3"><a href="#35">3.5 定性结果</a>
+</li>
+<li class="toc-h3"><a href="#36-vision-renderer">3.6 Vision Renderer 生成质量</a>
+</li>
+<li class="toc-h3"><a href="#37-bsa">3.7 BSA 加速</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_4">四、关键洞察与技术亮点</a>
+</li>
+<li class="toc-h2"><a href="#_5">五、局限性</a>
+</li>
+<li class="toc-h2"><a href="#_6">六、关键概念速查</a>
+</ul></li>
+</li></ul>
+</nav>
+
+<main class="main-wrapper">
+  <div class="content-inner" id="main-content">
+<h1 id="x-foresight-a-joint-vision-action-causal-forecasting-network-via-predictive-world-modeling">X-Foresight: A Joint Vision-Action Causal Forecasting Network via Predictive World Modeling</h1>
+<div class="article-stats">7,812 字 · English 878 词 · 约 27 分钟阅读</div>
+
+<blockquote>
+<p><strong>论文信息</strong>
+- 作者：PWM Team, XPeng Inc.（小鹏汽车）
+- 通讯作者 / Advisor：Yu Zhang, Xianming Liu
+- 项目负责人：Zhuangzhuang Ding, Pengkun Zheng
+- 核心贡献者（按字母序）：Baolu Li, Jingyu Qian, Rui Guo, Yilun Chen
+- 投稿方向：NeurIPS 2025（投稿中）
+- arXiv ID：2605.24892
+- 项目页面：https://x-foresight-1.github.io
+- 代码：未提供</p>
+</blockquote>
+<hr />
+<h2 id="_1">一、核心问题</h2>
+<p>当前的 Vision-Language-Action (VLA) 模型<strong>本质上是反应式的（reactive）</strong>：它们基于历史观测直接输出控制信号，缺乏对物理世界未来状态的内部模拟能力。这种"无远见"的局限导致模型无法：</p>
+<ol>
+<li><strong>预判碰撞</strong>：不能提前模拟未来场景来规避危险。</li>
+<li><strong>处理长程因果</strong>：无法理解"当前决策 → 几秒后的世界状态"之间的因果链。</li>
+<li><strong>在复杂场景中稳健规划</strong>：如环岛多出口导航、红绿灯变化前的预判。</li>
+</ol>
+<p>论文的核心洞察是：<strong>视频是物理世界知识的主要载体</strong>——它同时编码了低级视觉细节（纹理、形状）和高级语义信息（运动模式、交通参与者行为）。如果能从视频数据中学习预测未来画面（world modeling），VLA 就能内化物理动力学和长程因果关系。</p>
+<p>然而，直接将 next-token prediction 范式套用到视频 world modeling 面临两大挑战：</p>
+<ol>
+<li><strong>熵困境</strong>：语言 token 语义离散、高熵；视频 token 帧间高度相似、低熵冗余。逐帧预测容易退化为平凡的外推（trivial extrapolation），而非学习有意义的物理动力学。</li>
+<li><strong>时间困境</strong>：瞬时动力学（instantaneous dynamics）需要密集帧预测，但长程因果关系（long-term causality）跨越的时间跨度远超密集预测能高效覆盖的范围。</li>
+</ol>
+<hr />
+<h2 id="_2">二、核心思路 / 方法</h2>
+<p>X-Foresight 的核心设计是<strong>将预测性世界模型直接嵌入 VLA 架构</strong>，实现联合的世界建模和实时动作控制。系统由两大组件构成：</p>
+<ul>
+<li><strong>Large Drive Model (LDM)</strong>：自回归 Transformer，在统一 token 空间中联合预测未来动作、BEV 表征和多视角相机 latent token。</li>
+<li><strong>Vision Renderer</strong>：基于 Diffusion Transformer (DiT) 的解码器，将 LDM 的 latent token 重建为逼真的多视角未来画面，并反馈回 LDM 形成闭环。</li>
+</ul>
+<p><img alt="图1：X-Foresight 总览图" src="assets/x-foresight/xforesight_main.jpg" /></p>
+<p><em>图1：X-Foresight 系统全景，包含三个子图。</em></p>
+<p><strong>子图 (A) — 推理管线（Inference Pipeline）：</strong>
+展示了从感知到控制再到渲染的完整数据流。左侧为多视角历史图像（7 个环视摄像头），经 ViT 编码后与语言指令（"沿当前道路直行，第二个路口右转"等导航文本）一同输入 LDM。LDM 在单次前向传播中同时输出三样东西：① 下一步 ego action（方向盘转角、油门/刹车），用于实时车辆控制；② 未来 1 秒的 camera latent tokens（4 帧 × 7 摄像头），以低分辨率 latent 形式编码了预测的未来场景布局和动态；③ 辅助 BEV 表征。camera tokens 随后进入 Vision Renderer（基于 DiT 的扩散解码器），经少量 rectified flow 采样步数去噪，生成高保真、多视角一致的环视未来画面。这些渲染帧被附加到历史上下文缓冲区，作为下一推理步的"观测"反馈回 LDM——形成闭环。循环迭代即可产生任意长度的（动作轨迹 + 环视视频）联合推演。此管线的核心巧思在于：LDM 负责"想象"（产生语义丰富但视觉模糊的 latent），Renderer 负责"显影"（将 latent 细化为逼真画面），两者分工明确。</p>
+<p><strong>子图 (B) — 闭环推演可视化（Closed-Loop Inference Visualization）：</strong>
+展示前向摄像头（front camera）在闭环推演中的预测未来帧，时间跨度从 t=0s（ground-truth 观测）到 t=6s（纯模型预测）。自上而下 4 行分别对应 t=0s、2s、4s、6s。关键观察：即使经过 6 秒的自回归推演（每个 AR 步产 1 秒/4 帧，共计 6 个 AR 步），画面仍保持几何一致性——车道线不发生扭曲、前方车辆的位置和尺度连续变化、路侧建筑物不出现跳跃或形变。这说明 latent sink 和 latent augmentation 有效抑制了闭环推演中的误差累积。图中蓝色轨迹线叠加在前向画面上，展示了 LDM 预测的自车未来路径。</p>
+<p><strong>子图 (C) — Benchmark 对比（Performance Comparison）：</strong>
+柱状图展示 X-Foresight 与 baseline（纯 reactive VLA）在多个评测维度上的对比。X-Foresight 在所有维度均取得更优（更低）的分数，其中 Safety 和 Compliance 两个维度的领先优势最为显著，直观验证了"通过世界建模获得远见 → 提升安全关键决策质量"的核心主张。具体的数值对比详见第三章实验部分。</p>
+<h3 id="21-long-horizon-chunk-wise-auto-regressive-strategy">2.1 Long-Horizon Chunk-Wise Auto-Regressive Strategy</h3>
+<p>这是解决"熵困境"和"时间困境"的核心机制。</p>
+<p><strong>Chunk-Wise 预测</strong>：将未来切分为固定长度的 chunk（每个 chunk 1 秒，含 4 帧@4Hz），模型在每个自回归步预测整个 chunk 的 K 帧。相比逐帧预测，chunk 内保留了密集的瞬时动态信息；相比将帧率直接降采样，chunk 间跳过的语义距离足够大，迫使模型学习真正的世界状态转移，而非平凡帧间外推。</p>
+<p><img alt="图2：未来帧预测的五种 prompt 设计" src="assets/x-foresight/predicted_future_frames.jpg" /></p>
+<p><em>图2：五种未来帧预测策略的系统对比。横轴为时间步，每个色块代表一个被模型预测的未来帧，色块间的间隔反映了采样策略的差异。这张图是理解 X-Foresight 核心设计动机的关键——它解释了为什么简单的"多预测几帧"不够，以及 chunk-wise 设计如何同时解决熵困境和时间困境。</em></p>
+<p><strong>子图 (a) Frame-wise foresight（逐帧预测）：</strong>
+每自回归步仅预测紧邻的下一帧。图中相邻帧之间色块几乎重叠，反映了视频帧间极高的相似性。这种设置下，模型只需要学会"把上一帧稍微平移几个像素"就能获得低 loss——即平凡外推（trivial extrapolation）。损失函数虽然在数值上收敛了，但模型并未学到任何有意义的物理动力学（如"前车减速意味着我可能需要刹车"）。这是直接迁移 LLM 的 next-token 范式到视频域的根本性失败模式。</p>
+<p><strong>子图 (b) Frame-wise longer foresight（加大步长的逐帧预测）：</strong>
+通过引入时间步长 s 对帧序列降采样（例如从 4Hz 降至 1Hz），使每步预测的帧在时间上拉开距离。这确实增大了帧间差异、缓解了熵困境，但代价是丢失了精细时序运动信息——对于轨迹预测而言，4Hz→1Hz 的降采样意味着自车的速度、加速度、转向角速度等都需要从稀疏得多的观测中推断，可能出现混叠（aliasing），导致轨迹预测精度下降。</p>
+<p><strong>子图 (c) Chunk-wise foresight（本文方案：chunk 级预测）：</strong>
+每个 AR 步预测包含 K 帧连续画面的一个 chunk（蓝色块）。Chunk 内部保留了原始的密集时序（4Hz），完整捕获瞬时动力学（如行人突然横穿的 0.25 秒级运动），无需降采样。Chunk 之间形成自然的语义间距——1 秒后的场景与当前场景已有足够的差异（前车可能已变道、红绿灯可能已变化），迫使模型学习真正的世界状态转移。这一设计一举两得：chunk 内密集 = 解决瞬时动力学需求；chunk 间稀疏 = 解决熵困境。</p>
+<p><strong>子图 (d) Chunk-wise longer foresight（扩展远见的 chunk 预测）：</strong>
+在 chunk-wise 基础上进一步拉大相邻 chunk 之间的时间步长（stride s，从 1s 扩展到 3s）。这使得有效预测视界从 ~1 秒扩展到 ~6 秒（3 chunks × 2s each），但每个 AR 步的计算量不变——因为被预测的 chunk 仍然只有 K 帧。关键的非对称设计：视觉预测覆盖了延长的整个视界（3s gap + chunk），而动作预测仅输出紧邻下一步的控制信号——因为闭环控制需要密集、高频率的轨迹输出，不能跳过中间步骤。</p>
+<p><strong>子图 (e) Chunk-wise temporal importance sampling（时间重要性采样）：</strong>
+在子图 (d) 的基础上，将 chunk 间的均匀采样替换为重要性加权采样。红色标记的 chunk（加粗边框）代表被重要性采样选中的高权重段——通常对应急刹车、快速变道、突然加速等安全关键事件；灰色标记的 chunk（虚线边框）代表低权重的平稳巡航段。通过公式 <span class="math inline">$p_k \propto w_k^{1/\tau}$</span>（其中 <span class="math inline">$w_k$</span> 基于三窗口加权加速度幅值），训练监督被集中到约 30% 的最关键 chunk 上，使模型将有限的计算预算用于学习最有价值的物理因果关系。</p>
+<p><strong>Chunk-wise longer foresight（扩展远见）</strong>：在基础 chunk-wise 之上，通过拉大 chunk 间步长（从 1s 到 3s）来扩展有效预测视界。关键设计是<strong>非对称</strong>的：视觉预测覆盖延长的步长，而动作预测保持在下一步控制频率不变——因为闭环控制需要密集的轨迹输出。</p>
+<h3 id="22-multi-modal-prompt-design">2.2 Multi-Modal Prompt Design</h3>
+<p>LDM 将预测问题定义为多模态 prompt 任务：</p>
+<p><div class="math display">$$[\texttt{SYSTEM PROMPT}] \mid [l_0, O_0, A_0, Q_0] \mid [l_1, O_1, A_1, Q_1] \mid \ldots \mid [l_i, O_i, A_i, Q_i]$$</div></p>
+<p>每个时序 chunk 包含四类 token：</p>
+<ul>
+<li><strong><span class="math inline">$l_i$</span></strong>：文本 token，指定预测视界/时间窗口</li>
+<li><strong><span class="math inline">$O_i$</span></strong>：多视角视频 token（通过 ViT 编码器提取）</li>
+<li><strong><span class="math inline">$A_i$</span></strong>：自车状态/动作 token（轨迹历史）</li>
+<li><strong><span class="math inline">$Q_i$</span></strong>：查询 token，触发未来变量预测</li>
+</ul>
+<h3 id="23-three-stage-training-pipeline">2.3 Three-Stage Training Pipeline</h3>
+<p><img alt="图3：X-Foresight 三阶段训练管线" src="assets/x-foresight/pipeline_figure4_v3.jpg" /></p>
+<p><em>图3：X-Foresight 三阶段训练流程全景图。与大多数端到端方法不同，X-Foresight 采用"先分后合"策略将 LDM 和 Renderer 的训练解耦为三个阶段，避免两个复杂模块联合训练的不稳定性。图中实线箭头表示训练时的梯度流（gradient flow），虚线箭头表示数据流（forward pass），红色叉号表示该阶段被冻结的模块。</em></p>
+<p><strong>Stage I — LDM Pretraining（LDM 独立预训练）：</strong>
+此阶段仅训练 LDM，Vision Renderer 完全不参与。LDM 在 teacher forcing 下接收 multi-modal prompt（系统指令 + 历史观测 token + 历史动作 token + query token），用三个损失的加权组合进行监督：<span class="math inline">$L_{\text{total}} = L_{\text{act}} + \alpha L_{\text{cam}} + \beta L_{\text{bev}}$</span>。其中 <span class="math inline">$L_{\text{act}}$</span>（L1 回归）监督动作预测，<span class="math inline">$L_{\text{cam}}$</span>（L2 回归）监督 camera latent token 预测（以 frozen ViT 编码的 GT 帧 latent 为目标），<span class="math inline">$L_{\text{bev}}$</span>（L2 回归）作为辅助损失监督 BEV 预测。此阶段的关键设计有三：① 半因果 BSA 注意力掩码使长序列训练的计算复杂度接近线性；② 短→长的课程学习（从 H=1s 逐步扩展到 H=21s/chunk stride 从 1s 扩展到 3s）；③ 时间重要性采样将梯度信号集中于安全关键 chunk。由于 camera token 在 L2 损失下对多个可能的未来取均值，直接 decode 出来的图像是模糊的——但包含了足够的场景结构和语义信息来支撑动作预测。</p>
+<p><strong>Stage II — Renderer Pretraining（Renderer 独立预训练）：</strong>
+此阶段仅训练 Vision Renderer，LDM 完全不参与。Renderer 从 X-World（预训练 DiT 视频生成器）的权重初始化，在驾驶数据上进行两步适配：① 时间对齐——从 X-World 原生的 12Hz 微调到 LDM 的 4Hz 输出频率（调整 VAE 时间步长和 rectified flow 采样步数），确保每个生成帧与 LDM 的 camera token 一一对应；② rollout drift 缓解——加入 latent sink（在 latent 空间中锚定一个稳定的参考上下文，在多个 rollout 步间共享）和 latent augmentation（训练时对当前步的 latent 注入扰动，使 Renderer 习惯推理时的噪声分布）。此阶段 Renderer 仍通过 X-World 原生的 action-conditioning 分支接收 GT 未来轨迹（而非 LDM 预测的 camera token），以确保独立训练时的条件信号干净可靠。优化使用 Muon 优化器，学习率 <span class="math inline">$8\times10^{-5}$</span>，batch size 1/device，128 GPUs。</p>
+<p><strong>Stage III — Renderer Alignment（Renderer 联合对齐）：</strong>
+这是"合"的阶段：LDM 被冻结（图中红色叉号），仅 Renderer 继续接收梯度。Renderer 的条件源从 Stage II 中的 GT action 切换为 LDM 预测的 camera token，通过新激活的 camera-token cross-attention 分支注入每个 DiT block。同时移除 X-World 遗留的 action-conditioning、dynamic-agent、static-element、text-conditioning 四个分支——Renderer 仅以 (i) 多视角历史画面 latents 和 (ii) LDM 预测的 camera token 为条件。这一"纯 camera token 条件"的强制约束是确保闭环一致性的关键：如果 Renderer 能同时看到 action token，它可能学到一个低熵捷径——直接根据 action 画出未来而不依赖 camera token——导致 LDM 的 latent 想象和 Renderer 的像素输出各说各话，闭环推演形同虚设。训练使用 rectified flow velocity-matching 目标，Muon 优化器配合 one-cycle cosine 学习率调度，应用 activation checkpointing 和 FSDP 分片以装入设备内存。从 Stage III 开始定期对比 Renderer 输出与 Camera Latent Decoder 的 pixel decode（相同 camera token 条件下的两种重建方式），以审计 Renderer 是否忠实追踪 LDM 的意图。</p>
+<h3 id="24">2.4 关键训练设计</h3>
+<h4 id="curriculum-learning">Curriculum Learning（课程学习）</h4>
+<p>从短视界（chunk 间步长 1s）开始训练，逐步扩展到长视界（步长 3s）。渐进策略让模型先学会短期预测，再逐步掌握更长时间跨度的因果关系。消融实验（表 2）证实：课程学习（CL）使碰撞率从 0.270% 降至 0.238%，扩展远见（CLEF，含步长扩展）进一步将 ADE/FDE 推至最优——因为扩展 stride 不仅拉长了视界，还增大了 chunk 间语义距离，使学习信号更强。</p>
+<h4 id="temporal-importance-sampling">Temporal Importance Sampling（时间重要性采样）</h4>
+<p>均匀采样视界内的 chunk 会浪费大多数计算在"巡航"等平稳段，而安全关键事件（急刹、切入、变道等）采样不足。为此引入基于自车运动信号的重要性采样：</p>
+<p><div class="math display">$$w_k = \sum_{W \in \{W_1^k, W_2^k, W_3^k\}} \max_{t \in W}\left(\lambda_x |a_x(t)| + \lambda_y |a_y(t)|\right)$$</div></p>
+<p>三个时间窗口覆盖不同阶段：</p>
+<ul>
+<li><strong><span class="math inline">$W_1^k$</span>（近未来）</strong>：捕获迫在眉睫的事件（制动、加速、突然转向）</li>
+<li><strong><span class="math inline">$W_2^k$</span>（中视界）</strong>：捕获即将发生的操控（入弯、刹车意图）</li>
+<li><strong><span class="math inline">$W_3^k$</span>（近历史）</strong>：捕获刚完成的操控的后续影响</li>
+</ul>
+<p>采样概率通过温度缩放：<span class="math inline">$p_k = \frac{w_k^{1/\tau}}{\sum_j w_j^{1/\tau}}$</span></p>
+<h4 id="semi-causal-block-sparse-attention-bsa">Semi-Causal Block-Sparse Attention (BSA)</h4>
+<p><img alt="图4：半因果块稀疏注意力掩码" src="assets/x-foresight/precise_mask_medium_v9_ar12_v3.jpg" /></p>
+<p><em>图4：BSA 注意力掩码的两个互补模式，分别对应按时间步差奇偶性划分的两组注意力头。这是使长序列训练在计算上可行的关键工程优化。</em></p>
+<p><em>图的排布与阅读方式：</em><em> 两个面板（左/右或上/下，取决于排版）分别展示 Group 0 和 Group 1 的稀疏注意力模式。每个面板中，横轴为 key blocks（被关注的 token 块），纵轴为 query blocks（发起关注的 token 块），每个彩色像素点代表该 (query_block, key_block) 对的注意力被允许（即未被 mask 掉），白色区域代表被 mask。序列按时间顺序从左到右、从上到下排列，最左上角的密集块对应 system prompt（全局可见的 sink token）。</em></p>
+<p><em>掩码的层次结构（从粗到细）：</em><em> ① </em><em>全局层</em><em>：system prompt 块对所有后续 chunk 完全可见——它为整个序列提供任务指令和高层导航目标，扮演类似 ViT 中 CLS token 的角色。② </em><em>chunk 内层</em><em>：对角线上的密集正方形对应每个时序 chunk 内部的 token 块，采用完全双向（bidirectional）注意力——chunk 内的 <span class="math inline">$l_i$</span>、<span class="math inline">$O_i$</span>、<span class="math inline">$A_i$</span>、<span class="math inline">$Q_i$</span> 四种 token 可以在该时间窗口内自由交互，实现联合推理。③ </em><em>chunk 间层（prompt→prompt）</em><em>：非对角线的彩色像素连接不同 chunk 之间的 prompt token（<span class="math inline">$l_i$</span>、<span class="math inline">$O_i$</span>、<span class="math inline">$A_i$</span>）。连接模式是时间因果的（过去→现在），并且空间邻域随时间距离增大而收缩——近期的 chunk 与当前 chunk 在较宽的空间范围内交互，远期的 chunk 交互范围逐步收窄。这一"随时间衰减的空间注意力半径"反映了物理直觉：很久以前的观测对当前决策的影响更宏观、更不需要精确的空间对应。④ </em><em>chunk 间层（query→prompt）</em><em>：Query token <span class="math inline">$Q_i$</span> 可以关注所有过去的 prompt token（<span class="math inline">$l_{1:i}$</span>、<span class="math inline">$O_{1:i}$</span>、<span class="math inline">$A_{1:i}$</span>），确保未来预测的条件信息完整。⑤ </em><em>禁止连接</em><em>：<span class="math inline">$Q_i$</span> 不能关注过去的 query token <span class="math inline">$Q_{1:i-1}$</span>——这是为了防止当前预测直接复制之前的预测输出（cheating shortcut），强制模型始终从原始观测中推理未来。</em></p>
+<p><em>两个面板的互补关系：</em><em> Group 0 和 Group 1 按 query-key 时间步差的奇偶性划分。例如，Group 0 关注时间步差为偶数（0, 2, 4, ...）的 key blocks，Group 1 关注时间步差为奇数（1, 3, 5, ...）的 key blocks。每个组只承担约一半的注意力连接，两个组合在一起覆盖完整的时序上下文。这种划分的妙处在于：它天然保持了时间覆盖的均匀性（每隔一个时间步一个连接，而非集中在前半段或后半段），同时每个注意力头组的计算量减半。最终整体注意力块密度随序列长度近似线性增长（而非标准注意力的二次增长），实测长序列训练每步从 24.50s 降至 15.40s，</em><em>1.59× 加速</em><em>。</em></p>
+<h3 id="25">2.5 训练目标</h3>
+<p>三个损失函数的加权组合：</p>
+<p><div class="math display">$$L_{\text{cam}} = \frac{1}{HV}\sum_{i=1}^{H}\sum_{v=1}^{V}\left\|\hat{\mathbf{o}}_i^v - g(\mathbf{I}_i^v)\right\|_2$$</div></p>
+<p><div class="math display">$$L_{\text{act}} = \frac{1}{H}\sum_{i=1}^{H}\left\|\hat{\mathbf{a}}_i - \mathbf{a}_i\right\|_1$$</div></p>
+<p><div class="math display">$$L_{\text{bev}} = \frac{1}{H}\sum_{i=1}^{H}\left\|\hat{\mathbf{b}}_i - \mathbf{b}_i\right\|_2$$</div></p>
+<p><div class="math display">$$L_{\text{total}} = L_{\text{act}} + \alpha L_{\text{cam}} + \beta L_{\text{bev}}$$</div></p>
+<ul>
+<li>Camera token 用 L2 回归（teacher forcing 下 GT→latent 的 ViT 编码），收敛到条件未来的低熵均值——多个可能的未来在 L2 下的最优估计就是它们的期望。这解释了为什么直接 decode camera token 得到的是模糊图像（期望图）而非清晰的单次采样。</li>
+<li>动作用 L1 回归——相比 L2，L1 对离群值更鲁棒，适合轨迹预测中偶发的大偏差。</li>
+<li>BEV 为辅助损失，鼓励几何上有意义的场景表征，同时也是对 camera token 的正则化——防止 latent 空间塌缩到只编码外观而丢失空间结构。</li>
+</ul>
+<h3 id="26-vision-renderer">2.6 Vision Renderer</h3>
+<p>基于 X-World（DiT 视频生成器），使用 3D causal VAE + rectified flow 目标：</p>
+<p><div class="math display">$$\mathcal{L}_{\text{velocity}}(\theta) = \mathbb{E}_{\mathbf{y}_0,\mathbf{y}_1,t,\mathbf{c}}\left[\left\|v_\theta(\mathbf{y}_t,t,\mathbf{c}) - (\mathbf{y}_1-\mathbf{y}_0)\right\|_2^2\right]$$</div></p>
+<p>设计要点：</p>
+<ul>
+<li><strong>仅以 camera token 为条件</strong>：故意不暴露 action token 给 Renderer，避免 Renderer 利用 action 作为低熵捷径而忽略 camera token，破坏闭环的一致性</li>
+<li><strong>交叉视角注意力</strong>：在时间轴和视角轴之间交替应用 self-attention，确保 7 个环视相机之间的几何一致性</li>
+<li><strong>4Hz 时间对齐</strong>：从 X-World 原生 12Hz 微调适配到 LDM 的 4Hz</li>
+<li><strong>Rollout drift 缓解</strong>：latent sink + latent augmentation，避免闭环推演中误差累积导致的 drift</li>
+</ul>
+<h3 id="27">2.7 推理流程</h3>
+<div class="codehilite"><pre><span></span><code><span class="err">┌──────────────────────────────────────────────────────────┐</span>
+<span class="err">│</span><span class="w">                    </span><span class="n">每个推理步</span><span class="w"> </span><span class="p">(</span><span class="mi">4</span><span class="n">Hz</span><span class="p">)</span><span class="w">                        </span><span class="err">│</span>
+<span class="err">├──────────────────────────────────────────────────────────┤</span>
+<span class="err">│</span><span class="w">  </span><span class="n">输入</span><span class="o">:</span><span class="w"> </span><span class="n">文本指令</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">多视角历史帧窗口</span><span class="w">                           </span><span class="err">│</span>
+<span class="err">│</span><span class="w">    </span><span class="err">│</span><span class="w">                                                      </span><span class="err">│</span>
+<span class="err">│</span><span class="w">    </span><span class="err">▼</span><span class="w">                                                      </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">┌─────────────────────────┐</span><span class="w">                              </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="n">LDM</span><span class="w"> </span><span class="p">(</span><span class="n">自回归</span><span class="w"> </span><span class="n">Transformer</span><span class="p">)</span><span class="w"> </span><span class="err">│</span><span class="w">  </span><span class="err">←</span><span class="w"> </span><span class="n">单次前向传播</span><span class="w">              </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">┌─────────────────────┐</span><span class="w"> </span><span class="err">│</span><span class="w">                              </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="n">预测</span><span class="o">:</span><span class="w">                </span><span class="err">│</span><span class="w"> </span><span class="err">│</span><span class="w">                              </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="err">•</span><span class="w"> </span><span class="n">下一步</span><span class="w"> </span><span class="n">ego</span><span class="w"> </span><span class="n">action</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="err">│</span><span class="w">                              </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="err">•</span><span class="w"> </span><span class="mi">1</span><span class="n">秒</span><span class="w"> </span><span class="n">camera</span><span class="w"> </span><span class="n">tokens</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="err">│</span><span class="w">  </span><span class="err">←</span><span class="w"> </span><span class="mi">4</span><span class="n">帧</span><span class="err">×</span><span class="mi">7</span><span class="n">摄像头</span><span class="p">,</span><span class="w"> </span><span class="n">低分辨率latent</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="err">•</span><span class="w"> </span><span class="n">BEV</span><span class="w"> </span><span class="n">辅助</span><span class="w">           </span><span class="err">│</span><span class="w"> </span><span class="err">│</span><span class="w">                              </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">└─────────────────────┘</span><span class="w"> </span><span class="err">│</span><span class="w">                              </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">└──────────┬──────────────┘</span><span class="w">                              </span><span class="err">│</span>
+<span class="err">│</span><span class="w">             </span><span class="err">│</span><span class="w"> </span><span class="n">camera</span><span class="w"> </span><span class="n">tokens</span><span class="w">                                </span><span class="err">│</span>
+<span class="err">│</span><span class="w">             </span><span class="err">▼</span><span class="w">                                              </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">┌─────────────────────────┐</span><span class="w">                              </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="n">Vision</span><span class="w"> </span><span class="n">Renderer</span><span class="w"> </span><span class="p">(</span><span class="n">DiT</span><span class="p">)</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">←</span><span class="w"> </span><span class="n">Rectified</span><span class="w"> </span><span class="n">Flow</span><span class="w"> </span><span class="n">采样</span><span class="w">        </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">┌─────────────────────┐</span><span class="w"> </span><span class="err">│</span><span class="w">                              </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="n">渲染</span><span class="o">:</span><span class="w">                </span><span class="err">│</span><span class="w"> </span><span class="err">│</span><span class="w">                              </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="n">高保真多视角未来帧</span><span class="w">    </span><span class="err">│</span><span class="w"> </span><span class="err">│</span><span class="w">  </span><span class="err">←</span><span class="w"> </span><span class="mi">7</span><span class="n">个环视摄像头</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="n">帧</span><span class="mi">@4</span><span class="n">Hz</span><span class="w">    </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">└─────────────────────┘</span><span class="w"> </span><span class="err">│</span><span class="w">                              </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">└──────────┬──────────────┘</span><span class="w">                              </span><span class="err">│</span>
+<span class="err">│</span><span class="w">             </span><span class="err">│</span><span class="w"> </span><span class="n">渲染帧</span><span class="w">                                       </span><span class="err">│</span>
+<span class="err">│</span><span class="w">             </span><span class="err">▼</span><span class="w">                                              </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">┌─────────────────────────┐</span><span class="w">                              </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="n">附加到滚动上下文缓冲区</span><span class="w">    </span><span class="err">│</span><span class="w">                              </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">→</span><span class="w"> </span><span class="n">反馈回</span><span class="w"> </span><span class="n">LDM</span><span class="w"> </span><span class="n">作为新观测</span><span class="w">   </span><span class="err">│</span><span class="w">                              </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">└─────────────────────────┘</span><span class="w">                              </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                           </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="n">循环迭代</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">产生任意长度的</span><span class="w"> </span><span class="p">(</span><span class="n">动作轨迹</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">环视视频</span><span class="p">)</span><span class="w"> </span><span class="n">闭环推演</span><span class="w">       </span><span class="err">│</span>
+<span class="err">└──────────────────────────────────────────────────────────┘</span>
+</code></pre></div>
+
+<hr />
+<h2 id="_3">三、实验与结果</h2>
+<p>实验基于小鹏自建的工业级数据集：<strong>28 万小时</strong>驾驶数据、<strong>3400 万</strong> clip（每 clip ≤30 秒）、7 摄像头环视系统、13.8T token、4Hz 训练频率。场景分布：城市道路 86.8%，高速 13.2%。</p>
+<p><img alt="图5：数据集概览" src="assets/x-foresight/datainfo_final.jpg" /></p>
+<p><em>图5：工业级多摄像头驾驶数据集概览。</em></p>
+<p><em>图的中心是自车俯视示意图，7 个环视摄像头以扇形标注覆盖范围——前鱼眼（front fisheye，大广角近场感知，覆盖车头前方约 180 度的宽视场）、前窄角（front narrow，长焦远距离观测，覆盖正前方约 300 米范围）、左前/右前（侧前方，覆盖交叉车流和变道盲区）、左后/右后（侧后方，覆盖后方来车和盲区）、后方（rear，正后方跟车感知）。这 7 路视频构成完整的 360 度无死角环视感知，所有相机经过几何标定，统一到自车坐标系。</em></p>
+<p><em>图的周边信息标注了数据集的规模维度：</em><em> 总时长约 280,000 小时（相当于约 32 年的连续驾驶数据），切分为 34M 个 clip（每 clip 最长 30 秒），经 ViT tokenization 后产生 13.8T 个 token 用于 world model 训练。所有相机原生以 12Hz 采集，训练时下采样至 4Hz——这一帧率的选择是权衡了运动保真度（4Hz 足以捕获 0.25 秒级的瞬时动态）和计算效率（相比 12Hz 将序列长度缩减了 3 倍，使自回归训练可承受）。4Hz 意味着每帧间隔 250ms，在 120km/h 高速行驶时自车移动约 8.3m，这个空间分辨率对于世界建模中的场景理解是足够的。</em></p>
+<p><img alt="图6：训练场景分布" src="assets/x-foresight/data_distribution_behavior.jpg" /></p>
+<p><em>图6：训练数据场景分布柱状图。</em></p>
+<p><em>图表结构：</em><em> 横轴为 8 大聚合场景类别，纵轴为该类别在总数据中的占比（百分比）。每个柱子的颜色分段表示城市道路（urban）和高速（highway）的比例——蓝色/深色为城市，橙色/浅色为高速。每个类别名后的括号内数字为该类别下细粒度 auto-tag 的数量（原始标签共约 200 个，经聚合为 8 类）。</em></p>
+<p><em>8 类场景及其关键数字：</em><em> ① </em><em>开放道路车道保持（Open-road Lane Keeping）</em><em>——21.0%，城市主导，这是最基础的巡航场景；② </em><em>变道（Lane Changes）</em><em>——20.1%，包含左右变道、超车变道等；③ </em><em>受限车道行驶（Constrained-lane Driving）</em><em>——16.0%，如压线行驶、无标线路段，对模型的空间推理要求更高；④ </em><em>路口与转弯（Intersections &amp; Turns）</em><em>——13.1%，含十字路口、T 型路口、左右转弯，是事故高发场景；⑤ </em><em>障碍物与切入（Obstacles &amp; Cut-ins）</em><em>——9.9%，前方车辆突然切入、道路障碍物等安全关键事件；⑥ </em><em>跟车与拥堵（Following &amp; Congestion）</em><em>——9.6%，密集车流中的低速跟车和启停；⑦ </em><em>弱势道路使用者交互（VRU Interactions）</em><em>——6.2%，行人、自行车、电动车等交互场景；⑧ </em><em>罕见路况（Rare Road Layouts）</em><em>——4.1%，匝道、收费站、环岛、高曲率弯道等长尾场景。</em></p>
+<p><em>关键解读：</em><em> 约 70% 的数据为常规驾驶场景（前三类），为模型提供了稳定的基础训练信号；约 30% 为交互密集型和长尾场景（后五类），确保模型接触到安全关键事件的足够样本。城市道路占比 86.8% 反映了大规模公开道路数据采集的现实——大多数里程发生在城市路网中。但高速虽然只占 13.2%，却是速度最快、事故后果最严重的场景，因此 TIS（时间重要性采样）在高速段的加速度事件上会赋予更高的权重。</em></p>
+<h3 id="31">3.1 评估指标</h3>
+<ul>
+<li><strong>ADE/FDE</strong>：平均/终点位移误差（米），分横向（Lat.）和纵向（Long.）</li>
+<li><strong>Collision</strong>：碰撞率（%）</li>
+<li><strong>CCES 四维指标</strong>（相对于 <span class="math inline">$H{=}1$</span> baseline 的比率，越低越好）：<ul>
+<li><strong>Compliance</strong>：交规遵守（车道居中、压线、闯红灯）</li>
+<li><strong>Comfort</strong>：乘坐质量（转向不稳、晕车）</li>
+<li><strong>Efficiency</strong>：行驶效率（加速不足、未超越慢车）</li>
+<li><strong>Safety</strong>：安全性（碰撞、TTC 违规、冲出道路边界）</li>
+</ul>
+</li>
+<li><strong>Total = Compl. + Comfort + Eff. + Safety</strong>（baseline 为 4.0）</li>
+</ul>
+<h3 id="32">3.2 训练视界的影响</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>ADE Lat.↓</th>
+<th>ADE Long.↓</th>
+<th>FDE Lat.↓</th>
+<th>FDE Long.↓</th>
+<th>Coll.↓</th>
+<th>Compl.↓</th>
+<th>Comfort↓</th>
+<th>Eff.↓</th>
+<th>Safety↓</th>
+<th>Total↓</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>H=1</td>
+<td>0.1923</td>
+<td>1.2409</td>
+<td>0.4881</td>
+<td>3.1935</td>
+<td>0.263</td>
+<td>1.0000</td>
+<td>1.0000</td>
+<td>1.0000</td>
+<td>1.0000</td>
+<td>4.0000</td>
+</tr>
+<tr>
+<td>H=6</td>
+<td>0.1864</td>
+<td>1.2196</td>
+<td>0.4691</td>
+<td>3.1178</td>
+<td>0.262</td>
+<td>0.9756</td>
+<td>0.9880</td>
+<td>0.9833</td>
+<td>0.9927</td>
+<td>3.9396</td>
+</tr>
+<tr>
+<td>H=21</td>
+<td>0.1810</td>
+<td>1.2110</td>
+<td>0.4571</td>
+<td>3.0988</td>
+<td>0.245</td>
+<td>0.9533</td>
+<td>1.0416</td>
+<td>1.0094</td>
+<td>0.9481</td>
+<td>3.9524</td>
+</tr>
+</tbody>
+</table>
+<p>关键发现：从 <span class="math inline">$H{=}1$</span> 到 <span class="math inline">$H{=}6$</span>，所有指标单调改善，Total 从 4.0 降至 3.94。但 <span class="math inline">$H{=}21$</span> 时 Comfort 和 Efficiency 出现轻微回退（1.0416、1.0094），Total 也回升到 3.95。这说明<strong>直接扩展视界存在优化困难</strong>，需要课程学习和重要性采样的辅助。</p>
+<h3 id="33-clclef-tis">3.3 CL、CLEF 和 TIS 消融实验</h3>
+<p>所有模型从 <span class="math inline">$H{=}6$</span> checkpoint 初始化，额外用 128 GPU 训练。</p>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>ADE Lat.↓</th>
+<th>ADE Long.↓</th>
+<th>FDE Lat.↓</th>
+<th>FDE Long.↓</th>
+<th>Coll.↓</th>
+<th>Compl.↓</th>
+<th>Comfort↓</th>
+<th>Eff.↓</th>
+<th>Safety↓</th>
+<th>Total↓</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Cont. H=6</td>
+<td>0.1741</td>
+<td>1.1807</td>
+<td>0.4344</td>
+<td>3.0087</td>
+<td>0.270</td>
+<td>0.9302</td>
+<td>1.0515</td>
+<td>0.9980</td>
+<td>0.9726</td>
+<td>3.9523</td>
+</tr>
+<tr>
+<td>+H=21, CL</td>
+<td>0.1718</td>
+<td>1.1671</td>
+<td>0.4277</td>
+<td>2.9856</td>
+<td>0.238</td>
+<td>0.9326</td>
+<td>1.0106</td>
+<td>1.0003</td>
+<td>0.9310</td>
+<td>3.8745</td>
+</tr>
+<tr>
+<td>+H=21, CLEF</td>
+<td>0.1692</td>
+<td>1.1571</td>
+<td>0.4181</td>
+<td>2.9421</td>
+<td>0.230</td>
+<td>0.9320</td>
+<td>1.0076</td>
+<td>0.9951</td>
+<td>0.9387</td>
+<td>3.8734</td>
+</tr>
+<tr>
+<td>+H=21, TIS</td>
+<td>0.1696</td>
+<td>1.1578</td>
+<td>0.4195</td>
+<td>2.9413</td>
+<td><strong>0.216</strong></td>
+<td><strong>0.9187</strong></td>
+<td><strong>1.0043</strong></td>
+<td>0.9953</td>
+<td><strong>0.9264</strong></td>
+<td><strong>3.8447</strong></td>
+</tr>
+</tbody>
+</table>
+<p>关键发现：</p>
+<ul>
+<li><strong>继续训练 H=6</strong> 虽然改善了 ADE/FDE，但碰撞率反而上升（0.262→0.270），排除了"多训练一会就行"的解释</li>
+<li><strong>CL</strong>（基础课程学习）有效降低碰撞（0.270→0.238）和 Total CCES（3.95→3.87）</li>
+<li><strong>CLEF</strong>（课程学习 + 扩展远见）实现最强的 ADE/FDE 改善，但 Safety 比 CL 略有回退（0.9310→0.9387）</li>
+<li><strong>TIS</strong>（时间重要性采样）进一步将碰撞率降至 0.216%（<strong>相对减少 6.1%</strong>），获得最低 Total CCES（3.8447），Safety 改善至 0.9264——符合将监督集中在安全关键 chunk 的设计意图</li>
+</ul>
+<h3 id="34-production-scale">3.4 Production-Scale 最终对比</h3>
+<p>训练扩展到 1024 GPU，完整 X-Foresight（<span class="math inline">$H{=}21$</span> + CLEF + TIS）vs Baseline：</p>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>ADE Lat.↓</th>
+<th>ADE Long.↓</th>
+<th>FDE Lat.↓</th>
+<th>FDE Long.↓</th>
+<th>Coll.↓</th>
+<th>Compl.↓</th>
+<th>Comfort↓</th>
+<th>Eff.↓</th>
+<th>Safety↓</th>
+<th>Total↓</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Baseline</td>
+<td>0.1675</td>
+<td>1.1387</td>
+<td>0.4153</td>
+<td>2.9117</td>
+<td>0.228</td>
+<td>0.9483</td>
+<td>0.9505</td>
+<td>0.9867</td>
+<td>0.9441</td>
+<td>3.8296</td>
+</tr>
+<tr>
+<td>X-Foresight</td>
+<td><strong>0.1567</strong></td>
+<td><strong>1.0982</strong></td>
+<td><strong>0.3789</strong></td>
+<td><strong>2.7924</strong></td>
+<td><strong>0.191</strong></td>
+<td><strong>0.8708</strong></td>
+<td><strong>0.9413</strong></td>
+<td><strong>0.9831</strong></td>
+<td><strong>0.8583</strong></td>
+<td><strong>3.6535</strong></td>
+</tr>
+</tbody>
+</table>
+<p>核心结果：</p>
+<ul>
+<li>横向 ADE 降低 <strong>6.4%</strong>，纵向 ADE 降低 <strong>3.6%</strong></li>
+<li>横向 FDE 降低 <strong>8.8%</strong>，纵向 FDE 降低 <strong>4.1%</strong></li>
+<li><strong>碰撞率从 0.228% 降至 0.191%，相对减少 16.2%</strong>——这是最重要的安全指标</li>
+<li>Safety 改善 <strong>9.1%</strong>，Compliance 改善 <strong>8.2%</strong></li>
+<li>Total CCES 从 3.83 降至 3.65，<strong>相对改善 4.6%</strong></li>
+</ul>
+<p>改善集中在 Safety 和 Compliance 两个维度，与"长视界世界因果监督提升安全关键决策质量"的核心主张一致。</p>
+<h3 id="35">3.5 定性结果</h3>
+<p><img alt="图7：定性对比——环岛导航" src="assets/x-foresight/qualitative_navigation.jpg" /></p>
+<p><em>图7：定性对比场景一——多出口环岛的远出口导航。</em></p>
+<p><em>场景设定：</em><em> 自车（ego vehicle，图中以绿色/彩色轨迹标识）进入一个多出口环岛，导航指令（图示左上角的导航箭头或文字）指示在环岛的较远出口（如第三或第四出口）驶出，而非第一个出口。这是一个典型的"需要长程空间推理"的场景——最近的那个出口在视觉上最显著、最吸引模型的注意力，但正确的决策是忽略它并继续沿环岛行驶。</em></p>
+<p><em>对比解读：</em><em> </em><em>Baseline（左列/上图）</em><em>：反应式 VLA 模型被最近、最显著的可见出口吸引，在环岛入口处即发出右转意图，轨迹（红色/虚线）偏离环岛车道中心线，提前切向第一个出口方向，与 ground truth（绿色/实线）产生大幅偏离。这一失败模式本质上是缺乏"远见"——模型只看当前帧的视觉显著 cue（最近出口），无法将导航指令中的"远出口"这个长期目标与当前动作关联起来。</em><em>X-Foresight（右列/下图）</em><em>：通过自回归世界推演，模型在 latent 空间中模拟了"如果现在走第一个出口 vs 如果继续沿环岛行驶"的未来场景差异，并在 camera token 中编码了"继续沿环岛才能到达远出口"的因果关系。因此其轨迹（紫色/实线）紧密贴合环岛车道中心线，一直追踪 ground truth 直至目标出口。这幅图直观展示了"predictive world modeling → 长程空间因果关系 → 正确导航决策"的因果链。</em></p>
+<p><img alt="图8：定性对比——红绿灯预判" src="assets/x-foresight/qualitative_signal.jpg" /></p>
+<p><em>图8：定性对比场景二——夜间红绿灯状态变化的预判。</em></p>
+<p><em>场景设定：</em><em> 自车夜间接近一个信号灯控制的十字路口。在</em><em>当前时刻 t=0</em><em>，信号灯显示为红色（图中底部或左侧的状态标注确认了这一点）。然而，数据记录（ground-truth log）表明：信号灯将在自车到达停止线之前变为绿色——这意味着正确的行为是保持速度、穿过路口，而非在停止线前刹车。这是一个纯"时间远见"的场景：当前的视觉观测（红灯）误导性地指向"立即停车"，只有通过预测未来信号状态的变化，才能做出正确决策。</em></p>
+<p><em>对比解读：</em><em> </em><em>Baseline（左列/上图）</em><em>：反应式模型将当前红灯作为硬约束，发出减速/停车指令，预测轨迹（红色/虚线）在停止线前就截断或大幅减速，无法匹配 ground truth（绿色/实线，穿过路口）。这说明 reactive 模型无法对即将发生的环境变化进行推理——它只能响应"现在有什么"，不能预判"下一秒会变成什么"。</em><em>X-Foresight（右列/下图）</em><em>：通过 chunk-wise 自回归推演，LDM 在 forward pass 中预测了未来 6 秒的多帧相机画面。在这些预测的未来帧中，信号灯状态随时间的推移自然地从红变绿——模型在 latent 空间中"看到"了绿灯亮起之后的场景，因此其预测轨迹（紫色/实线）连续穿过路口，与 ground truth 高度一致。关键洞察：X-Foresight 并不知道交通信号灯的物理规则（红灯→绿灯的时序），它仅仅是通过 world modeling 从海量驾驶数据中学到了"当接近停止线时红灯通常会变绿"这一统计规律——这是一种从数据中涌现的因果推理能力。</em></p>
+<h3 id="36-vision-renderer">3.6 Vision Renderer 生成质量</h3>
+<p><img alt="图9：Vision Renderer 6 秒推演可视化" src="assets/x-foresight/vision_renderer_plot.jpg" /></p>
+<p><em>图9：Vision Renderer 的 6 秒闭环推演可视化网格。这是验证"camera token 作为有效信息瓶颈"以及"Renderer 忠实追踪 LDM 意图"两个关键设计假设的核心证据图。</em></p>
+<p><em>图表结构：</em><em> 这是一个 7 列 × 7 行的网格布局。</em><em>7 列</em><em>从左到右对应 7 个环视摄像头——左后（left rear）、左前（left front）、前窄角（front narrow）、前鱼眼（front fisheye）、后方（rear）、右前（right front）、右后（right rear）。</em><em>7 行</em><em>从上到下对应时间轴——t=0s（第一行，ground truth 真实观测，用作参考基准）、t=1s 到 t=6s（后续 6 行，纯模型自回归预测的渲染帧）。每一格是一张 4Hz 下的相机帧。</em></p>
+<p><em>逐行阅读指南：</em><em> ① </em><em>t=0s（GT 行）</em><em>：所有 7 个相机展示同一时刻的真实场景。可以观察到前窄角看到远处的主路和车辆、前鱼眼看到近处宽阔的视野和车道线、侧方相机看到相邻车道和路边建筑、后方相机看到跟随车辆。② </em><em>t=1s-2s（近期预测）</em><em>：渲染帧质量极高，与 GT 行几乎不可区分——道路纹理、车道线、前车尾灯、路侧建筑立面等细节均得到保持。定量上这对应了 FID 1.51 @ 1s 的优秀成绩。③ </em><em>t=3s-4s（中期预测）</em><em>：开始出现轻微的质量退化——远处物体的边缘可能略微模糊，但整体的几何结构（车道走向、前车位置和尺度、自车所在车道）仍然准确。这反映了 rollout drift 的逐渐累积。④ </em><em>t=5s-6s（远期预测）</em>*：退化更明显但仍在可控范围内——FID 从 1s 的 1.51 仅上升到 6s 的 2.84（+1.33），FVD 从 11.28 升到 29.52（+18.24）。相比直接 decode camera token 的 Camera Latent Decoder（FID 10.97→11.82，FVD 135.56→158.39），Renderer 的质量提升了约一个数量级。</p>
+<p><em>蓝色轨迹线解读（关键）：</em><em> 在前窄角和前鱼眼两个前向视图上，叠加了一条</em><em>蓝色轨迹线</em><em>——这是从 LDM 预测的 action token 中解码出的自车未来路径（方向盘转角 + 速度积分得出的 2D 轨迹投影到图像平面）。Renderer 在训练和推理中</em><em>从未接触过 action token</em><em>（Stage III 中 action-conditioning 分支已被移除），因此这条蓝色轨迹是独立于 Renderer 的外部参考。观察 6 秒内的所有行：蓝色轨迹始终紧密贴合渲染画面中的车道几何——轨迹在弯道处沿车道线弯曲、在直道处保持在车道中心、在前车后方保持安全距离。这种高度一致性证明了：</em><em>camera token 已经隐式编码了自车轨迹和场景动力学</em><em>，并且 </em><em>Renderer 的生成完全受 LDM 的 latent 想象控制</em><em>，而非从历史画面中自由发挥（hallucination）。如果 Renderer 无视 camera token 而仅凭历史帧外推，蓝色轨迹和渲染画面必然出现不一致——但结果中并未观察到这种不一致，从而验证了"pure camera token conditioning"设计的有效性。</em></p>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>FID↓ (1s)</th>
+<th>FID↓ (6s)</th>
+<th>FVD↓ (1s)</th>
+<th>FVD↓ (6s)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Camera Latent Decoder</td>
+<td>10.97</td>
+<td>11.82</td>
+<td>135.56</td>
+<td>158.39</td>
+</tr>
+<tr>
+<td>Vision Renderer</td>
+<td><strong>1.51</strong></td>
+<td><strong>2.84</strong></td>
+<td><strong>11.28</strong></td>
+<td><strong>29.52</strong></td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>Vision Renderer 在 1s 视界达到 FID 1.51 / FVD 11.28，远优于直接 latent decode（FID 10.97 / FVD 135.56）。FID 低于 2.0 意味着渲染帧与真实帧在人眼感知上几乎不可区分；而 FID 10.97 的 latent decode 图像明显模糊。</li>
+<li>从 1s 到 6s 的退化很小（FID 仅增加 1.33，FVD 增加 18.24），说明<strong>自回归推演在 6 秒内 drift 累积有限</strong>，这是闭环部署的关键属性。</li>
+</ul>
+<h3 id="37-bsa">3.7 BSA 加速</h3>
+<table>
+<thead>
+<tr>
+<th>注意力实现</th>
+<th>每步耗时 (s)↓</th>
+<th>加速比↑</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>FlashAttention-2 (标准 causal mask)</td>
+<td>24.50</td>
+<td>1.00×</td>
+</tr>
+<tr>
+<td>BSA w/ mask (本文)</td>
+<td><strong>15.40</strong></td>
+<td><strong>1.59×</strong></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="_4">四、关键洞察与技术亮点</h2>
+<ol>
+<li>
+<p><strong>Chunk-wise 设计一举两得</strong>：既避免了逐帧预测的平凡外推退化（chunk 间语义距离足够大），又保留了 chunk 内密集帧捕获瞬时动力学。这是一个优雅的设计——不是选择帧率权衡，而是改变了预测的基本单元。</p>
+</li>
+<li>
+<p><strong>"只给 Renderer camera token 不给 action"的设计</strong>：这是确保闭环一致性的关键。如果同时暴露 action 和 camera token，Renderer 可能绕过 camera token 直接依赖 action 预测，导致 LDM 和 Renderer 各自独立预测未来——闭环形同虚设。强制 Renderer 只能通过 camera token 接受 LDM 的意图，使 camera token 成为有效的信息瓶颈，也提供了可审计的一致性检查（对比 Renderer 输出和 Camera Latent Decoder 输出）。</p>
+</li>
+<li>
+<p><strong>三阶段解耦训练</strong>：LDM 和 Renderer 先独立预训练、再联合对齐。这种"先分后合"策略在面对两个复杂模块时，比端到端联合训练更稳定、更易调试。</p>
+</li>
+<li>
+<p><strong>时间重要性采样的窗口设计</strong>：三窗口（近未来/中视界/近历史）覆盖操控全周期，不是简单的"采样大加速度帧"，而是从因果角度覆盖了操控的前因（近历史）、迫在眉睫（近未来）和长期意图（中视界）。</p>
+</li>
+<li>
+<p><strong>非对称预测</strong>：视觉预测走长视界（chunk 间步长 3s），动作预测保持高频率——这个不对称性精确反映了自动驾驶中"看远"和"控密"的不同需求。</p>
+</li>
+<li>
+<p><strong>BSA 线性的块密度</strong>：通过按时间步差奇偶性划分注意力头组，每个组只关注互补的时间偏移子集。这不仅压缩了计算，本身就是一种多头注意力的正则化——不同头组的差异化时间视野可能促进更丰富的表征学习。</p>
+</li>
+<li>
+<p><strong>从 "reactive" 到 "predictive" 的范式转变</strong>：X-Foresight 不是简单在 VLA 上加一个预测模块，而是将世界模型作为 VLA 的<strong>内在能力</strong>来训练——world modeling 和 action control 共享同一个 latent 空间和同一个 backbone。这种深度融合比两阶段方法（先预测再规划）更优雅，也避免了信息损失。</p>
+</li>
+</ol>
+<hr />
+<h2 id="_5">五、局限性</h2>
+<ol>
+<li>
+<p><strong>闭环推演中的漂移</strong>：虽然 drift 在 6 秒内有限（FID 仅 +1.33），但更长时间推演（如 20 秒+）的稳定性未在论文中讨论。对于需要长距离规划的自动驾驶场景，这仍是待解决问题。</p>
+</li>
+<li>
+<p><strong>缺乏公开 benchmark 对比</strong>：所有实验基于内部数据集，未与已发表的 world model 方法（如 GAIA-1、DriveDreamer、OccWorld 等）在公开 benchmark 上对比。CP 值难以评估。</p>
+</li>
+<li>
+<p><strong>安全关键场景的覆盖度</strong>：尽管时间重要性采样将碰撞率降低了 16.2%，但长尾问题的根本解决仍需数据覆盖和模型的进一步能力提升。</p>
+</li>
+<li>
+<p><strong>多模态监督的潜力</strong>：论文在结论中提到可以加入 3D 几何监督等更丰富的模态，说明当前方法在物理世界知识的学习上还有提升空间。</p>
+</li>
+</ol>
+<hr />
+<h2 id="_6">六、关键概念速查</h2>
+<table>
+<thead>
+<tr>
+<th>概念</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>LDM</strong> (Large Drive Model)</td>
+<td>自回归 Transformer，在统一 token 空间联合预测动作和未来视觉</td>
+</tr>
+<tr>
+<td><strong>Vision Renderer</strong></td>
+<td>基于 DiT + Rectified Flow 的多视角未来画面渲染器</td>
+</tr>
+<tr>
+<td><strong>Chunk-Wise AR</strong></td>
+<td>每个自回归步预测一个 chunk（K 帧），而非单帧</td>
+</tr>
+<tr>
+<td><strong>Chunk-Wise Longer Foresight</strong></td>
+<td>拉大 chunk 间步长扩展有效预测视界</td>
+</tr>
+<tr>
+<td><strong>CLEF</strong></td>
+<td>Curriculum Learning with Extended Foresight</td>
+</tr>
+<tr>
+<td><strong>TIS</strong> (Temporal Importance Sampling)</td>
+<td>基于自车加/减速度的重要性加权采样，聚焦安全关键 chunk</td>
+</tr>
+<tr>
+<td><strong>BSA</strong> (Block-Sparse Attention)</td>
+<td>半因果块稀疏注意力，线性复杂度长序列训练</td>
+</tr>
+<tr>
+<td><strong>CCES</strong></td>
+<td>四维驾驶质量评估：Compliance / Comfort / Efficiency / Safety</td>
+</tr>
+<tr>
+<td><strong>Camera Token</strong></td>
+<td>LDM 预测的多视角 latent token，编码未来外观和场景动力学</td>
+</tr>
+<tr>
+<td><strong>Rectified Flow</strong></td>
+<td>直线插值的扩散采样路径，比标准 DDPM 用更少步骤产生高质量样本</td>
+</tr>
+<tr>
+<td><strong>Camera Latent Decoder</strong></td>
+<td>轻量卷积解码器，用于可视化诊断 latent 空间的一致性</td>
+</tr>
+<tr>
+<td><strong>Rollout Drift</strong></td>
+<td>自回归推演中误差逐步累积导致预测偏离数据流形的现象</td>
+</tr>
+</tbody>
+</table>
+  </div>
+</main>
+
+
+<script>
+(function() {
+  const sidebar = document.getElementById('sidebar');
+  const links = sidebar.querySelectorAll('a');
+  const headings = document.querySelectorAll('h1[id], h2[id], h3[id], h4[id]');
+  if (headings.length === 0) return;
+
+  const linkMap = new Map();
+  links.forEach(function(a) {
+    const href = a.getAttribute('href');
+    if (href && href.startsWith('#')) linkMap.set(href.slice(1), a);
+  });
+
+  function onScroll() {
+    let currentId = null;
+    const scrollTop = window.scrollY + 80;
+    headings.forEach(function(h) { if (h.offsetTop <= scrollTop) currentId = h.id; });
+    links.forEach(function(a) { a.classList.remove('active'); });
+    if (currentId && linkMap.has(currentId)) {
+      const el = linkMap.get(currentId);
+      el.classList.add('active');
+      const sr = sidebar.getBoundingClientRect();
+      const er = el.getBoundingClientRect();
+      if (er.bottom > sr.bottom || er.top < sr.top) {
+        el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+    }
+  }
+
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+})();
+</script>
+
+</body>
+</html>
