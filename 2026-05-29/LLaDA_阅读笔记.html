@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Large Language Diffusion Models</title>
+<!-- arxiv: 2502.09992 -->
+<!-- venue: NeurIPS 2025 -->
+<!-- tags: 语言模型, 扩散模型, 推理 -->
+<!-- words-zh: 2769 -->
+<!-- words-en: 390 -->
+<!-- reading-time: 10 -->
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #ffffff;
+    --text: #1a1a2e;
+    --text-secondary: #555;
+    --border: #e1e4e8;
+    --link: #0969da;
+    --table-stripe: #f6f8fa;
+    --heading: #0d1117;
+    --blockquote-border: #0969da;
+    --blockquote-bg: #f0f6ff;
+    --inline-code: #d73a49;
+    --inline-code-bg: #f6f8fa;
+    --sidebar-width: 260px;
+    --toc-active: #0969da;
+    --content-max-width: 900px;
+    --content-padding: 48px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "Inter", "Noto Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 16px;
+    line-height: 1.75;
+    color: var(--text);
+    background: var(--bg);
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    width: var(--sidebar-width);
+    overflow-y: auto;
+    padding: 28px 20px 40px;
+    background: #fafbfc;
+    border-right: 1px solid var(--border);
+    z-index: 10;
+    scrollbar-width: thin;
+  }
+  .sidebar-title {
+    font-size: 13px; font-weight: 700; color: var(--text-secondary);
+    margin-bottom: 16px; letter-spacing: 0.06em; text-transform: uppercase;
+  }
+  .toc-list { list-style: none; padding: 0; margin: 0; }
+  .toc-list ul { list-style: none; padding-left: 14px; }
+  .toc-list li { margin: 1px 0; }
+  .toc-list a {
+    display: block; padding: 4px 12px; font-size: 13.5px; line-height: 1.45;
+    color: var(--text-secondary); text-decoration: none; border-radius: 4px;
+    border-left: 2px solid transparent; transition: all 0.15s;
+  }
+  .toc-list a:hover { color: var(--link); background: #e8f0fe; }
+  .toc-list a.active {
+    color: var(--toc-active); font-weight: 600;
+    border-left-color: var(--toc-active); background: #e8f0fe;
+  }
+  .toc-h1 a { font-weight: 600; color: var(--heading); font-size: 14px; }
+  .toc-h3 a { padding-left: 24px; font-size: 13px; }
+  .toc-h4 a { padding-left: 36px; font-size: 12.5px; }
+  .toc-empty { color: var(--text-secondary); font-size: 13px; font-style: italic; }
+
+  .main-wrapper {
+    margin-left: var(--sidebar-width);
+    min-height: 100vh;
+    display: flex; justify-content: center;
+  }
+  .content-inner {
+    width: 100%;
+    max-width: var(--content-max-width);
+    padding: 40px var(--content-padding) 80px;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    color: var(--heading); font-weight: 700; line-height: 1.3;
+    margin-top: 2em; margin-bottom: 0.6em; scroll-margin-top: 24px;
+  }
+  h1 { font-size: 2em; border-bottom: 2px solid var(--border); padding-bottom: 0.3em; margin-top: 0; }
+  h2 { font-size: 1.5em; border-bottom: 1px solid var(--border); padding-bottom: 0.25em; }
+  h3 { font-size: 1.25em; }
+  h4 { font-size: 1.1em; }
+  p { margin-bottom: 1em; }
+  a { color: var(--link); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  strong { font-weight: 600; }
+
+  blockquote {
+    border-left: 4px solid var(--blockquote-border);
+    background: var(--blockquote-bg);
+    padding: 12px 20px; margin: 1em 0;
+    border-radius: 0 6px 6px 0; color: var(--text-secondary);
+  }
+  blockquote p:last-child { margin-bottom: 0; }
+
+  code {
+    font-family: "JetBrains Mono", "SF Mono", "Fira Code", monospace;
+    font-size: 0.875em; background: var(--inline-code-bg);
+    padding: 2px 6px; border-radius: 4px; color: var(--inline-code);
+  }
+  pre {
+    background: #1e1e2e; color: #cdd6f4;
+    border-radius: 8px; padding: 16px 20px; overflow-x: auto;
+    margin: 1em 0; font-size: 14px; line-height: 1.55;
+  }
+  pre code { background: none; padding: 0; border-radius: 0; color: inherit; font-size: inherit; }
+
+  .codehilite { background: #1e1e2e; border-radius: 8px; padding: 16px 20px; overflow-x: auto; margin: 1em 0; }
+  .codehilite pre { background: none; padding: 0; margin: 0; border-radius: 0; }
+  .codehilite .hll { background-color: #2a2a3e; }
+  .codehilite .c  { color: #6c7086; font-style: italic; }
+  .codehilite .k  { color: #cba6f7; }
+  .codehilite .o  { color: #89b4fa; }
+  .codehilite .s  { color: #a6e3a1; }
+  .codehilite .n  { color: #cdd6f4; }
+  .codehilite .p  { color: #bac2de; }
+  .codehilite .mi { color: #fab387; }
+  .codehilite .nf { color: #89b4fa; }
+  .codehilite .nb { color: #f38ba8; }
+  .codehilite .nc { color: #f9e2af; }
+  .codehilite .bp { color: #f38ba8; }
+
+  table { width: 100%; border-collapse: collapse; margin: 1em 0; font-size: 0.925em; }
+  th, td { border: 1px solid var(--border); padding: 10px 14px; text-align: left; }
+  th { background: var(--table-stripe); font-weight: 600; color: var(--heading); }
+  tr:nth-child(even) td { background: var(--table-stripe); }
+
+  .math.display { display: block; overflow-x: auto; padding: 12px 0; margin: 1em 0; }
+  ul, ol { padding-left: 1.5em; margin-bottom: 1em; }
+  li { margin-bottom: 0.3em; }
+  hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+  img { max-width: 100%; height: auto; border-radius: 6px; margin: 0; }
+  p:has(img) { text-align: center; margin-top: 0.6em; margin-bottom: 0; }
+  p:has(img) + p { text-align: center; font-size: 0.9em; color: var(--text-secondary); margin-top: 0.15em; margin-bottom: 0.6em; }
+  .mermaid { text-align: center; margin: 1.5em 0; background: #fafbfc; border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+  .article-stats {
+    font-size: 0.85rem; color: var(--text-secondary);
+    padding: 10px 18px; margin-bottom: 28px;
+    background: #f8f9fa; border: 1px solid var(--border); border-radius: 8px;
+  }
+
+  @media (max-width: 1024px) {
+    .sidebar { position: static; width: 100%; height: auto; max-height: 35vh; border-right: none; border-bottom: 1px solid var(--border); }
+    .main-wrapper { margin-left: 0; display: block; }
+    .content-inner { max-width: none; padding: 24px 20px 60px; }
+  }
+</style>
+
+<script>
+MathJax = {
+  tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']], processEscapes: true, tags: 'none' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] }
+};
+</script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  mermaid.initialize({ startOnLoad: true, theme: 'neutral', securityLevel: 'loose' });
+});
+</script>
+
+</head>
+<body>
+
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-title">目录</div>
+  <ul class="toc-list">
+<li class="toc-h1"><a href="#large-language-diffusion-models">Large Language Diffusion Models</a>
+<ul>
+</li>
+<li class="toc-h2"><a href="#_1">一、核心问题</a>
+</li>
+<li class="toc-h2"><a href="#_2">二、核心思路 / 方法</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#21-llada">2.1 LLaDA 的生成建模方式</a>
+</li>
+<li class="toc-h3"><a href="#22-bert">2.2 与 BERT 的本质区别</a>
+</li>
+<li class="toc-h3"><a href="#23">2.3 模型架构</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_3">三、训练目标</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#31">3.1 预训练</a>
+</li>
+<li class="toc-h3"><a href="#32-sft">3.2 SFT</a>
+</li>
+<li class="toc-h3"><a href="#33">3.3 推理采样</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_4">四、实验与结果</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#41-scalability">4.1 可扩展性（Scalability）</a>
+</li>
+<li class="toc-h3"><a href="#42-benchmarkllada-8b-base">4.2 基座模型 Benchmark（LLaDA 8B Base）</a>
+</li>
+<li class="toc-h3"><a href="#43-instruct-benchmarkllada-8b-instruct">4.3 Instruct 模型 Benchmark（LLaDA 8B Instruct）</a>
+</li>
+<li class="toc-h3"><a href="#44-reversal-reasoning">4.4 反转推理（Reversal Reasoning）</a>
+</li>
+<li class="toc-h3"><a href="#45">4.5 采样效率分析</a>
+</li>
+<li class="toc-h3"><a href="#46-remask">4.6 采样策略消融：低置信度 Remask 至关重要</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_5">五、关键洞察与技术亮点</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#51">5.1 "生成式建模原理 &gt; 自回归形式"</a>
+</li>
+<li class="toc-h3"><a href="#52-time-free-parameterization">5.2 时间无关参数化（Time-free Parameterization）</a>
+</li>
+<li class="toc-h3"><a href="#53">5.3 天然双向建模 → 打破反转诅咒</a>
+</li>
+<li class="toc-h3"><a href="#54">5.4 推理灵活性：纯扩散、自回归、块扩散三者通吃</a>
+</li>
+<li class="toc-h3"><a href="#55">5.5 训练稳定性</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_6">六、代码实现解读</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#61-causal-mask">6.1 模型架构：去掉 Causal Mask</a>
+</li>
+<li class="toc-h3"><a href="#62">6.2 预训练核心代码</a>
+</li>
+<li class="toc-h3"><a href="#63-sft">6.3 SFT 核心代码</a>
+</li>
+<li class="toc-h3"><a href="#64">6.4 推理采样流程</a>
+</li>
+<li class="toc-h3"><a href="#65">6.5 采样策略对比</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_7">七、局限性</a>
+</li>
+<li class="toc-h2"><a href="#_8">八、关键概念速查</a>
+</ul></li>
+</li></ul>
+</nav>
+
+<main class="main-wrapper">
+  <div class="content-inner" id="main-content">
+<h1 id="large-language-diffusion-models">Large Language Diffusion Models</h1>
+<div class="article-stats">2,769 字 · English 390 词 · 约 10 分钟阅读</div>
+
+<blockquote>
+<p><strong>论文信息</strong>
+- 作者：Shen Nie<em>, Fengqi Zhu</em>, Zebin You, Xiaolu Zhang, Jingyang Ou, Jun Hu, Jun Zhou, Yankai Lin, Ji-Rong Wen, Chongxuan Li（* 共同一作）
+- 通讯作者：Chongxuan Li（中国人民大学高瓴人工智能学院）
+- 机构：中国人民大学 + 蚂蚁集团
+- 投稿方向：NeurIPS 2025（以 [final] 选项编译，已接收）
+- arXiv ID：2502.09992
+- 代码：https://github.com/ML-GSAI/LLaDA
+- HuggingFace：https://huggingface.co/GSAI-ML/LLaDA-8B-Base</p>
+</blockquote>
+<hr />
+<h2 id="_1">一、核心问题</h2>
+<p><strong>自回归模型（ARM）是不是 LLM 核心能力的唯一路径？</strong></p>
+<p>当前所有主流 LLM（GPT、LLaMA 等）都采用自回归"next-token prediction"范式（公式 2），业界普遍认为 LLM 的三大核心能力——<strong>可扩展性（scalability）、上下文学习（in-context learning）、指令遵循（instruction-following）</strong>——天然依赖自回归建模。这篇论文直接挑战这个假设。</p>
+<p>论文的核心洞察是：真正支撑 LLM 能力的，是<strong>生成式建模原理</strong>（generative modeling principles，即公式 1 的最大似然估计 / KL 散度最小化），而不是自回归形式本身。自回归模型天然存在的<strong>反转诅咒（reversal curse）</strong>反而是其形式局限性的直接体现。</p>
+<hr />
+<h2 id="_2">二、核心思路 / 方法</h2>
+<h3 id="21-llada">2.1 LLaDA 的生成建模方式</h3>
+<p>LLaDA 采用<strong>掩码扩散模型（Masked Diffusion Model, MDM）</strong>来定义模型分布，不再逐 token 自回归生成，而是：</p>
+<ol>
+<li><strong>前向过程</strong>：给定干净文本 <span class="math inline">$x_0$</span>，以概率 <span class="math inline">$t \sim U[0, 1]$</span> 对每个 token <strong>独立随机</strong>掩码，得到部分掩码的 <span class="math inline">$x_t$</span>。<span class="math inline">$t=1$</span> 时全部掩码，<span class="math inline">$t=0$</span> 时无掩码。</li>
+<li><strong>反向过程</strong>：训练一个 <strong>mask predictor</strong>（Transformer，无因果掩码）输入 <span class="math inline">$x_t$</span>，同时预测所有被掩码的 token。从 <span class="math inline">$t=1$</span>（全掩码）逐渐去掩码到 <span class="math inline">$t=0$</span>（全部生成），在此过程中迭代采样。</li>
+</ol>
+<p><img alt="图2：LLaDA 概览图" src="assets/llada/overview.jpg" /></p>
+<p><em>图2：LLaDA 整体架构概览。(a) 预训练——对完整文本以相同比率 <span class="math inline">$t \sim U[0,1]$</span> 随机独立掩码每个 token；(b) SFT——仅对 response 部分进行掩码，prompt 保持不变；(c) 采样——从 <span class="math inline">$t=1$</span>（全掩码）到 <span class="math inline">$t=0$</span>（无掩码）模拟扩散过程，每步同时预测所有掩码 token，配合灵活的 remask 策略。</em></p>
+<h3 id="22-bert">2.2 与 BERT 的本质区别</h3>
+<p>这经常被问到。LLaDA 使用的是<strong>从 0 到 1 随机变化的掩码比率</strong>，而 BERT 使用固定比率（如 15%）。这个细微差别有重大意义：</p>
+<ul>
+<li>LLaDA 的训练目标是模型分布<strong>负对数似然的上界</strong>（公式 8），使其成为<strong>有原则的生成模型 (principled generative model)</strong></li>
+<li>这赋予了 LLaDA 本质性的 in-context learning 和 instruction-following 能力</li>
+<li>在大数据和模型规模下具有 Fisher 一致性，保证了可扩展性</li>
+</ul>
+<h3 id="23">2.3 模型架构</h3>
+<p>LLaDA 8B 与 LLaMA3 8B 使用相同的 Transformer 架构基础（RMSNorm、SwiGLU、RoPE），关键差异：</p>
+<table>
+<thead>
+<tr>
+<th>设计选择</th>
+<th>LLaDA 8B</th>
+<th>LLaMA3 8B</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>注意力掩码</td>
+<td>无因果掩码（双向）</td>
+<td>因果掩码（单向）</td>
+</tr>
+<tr>
+<td>注意力类型</td>
+<td>普通多头注意力</td>
+<td>分组查询注意力（GQA）</td>
+</tr>
+<tr>
+<td>FFN 维度</td>
+<td>12,288（略小）</td>
+<td>14,336</td>
+</tr>
+<tr>
+<td>KV 头数</td>
+<td>32</td>
+<td>8</td>
+</tr>
+<tr>
+<td>原因</td>
+<td>无法用 KV Cache，无需 GQA</td>
+<td>GQA 减少 KV Cache</td>
+</tr>
+</tbody>
+</table>
+<p>不使用 GQA 导致注意力层参数更多，因此缩减 FFN 维度以保持总参数量相近（8.02B vs 8.03B）。</p>
+<hr />
+<h2 id="_3">三、训练目标</h2>
+<h3 id="31">3.1 预训练</h3>
+<p>LLaDA 的损失函数只计算<strong>被掩码 token</strong> 上的交叉熵，带 <span class="math inline">$\frac{1}{t}$</span> 权重：</p>
+<p><div class="math display">$$\mathcal{L}(\theta) = -\mathbb{E}_{t, x_0, x_t}\left[\frac{1}{t} \sum_{i=1}^L \mathbf{1}[x_t^i = \textrm{M}] \log p_\theta(x_0^i|x_t)\right]$$</div></p>
+<p>其中 <span class="math inline">$t \sim U[0, 1]$</span>，<span class="math inline">$x_t$</span> 来自前向掩码过程。该损失被证明是负对数似然的上界：</p>
+<p><div class="math display">$$-\mathbb{E}_{p_{\textrm{data}}(x_0)}[\log p_\theta(x_0)] \le \mathcal{L}(\theta)$$</div></p>
+<p><strong>预训练配置</strong>：</p>
+<ul>
+<li>数据：2.3T tokens（约 11% 中文、61% 英文、28% 代码）</li>
+<li>序列长度：4096 tokens</li>
+<li>计算量：0.13M H800 GPU hours（约 10²³ FLOPs）</li>
+<li>优化器：AdamW（weight decay 0.1，batch size 1280）</li>
+<li>学习率：Warmup-Stable-Decay 策略——初始 4e-4，1.2T 后降至 1e-4，最后 0.3T 线性降至 1e-5</li>
+<li>训练全程只 crash 过一次（1.2T 处 loss=NAN），恢复后降学习率继续</li>
+</ul>
+<h3 id="32-sft">3.2 SFT</h3>
+<p>将 (prompt, response) 对中的 <strong>response 部分</strong> 进行随机掩码，计算相同形式的损失：</p>
+<p><div class="math display">$$-\mathbb{E}_{t, p_0, r_0, r_t}\left[\frac{1}{t} \sum_{i=1}^{L'} \mathbf{1}[r_t^i = \textrm{M}] \log p_\theta(r_0^i|p_0, r_t)\right]$$</div></p>
+<ul>
+<li>数据：4.5M 对（1M 人工标注 + 3.5M 合成）</li>
+<li>3 个 epoch，学习率 2.5e-5，batch size 256</li>
+<li>用动态 padding（附 <code>|EOS|</code> token），训练时也预测 EOS，采样时去除</li>
+</ul>
+<h3 id="33">3.3 推理采样</h3>
+<p>从 <span class="math inline">$t=1$</span>（全掩码）到 <span class="math inline">$t=0$</span>（全部生成），将时间离散为 <span class="math inline">$N$</span> 步。每步：</p>
+<ol>
+<li>Mask predictor 输入当前 <span class="math inline">$p_0 + r_t$</span>，预测所有掩码位置的 token</li>
+<li>使用 <strong>低置信度 remask（low-confidence remasking）</strong> 策略选择保留哪些 token</li>
+<li>将 <span class="math inline">$\frac{s}{t}$</span> 比例的低置信度预测重新掩码</li>
+</ol>
+<p><strong>关键超参数</strong>：</p>
+<ul>
+<li>生成长度（用户指定，论文显示结果对此不敏感）</li>
+<li>采样步数（= 生成长度时最优，可减少以换速度）</li>
+</ul>
+<p>此外 LLaDA <strong>天然支持多种采样方式</strong>（无需重新训练）：纯扩散采样、自回归采样、块扩散采样。</p>
+<hr />
+<h2 id="_4">四、实验与结果</h2>
+<h3 id="41-scalability">4.1 可扩展性（Scalability）</h3>
+<p><img alt="图3：可扩展性对比" src="assets/llada/flops_mmlu_scatter.jpg" /></p>
+<p><em>图3（共6个子图）：LLaDA 与自回归基线（ARM）在 6 个任务上随预训练 FLOPs 增加的性能变化。横轴为预训练计算量（FLOPs），纵轴为各项任务指标。</em></p>
+<table>
+<tr>
+<td width="33%"><img src="assets/llada/flops_mmlu_scatter.jpg" width="100%"><br><em>(a) MMLU</em></td>
+<td width="33%"><img src="assets/llada/flops_arc_c_scatter.jpg" width="100%"><br><em>(b) ARC-C</em></td>
+<td width="33%"><img src="assets/llada/flops_cmmlu_scatter.jpg" width="100%"><br><em>(c) CMMLU</em></td>
+</tr>
+<tr>
+<td width="33%"><img src="assets/llada/flops_piqa_scatter.jpg" width="100%"><br><em>(d) PIQA</em></td>
+<td width="33%"><img src="assets/llada/flops_GSM8K_scatter.jpg" width="100%"><br><em>(e) GSM8K</em></td>
+<td width="33%"><img src="assets/llada/flops_HumanEval_scatter.jpg" width="100%"><br><em>(f) HumanEval</em></td>
+</tr>
+</table>
+
+<p><em>图3（完整6子图）：在 10²⁰ ∼ 10²³ FLOPs 范围内，LLaDA（蓝色）与自回归模型（橙色）的随计算量增长的趋势对比。关键发现：LLaDA 展现了与 ARM 竞争性的可扩展性，在 MMLU 和 GSM8K 上甚至表现出更强的扩展趋势。在 PIQA 等相对较弱的任务上，性能差距也随规模增加而缩小。</em></p>
+<p><strong>关键发现</strong>：LLaDA 在 10²⁰ ∼ 10²³ FLOPs 范围内展现了与 ARM 高度竞争的可扩展性。在 MMLU 和 GSM8K 上，LLaDA 甚至表现更好。</p>
+<h3 id="42-benchmarkllada-8b-base">4.2 基座模型 Benchmark（LLaDA 8B Base）</h3>
+<p><img alt="图1a：基座模型零/少样本 Benchmark" src="assets/llada/LLaDA_vs_LLaMA.jpg" /></p>
+<p><em>图1 (a)：LLaDA 8B Base 与 LLaMA3 8B Base、LLaMA2 7B Base 在 15 个零/少样本任务上的对比。LLaDA 在超半数任务上达到与 LLaMA3 8B 竞争的水平，尤其在数学（GSM8K 70.3 vs 48.7）和中文（CMMLU 69.9 vs 50.7）上大幅领先。</em></p>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>LLaDA 8B</th>
+<th>LLaMA3 8B</th>
+<th>LLaMA2 7B</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>训练 tokens</td>
+<td>2.3T</td>
+<td>15T</td>
+<td>2T</td>
+</tr>
+<tr>
+<td>MMLU (5-shot)</td>
+<td><strong>65.9</strong></td>
+<td>65.4</td>
+<td>45.9</td>
+</tr>
+<tr>
+<td>BBH (3-shot)</td>
+<td>49.7</td>
+<td><strong>62.1</strong></td>
+<td>39.4</td>
+</tr>
+<tr>
+<td>GSM8K (4-shot)</td>
+<td><strong>70.3</strong></td>
+<td>48.7</td>
+<td>13.1</td>
+</tr>
+<tr>
+<td>Math (4-shot)</td>
+<td><strong>31.4</strong></td>
+<td>16.0</td>
+<td>4.3</td>
+</tr>
+<tr>
+<td>HumanEval (0-shot)</td>
+<td><strong>35.4</strong></td>
+<td>34.8</td>
+<td>12.8</td>
+</tr>
+<tr>
+<td>CMMLU (5-shot)</td>
+<td><strong>69.9</strong></td>
+<td>50.7</td>
+<td>32.5</td>
+</tr>
+<tr>
+<td>C-Eval (5-shot)</td>
+<td><strong>70.5</strong></td>
+<td>51.7</td>
+<td>34.0</td>
+</tr>
+</tbody>
+</table>
+<p><strong>核心亮点</strong>：LLaDA 仅用 2.3T tokens 训练（LLaMA3 的 ~1/6.5），在数学和中文任务上对 LLaMA3 8B 形成碾压式优势（GSM8K 高出 21.6 个百分点），同时英文通用任务整体持平。</p>
+<h3 id="43-instruct-benchmarkllada-8b-instruct">4.3 Instruct 模型 Benchmark（LLaDA 8B Instruct）</h3>
+<p><img alt="图1b：Instruct 模型 Benchmark" src="assets/llada/LLaDA_vs_LLaMA_chat.jpg" /></p>
+<p><em>图1 (b)：LLaDA 8B Instruct（仅SFT）与 LLaMA3 8B Instruct（SFT+RL）的对比。LLaDA 在仅使用 SFT 的情况下，多项指标与经过 RL 对齐的 LLaMA3 8B Instruct 接近。</em></p>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>LLaDA 8B Inst</th>
+<th>LLaMA3 8B Inst</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>后训练方式</td>
+<td>仅 SFT</td>
+<td>SFT + RL</td>
+</tr>
+<tr>
+<td>MMLU (5-shot)</td>
+<td>65.5</td>
+<td><strong>68.4</strong></td>
+</tr>
+<tr>
+<td>MMLU-Pro (0-shot)</td>
+<td>37.0</td>
+<td><strong>41.9</strong></td>
+</tr>
+<tr>
+<td>ARC-C (0-shot)</td>
+<td><strong>88.5</strong></td>
+<td>82.4</td>
+</tr>
+<tr>
+<td>GSM8K (4-shot)</td>
+<td>69.4</td>
+<td><strong>78.3</strong></td>
+</tr>
+<tr>
+<td>Math (0-shot)</td>
+<td><strong>31.9</strong></td>
+<td>29.6</td>
+</tr>
+<tr>
+<td>HumanEval (0-shot)</td>
+<td>49.4</td>
+<td><strong>59.8</strong></td>
+</tr>
+</tbody>
+</table>
+<p>关键：LLaDA 仅做了 SFT（未做 RLHF / DPO 等对齐），在多项指标上与经过 RL 对齐的 LLaMA3 8B Instruct 非常接近。这说明扩散模型同样能有效学习指令遵循。</p>
+<h3 id="44-reversal-reasoning">4.4 反转推理（Reversal Reasoning）</h3>
+<table>
+<thead>
+<tr>
+<th>模型</th>
+<th style="text-align: center;">正向诗歌续写</th>
+<th style="text-align: center;">反向诗歌续写</th>
+<th style="text-align: center;">差距</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GPT-4o</td>
+<td style="text-align: center;"><strong>82.7</strong></td>
+<td style="text-align: center;">34.3</td>
+<td style="text-align: center;">-48.4</td>
+</tr>
+<tr>
+<td>Qwen2.5-7B Inst</td>
+<td style="text-align: center;">75.9</td>
+<td style="text-align: center;">38.0</td>
+<td style="text-align: center;">-37.9</td>
+</tr>
+<tr>
+<td>LLaDA-8B Inst</td>
+<td style="text-align: center;">51.8</td>
+<td style="text-align: center;"><strong>45.6</strong></td>
+<td style="text-align: center;">-6.2</td>
+</tr>
+</tbody>
+</table>
+<p>LLaDA 正反向差距仅 6.2 个百分点，而 GPT-4o 差距高达 48.4。<strong>LLaDA 的反向生成能力超越了 GPT-4o</strong>（45.6 vs 34.3），这是扩散模型天然的<strong>无方向性归纳偏置</strong>带来的优势——在训练中，LLaDA 看到的是被随机掩码的文本，没有固定的左→右方向偏好。</p>
+<h3 id="45">4.5 采样效率分析</h3>
+<p><img alt="采样效率分析" src="assets/llada/GSM8K_efficiency.jpg" /></p>
+<p><em>图：采样效率分析——LLaDA 在不同采样步数（32/64/128/256 步）下的速度-质量权衡。横轴为吞吐量（tokens/s），纵轴为任务指标。</em></p>
+<table>
+<tr>
+<td width="50%"><img src="assets/llada/GSM8K_efficiency.jpg" width="100%"><br><em>(a) GSM8K——LLaDA 8B 在 1.5x 吞吐量下持平 LLaMA3 8B</em></td>
+<td width="50%"><img src="assets/llada/Math_efficiency.jpg" width="100%"><br><em>(b) Math——LLaDA 8B 在 1.8x 吞吐量下持平 LLaMA3 8B</em></td>
+</tr>
+<tr>
+<td width="50%"><img src="assets/llada/HumanEval_efficiency.jpg" width="100%"><br><em>(c) HumanEval——吞吐量匹配时性能相当</em></td>
+<td width="50%"><img src="assets/llada/MBPP_efficiency.jpg" width="100%"><br><em>(d) MBPP——LLaDA 弱于 LLaMA3</em></td>
+</tr>
+</table>
+
+<p>LLaDA 通过调整采样步数提供了<strong>灵活的质效权衡</strong>：减少步数可以大幅提速，减少到 32 步时在 GSM8K 和 Math 上以比 LLaMA3 更高的吞吐量获得同等性能（尽管 LLaMA3 使用了 KV Cache 而 LLaDA 完全没有推理优化）。</p>
+<p>关键结论：<strong>LLaDA 不是为了比 ARM 更快</strong>，而是在没有 KV Cache 等推理优化的情况下已经能在某些任务上达到速度-质量的双赢，说明优化空间很大。</p>
+<h3 id="46-remask">4.6 采样策略消融：低置信度 Remask 至关重要</h3>
+<table>
+<thead>
+<tr>
+<th>策略</th>
+<th style="text-align: center;">BBH</th>
+<th style="text-align: center;">GSM8K</th>
+<th style="text-align: center;">Math</th>
+<th style="text-align: center;">HumanEval</th>
+<th style="text-align: center;">MBPP</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>随机 Remask</td>
+<td style="text-align: center;">32.1</td>
+<td style="text-align: center;">21.3</td>
+<td style="text-align: center;">9.2</td>
+<td style="text-align: center;">11.6</td>
+<td style="text-align: center;">21.0</td>
+</tr>
+<tr>
+<td>低置信度 Remask</td>
+<td style="text-align: center;"><strong>45.0</strong></td>
+<td style="text-align: center;"><strong>70.0</strong></td>
+<td style="text-align: center;"><strong>30.3</strong></td>
+<td style="text-align: center;"><strong>32.9</strong></td>
+<td style="text-align: center;"><strong>40.2</strong></td>
+</tr>
+</tbody>
+</table>
+<p>低置信度 remask 的效果远超随机 remask，类比于自回归模型中的退火采样（annealed sampling），通过降低多样性来提升准确性。</p>
+<hr />
+<h2 id="_5">五、关键洞察与技术亮点</h2>
+<h3 id="51">5.1 "生成式建模原理 &gt; 自回归形式"</h3>
+<p>论文最核心的哲学主张。可扩展性主要来自 Transformer + 大模型 + 大数据 + Fisher 一致性（由最大似然框架保证），而非自回归形式独有。扩散 Transformer 在视觉领域的成功就是佐证。</p>
+<h3 id="52-time-free-parameterization">5.2 时间无关参数化（Time-free Parameterization）</h3>
+<p>MDM 的关键理论结果之一是：<strong>mask predictor 不需要时间 <span class="math inline">$t$</span> 作为输入</strong>。原因是数据预测函数 <span class="math inline">$q_{0|t}(x_s^i|x_t)$</span> 等价于在未掩码 token 条件下的干净数据条件分布 <span class="math inline">$p_{\textrm{data}}(x_0^{i}|x_t^{\textrm{UM}})$</span>，而后者与 <span class="math inline">$t$</span> 无关。这意味着 LLaDA 可以直接使用标准 Transformer（不加时间嵌入）作为 mask predictor。</p>
+<h3 id="53">5.3 天然双向建模 → 打破反转诅咒</h3>
+<p>LLaDA 的训练等价于<strong>任意顺序自回归模型（any-order autoregressive model）</strong>的期望训练目标，这使它天然具有双向推理能力，无需任何特殊设计。这也是它在反转诗歌任务上超越 GPT-4o 的根本原因。</p>
+<h3 id="54">5.4 推理灵活性：纯扩散、自回归、块扩散三者通吃</h3>
+<p>同一个预训练/SFT 后的 LLaDA 模型，无需任何修改或重新训练，即可支持三种采样策略：</p>
+<ul>
+<li><strong>纯扩散</strong>：性能最佳（全文默认）</li>
+<li><strong>块扩散 LLaDA（semi-autoregressive）</strong>：固定块长度，块间自回归、块内扩散，Instruct 模型的 GSM8K 可达 78.6</li>
+<li><strong>纯自回归</strong>：Base 模型可用，但 Instruct 模型效果差（SFT 数据是完整句子）</li>
+</ul>
+<h3 id="55">5.5 训练稳定性</h3>
+<p>2.3T tokens 预训练中仅 crash 1 次（1.2T 处），恢复后降学习率即可。训练只跑了一次，无超参调优。</p>
+<hr />
+<h2 id="_6">六、代码实现解读</h2>
+<p>LLaDA 的实现极其简洁——从自回归模型代码出发，只需寥寥数行修改。</p>
+<h3 id="61-causal-mask">6.1 模型架构：去掉 Causal Mask</h3>
+<div class="codehilite"><pre><span></span><code>LLaMA 的 Transformer Decoder:
+┌──────────────────────────────────────┐
+│  Input → RMSNorm → Attention        │
+│                    (causal mask)     │
+│         → RMSNorm → FFN (SwiGLU)    │
+│         → Output                     │  × 32 layers
+└──────────────────────────────────────┘
+
+LLaDA 的 Transformer Encoder:
+┌──────────────────────────────────────┐
+│  Input → RMSNorm → Attention        │
+│                    (no causal mask)  │
+│         → RMSNorm → FFN (SwiGLU)    │
+│         → Output                     │  × 32 layers
+└──────────────────────────────────────┘
+</code></pre></div>
+
+<p>唯一的变化：删除自注意力中的因果掩码。模型权重结构完全相同，可直接从 ARM checkpoint 转化。</p>
+<h3 id="62">6.2 预训练核心代码</h3>
+<div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">forward_process</span><span class="p">(</span><span class="n">input_ids</span><span class="p">,</span> <span class="n">eps</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">):</span>
+    <span class="n">b</span><span class="p">,</span> <span class="n">l</span> <span class="o">=</span> <span class="n">input_ids</span><span class="o">.</span><span class="n">shape</span>
+    <span class="n">t</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">input_ids</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>        <span class="c1"># t ~ U(0,1)</span>
+    <span class="n">p_mask</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">eps</span><span class="p">)</span> <span class="o">*</span> <span class="n">t</span> <span class="o">+</span> <span class="n">eps</span>
+    <span class="n">p_mask</span> <span class="o">=</span> <span class="n">p_mask</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">]</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">l</span><span class="p">)</span>
+    <span class="n">masked_indices</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">rand</span><span class="p">((</span><span class="n">b</span><span class="p">,</span> <span class="n">l</span><span class="p">))</span> <span class="o">&lt;</span> <span class="n">p_mask</span>       <span class="c1"># 每个 token 独立以 t 概率掩码</span>
+    <span class="n">noisy_batch</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">masked_indices</span><span class="p">,</span> <span class="mi">126336</span><span class="p">,</span> <span class="n">input_ids</span><span class="p">)</span>  <span class="c1"># 126336 = [MASK]</span>
+    <span class="k">return</span> <span class="n">noisy_batch</span><span class="p">,</span> <span class="n">masked_indices</span><span class="p">,</span> <span class="n">p_mask</span>
+
+<span class="c1"># 损失计算</span>
+<span class="n">logits</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="n">input_ids</span><span class="o">=</span><span class="n">noisy_batch</span><span class="p">)</span><span class="o">.</span><span class="n">logits</span>
+<span class="n">token_loss</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">cross_entropy</span><span class="p">(</span><span class="n">logits</span><span class="p">[</span><span class="n">masked_indices</span><span class="p">],</span> 
+                              <span class="n">input_ids</span><span class="p">[</span><span class="n">masked_indices</span><span class="p">],</span> 
+                              <span class="n">reduction</span><span class="o">=</span><span class="s1">&#39;none&#39;</span><span class="p">)</span> <span class="o">/</span> <span class="n">p_mask</span><span class="p">[</span><span class="n">masked_indices</span><span class="p">]</span>
+<span class="n">loss</span> <span class="o">=</span> <span class="n">token_loss</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">/</span> <span class="p">(</span><span class="n">input_ids</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">input_ids</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+</code></pre></div>
+
+<p><strong>论文公式 → 代码映射</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>论文公式</th>
+<th>代码行</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><span class="math inline">$t \sim U[0,1]$</span></td>
+<td><code>torch.rand(b)</code></td>
+<td>为每个样本独立采样掩码比率</td>
+</tr>
+<tr>
+<td><span class="math inline">$x_t \sim q_{t\|0}(x_t\|x_0)$</span></td>
+<td><code>torch.rand() &lt; p_mask</code></td>
+<td>每个 token 以概率 t 独立掩码</td>
+</tr>
+<tr>
+<td><span class="math inline">$\frac{1}{t} \sum \mathbf{1}[x_t^i=\textrm{M}] \log p_\theta$</span></td>
+<td><code>cross_entropy(...) / p_mask[masked_indices]</code></td>
+<td>仅对掩码位置计算加权交叉熵</td>
+</tr>
+</tbody>
+</table>
+<h3 id="63-sft">6.3 SFT 核心代码</h3>
+<div class="codehilite"><pre><span></span><code><span class="c1"># SFT 关键差异：不对 prompt 部分加噪声</span>
+<span class="n">noisy_batch</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">p_mask</span> <span class="o">=</span> <span class="n">forward_process</span><span class="p">(</span><span class="n">input_ids</span><span class="p">)</span>
+<span class="n">prompt_mask</span> <span class="o">=</span> <span class="p">(</span><span class="n">token_positions</span> <span class="o">&lt;</span> <span class="n">prompt_lengths</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
+<span class="n">noisy_batch</span><span class="p">[</span><span class="n">prompt_mask</span><span class="p">]</span> <span class="o">=</span> <span class="n">input_ids</span><span class="p">[</span><span class="n">prompt_mask</span><span class="p">]</span>  <span class="c1"># 保持 prompt 原样</span>
+
+<span class="c1"># 按 answer 长度归一化</span>
+<span class="n">token_loss</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">cross_entropy</span><span class="p">(</span><span class="n">logits</span><span class="p">[</span><span class="n">masked_indices</span><span class="p">],</span> 
+                              <span class="n">input_ids</span><span class="p">[</span><span class="n">masked_indices</span><span class="p">],</span> 
+                              <span class="n">reduction</span><span class="o">=</span><span class="s1">&#39;none&#39;</span><span class="p">)</span> <span class="o">/</span> <span class="n">p_mask</span><span class="p">[</span><span class="n">masked_indices</span><span class="p">]</span>
+<span class="n">ce_loss</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">token_loss</span> <span class="o">/</span> <span class="n">answer_lengths</span><span class="p">[</span><span class="n">masked_indices</span><span class="p">])</span> <span class="o">/</span> <span class="n">input_ids</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+</code></pre></div>
+
+<h3 id="64">6.4 推理采样流程</h3>
+<div class="codehilite"><pre><span></span><code><span class="w">                    </span><span class="err">┌──────────────────────────┐</span>
+<span class="w">                    </span><span class="err">│</span><span class="w">  </span><span class="n">r₁</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">全</span><span class="w"> </span><span class="o">[</span><span class="n">MASK</span><span class="o">]</span><span class="w"> </span><span class="n">序列</span><span class="w">      </span><span class="err">│</span>
+<span class="w">                    </span><span class="err">│</span><span class="w">  </span><span class="n">t</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="w">                    </span><span class="err">│</span>
+<span class="w">                    </span><span class="err">└───────────┬──────────────┘</span>
+<span class="w">                                </span><span class="err">│</span>
+<span class="w">            </span><span class="err">┌───────────────────▼───────────────────┐</span>
+<span class="w">            </span><span class="err">│</span><span class="w">  </span><span class="k">for</span><span class="w"> </span><span class="n">step</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="mf">1.</span><span class="p">.</span><span class="nl">N</span><span class="p">:</span><span class="w">                    </span><span class="err">│</span>
+<span class="w">            </span><span class="err">│</span><span class="w">    </span><span class="n">s</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">t</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="o">/</span><span class="n">N</span><span class="w">                        </span><span class="err">│</span>
+<span class="w">            </span><span class="err">│</span><span class="w">                                       </span><span class="err">│</span>
+<span class="w">            </span><span class="err">│</span><span class="w">    </span><span class="err">┌──────────────────────────┐</span><span class="w">      </span><span class="err">│</span>
+<span class="w">            </span><span class="err">│</span><span class="w">    </span><span class="err">│</span><span class="w">  </span><span class="n">mask_predictor</span><span class="p">(</span><span class="n">p₀</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">rₜ</span><span class="p">)</span><span class="w"> </span><span class="err">│</span><span class="w">      </span><span class="err">│</span><span class="w"> </span><span class="n">预测所有</span><span class="w"> </span><span class="o">[</span><span class="n">MASK</span><span class="o">]</span>
+<span class="w">            </span><span class="err">│</span><span class="w">    </span><span class="err">└───────────┬──────────────┘</span><span class="w">      </span><span class="err">│</span>
+<span class="w">            </span><span class="err">│</span><span class="w">                </span><span class="err">│</span><span class="w">                     </span><span class="err">│</span>
+<span class="w">            </span><span class="err">│</span><span class="w">    </span><span class="err">┌───────────▼──────────────┐</span><span class="w">      </span><span class="err">│</span>
+<span class="w">            </span><span class="err">│</span><span class="w">    </span><span class="err">│</span><span class="w">  </span><span class="n">argmax</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">低置信度</span><span class="w"> </span><span class="n">remask</span><span class="w">  </span><span class="err">│</span><span class="w">      </span><span class="err">│</span><span class="w"> </span><span class="n">保留高置信度</span><span class="w"> </span><span class="err">←</span><span class="w"> </span><span class="n">低置信度</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="o">[</span><span class="n">MASK</span><span class="o">]</span>
+<span class="w">            </span><span class="err">│</span><span class="w">    </span><span class="err">│</span><span class="w">  </span><span class="n">保留</span><span class="w"> </span><span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="n">s</span><span class="p">)</span><span class="w"> </span><span class="n">个</span><span class="w"> </span><span class="n">token</span><span class="w">      </span><span class="err">│</span><span class="w">      </span><span class="err">│</span>
+<span class="w">            </span><span class="err">│</span><span class="w">    </span><span class="err">└───────────┬──────────────┘</span><span class="w">      </span><span class="err">│</span>
+<span class="w">            </span><span class="err">│</span><span class="w">                </span><span class="err">│</span><span class="w">                     </span><span class="err">│</span>
+<span class="w">            </span><span class="err">│</span><span class="w">    </span><span class="n">rₛ</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">更新后的序列</span><span class="w">                  </span><span class="err">│</span>
+<span class="w">            </span><span class="err">│</span><span class="w">    </span><span class="n">t</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">s</span><span class="w">                              </span><span class="err">│</span>
+<span class="w">            </span><span class="err">└───────────────────┬───────────────────┘</span>
+<span class="w">                                </span><span class="err">│</span>
+<span class="w">                    </span><span class="err">┌───────────▼──────────────┐</span>
+<span class="w">                    </span><span class="err">│</span><span class="w">  </span><span class="n">r₀</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">完整生成文本</span><span class="w">         </span><span class="err">│</span>
+<span class="w">                    </span><span class="err">└──────────────────────────┘</span>
+</code></pre></div>
+
+<p><strong>remask 策略核心</strong>：</p>
+<ul>
+<li><strong>随机 remask</strong>：随机选择 <span class="math inline">$\frac{s}{t}$</span> 比例的已预测 token 重新掩码</li>
+<li><strong>低置信度 remask</strong>：选择预测置信度最低的 <span class="math inline">$\frac{s}{t}$</span> 比例 token 重新掩码（默认策略，效果远超随机）</li>
+</ul>
+<p>低置信度 remask 的作用类似自回归模型中的 temperature sampling / top-k——它保留了高置信度的预测，让模型在后续步骤中有机会修正低置信度部分。</p>
+<h3 id="65">6.5 采样策略对比</h3>
+<p>LLaDA 同一模型支持三种策略：</p>
+<table>
+<thead>
+<tr>
+<th>策略</th>
+<th>流程</th>
+<th style="text-align: center;">Base 性能</th>
+<th style="text-align: center;">Instruct 性能</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>纯扩散</td>
+<td>全局同时去掩码</td>
+<td style="text-align: center;"><strong>最优</strong></td>
+<td style="text-align: center;"><strong>最优</strong>（数学任务除外）</td>
+</tr>
+<tr>
+<td>块扩散 LLaDA</td>
+<td>块间半自回归 + 块内扩散</td>
+<td style="text-align: center;">次优</td>
+<td style="text-align: center;">数学最优（GSM8K 78.6）</td>
+</tr>
+<tr>
+<td>纯自回归</td>
+<td>逐 token 左→右</td>
+<td style="text-align: center;">Base 可用</td>
+<td style="text-align: center;">Instruct 不可用</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="_7">七、局限性</h2>
+<ol>
+<li>
+<p><strong>生成长度需要手动指定</strong>：虽然实验证明结果对此不敏感，但要实现真正自适应的生成长度还需改进。</p>
+</li>
+<li>
+<p><strong>推理速度仍有差距</strong>：无 KV Cache，固定长度 + 多步采样，当前最优配置下比 LLaMA3 慢。但论文明确指出这是上限探索而非效率优化，类比扩散图像模型从 DDPM 到 Consistency Model 近千倍加速的历程。</p>
+</li>
+<li>
+<p><strong>计算资源限制</strong>：未能在同等数据量上训练 ARM 基线（ARM 最高 7B，而 LLaDA 8B 的对比模型 LLaMA3 8B 用了 15T tokens vs 2.3T tokens）。</p>
+</li>
+<li>
+<p><strong>未做 RL 对齐</strong>：Instruct 模型仅 SFT，缺少 RLHF/DPO 等对齐过程。</p>
+</li>
+<li>
+<p><strong>无 KV Cache 的替代方案</strong>：未设计专门的注意力机制或位置编码优化推理效率。</p>
+</li>
+<li>
+<p><strong>仅探索文本模态</strong>：多模态扩散语言模型的潜力尚未涉及。</p>
+</li>
+</ol>
+<hr />
+<h2 id="_8">八、关键概念速查</h2>
+<table>
+<thead>
+<tr>
+<th>概念</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Masked Diffusion Model (MDM)</strong></td>
+<td>通过前向随机掩码 + 反向去掩码定义生成过程的一类离散扩散模型</td>
+</tr>
+<tr>
+<td><strong>Mask Predictor</strong></td>
+<td>LLaDA 核心组件，输入部分掩码的文本，同时预测所有掩码位置</td>
+</tr>
+<tr>
+<td><strong>Low-confidence Remasking</strong></td>
+<td>推理时保留高置信度的预测，将低置信度预测重新掩码，让后续步骤修正</td>
+</tr>
+<tr>
+<td><strong>Time-free Parameterization</strong></td>
+<td>理论上证明 mask predictor 不需要时间 t 作为输入，可直接使用标准 Transformer</td>
+</tr>
+<tr>
+<td><strong>Any-order Autoregressive (AO-ARM)</strong></td>
+<td>LLaDA 的训练目标等价于所有可能解码顺序的自回归模型的期望</td>
+</tr>
+<tr>
+<td><strong>Fisher Consistency</strong></td>
+<td>模型在无限数据和足够大容量下能恢复真实数据分布，保证可扩展性</td>
+</tr>
+<tr>
+<td><strong>Reversal Curse</strong></td>
+<td>自回归模型因单向生成而在反向推理任务上表现不佳的现象</td>
+</tr>
+<tr>
+<td><strong>Classifier-free Guidance (CFG)</strong></td>
+<td>无需分类器即可在采样时调节与 prompt 对齐度的技术，LLaDA 兼容但主实验未使用</td>
+</tr>
+<tr>
+<td><strong>Block Diffusion</strong></td>
+<td>将文本分块，块间自回归、块内扩散的混合采样策略</td>
+</tr>
+<tr>
+<td><strong>Warmup-Stable-Decay</strong></td>
+<td>预热 → 稳定 → 衰减的三阶段学习率调度策略，无需中断训练即可监控进度</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p><em>笔记生成时间：2026-05-29</em></p>
+  </div>
+</main>
+
+
+<script>
+(function() {
+  const sidebar = document.getElementById('sidebar');
+  const links = sidebar.querySelectorAll('a');
+  const headings = document.querySelectorAll('h1[id], h2[id], h3[id], h4[id]');
+  if (headings.length === 0) return;
+
+  const linkMap = new Map();
+  links.forEach(function(a) {
+    const href = a.getAttribute('href');
+    if (href && href.startsWith('#')) linkMap.set(href.slice(1), a);
+  });
+
+  function onScroll() {
+    let currentId = null;
+    const scrollTop = window.scrollY + 80;
+    headings.forEach(function(h) { if (h.offsetTop <= scrollTop) currentId = h.id; });
+    links.forEach(function(a) { a.classList.remove('active'); });
+    if (currentId && linkMap.has(currentId)) {
+      const el = linkMap.get(currentId);
+      el.classList.add('active');
+      const sr = sidebar.getBoundingClientRect();
+      const er = el.getBoundingClientRect();
+      if (er.bottom > sr.bottom || er.top < sr.top) {
+        el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+    }
+  }
+
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+})();
+</script>
+
+</body>
+</html>
