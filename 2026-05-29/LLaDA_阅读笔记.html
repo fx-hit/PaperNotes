@@ -7,9 +7,9 @@
 <!-- arxiv: 2502.09992 -->
 <!-- venue: NeurIPS 2025 -->
 <!-- tags: 语言模型, 扩散模型, 推理 -->
-<!-- words-zh: 2769 -->
-<!-- words-en: 390 -->
-<!-- reading-time: 10 -->
+<!-- words-zh: 3240 -->
+<!-- words-en: 443 -->
+<!-- reading-time: 11 -->
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
@@ -218,6 +218,8 @@ document.addEventListener('DOMContentLoaded', function() {
 <li class="toc-h3"><a href="#45">4.5 采样效率分析</a>
 </li>
 <li class="toc-h3"><a href="#46-remask">4.6 采样策略消融：低置信度 Remask 至关重要</a>
+</li>
+<li class="toc-h3"><a href="#47">4.7 生成过程可视化</a>
 </ul></li>
 </li>
 <li class="toc-h2"><a href="#_5">五、关键洞察与技术亮点</a>
@@ -258,7 +260,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <main class="main-wrapper">
   <div class="content-inner" id="main-content">
 <h1 id="large-language-diffusion-models">Large Language Diffusion Models</h1>
-<div class="article-stats">2,769 字 · English 390 词 · 约 10 分钟阅读</div>
+<div class="article-stats">3,240 字 · English 443 词 · 约 11 分钟阅读</div>
 
 <blockquote>
 <p><strong>论文信息</strong>
@@ -371,8 +373,6 @@ document.addEventListener('DOMContentLoaded', function() {
 <hr />
 <h2 id="_4">四、实验与结果</h2>
 <h3 id="41-scalability">4.1 可扩展性（Scalability）</h3>
-<p><img alt="图3：可扩展性对比" src="assets/llada/flops_mmlu_scatter.jpg" /></p>
-<p><em>图3（共6个子图）：LLaDA 与自回归基线（ARM）在 6 个任务上随预训练 FLOPs 增加的性能变化。横轴为预训练计算量（FLOPs），纵轴为各项任务指标。</em></p>
 <table>
 <tr>
 <td width="33%"><img src="assets/llada/flops_mmlu_scatter.jpg" width="100%"><br><em>(a) MMLU</em></td>
@@ -386,11 +386,23 @@ document.addEventListener('DOMContentLoaded', function() {
 </tr>
 </table>
 
-<p><em>图3（完整6子图）：在 10²⁰ ∼ 10²³ FLOPs 范围内，LLaDA（蓝色）与自回归模型（橙色）的随计算量增长的趋势对比。关键发现：LLaDA 展现了与 ARM 竞争性的可扩展性，在 MMLU 和 GSM8K 上甚至表现出更强的扩展趋势。在 PIQA 等相对较弱的任务上，性能差距也随规模增加而缩小。</em></p>
-<p><strong>关键发现</strong>：LLaDA 在 10²⁰ ∼ 10²³ FLOPs 范围内展现了与 ARM 高度竞争的可扩展性。在 MMLU 和 GSM8K 上，LLaDA 甚至表现更好。</p>
+<p><em>图3：LLaDA 与自回归基线（ARM）在 6 个任务上的可扩展性对比，横轴为预训练计算量（FLOPs），纵轴为各任务指标。</em></p>
+<p><strong>逐子图分析：</strong></p>
+<p><strong>(a) MMLU（5-shot）：</strong> LLaDA（蓝色）与 ARM（橙色）在 10²⁰∼10²³ FLOPs 区间内的趋势几乎完全平行，且 LLaDA 整体略高于 ARM。这意味着在通用知识理解任务上，扩散模型的扩展效率不逊于自回归模型。</p>
+<p><strong>(b) ARC-C（0-shot）：</strong> LLaDA 略低于 ARM，差距约 2-4 个百分点。但随着计算量增加，差距并未扩大，说明这更多是数据效率的差异而非根本性的架构劣势。</p>
+<p><strong>(c) CMMLU（5-shot，中文多任务理解）：</strong> LLaDA 与 ARM 趋势高度一致。在最大计算量处，LLaDA 甚至略高于 ARM，证明双向建模对中文等多语言任务可能有天然优势。</p>
+<p><strong>(d) PIQA（0-shot，物理常识推理）：</strong> 这是 LLaDA 相对最弱的任务——LLaDA 始终低于 ARM 约 5 个百分点。但随着 FLOPs 增加，差距在缩小。可能原因是 PIQA 需要精确的物理因果链推理，双向建模的信息整合方式在此任务上稍有劣势。</p>
+<p><strong>(e) GSM8K（4-shot，小学数学）：</strong> LLaDA 明显优于 ARM，且在最大计算量处差距最大（约 10 个百分点）。这与 Table 1 中 LLaDA 对 LLaMA3 8B 在 GSM8K 上的巨大优势（70.3 vs 48.7）一致。</p>
+<p><strong>(f) HumanEval（0-shot，代码生成）：</strong> 在低计算量区间 LLaDA 略低，但到 10²³ FLOPs 处已基本追平。说明代码能力可以通过规模扩展弥补。*</p>
 <h3 id="42-benchmarkllada-8b-base">4.2 基座模型 Benchmark（LLaDA 8B Base）</h3>
-<p><img alt="图1a：基座模型零/少样本 Benchmark" src="assets/llada/LLaDA_vs_LLaMA.jpg" /></p>
-<p><em>图1 (a)：LLaDA 8B Base 与 LLaMA3 8B Base、LLaMA2 7B Base 在 15 个零/少样本任务上的对比。LLaDA 在超半数任务上达到与 LLaMA3 8B 竞争的水平，尤其在数学（GSM8K 70.3 vs 48.7）和中文（CMMLU 69.9 vs 50.7）上大幅领先。</em></p>
+<table>
+<tr>
+<td width="48%"><img src="assets/llada/LLaDA_vs_LLaMA.jpg" width="100%"><br><em>(a) LLaDA 8B Base vs LLaMA3 8B Base、LLaMA2 7B Base 在 15 个零/少样本任务上的对比</em></td>
+<td width="52%"><img src="assets/llada/LLaDA_vs_LLaMA_chat.jpg" width="100%"><br><em>(b) LLaDA 8B Instruct（仅 SFT）vs 各 Instruct 模型（SFT+RL）</em></td>
+</tr>
+</table>
+
+<p><em>图1：零/少样本 Benchmark 对比。</em></p>
 <table>
 <thead>
 <tr>
@@ -453,8 +465,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </table>
 <p><strong>核心亮点</strong>：LLaDA 仅用 2.3T tokens 训练（LLaMA3 的 ~1/6.5），在数学和中文任务上对 LLaMA3 8B 形成碾压式优势（GSM8K 高出 21.6 个百分点），同时英文通用任务整体持平。</p>
 <h3 id="43-instruct-benchmarkllada-8b-instruct">4.3 Instruct 模型 Benchmark（LLaDA 8B Instruct）</h3>
-<p><img alt="图1b：Instruct 模型 Benchmark" src="assets/llada/LLaDA_vs_LLaMA_chat.jpg" /></p>
-<p><em>图1 (b)：LLaDA 8B Instruct（仅SFT）与 LLaMA3 8B Instruct（SFT+RL）的对比。LLaDA 在仅使用 SFT 的情况下，多项指标与经过 RL 对齐的 LLaMA3 8B Instruct 接近。</em></p>
+<p><em>对应图1 (b)。LLaDA 8B Instruct（仅 SFT）与 LLaMA3 8B Instruct（SFT+RL）的对比。LLaDA 在仅使用 SFT 的情况下，多项指标与经过 RL 对齐的 LLaMA3 8B Instruct 接近。</em></p>
 <table>
 <thead>
 <tr>
@@ -535,8 +546,6 @@ document.addEventListener('DOMContentLoaded', function() {
 </table>
 <p>LLaDA 正反向差距仅 6.2 个百分点，而 GPT-4o 差距高达 48.4。<strong>LLaDA 的反向生成能力超越了 GPT-4o</strong>（45.6 vs 34.3），这是扩散模型天然的<strong>无方向性归纳偏置</strong>带来的优势——在训练中，LLaDA 看到的是被随机掩码的文本，没有固定的左→右方向偏好。</p>
 <h3 id="45">4.5 采样效率分析</h3>
-<p><img alt="采样效率分析" src="assets/llada/GSM8K_efficiency.jpg" /></p>
-<p><em>图：采样效率分析——LLaDA 在不同采样步数（32/64/128/256 步）下的速度-质量权衡。横轴为吞吐量（tokens/s），纵轴为任务指标。</em></p>
 <table>
 <tr>
 <td width="50%"><img src="assets/llada/GSM8K_efficiency.jpg" width="100%"><br><em>(a) GSM8K——LLaDA 8B 在 1.5x 吞吐量下持平 LLaMA3 8B</em></td>
@@ -582,6 +591,15 @@ document.addEventListener('DOMContentLoaded', function() {
 </tbody>
 </table>
 <p>低置信度 remask 的效果远超随机 remask，类比于自回归模型中的退火采样（annealed sampling），通过降低多样性来提升准确性。</p>
+<h3 id="47">4.7 生成过程可视化</h3>
+<p><img alt="图：LLaDA 数学推理的采样过程" src="assets/llada/diff_math.png" /></p>
+<p><em>图：LLaDA 8B Instruct 在数学题"Lily can run 12 km/h for 4h, then 6 km/h. How many km in 8h?"上的生成过程可视化。颜色越深表示该 token 在采样后期才被确定，颜色越浅表示早期就被预测出来。</em></p>
+<p>这张图展示了扩散语言模型非自回归生成过程的独特特性：</p>
+<ol>
+<li><strong>关键中间结果被早期锁定</strong>：<code>12 × 4 = 48</code> 等计算步骤在采样早期（浅色）就被确定，说明 mask predictor 在全局信息充足的条件下能高置信度地一次性预测出计算中间值。</li>
+<li><strong>最终答案可能出现得比中间步骤更早</strong>：有时"72"这个最终答案的 token 会比 <code>12 × 4 = 48</code> 中的某些 token 更早被确定。这是因为 mask predictor 在一次前向传播中同时预测所有被掩码位置，它可能先"猜到"最终答案的模式，再去补充中间推理。</li>
+<li><strong>与自回归模型的本质差异</strong>：自回归模型必须按序生成"先计算 12×4=48，再计算 4×12+6×4=72"，而 LLaDA 可以先看到全局结构再填充细节。</li>
+</ol>
 <hr />
 <h2 id="_5">五、关键洞察与技术亮点</h2>
 <h3 id="51">5.1 "生成式建模原理 &gt; 自回归形式"</h3>
@@ -592,10 +610,19 @@ document.addEventListener('DOMContentLoaded', function() {
 <p>LLaDA 的训练等价于<strong>任意顺序自回归模型（any-order autoregressive model）</strong>的期望训练目标，这使它天然具有双向推理能力，无需任何特殊设计。这也是它在反转诗歌任务上超越 GPT-4o 的根本原因。</p>
 <h3 id="54">5.4 推理灵活性：纯扩散、自回归、块扩散三者通吃</h3>
 <p>同一个预训练/SFT 后的 LLaDA 模型，无需任何修改或重新训练，即可支持三种采样策略：</p>
+<table>
+<tr>
+<td width="25%"><img src="assets/llada/ar_sample.jpg" width="100%"><br><em>(a) 自回归：逐 token 左→右生成</em></td>
+<td width="37%"><img src="assets/llada/block_diffusion.jpg" width="100%"><br><em>(b) 块扩散（原版）：块间自回归、块内扩散，序列长度动态变化</em></td>
+<td width="37%"><img src="assets/llada/block_diffusion_llada.jpg" width="100%"><br><em>(c) 块扩散 LLaDA：固定块长度，块间半自回归 + 块内扩散</em></td>
+</tr>
+</table>
+
+<p><em>图：LLaDA 支持的三种灵活采样策略。彩色方块为已生成的 token，× 为当前掩码的 token。图示块长度为 4。</em></p>
 <ul>
-<li><strong>纯扩散</strong>：性能最佳（全文默认）</li>
+<li><strong>纯扩散</strong>：全局同时去掩码，性能最佳（全文默认）</li>
 <li><strong>块扩散 LLaDA（semi-autoregressive）</strong>：固定块长度，块间自回归、块内扩散，Instruct 模型的 GSM8K 可达 78.6</li>
-<li><strong>纯自回归</strong>：Base 模型可用，但 Instruct 模型效果差（SFT 数据是完整句子）</li>
+<li><strong>纯自回归</strong>：逐 token 左→右，Base 模型可用，但 Instruct 模型效果差（SFT 数据是完整句子）</li>
 </ul>
 <h3 id="55">5.5 训练稳定性</h3>
 <p>2.3T tokens 预训练中仅 crash 1 次（1.2T 处），恢复后降学习率即可。训练只跑了一次，无超参调优。</p>
