@@ -34,24 +34,12 @@ from pathlib import Path
 
 MODE = sys.argv[1]
 ROOT = Path.cwd()
-TAG_PAGE_MIN_COUNT = 2
+TAG_PAGE_MIN_COUNT = 1
 
 TAG_ALIASES = {
     "World Action Model": "WAM",
     "World-Action Model": "WAM",
     "世界动作模型": "WAM",
-    "Robotics": "机器人",
-    "Robot Manipulation": "机器人",
-    "机器人操作": "机器人",
-    "机器人操控": "机器人",
-    "操作": "机器人",
-    "机器人基础模型": "机器人",
-    "隐式推理": "推理",
-    "因果推理": "推理",
-    "流式推理": "推理",
-    "Action-State Consistency": "推理",
-    "Test-Time Scaling": "推理",
-    "Future-Reality Verification": "推理",
     "3D感知": "3D重建",
     "4D重建": "3D重建",
     "前馈模型": "3D重建",
@@ -65,7 +53,6 @@ TAG_ALIASES = {
     "零样本泛化": "泛化",
     "跨具身迁移": "泛化",
     "Generalization": "泛化",
-    "Diffusion Policy": "策略学习",
     "Knowledge Distillation": "知识蒸馏",
     "Parameter-Efficient Transfer": "知识蒸馏",
 }
