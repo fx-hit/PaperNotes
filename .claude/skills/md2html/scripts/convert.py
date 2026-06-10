@@ -321,6 +321,7 @@ CSS = r"""
     --sidebar-width: 260px;
     --toc-active: #0969da;
     --content-max-width: 1350px;
+    --media-max-width: 900px;
     --content-padding: 48px;
   }
 
@@ -436,8 +437,9 @@ CSS = r"""
   ul, ol { padding-left: 1.5em; margin-bottom: 1em; }
   li { margin-bottom: 0.3em; }
   hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
-  img { max-width: 100%; height: auto; border-radius: 6px; margin: 0; }
-  p:has(img) { text-align: center; margin-top: 0.6em; margin-bottom: 0; }
+  img { max-width: min(100%, var(--media-max-width)); height: auto; border-radius: 6px; margin: 0 auto; display: block; }
+  p:has(img) { text-align: center; max-width: var(--media-max-width); margin: 0.6em auto 0; }
+  table:has(img) { width: min(100%, var(--media-max-width)) !important; margin-left: auto; margin-right: auto; }
   p:has(img) + p { text-align: center; font-size: 0.9em; color: var(--text-secondary); margin-top: 0.15em; margin-bottom: 0.6em; }
   .mermaid { text-align: center; margin: 1.5em 0; background: #fafbfc; border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
   .article-stats {
