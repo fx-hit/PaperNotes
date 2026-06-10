@@ -656,7 +656,7 @@ def render_index(notes: list[Note]) -> str:
         lines.extend(
             [
                 '  <div class="paper-card">',
-                f'    <a href="{e(note.path)}">{e(note.title)}</a>',
+                f'    <a href="{e(note.path)}" target="_blank" rel="noopener">{e(note.title)}</a>',
                 f'    <div class="paper-meta">{note_meta(note, include_reading=True, include_updated=True)}</div>',
             ]
         )
@@ -716,7 +716,7 @@ def render_tags(notes: list[Note]) -> str:
             lines.extend(
                 [
                     '    <div class="paper-card">',
-                    f'      <a href="{e(note.path)}">{e(note.title)}</a>',
+                    f'      <a href="{e(note.path)}" target="_blank" rel="noopener">{e(note.title)}</a>',
                     f'      <div class="paper-meta">{note_meta(note, include_reading=False, include_updated=False)}<span class="paper-date">{e(note.date)}</span></div>',
                     "    </div>",
                 ]
