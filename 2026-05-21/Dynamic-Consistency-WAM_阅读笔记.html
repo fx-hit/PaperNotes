@@ -8,7 +8,7 @@
 <!-- venue: NeurIPS 2026（投稿中） -->
 <!-- tags: WAM -->
 <!-- words-zh: 5710 -->
-<!-- words-en: 520 -->
+<!-- words-en: 528 -->
 <!-- reading-time: 19 -->
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap');
@@ -27,7 +27,7 @@
     --inline-code-bg: #f6f8fa;
     --sidebar-width: 260px;
     --toc-active: #0969da;
-    --content-max-width: 900px;
+    --content-max-width: 1350px;
     --content-padding: 48px;
   }
 
@@ -112,26 +112,27 @@
     padding: 2px 6px; border-radius: 4px; color: var(--inline-code);
   }
   pre {
-    background: #1e1e2e; color: #cdd6f4;
+    background: #f6f8fa; color: #24292f;
+    border: 1px solid var(--border);
     border-radius: 8px; padding: 16px 20px; overflow-x: auto;
     margin: 1em 0; font-size: 14px; line-height: 1.55;
   }
   pre code { background: none; padding: 0; border-radius: 0; color: inherit; font-size: inherit; }
 
-  .codehilite { background: #1e1e2e; border-radius: 8px; padding: 16px 20px; overflow-x: auto; margin: 1em 0; }
+  .codehilite { background: #f6f8fa; border: 1px solid var(--border); border-radius: 8px; padding: 16px 20px; overflow-x: auto; margin: 1em 0; }
   .codehilite pre { background: none; padding: 0; margin: 0; border-radius: 0; }
-  .codehilite .hll { background-color: #2a2a3e; }
-  .codehilite .c  { color: #6c7086; font-style: italic; }
-  .codehilite .k  { color: #cba6f7; }
-  .codehilite .o  { color: #89b4fa; }
-  .codehilite .s  { color: #a6e3a1; }
-  .codehilite .n  { color: #cdd6f4; }
-  .codehilite .p  { color: #bac2de; }
-  .codehilite .mi { color: #fab387; }
-  .codehilite .nf { color: #89b4fa; }
-  .codehilite .nb { color: #f38ba8; }
-  .codehilite .nc { color: #f9e2af; }
-  .codehilite .bp { color: #f38ba8; }
+  .codehilite .hll { background-color: #fff8c5; }
+  .codehilite .c  { color: #6e7781; font-style: italic; }
+  .codehilite .k  { color: #cf222e; }
+  .codehilite .o  { color: #0550ae; }
+  .codehilite .s  { color: #0a3069; }
+  .codehilite .n  { color: #24292f; }
+  .codehilite .p  { color: #24292f; }
+  .codehilite .mi { color: #0550ae; }
+  .codehilite .nf { color: #8250df; }
+  .codehilite .nb { color: #953800; }
+  .codehilite .nc { color: #953800; }
+  .codehilite .bp { color: #953800; }
 
   table { width: 100%; border-collapse: collapse; margin: 1em 0; font-size: 0.925em; }
   th, td { border: 1px solid var(--border); padding: 10px 14px; text-align: left; }
@@ -224,7 +225,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <main class="main-wrapper">
   <div class="content-inner" id="main-content">
 <h1 id="is-the-future-compatible-diagnosing-dynamic-consistency-in-world-action-models">Is the Future Compatible? Diagnosing Dynamic Consistency in World Action Models</h1>
-<div class="article-stats">5,710 字 · English 520 词 · 约 19 分钟阅读</div>
+<div class="article-stats">5,710 字 · English 528 词 · 约 19 分钟阅读</div>
 
 <blockquote>
 <p><strong>论文信息</strong>
@@ -322,6 +323,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <td width="50%"><img src="assets/dynamic-consistency-wam/cosmos_zscore.jpg" width="100%"><br><em>(a) Cosmos-Policy</em></td>
 <td width="50%"><img src="assets/dynamic-consistency-wam/lingbot_zscore.jpg" width="100%"><br><em>(b) LingBot-VA</em></td>
 </tr></table>
+
 <p><em>图3：成功与失败轨迹的 action-state consistency 核密度估计（KDE）分布对比，左子图 (a) 为 Cosmos-Policy（RoboCasa），右子图 (b) 为 LingBot-VA（RoboTwin 2.0）。</em></p>
 <p><strong><em>坐标轴和含义：</em></strong> 横轴为归一化后的一致性 z-score——为了跨任务可比，每个任务内部先计算 episode 级一致性的均值和标准差，再将每个 episode 的一致性转为 z-score（<span class="math inline">$(c - \mu_{\text{task}}) / \sigma_{\text{task}}$</span>）。因此 z-score = 0 代表该 episode 的一致性处于该任务的均值水平，正值表示高于均值，负值表示低于均值。纵轴为核密度估计的密度值。蓝色曲线为成功轨迹（Success）的分布，橙色曲线为失败轨迹（Failure）的分布。</p>
 <p><strong><em>子图 (a) Cosmos-Policy：</em></strong> 成功轨迹的一致性分布整体右移——峰值约在 z-score = +0.3 处，且分布更集中（更窄的峰），说明成功轨迹的一致性普遍偏高且方差较小。失败轨迹的分布偏左，峰值在 z-score ≈ −0.1 附近，且分布更宽（尾部向左延伸至 −2.0 以下），说明失败轨迹的一致性不仅平均更低，且个体差异更大。<strong>Cohen's d = 0.76</strong>，属于中到大效应量，意味着两分布的均值差距约为 0.76 个标准差——在社会科学中通常被视为"有实际意义的差异"。</p>
@@ -367,6 +369,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <td width="50%"><img src="assets/dynamic-consistency-wam/cosmos_latent_change_comparison.jpg" width="100%"><br><em>(a) Cosmos-Policy</em></td>
 <td width="50%"><img src="assets/dynamic-consistency-wam/lingbot_latent_change_comparison.jpg" width="100%"><br><em>(b) LingBot-VA</em></td>
 </tr></table>
+
 <p><em>图6：将 latent change（<span class="math inline">$\Delta z_t$</span>）按两个维度分解——任务类型（对齐 Aligned / 错位 Misaligned）和轨迹结果（成功 Success / 失败 Failure），形成四组曲线的时间序列对比。左子图 (a) 为 Cosmos-Policy，右子图 (b) 为 LingBot-VA。</em></p>
 <p><strong><em>坐标轴和图例：</em></strong> 横轴为轨迹的时间步（从 episode 开始到结束），纵轴为 latent change <span class="math inline">$\Delta z_t$</span> 的值。四条曲线分别对应：</p>
 <ul>

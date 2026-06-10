@@ -1,3 +1,7 @@
+<!-- arxiv: 2605.06222 -->
+<!-- venue: NeurIPS 2026（投稿中） -->
+<!-- tags: WAM -->
+
 # When to Trust Imagination: Adaptive Action Execution for World Action Models
 
 > **论文信息**

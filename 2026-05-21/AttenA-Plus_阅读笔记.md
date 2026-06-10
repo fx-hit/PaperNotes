@@ -1,3 +1,7 @@
+<!-- arxiv: 2605.13548 -->
+<!-- venue: NeurIPS 2026（投稿中） -->
+<!-- tags: VLA, WAM -->
+
 # AttenA+: Rectifying Action Inequality in Robotic Foundation Models
 
 > **论文信息**

@@ -1,3 +1,7 @@
+<!-- arxiv: 2509.09674 -->
+<!-- venue: ICLR 2026 -->
+<!-- tags: VLA, 强化学习 -->
+
 # SimpleVLA-RL: Scaling VLA Training via Reinforcement Learning
 
 > **论文信息**

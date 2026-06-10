@@ -54,7 +54,7 @@ PaperNotes/
 
 1. **读论文做笔记** — 对包含 arxiv TeX 源码的目录使用 `paper2notes` skill，生成带有插图的 markdown 笔记。
 2. **导出 HTML** — 使用 `md2html` skill 将 markdown 笔记转换为独立 HTML 页面，包含 MathJax、Mermaid 图表、代码高亮和侧边栏目录。
-3. **添加元数据** — 在 HTML 页面的 `<title>` 后添加 HTML 注释格式的元数据，以便首页自动提取：
+3. **添加元数据** — 在 Markdown 文件顶部添加 HTML 注释格式的元数据，`md2html` 会把它们写入 HTML 的 `<title>` 后，首页和标签页再从 HTML 中提取：
    ```html
    <!-- arxiv: XXXX.XXXXX -->
    <!-- venue: 会议/期刊 年份 -->
@@ -64,7 +64,9 @@ PaperNotes/
    - **tags 规范**：标签用于站点级浏览，不是关键词堆砌。每篇论文建议 2-5 个宽粒度、可复用标签，优先复用既有规范标签，如 `VLA`、`WAM`、`世界模型`、`视频生成`、`3D重建`、`泛化`、`强化学习`、`自动驾驶`、`扩散模型`。
    - 避免同义标签重复：统一写 `WAM`，不要写 `World Action Model`、`World-Action Model`、`世界动作模型`；统一写 `视频生成`，不要拆成 `视频扩散`、`视频扩散模型`、`Video Prediction`。
    - 除非预计后续会有多篇论文复用，否则不要新增论文专属的一次性方法标签（如某个 benchmark 名、模块名、损失名）。这类细节留在正文，不进入 `tags`。
-4. **更新站点入口** — 运行 `./generate_index.sh --site` 自动重新生成 `index.html` 和 `tags.html`。
+   - 元数据的唯一源头是 Markdown。不要只手工改 HTML；重新转换时 HTML 会以 Markdown 顶部注释为准。
+   - 综述或自建材料没有 arXiv ID 时，显式写 `<!-- arxiv: N/A -->`，不要留空。
+4. **更新站点入口** — 日常维护优先运行 `./scripts/build_note.sh <笔记.md>`；它会转换 HTML、运行 `./generate_index.sh --site` 并执行全仓审计。只更新入口页时运行 `./generate_index.sh --site`。
    - GitHub Pages 默认打开根目录 `index.html`，该页按日期倒序浏览论文；页面顶部提供"按时间 / 按标签"导航，可切换到 `tags.html`。
    - `tags.html` 按 `<!-- tags: -->` 元数据自动分组，标签导航按论文数量降序排列；展示所有标签，包括仅关联 1 篇论文的标签。标签分组默认折叠，点击标签标题或顶部标签导航后展开对应论文列表。不要手工维护标签计数、分组或论文列表。
    - `generate_index.sh` 仅扫描日期目录**顶层**（`20??-??-??/*.html`），因此笔记 HTML 必须放在 `YYYY-MM-DD/` 目录下，不能放在子目录中。
@@ -72,7 +74,8 @@ PaperNotes/
    - 首页的"更新于"日期通过 `git log -1 --format="%cs"` 取笔记 HTML 的最后提交日期；`git log` 只能查到已提交文件。因此新增或修改笔记后，先提交笔记文件，再运行 `./generate_index.sh --site`，然后把生成的 `index.html` 和 `tags.html` amend 到同一个 commit，或单独再提交一次入口页更新。
    - `generate_index.sh` 兼容旧用法：`./generate_index.sh` 或 `./generate_index.sh --index` 输出按时间首页到 stdout，`./generate_index.sh --tags` 输出标签页到 stdout；日常维护统一使用 `./generate_index.sh --site`。
    - 首页和标签页不依赖任何外部构建工具或静态站点生成器，每次新增或修改笔记后重新运行脚本并 commit 生成的 `index.html`、`tags.html` 即可。
-5. **提交** — 按 commit 规范提交笔记文件。
+5. **提交前审计** — 运行 `python3 scripts/audit_notes.py --check-site`。该脚本会检查 Markdown/HTML 配对、必需元数据、图片断链、入口页是否过期、非标准标签、过大图片和日期目录下未忽略文件。
+6. **提交** — 按 commit 规范提交笔记文件。
 
 ## Commit 规范
 

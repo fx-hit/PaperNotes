@@ -1,3 +1,7 @@
+<!-- arxiv: 2605.07514 -->
+<!-- venue: NeurIPS 2026（投稿中） -->
+<!-- tags: WAM -->
+
 # Is the Future Compatible? Diagnosing Dynamic Consistency in World Action Models
 
 > **论文信息**

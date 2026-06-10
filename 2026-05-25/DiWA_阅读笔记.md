@@ -1,3 +1,7 @@
+<!-- arxiv: 2508.03645 -->
+<!-- venue: CoRL 2025 -->
+<!-- tags: 世界模型, 强化学习 -->
+
 # DiWA: Diffusion Policy Adaptation with World Models
 
 > **论文信息**

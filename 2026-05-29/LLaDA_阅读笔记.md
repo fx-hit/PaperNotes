@@ -1,3 +1,7 @@
+<!-- arxiv: 2502.09992 -->
+<!-- venue: NeurIPS 2025 -->
+<!-- tags: 语言模型, 扩散模型 -->
+
 # Large Language Diffusion Models
 
 > **论文信息**

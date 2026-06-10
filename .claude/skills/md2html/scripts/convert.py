@@ -11,6 +11,7 @@ Output: <filename>.html alongside each input file.
 import re
 import sys
 import os
+from pathlib import Path
 import markdown
 from markdown.extensions import codehilite, fenced_code, tables, toc
 
@@ -186,14 +187,60 @@ def format_stats_html(stats):
     return '<div class="article-stats">' + ' · '.join(parts) + '</div>\n'
 
 
-def extract_metadata_comments(text):
-    """Extract site metadata comments (arxiv, venue, tags) from markdown."""
-    metadata = []
+METADATA_KEYS = ('arxiv', 'venue', 'tags')
+METADATA_COMMENT_RE = re.compile(r'^\s*<!--\s*(arxiv|venue|tags)\s*:\s*(.*?)\s*-->\s*$')
+
+
+def split_metadata_comments(text):
+    """Extract site metadata comments from markdown and remove them from body."""
+    metadata = {}
+    body_lines = []
     for line in text.split('\n'):
-        stripped = line.strip()
-        if stripped.startswith('<!--') and any(k in stripped for k in ('arxiv', 'venue', 'tags')):
-            metadata.append(stripped)
-    return metadata
+        match = METADATA_COMMENT_RE.match(line)
+        if match:
+            key, value = match.group(1), match.group(2).strip()
+            metadata[key] = value
+            continue
+        body_lines.append(line)
+    return metadata, '\n'.join(body_lines)
+
+
+def requires_site_metadata(md_path):
+    """Top-level notes under dated directories are published to the site."""
+    path = Path(md_path)
+    if path.suffix != '.md':
+        return False
+    if len(path.parts) == 2 and re.fullmatch(r'20\d\d-\d\d-\d\d', path.parts[0]):
+        return True
+
+    full_path = path if path.is_absolute() else (Path.cwd() / path)
+    parent = full_path.parent
+    return (
+        re.fullmatch(r'20\d\d-\d\d-\d\d', parent.name) is not None
+        and (parent.parent / 'generate_index.sh').exists()
+    )
+
+
+def validate_metadata(md_path, metadata):
+    """Fail fast before generating an HTML page with incomplete site metadata."""
+    if not requires_site_metadata(md_path):
+        return
+
+    missing = [key for key in METADATA_KEYS if not metadata.get(key)]
+    if missing:
+        raise ValueError(
+            f"{md_path}: missing required metadata comment(s): "
+            + ", ".join(f"<!-- {key}: ... -->" for key in missing)
+        )
+
+    tags = [tag.strip() for tag in metadata['tags'].split(',') if tag.strip()]
+    if not tags:
+        raise ValueError(f"{md_path}: tags metadata must contain at least one tag")
+
+
+def format_metadata_comments(metadata):
+    """HTML comments consumed by generate_index.sh."""
+    return [f'<!-- {key}: {metadata[key]} -->' for key in METADATA_KEYS if metadata.get(key)]
 
 
 def format_stats_comment(stats, metadata_comments=None):
@@ -273,7 +320,7 @@ CSS = r"""
     --inline-code-bg: #f6f8fa;
     --sidebar-width: 260px;
     --toc-active: #0969da;
-    --content-max-width: 900px;
+    --content-max-width: 1350px;
     --content-padding: 48px;
   }
 
@@ -358,26 +405,27 @@ CSS = r"""
     padding: 2px 6px; border-radius: 4px; color: var(--inline-code);
   }
   pre {
-    background: #1e1e2e; color: #cdd6f4;
+    background: #f6f8fa; color: #24292f;
+    border: 1px solid var(--border);
     border-radius: 8px; padding: 16px 20px; overflow-x: auto;
     margin: 1em 0; font-size: 14px; line-height: 1.55;
   }
   pre code { background: none; padding: 0; border-radius: 0; color: inherit; font-size: inherit; }
 
-  .codehilite { background: #1e1e2e; border-radius: 8px; padding: 16px 20px; overflow-x: auto; margin: 1em 0; }
+  .codehilite { background: #f6f8fa; border: 1px solid var(--border); border-radius: 8px; padding: 16px 20px; overflow-x: auto; margin: 1em 0; }
   .codehilite pre { background: none; padding: 0; margin: 0; border-radius: 0; }
-  .codehilite .hll { background-color: #2a2a3e; }
-  .codehilite .c  { color: #6c7086; font-style: italic; }
-  .codehilite .k  { color: #cba6f7; }
-  .codehilite .o  { color: #89b4fa; }
-  .codehilite .s  { color: #a6e3a1; }
-  .codehilite .n  { color: #cdd6f4; }
-  .codehilite .p  { color: #bac2de; }
-  .codehilite .mi { color: #fab387; }
-  .codehilite .nf { color: #89b4fa; }
-  .codehilite .nb { color: #f38ba8; }
-  .codehilite .nc { color: #f9e2af; }
-  .codehilite .bp { color: #f38ba8; }
+  .codehilite .hll { background-color: #fff8c5; }
+  .codehilite .c  { color: #6e7781; font-style: italic; }
+  .codehilite .k  { color: #cf222e; }
+  .codehilite .o  { color: #0550ae; }
+  .codehilite .s  { color: #0a3069; }
+  .codehilite .n  { color: #24292f; }
+  .codehilite .p  { color: #24292f; }
+  .codehilite .mi { color: #0550ae; }
+  .codehilite .nf { color: #8250df; }
+  .codehilite .nb { color: #953800; }
+  .codehilite .nc { color: #953800; }
+  .codehilite .bp { color: #953800; }
 
   table { width: 100%; border-collapse: collapse; margin: 1em 0; font-size: 0.925em; }
   th, td { border: 1px solid var(--border); padding: 10px 14px; text-align: left; }
@@ -494,7 +542,9 @@ def convert_file(md_path):
         text = f.read()
 
     # Extract metadata before any processing
-    metadata_comments = extract_metadata_comments(text)
+    metadata, text = split_metadata_comments(text)
+    validate_metadata(md_path, metadata)
+    metadata_comments = format_metadata_comments(metadata)
 
     # Find first # heading for title (skip HTML comments)
     title = os.path.basename(md_path)

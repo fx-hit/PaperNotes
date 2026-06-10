@@ -1,3 +1,7 @@
+<!-- arxiv: 2603.16666 -->
+<!-- venue: NeurIPS 2026（投稿中） -->
+<!-- tags: WAM, 视频生成 -->
+
 # Fast-WAM: Do World Action Models Need Test-time Future Imagination?
 
 > **论文信息**

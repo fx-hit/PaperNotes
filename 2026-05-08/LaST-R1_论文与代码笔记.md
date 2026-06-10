@@ -1,3 +1,7 @@
+<!-- arxiv: 2604.28192 -->
+<!-- venue: ICML 2026 Spotlight -->
+<!-- tags: VLA, 强化学习 -->
+
 # LaST-R1 论文与代码笔记
 
 > 目标：总结 LaST-R1 论文，并结合代码解释三个问题：

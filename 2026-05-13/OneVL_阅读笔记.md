@@ -1,3 +1,7 @@
+<!-- arxiv: 2604.18486 -->
+<!-- venue: 小米汽车技术报告 -->
+<!-- tags: 自动驾驶 -->
+
 # OneVL: One-Step Latent Reasoning and Planning with Vision-Language Explanations
 
 > **论文信息**

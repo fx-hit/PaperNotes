@@ -1,3 +1,7 @@
+<!-- arxiv: 2601.21998 -->
+<!-- venue: 蚂蚁灵波技术报告 -->
+<!-- tags: 世界模型 -->
+
 # LingBot-VA: Causal World Modeling for Robot Control
 
 > **论文信息**

@@ -7,8 +7,8 @@
 <!-- arxiv: 2605.13548 -->
 <!-- venue: NeurIPS 2026（投稿中） -->
 <!-- tags: VLA, WAM -->
-<!-- words-zh: 3381 -->
-<!-- words-en: 257 -->
+<!-- words-zh: 3373 -->
+<!-- words-en: 270 -->
 <!-- reading-time: 11 -->
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap');
@@ -27,7 +27,7 @@
     --inline-code-bg: #f6f8fa;
     --sidebar-width: 260px;
     --toc-active: #0969da;
-    --content-max-width: 900px;
+    --content-max-width: 1350px;
     --content-padding: 48px;
   }
 
@@ -112,26 +112,27 @@
     padding: 2px 6px; border-radius: 4px; color: var(--inline-code);
   }
   pre {
-    background: #1e1e2e; color: #cdd6f4;
+    background: #f6f8fa; color: #24292f;
+    border: 1px solid var(--border);
     border-radius: 8px; padding: 16px 20px; overflow-x: auto;
     margin: 1em 0; font-size: 14px; line-height: 1.55;
   }
   pre code { background: none; padding: 0; border-radius: 0; color: inherit; font-size: inherit; }
 
-  .codehilite { background: #1e1e2e; border-radius: 8px; padding: 16px 20px; overflow-x: auto; margin: 1em 0; }
+  .codehilite { background: #f6f8fa; border: 1px solid var(--border); border-radius: 8px; padding: 16px 20px; overflow-x: auto; margin: 1em 0; }
   .codehilite pre { background: none; padding: 0; margin: 0; border-radius: 0; }
-  .codehilite .hll { background-color: #2a2a3e; }
-  .codehilite .c  { color: #6c7086; font-style: italic; }
-  .codehilite .k  { color: #cba6f7; }
-  .codehilite .o  { color: #89b4fa; }
-  .codehilite .s  { color: #a6e3a1; }
-  .codehilite .n  { color: #cdd6f4; }
-  .codehilite .p  { color: #bac2de; }
-  .codehilite .mi { color: #fab387; }
-  .codehilite .nf { color: #89b4fa; }
-  .codehilite .nb { color: #f38ba8; }
-  .codehilite .nc { color: #f9e2af; }
-  .codehilite .bp { color: #f38ba8; }
+  .codehilite .hll { background-color: #fff8c5; }
+  .codehilite .c  { color: #6e7781; font-style: italic; }
+  .codehilite .k  { color: #cf222e; }
+  .codehilite .o  { color: #0550ae; }
+  .codehilite .s  { color: #0a3069; }
+  .codehilite .n  { color: #24292f; }
+  .codehilite .p  { color: #24292f; }
+  .codehilite .mi { color: #0550ae; }
+  .codehilite .nf { color: #8250df; }
+  .codehilite .nb { color: #953800; }
+  .codehilite .nc { color: #953800; }
+  .codehilite .bp { color: #953800; }
 
   table { width: 100%; border-collapse: collapse; margin: 1em 0; font-size: 0.925em; }
   th, td { border: 1px solid var(--border); padding: 10px 14px; text-align: left; }
@@ -142,9 +143,9 @@
   ul, ol { padding-left: 1.5em; margin-bottom: 1em; }
   li { margin-bottom: 0.3em; }
   hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
-  img { max-width: 100%; height: auto; border-radius: 6px; margin: 0.5em 0; }
-  p:has(img) { text-align: center; }
-  p:has(img) + p { text-align: center; font-size: 0.9em; color: var(--text-secondary); }
+  img { max-width: 100%; height: auto; border-radius: 6px; margin: 0; }
+  p:has(img) { text-align: center; margin-top: 0.6em; margin-bottom: 0; }
+  p:has(img) + p { text-align: center; font-size: 0.9em; color: var(--text-secondary); margin-top: 0.15em; margin-bottom: 0.6em; }
   .mermaid { text-align: center; margin: 1.5em 0; background: #fafbfc; border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
   .article-stats {
     font-size: 0.85rem; color: var(--text-secondary);
@@ -230,7 +231,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <main class="main-wrapper">
   <div class="content-inner" id="main-content">
 <h1 id="attena-rectifying-action-inequality-in-robotic-foundation-models">AttenA+: Rectifying Action Inequality in Robotic Foundation Models</h1>
-<div class="article-stats">3,381 字 · English 257 词 · 约 11 分钟阅读</div>
+<div class="article-stats">3,373 字 · English 270 词 · 约 11 分钟阅读</div>
 
 <blockquote>
 <p><strong>论文信息</strong>
@@ -592,7 +593,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </tbody>
 </table>
 <p><img alt="图4：真机实验结果。" src="assets/attena-plus/real_bins2.jpg" /></p>
-<p><em>图4：Franka 真机实验结果。<strong>(a)</strong> 定量成功率对比（每个任务测试 50 次）；<strong>(b)</strong> 定性可视化。</em></p>
+<p><em>图4：Franka 真机实验结果。</em><em>(a)</em><em> 定量成功率对比（每个任务测试 50 次）；</em><em>(b)</em><em> 定性可视化。</em></p>
 <ul>
 <li><strong>Close Draw（关闭抽屉）</strong>：两项均为 100%（50/50），这是个简单任务，基线已饱和</li>
 <li><strong>Put Cube（放方块）</strong>：AttenA+OFT 达 100%（50/50），基线为 96%（48/50），提升 4%</li>

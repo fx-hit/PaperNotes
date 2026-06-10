@@ -1,3 +1,7 @@
+<!-- arxiv: 2605.05126 -->
+<!-- venue: CVPR 2026 -->
+<!-- tags: VLA, 3D重建 -->
+
 # ConsisVLA-4D 论文阅读笔记
 
 > **论文标题**: ConsisVLA-4D: Advancing Spatiotemporal Consistency in Efficient 3D-Perception and 4D-Reasoning for Robotic Manipulation

@@ -15,6 +15,13 @@ python3 .claude/skills/md2html/scripts/convert.py <file1.md> [file2.md ...]
 
 - 不传参数则转换当前目录所有 `.md` 文件
 - 输出 HTML 文件与源 `.md` 同目录
+- 位于 `20YY-MM-DD/` 顶层的站点笔记必须在 Markdown 顶部包含 `arxiv`、`venue`、`tags` 三行元数据注释；缺失时转换会失败
+
+```html
+<!-- arxiv: 2602.15922 -->
+<!-- venue: NVIDIA Tech Report 2026 -->
+<!-- tags: WAM, 世界模型, 视频生成, 泛化 -->
+```
 
 ## 转换内容
 
@@ -24,6 +31,7 @@ python3 .claude/skills/md2html/scripts/convert.py <file1.md> [file2.md ...]
 - **表格**、**引用**、**列表**等标准 markdown
 - **侧边栏目录**：自动提取 h1-h4 生成，滚动时高亮当前章节
 - **响应式布局**：窄屏自动折叠目录
+- **站点元数据**：从 Markdown 顶部注释写入 HTML `<title>` 后，供 `generate_index.sh` 提取
 
 ## 依赖
 

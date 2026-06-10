@@ -1,3 +1,7 @@
+<!-- arxiv: 2605.12624 -->
+<!-- venue: NeurIPS 2026（投稿中） -->
+<!-- tags: 自动驾驶, VLA -->
+
 # MindVLA-U1: VLA Beats VA with Unified Streaming Architecture for Autonomous Driving
 
 > **论文信息**

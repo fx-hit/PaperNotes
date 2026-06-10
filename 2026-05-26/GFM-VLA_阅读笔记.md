@@ -1,3 +1,7 @@
+<!-- arxiv: 2605.24642 -->
+<!-- venue: ECCV 2026（投稿中） -->
+<!-- tags: VLA, 3D重建 -->
+
 # Understanding the Impact of Geometric Foundation Models on Vision-Language-Action Models
 
 > **论文信息**

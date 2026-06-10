@@ -1,3 +1,7 @@
+<!-- arxiv: 2605.24892 -->
+<!-- venue: NeurIPS 2025（投稿中） -->
+<!-- tags: 自动驾驶, VLA, 世界模型, 视频生成 -->
+
 # X-Foresight: A Joint Vision-Action Causal Forecasting Network via Predictive World Modeling
 
 > **论文信息**

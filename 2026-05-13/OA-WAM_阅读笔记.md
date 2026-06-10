@@ -1,3 +1,7 @@
+<!-- arxiv: 2605.06481 -->
+<!-- venue: NeurIPS 2026（投稿中） -->
+<!-- tags: 世界模型 -->
+
 # OA-WAM: Object-Addressable World Action Model for Robust Robot Manipulation
 
 > **论文信息**

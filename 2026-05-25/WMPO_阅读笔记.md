@@ -1,3 +1,7 @@
+<!-- arxiv: 2511.09515 -->
+<!-- venue: ICLR 2026 -->
+<!-- tags: VLA, 世界模型, 强化学习, 视频生成 -->
+
 # WMPO: World Model-based Policy Optimization for Vision-Language-Action Models
 
 > **论文信息**

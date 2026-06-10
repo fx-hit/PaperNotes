@@ -1,3 +1,7 @@
+<!-- arxiv: 2605.15195 -->
+<!-- venue: CVPR 2026 Oral -->
+<!-- tags: 3D重建 -->
+
 # VGGT-Ω: Scaling Feed-Forward Reconstruction Models
 
 > **论文信息**

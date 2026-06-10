@@ -1,3 +1,7 @@
+<!-- arxiv: 2605.25829 -->
+<!-- venue: NeurIPS 2026（投稿中） -->
+<!-- tags: VLA, 3D重建 -->
+
 # OASIS: Observation-Action Space Alignment via SE(3) Trajectory Prediction for Robotic Manipulation
 
 > **论文信息**

@@ -112,17 +112,26 @@ def normalize_tags(tags: list[str]) -> tuple[str, ...]:
 
 def load_notes() -> list[Note]:
     notes: list[Note] = []
+    errors: list[str] = []
     for path in sorted(ROOT.glob("20??-??-??/*.html"), key=lambda p: (p.parent.name, p.name)):
         rel_path = path.relative_to(ROOT).as_posix()
         text = path.read_text(encoding="utf-8", errors="ignore")
         tags = normalize_tags([tag.strip() for tag in extract_comment(text, "tags").split(",") if tag.strip()])
+        arxiv = extract_comment(text, "arxiv")
+        venue = extract_comment(text, "venue")
+        if not arxiv:
+            errors.append(f"{rel_path}: missing <!-- arxiv: ... -->")
+        if not venue:
+            errors.append(f"{rel_path}: missing <!-- venue: ... -->")
+        if not tags:
+            errors.append(f"{rel_path}: missing <!-- tags: ... -->")
         notes.append(
             Note(
                 path=rel_path,
                 date=path.parent.name,
                 title=extract_title(text, path.stem),
-                arxiv=extract_comment(text, "arxiv"),
-                venue=extract_comment(text, "venue"),
+                arxiv=arxiv,
+                venue=venue,
                 tags=tags,
                 words_zh=extract_comment(text, "words-zh"),
                 words_en=extract_comment(text, "words-en"),
@@ -130,6 +139,11 @@ def load_notes() -> list[Note]:
                 updated=git_updated(rel_path),
             )
         )
+    if errors:
+        print("Metadata errors:", file=sys.stderr)
+        for error in errors:
+            print(f"  - {error}", file=sys.stderr)
+        raise SystemExit(1)
     return notes
 
 
@@ -532,7 +546,7 @@ def tag_page_script() -> list[str]:
 
 def note_meta(note: Note, include_reading: bool, include_updated: bool) -> str:
     meta = ""
-    if note.arxiv:
+    if note.arxiv and note.arxiv.upper() not in {"N/A", "NA", "NONE"}:
         meta += f"arXiv: {e(note.arxiv)}"
     if note.venue:
         meta += f'<span class="paper-venue">{e(note.venue)}</span>'

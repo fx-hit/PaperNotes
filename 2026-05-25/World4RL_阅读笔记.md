@@ -1,3 +1,7 @@
+<!-- arxiv: 2509.19080 -->
+<!-- venue: 投稿 IEEE Trans 期刊 -->
+<!-- tags: 世界模型, 强化学习 -->
+
 # World4RL: Diffusion World Models for Policy Refinement with Reinforcement Learning for Robotic Manipulation
 
 > **论文信息**

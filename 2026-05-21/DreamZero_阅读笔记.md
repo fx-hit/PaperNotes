@@ -1,3 +1,7 @@
+<!-- arxiv: 2602.15922 -->
+<!-- venue: NVIDIA Tech Report 2026 -->
+<!-- tags: WAM, 世界模型, 视频生成, 泛化 -->
+
 # DreamZero: World Action Models are Zero-shot Policies
 
 > **论文信息**

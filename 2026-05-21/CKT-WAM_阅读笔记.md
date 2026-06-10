@@ -1,6 +1,6 @@
 <!-- arxiv: 2605.06247 -->
 <!-- venue: NeurIPS 2026（投稿中） -->
-<!-- tags: WAM, VLA, 机器人, 知识蒸馏 -->
+<!-- tags: WAM, VLA, 知识蒸馏 -->
 
 # CKT-WAM: Parameter-Efficient Context Knowledge Transfer Between World Action Models
 

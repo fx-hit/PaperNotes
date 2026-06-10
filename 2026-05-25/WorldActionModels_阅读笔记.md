@@ -1,3 +1,7 @@
+<!-- arxiv: 2605.12090 -->
+<!-- venue: arXiv 综述 2026 -->
+<!-- tags: WAM, 世界模型, VLA, 视频生成 -->
+
 # World Action Models: The Next Frontier in Embodied AI
 
 > **论文信息**

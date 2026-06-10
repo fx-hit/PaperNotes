@@ -1,3 +1,7 @@
+<!-- arxiv: 2603.17240 -->
+<!-- venue: 投稿中 (under review) -->
+<!-- tags: WAM, 视频生成 -->
+
 # GigaWorld-Policy: An Efficient Action-Centered World-Action Model
 
 > **论文信息**

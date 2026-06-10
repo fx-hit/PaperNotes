@@ -7,7 +7,7 @@
 <!-- arxiv: 2603.16666 -->
 <!-- venue: NeurIPS 2026（投稿中） -->
 <!-- tags: WAM, 视频生成 -->
-<!-- words-zh: 2484 -->
+<!-- words-zh: 2487 -->
 <!-- words-en: 518 -->
 <!-- reading-time: 10 -->
 <style>
@@ -27,7 +27,7 @@
     --inline-code-bg: #f6f8fa;
     --sidebar-width: 260px;
     --toc-active: #0969da;
-    --content-max-width: 900px;
+    --content-max-width: 1350px;
     --content-padding: 48px;
   }
 
@@ -112,26 +112,27 @@
     padding: 2px 6px; border-radius: 4px; color: var(--inline-code);
   }
   pre {
-    background: #1e1e2e; color: #cdd6f4;
+    background: #f6f8fa; color: #24292f;
+    border: 1px solid var(--border);
     border-radius: 8px; padding: 16px 20px; overflow-x: auto;
     margin: 1em 0; font-size: 14px; line-height: 1.55;
   }
   pre code { background: none; padding: 0; border-radius: 0; color: inherit; font-size: inherit; }
 
-  .codehilite { background: #1e1e2e; border-radius: 8px; padding: 16px 20px; overflow-x: auto; margin: 1em 0; }
+  .codehilite { background: #f6f8fa; border: 1px solid var(--border); border-radius: 8px; padding: 16px 20px; overflow-x: auto; margin: 1em 0; }
   .codehilite pre { background: none; padding: 0; margin: 0; border-radius: 0; }
-  .codehilite .hll { background-color: #2a2a3e; }
-  .codehilite .c  { color: #6c7086; font-style: italic; }
-  .codehilite .k  { color: #cba6f7; }
-  .codehilite .o  { color: #89b4fa; }
-  .codehilite .s  { color: #a6e3a1; }
-  .codehilite .n  { color: #cdd6f4; }
-  .codehilite .p  { color: #bac2de; }
-  .codehilite .mi { color: #fab387; }
-  .codehilite .nf { color: #89b4fa; }
-  .codehilite .nb { color: #f38ba8; }
-  .codehilite .nc { color: #f9e2af; }
-  .codehilite .bp { color: #f38ba8; }
+  .codehilite .hll { background-color: #fff8c5; }
+  .codehilite .c  { color: #6e7781; font-style: italic; }
+  .codehilite .k  { color: #cf222e; }
+  .codehilite .o  { color: #0550ae; }
+  .codehilite .s  { color: #0a3069; }
+  .codehilite .n  { color: #24292f; }
+  .codehilite .p  { color: #24292f; }
+  .codehilite .mi { color: #0550ae; }
+  .codehilite .nf { color: #8250df; }
+  .codehilite .nb { color: #953800; }
+  .codehilite .nc { color: #953800; }
+  .codehilite .bp { color: #953800; }
 
   table { width: 100%; border-collapse: collapse; margin: 1em 0; font-size: 0.925em; }
   th, td { border: 1px solid var(--border); padding: 10px 14px; text-align: left; }
@@ -142,9 +143,9 @@
   ul, ol { padding-left: 1.5em; margin-bottom: 1em; }
   li { margin-bottom: 0.3em; }
   hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
-  img { max-width: 100%; height: auto; border-radius: 6px; margin: 0.5em 0; }
-  p:has(img) { text-align: center; }
-  p:has(img) + p { text-align: center; font-size: 0.9em; color: var(--text-secondary); }
+  img { max-width: 100%; height: auto; border-radius: 6px; margin: 0; }
+  p:has(img) { text-align: center; margin-top: 0.6em; margin-bottom: 0; }
+  p:has(img) + p { text-align: center; font-size: 0.9em; color: var(--text-secondary); margin-top: 0.15em; margin-bottom: 0.6em; }
   .mermaid { text-align: center; margin: 1.5em 0; background: #fafbfc; border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
   .article-stats {
     font-size: 0.85rem; color: var(--text-secondary);
@@ -242,14 +243,14 @@ document.addEventListener('DOMContentLoaded', function() {
 <main class="main-wrapper">
   <div class="content-inner" id="main-content">
 <h1 id="fast-wam-do-world-action-models-need-test-time-future-imagination">Fast-WAM: Do World Action Models Need Test-time Future Imagination?</h1>
-<div class="article-stats">2,484 字 · English 518 词 · 约 10 分钟阅读</div>
+<div class="article-stats">2,487 字 · English 518 词 · 约 10 分钟阅读</div>
 
 <blockquote>
 <p><strong>论文信息</strong>
 - 作者：Tianyuan Yuan, Zibin Dong, Yicheng Liu, Hang Zhao
 - 通讯作者：Hang Zhao（赵行）
 - 单位：IIIS, Tsinghua University（清华大学交叉信息研究院）&amp; Galaxea AI
-- 投稿方向：NeurIPS 2026（main track）
+- 投稿方向：NeurIPS 2026（投稿中，under review）
 - arXiv ID：2603.16666
 - 代码：https://github.com/yuantianyuan01/FastWAM（含 LIBERO/RoboTwin 训练和评估代码）
 - 项目主页：https://yuantianyuan01.github.io/FastWAM/

@@ -1,3 +1,7 @@
+<!-- arxiv: 2605.10942 -->
+<!-- venue: NeurIPS 2026（投稿中） -->
+<!-- tags: WAM, 泛化 -->
+
 # HarmoWAM: Harmonizing Generalizable and Precise Manipulation via Adaptive World Action Models
 
 > **论文信息**

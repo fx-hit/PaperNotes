@@ -7,6 +7,10 @@
 # Arxiv TeX source directories
 **/arXiv-*/
 
+# Local agent settings inside dated work dirs
+20??-??-??/.claude/
+**/.claude/settings.local.json
+
 # Known code directories (add new ones here)
 # Use */<name>/ to match only at date-directory level, not inside assets/
 */last_r1_code/
@@ -53,3 +57,6 @@ __pycache__/
 *.mov
 *.mp4
 *.avi
+*.mkv
+*.webm
+*.gif

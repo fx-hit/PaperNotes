@@ -1,3 +1,7 @@
+<!-- arxiv: 2604.26694 -->
+<!-- venue: NeurIPS 2026（投稿中） -->
+<!-- tags: WAM, 世界模型, 视频生成, 3D重建 -->
+
 # Unified 4D World Action Modeling from Video Priors with Asynchronous Denoising
 
 > **论文信息**
