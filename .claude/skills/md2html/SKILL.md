@@ -30,6 +30,7 @@ python3 .claude/skills/md2html/scripts/convert.py <file1.md> [file2.md ...]
 - **代码高亮**：Pygments 暗色主题
 - **表格**、**引用**、**列表**等标准 markdown
 - **侧边栏目录**：自动提取 h1-h4 生成，滚动时高亮当前章节
+- **图片浮层查看**：点击正文图片可悬浮放大查看，支持工具条缩放、`1x` 重置、关闭，以及 `Esc`、`+/-/0` 快捷键
 - **响应式布局**：窄屏自动折叠目录
 - **站点元数据**：从 Markdown 顶部注释写入 HTML `<title>` 后，供 `generate_index.sh` 提取
 

@@ -145,6 +145,7 @@
   li { margin-bottom: 0.3em; }
   hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
   img { max-width: min(100%, var(--media-max-width)); height: auto; border-radius: 6px; margin: 0 auto; display: block; }
+  #main-content img { cursor: zoom-in; }
   p:has(img) { text-align: center; max-width: var(--media-max-width); margin: 0.6em auto 0; }
   table:has(img) { width: min(100%, var(--media-max-width)) !important; margin-left: auto; margin-right: auto; }
   p:has(img) + p { text-align: center; font-size: 0.9em; color: var(--text-secondary); margin-top: 0.15em; margin-bottom: 0.6em; }
@@ -154,11 +155,52 @@
     padding: 10px 18px; margin-bottom: 28px;
     background: #f8f9fa; border: 1px solid var(--border); border-radius: 8px;
   }
+  body.image-lightbox-open { overflow: hidden; }
+  .image-lightbox {
+    position: fixed; inset: 0; z-index: 1000;
+    display: none; align-items: center; justify-content: center;
+    background: rgba(9, 12, 20, 0.86); padding: 84px 28px 34px;
+  }
+  .image-lightbox.is-open { display: flex; }
+  .image-lightbox__stage {
+    width: 100%; height: 100%;
+    overflow: auto;
+  }
+  .image-lightbox__image {
+    max-width: none; max-height: none; width: auto; height: auto;
+    margin: auto; border-radius: 8px; background: #fff;
+    box-shadow: 0 20px 70px rgba(0, 0, 0, 0.45);
+    display: block; cursor: zoom-in;
+  }
+  .image-lightbox__toolbar {
+    position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+    display: flex; align-items: center; gap: 8px; padding: 8px;
+    background: rgba(255, 255, 255, 0.94); border: 1px solid rgba(225, 228, 232, 0.75);
+    border-radius: 8px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.24);
+  }
+  .image-lightbox__button {
+    width: 34px; height: 34px; border: 1px solid var(--border); border-radius: 6px;
+    background: #fff; color: var(--heading); font: 700 17px/1 "Inter", sans-serif;
+    display: inline-flex; align-items: center; justify-content: center;
+    cursor: pointer;
+  }
+  .image-lightbox__button:hover { background: #f6f8fa; }
+  .image-lightbox__zoom {
+    min-width: 58px; text-align: center; color: var(--heading);
+    font: 600 13px/1 "Inter", sans-serif;
+  }
+  .image-lightbox__caption {
+    position: absolute; left: 28px; right: 28px; bottom: 12px;
+    color: rgba(255, 255, 255, 0.86); text-align: center; font-size: 13px;
+    line-height: 1.45; pointer-events: none;
+  }
 
   @media (max-width: 1024px) {
     .sidebar { position: static; width: 100%; height: auto; max-height: 35vh; border-right: none; border-bottom: 1px solid var(--border); }
     .main-wrapper { margin-left: 0; display: block; }
     .content-inner { max-width: none; padding: 24px 20px 60px; }
+    .image-lightbox { padding: 78px 14px 30px; }
+    .image-lightbox__toolbar { top: 12px; }
   }
 </style>
 
@@ -1296,6 +1338,141 @@ document.addEventListener('DOMContentLoaded', function() {
 
   window.addEventListener('scroll', onScroll, { passive: true });
   onScroll();
+})();
+</script>
+
+
+<script>
+(function() {
+  const content = document.getElementById('main-content');
+  if (!content) return;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'image-lightbox';
+  overlay.setAttribute('role', 'dialog');
+  overlay.setAttribute('aria-modal', 'true');
+
+  overlay.innerHTML = `
+    <div class="image-lightbox__toolbar" aria-label="图片缩放控制">
+      <button type="button" class="image-lightbox__button" data-action="zoom-out" aria-label="缩小" title="缩小">-</button>
+      <button type="button" class="image-lightbox__button" data-action="zoom-reset" aria-label="重置缩放" title="重置缩放">1x</button>
+      <button type="button" class="image-lightbox__button" data-action="zoom-in" aria-label="放大" title="放大">+</button>
+      <span class="image-lightbox__zoom" aria-live="polite">100%</span>
+      <button type="button" class="image-lightbox__button" data-action="close" aria-label="关闭" title="关闭">&times;</button>
+    </div>
+    <div class="image-lightbox__stage">
+      <img class="image-lightbox__image" alt="">
+    </div>
+    <div class="image-lightbox__caption"></div>
+  `;
+  document.body.appendChild(overlay);
+
+  const stage = overlay.querySelector('.image-lightbox__stage');
+  const image = overlay.querySelector('.image-lightbox__image');
+  const zoomLabel = overlay.querySelector('.image-lightbox__zoom');
+  const caption = overlay.querySelector('.image-lightbox__caption');
+
+  const minZoom = 0.25;
+  const maxZoom = 5;
+  const step = 0.25;
+  let zoom = 1;
+  let fitWidth = 1;
+
+  function clamp(value) {
+    return Math.min(maxZoom, Math.max(minZoom, value));
+  }
+
+  function centerImage() {
+    requestAnimationFrame(function() {
+      stage.scrollLeft = Math.max(0, (stage.scrollWidth - stage.clientWidth) / 2);
+      stage.scrollTop = Math.max(0, (stage.scrollHeight - stage.clientHeight) / 2);
+    });
+  }
+
+  function applyZoom() {
+    image.style.width = Math.max(1, Math.round(fitWidth * zoom)) + 'px';
+    zoomLabel.textContent = Math.round(zoom * 100) + '%';
+    centerImage();
+  }
+
+  function setZoom(value) {
+    zoom = clamp(value);
+    applyZoom();
+  }
+
+  function computeFitSize() {
+    const naturalWidth = image.naturalWidth || 1;
+    const naturalHeight = image.naturalHeight || 1;
+    const maxWidth = Math.max(1, stage.clientWidth);
+    const maxHeight = Math.max(1, stage.clientHeight);
+    const fitScale = Math.min(1, maxWidth / naturalWidth, maxHeight / naturalHeight);
+    fitWidth = Math.max(1, naturalWidth * fitScale);
+    applyZoom();
+  }
+
+  function openImage(source) {
+    image.onload = computeFitSize;
+    image.alt = source.alt || '';
+    caption.textContent = source.alt || '';
+    image.src = source.currentSrc || source.src;
+    zoom = 1;
+    overlay.classList.add('is-open');
+    document.body.classList.add('image-lightbox-open');
+    if (image.complete) computeFitSize();
+  }
+
+  function closeImage() {
+    overlay.classList.remove('is-open');
+    document.body.classList.remove('image-lightbox-open');
+    image.onload = null;
+    image.style.removeProperty('width');
+    image.removeAttribute('src');
+  }
+
+  overlay.addEventListener('click', function(event) {
+    const action = event.target.closest('[data-action]');
+    if (action) {
+      const type = action.getAttribute('data-action');
+      if (type === 'zoom-in') setZoom(zoom + step);
+      if (type === 'zoom-out') setZoom(zoom - step);
+      if (type === 'zoom-reset') setZoom(1);
+      if (type === 'close') closeImage();
+      return;
+    }
+    if (event.target === overlay || event.target === stage) closeImage();
+  });
+
+  overlay.addEventListener('wheel', function(event) {
+    if (!overlay.classList.contains('is-open')) return;
+    if (!event.ctrlKey && !event.metaKey) return;
+    event.preventDefault();
+    setZoom(zoom + (event.deltaY < 0 ? step : -step));
+  }, { passive: false });
+
+  document.addEventListener('keydown', function(event) {
+    if (!overlay.classList.contains('is-open')) return;
+    if (event.key === 'Escape') closeImage();
+    if (event.key === '+' || event.key === '=') setZoom(zoom + step);
+    if (event.key === '-' || event.key === '_') setZoom(zoom - step);
+    if (event.key === '0') setZoom(1);
+  });
+
+  window.addEventListener('resize', function() {
+    if (overlay.classList.contains('is-open')) computeFitSize();
+  });
+
+  content.querySelectorAll('img').forEach(function(img) {
+    if (img.closest('a')) return;
+    img.setAttribute('tabindex', '0');
+    img.setAttribute('title', img.getAttribute('title') || '点击放大查看');
+    img.addEventListener('click', function() { openImage(img); });
+    img.addEventListener('keydown', function(event) {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        openImage(img);
+      }
+    });
+  });
 })();
 </script>
 
