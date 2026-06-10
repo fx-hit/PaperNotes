@@ -321,7 +321,7 @@ CSS = r"""
     --sidebar-width: 260px;
     --toc-active: #0969da;
     --content-max-width: 1350px;
-    --media-max-width: 900px;
+    --media-max-width: 1000px;
     --content-padding: 48px;
   }
 
