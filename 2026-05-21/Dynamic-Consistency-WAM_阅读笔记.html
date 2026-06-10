@@ -158,49 +158,115 @@
   body.image-lightbox-open { overflow: hidden; }
   .image-lightbox {
     position: fixed; inset: 0; z-index: 1000;
-    display: none; align-items: center; justify-content: center;
-    background: rgba(9, 12, 20, 0.86); padding: 84px 28px 34px;
+    display: none;
+    background: rgba(9, 12, 20, 0.88);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
   }
-  .image-lightbox.is-open { display: flex; }
+  .image-lightbox.is-open { display: block; }
+
+  /* Stage uses flexbox to center the image; safe alignment prevents
+     clipping when zoomed-in content overflows — it falls back to
+     start so scrollbars reach every pixel. */
   .image-lightbox__stage {
     width: 100%; height: 100%;
     overflow: auto;
+    display: flex;
+    align-items: safe center;
+    justify-content: safe center;
+    padding: 24px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.18) transparent;
   }
+
   .image-lightbox__image {
-    max-width: none; max-height: none; width: auto; height: auto;
-    margin: auto; border-radius: 8px; background: #fff;
-    box-shadow: 0 20px 70px rgba(0, 0, 0, 0.45);
-    display: block; cursor: zoom-in;
+    max-width: none; max-height: none;
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 20px 70px rgba(0, 0, 0, 0.5);
+    cursor: zoom-in;
+    flex-shrink: 0;
+    transition: box-shadow 0.3s;
   }
-  .image-lightbox__toolbar {
-    position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
-    display: flex; align-items: center; gap: 8px; padding: 8px;
-    background: rgba(255, 255, 255, 0.94); border: 1px solid rgba(225, 228, 232, 0.75);
-    border-radius: 8px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.24);
-  }
-  .image-lightbox__button {
-    width: 34px; height: 34px; border: 1px solid var(--border); border-radius: 6px;
-    background: #fff; color: var(--heading); font: 700 17px/1 "Inter", sans-serif;
-    display: inline-flex; align-items: center; justify-content: center;
+
+  /* Close button — top-right glass circle */
+  .image-lightbox__close {
+    position: absolute; top: 20px; right: 20px; z-index: 1010;
+    width: 40px; height: 40px;
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.25);
+    color: rgba(255,255,255,0.85);
     cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    transition: background 0.2s, border-color 0.2s, transform 0.2s, color 0.2s;
   }
-  .image-lightbox__button:hover { background: #f6f8fa; }
-  .image-lightbox__zoom {
-    min-width: 58px; text-align: center; color: var(--heading);
-    font: 600 13px/1 "Inter", sans-serif;
+  .image-lightbox__close:hover {
+    background: rgba(255,255,255,0.15);
+    border-color: rgba(255,255,255,0.3);
+    color: #fff;
+    transform: scale(1.08);
   }
+
+  /* Zoom toolbar — bottom-center glass pill */
+  .image-lightbox__toolbar {
+    position: absolute; bottom: 28px; left: 50%; transform: translateX(-50%); z-index: 1010;
+    display: flex; align-items: center; gap: 4px;
+    padding: 6px;
+    background: rgba(30, 30, 45, 0.75);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 32px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.35);
+  }
+
+  .image-lightbox__btn {
+    width: 36px; height: 36px;
+    border: none; border-radius: 50%;
+    background: transparent;
+    color: rgba(255,255,255,0.82);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.2s, color 0.2s;
+  }
+  .image-lightbox__btn:hover {
+    background: rgba(255,255,255,0.13);
+    color: #fff;
+  }
+
+  .image-lightbox__zoom-val {
+    min-width: 52px; text-align: center;
+    color: rgba(255,255,255,0.82);
+    font: 600 12.5px/32px "Inter", -apple-system, sans-serif;
+    cursor: pointer; user-select: none;
+    border-radius: 20px; padding: 0 6px;
+    transition: background 0.2s, color 0.2s;
+    letter-spacing: -0.01em;
+  }
+  .image-lightbox__zoom-val:hover {
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+  }
+
   .image-lightbox__caption {
-    position: absolute; left: 28px; right: 28px; bottom: 12px;
-    color: rgba(255, 255, 255, 0.86); text-align: center; font-size: 13px;
-    line-height: 1.45; pointer-events: none;
+    position: absolute; left: 28px; right: 28px; bottom: 96px; z-index: 1005;
+    color: rgba(255,255,255,0.72); text-align: center;
+    font-size: 13px; line-height: 1.45;
+    pointer-events: none;
   }
 
   @media (max-width: 1024px) {
     .sidebar { position: static; width: 100%; height: auto; max-height: 35vh; border-right: none; border-bottom: 1px solid var(--border); }
     .main-wrapper { margin-left: 0; display: block; }
     .content-inner { max-width: none; padding: 24px 20px 60px; }
-    .image-lightbox { padding: 78px 14px 30px; }
-    .image-lightbox__toolbar { top: 12px; }
+    .image-lightbox__stage { padding: 12px; }
+    .image-lightbox__close { top: 12px; right: 12px; width: 36px; height: 36px; }
+    .image-lightbox__toolbar { bottom: 18px; padding: 5px; gap: 2px; }
+    .image-lightbox__btn { width: 32px; height: 32px; }
+    .image-lightbox__caption { bottom: 78px; left: 18px; right: 18px; }
   }
 </style>
 
@@ -711,15 +777,26 @@ document.addEventListener('DOMContentLoaded', function() {
   overlay.setAttribute('aria-modal', 'true');
 
   overlay.innerHTML = `
-    <div class="image-lightbox__toolbar" aria-label="图片缩放控制">
-      <button type="button" class="image-lightbox__button" data-action="zoom-out" aria-label="缩小" title="缩小">-</button>
-      <button type="button" class="image-lightbox__button" data-action="zoom-reset" aria-label="重置缩放" title="重置缩放">1x</button>
-      <button type="button" class="image-lightbox__button" data-action="zoom-in" aria-label="放大" title="放大">+</button>
-      <span class="image-lightbox__zoom" aria-live="polite">100%</span>
-      <button type="button" class="image-lightbox__button" data-action="close" aria-label="关闭" title="关闭">&times;</button>
-    </div>
+    <button type="button" class="image-lightbox__close" data-action="close" aria-label="关闭">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M5 5l10 10M15 5L5 15"/>
+      </svg>
+    </button>
     <div class="image-lightbox__stage">
       <img class="image-lightbox__image" alt="">
+    </div>
+    <div class="image-lightbox__toolbar" aria-label="图片缩放控制">
+      <button type="button" class="image-lightbox__btn" data-action="zoom-out" aria-label="缩小" title="缩小">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d="M3 9h12"/>
+        </svg>
+      </button>
+      <span class="image-lightbox__zoom-val" data-action="zoom-reset" title="点击重置缩放" role="button" tabindex="0">100%</span>
+      <button type="button" class="image-lightbox__btn" data-action="zoom-in" aria-label="放大" title="放大">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d="M3 9h12M9 3v12"/>
+        </svg>
+      </button>
     </div>
     <div class="image-lightbox__caption"></div>
   `;
@@ -727,7 +804,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   const stage = overlay.querySelector('.image-lightbox__stage');
   const image = overlay.querySelector('.image-lightbox__image');
-  const zoomLabel = overlay.querySelector('.image-lightbox__zoom');
+  const zoomLabel = overlay.querySelector('.image-lightbox__zoom-val');
   const caption = overlay.querySelector('.image-lightbox__caption');
 
   const minZoom = 0.25;
@@ -740,32 +817,33 @@ document.addEventListener('DOMContentLoaded', function() {
     return Math.min(maxZoom, Math.max(minZoom, value));
   }
 
-  function centerImage() {
+  function centerImage(animate) {
     requestAnimationFrame(function() {
-      stage.scrollLeft = Math.max(0, (stage.scrollWidth - stage.clientWidth) / 2);
-      stage.scrollTop = Math.max(0, (stage.scrollHeight - stage.clientHeight) / 2);
+      var left = Math.max(0, (stage.scrollWidth - stage.clientWidth) / 2);
+      var top = Math.max(0, (stage.scrollHeight - stage.clientHeight) / 2);
+      stage.scrollTo({ left: left, top: top, behavior: animate ? 'smooth' : 'auto' });
     });
   }
 
-  function applyZoom() {
+  function applyZoom(animate) {
     image.style.width = Math.max(1, Math.round(fitWidth * zoom)) + 'px';
     zoomLabel.textContent = Math.round(zoom * 100) + '%';
-    centerImage();
+    centerImage(animate);
   }
 
-  function setZoom(value) {
+  function setZoom(value, animate) {
     zoom = clamp(value);
-    applyZoom();
+    applyZoom(animate);
   }
 
   function computeFitSize() {
-    const naturalWidth = image.naturalWidth || 1;
-    const naturalHeight = image.naturalHeight || 1;
-    const maxWidth = Math.max(1, stage.clientWidth);
-    const maxHeight = Math.max(1, stage.clientHeight);
-    const fitScale = Math.min(1, maxWidth / naturalWidth, maxHeight / naturalHeight);
-    fitWidth = Math.max(1, naturalWidth * fitScale);
-    applyZoom();
+    var w = image.naturalWidth || 1;
+    var h = image.naturalHeight || 1;
+    var maxW = Math.max(1, stage.clientWidth - 48);
+    var maxH = Math.max(1, stage.clientHeight - 48);
+    var fitScale = Math.min(1, maxW / w, maxH / h);
+    fitWidth = Math.max(1, w * fitScale);
+    applyZoom(false);
   }
 
   function openImage(source) {
@@ -788,12 +866,12 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   overlay.addEventListener('click', function(event) {
-    const action = event.target.closest('[data-action]');
+    var action = event.target.closest('[data-action]');
     if (action) {
-      const type = action.getAttribute('data-action');
-      if (type === 'zoom-in') setZoom(zoom + step);
-      if (type === 'zoom-out') setZoom(zoom - step);
-      if (type === 'zoom-reset') setZoom(1);
+      var type = action.getAttribute('data-action');
+      if (type === 'zoom-in') setZoom(zoom + step, true);
+      if (type === 'zoom-out') setZoom(zoom - step, true);
+      if (type === 'zoom-reset') setZoom(1, true);
       if (type === 'close') closeImage();
       return;
     }
@@ -804,15 +882,15 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!overlay.classList.contains('is-open')) return;
     if (!event.ctrlKey && !event.metaKey) return;
     event.preventDefault();
-    setZoom(zoom + (event.deltaY < 0 ? step : -step));
+    setZoom(zoom + (event.deltaY < 0 ? step : -step), true);
   }, { passive: false });
 
   document.addEventListener('keydown', function(event) {
     if (!overlay.classList.contains('is-open')) return;
     if (event.key === 'Escape') closeImage();
-    if (event.key === '+' || event.key === '=') setZoom(zoom + step);
-    if (event.key === '-' || event.key === '_') setZoom(zoom - step);
-    if (event.key === '0') setZoom(1);
+    if (event.key === '+' || event.key === '=') setZoom(zoom + step, true);
+    if (event.key === '-' || event.key === '_') setZoom(zoom - step, true);
+    if (event.key === '0') setZoom(1, true);
   });
 
   window.addEventListener('resize', function() {
