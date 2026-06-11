@@ -4,13 +4,6 @@
 
 # SLVR: Semantic-Enriched Latent Visual Reasoning
 
-> 本文基于以下本地材料整理：
->
-> - 论文 TeX 源码：`arXiv-2605.19342v2/example_paper.tex`
-> - 论文插图：`arXiv-2605.19342v2/images/*.pdf`（figure1_n.pdf, figure2.pdf, dataset_region_multiq.pdf）
-> - 官方代码：`slvr/`（ICML 2026 官方实现，基于 Qwen2.5-VL-7B + DeepSpeed + TRL）
-> - 本文图片导出目录：`assets/slvr/`
-
 > **论文信息**
 > - 作者：Tianrun Xu, Yue Sun, Qixun Wang, Jingyi Lu, Yuan Wang, Tianren Zhang, Longteng Guo, Fengyun Rao, Jing LYU, Feng Chen†, Jing Liu†
 > - 通讯作者：Feng Chen (chenfeng@mail.tsinghua.edu.cn), Jing Liu (jliu@nlpr.ia.ac.cn)
@@ -19,6 +12,13 @@
 > - arXiv ID：2605.19342
 > - 代码：https://github.com/tinnel123666888/slvr
 > - 数据集：SLV-Set（[tinnel123/slv-set](https://huggingface.co/datasets/tinnel123/slv-set)）、SV-QA（[tinnel123/sv-qa](https://huggingface.co/datasets/tinnel123/sv-qa)）
+>
+> 本文基于以下本地材料整理：
+>
+> - 论文 TeX 源码：`arXiv-2605.19342v2/example_paper.tex`
+> - 论文插图：`arXiv-2605.19342v2/images/*.pdf`（figure1_n.pdf, figure2.pdf, dataset_region_multiq.pdf）
+> - 官方代码：`slvr/`（ICML 2026 官方实现，基于 Qwen2.5-VL-7B + DeepSpeed + TRL）
+> - 本文图片导出目录：`assets/slvr/`
 
 ---
 
