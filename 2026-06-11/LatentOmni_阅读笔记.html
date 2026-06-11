@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LatentOmni: Rethinking Omni-Modal Understanding via Unified Audio-Visual Latent Reasoning</title>
+<!-- arxiv: 2605.22012 -->
+<!-- venue: 投稿中 (under review) -->
+<!-- tags: 全模态, 多模态理解, 链式思考 -->
+<!-- words-zh: 3364 -->
+<!-- words-en: 326 -->
+<!-- reading-time: 11 -->
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #ffffff;
+    --text: #1a1a2e;
+    --text-secondary: #555;
+    --border: #e1e4e8;
+    --link: #0969da;
+    --table-stripe: #f6f8fa;
+    --heading: #0d1117;
+    --blockquote-border: #0969da;
+    --blockquote-bg: #f0f6ff;
+    --inline-code: #d73a49;
+    --inline-code-bg: #f6f8fa;
+    --sidebar-width: 260px;
+    --toc-active: #0969da;
+    --content-max-width: 1350px;
+    --media-max-width: 1000px;
+    --content-padding: 48px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "Inter", "Noto Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 16px;
+    line-height: 1.75;
+    color: var(--text);
+    background: var(--bg);
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    width: var(--sidebar-width);
+    overflow-y: auto;
+    padding: 28px 20px 40px;
+    background: #fafbfc;
+    border-right: 1px solid var(--border);
+    z-index: 10;
+    scrollbar-width: thin;
+  }
+  .sidebar-title {
+    font-size: 13px; font-weight: 700; color: var(--text-secondary);
+    margin-bottom: 16px; letter-spacing: 0.06em; text-transform: uppercase;
+  }
+  .toc-list { list-style: none; padding: 0; margin: 0; }
+  .toc-list ul { list-style: none; padding-left: 14px; }
+  .toc-list li { margin: 1px 0; }
+  .toc-list a {
+    display: block; padding: 4px 12px; font-size: 13.5px; line-height: 1.45;
+    color: var(--text-secondary); text-decoration: none; border-radius: 4px;
+    border-left: 2px solid transparent; transition: all 0.15s;
+  }
+  .toc-list a:hover { color: var(--link); background: #e8f0fe; }
+  .toc-list a.active {
+    color: var(--toc-active); font-weight: 600;
+    border-left-color: var(--toc-active); background: #e8f0fe;
+  }
+  .toc-h1 a { font-weight: 600; color: var(--heading); font-size: 14px; }
+  .toc-h3 a { padding-left: 24px; font-size: 13px; }
+  .toc-h4 a { padding-left: 36px; font-size: 12.5px; }
+  .toc-empty { color: var(--text-secondary); font-size: 13px; font-style: italic; }
+
+  .main-wrapper {
+    margin-left: var(--sidebar-width);
+    min-height: 100vh;
+    display: flex; justify-content: center;
+  }
+  .content-inner {
+    width: 100%;
+    max-width: var(--content-max-width);
+    padding: 40px var(--content-padding) 80px;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    color: var(--heading); font-weight: 700; line-height: 1.3;
+    margin-top: 2em; margin-bottom: 0.6em; scroll-margin-top: 24px;
+  }
+  h1 { font-size: 2em; border-bottom: 2px solid var(--border); padding-bottom: 0.3em; margin-top: 0; }
+  h2 { font-size: 1.5em; border-bottom: 1px solid var(--border); padding-bottom: 0.25em; }
+  h3 { font-size: 1.25em; }
+  h4 { font-size: 1.1em; }
+  p { margin-bottom: 1em; }
+  a { color: var(--link); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  strong { font-weight: 600; }
+
+  blockquote {
+    border-left: 4px solid var(--blockquote-border);
+    background: var(--blockquote-bg);
+    padding: 12px 20px; margin: 1em 0;
+    border-radius: 0 6px 6px 0; color: var(--text-secondary);
+  }
+  blockquote p:last-child { margin-bottom: 0; }
+
+  code {
+    font-family: "JetBrains Mono", "SF Mono", "Fira Code", monospace;
+    font-size: 0.875em; background: var(--inline-code-bg);
+    padding: 2px 6px; border-radius: 4px; color: var(--inline-code);
+  }
+  pre {
+    background: #f6f8fa; color: #24292f;
+    border: 1px solid var(--border);
+    border-radius: 8px; padding: 16px 20px; overflow-x: auto;
+    margin: 1em 0; font-size: 14px; line-height: 1.55;
+  }
+  pre code { background: none; padding: 0; border-radius: 0; color: inherit; font-size: inherit; }
+
+  .codehilite { background: #f6f8fa; border: 1px solid var(--border); border-radius: 8px; padding: 16px 20px; overflow-x: auto; margin: 1em 0; }
+  .codehilite pre { background: none; padding: 0; margin: 0; border-radius: 0; }
+  .codehilite .hll { background-color: #fff8c5; }
+  .codehilite .c  { color: #6e7781; font-style: italic; }
+  .codehilite .k  { color: #cf222e; }
+  .codehilite .o  { color: #0550ae; }
+  .codehilite .s  { color: #0a3069; }
+  .codehilite .n  { color: #24292f; }
+  .codehilite .p  { color: #24292f; }
+  .codehilite .mi { color: #0550ae; }
+  .codehilite .nf { color: #8250df; }
+  .codehilite .nb { color: #953800; }
+  .codehilite .nc { color: #953800; }
+  .codehilite .bp { color: #953800; }
+
+  table { width: 100%; border-collapse: collapse; margin: 1em 0; font-size: 0.925em; }
+  th, td { border: 1px solid var(--border); padding: 10px 14px; text-align: left; }
+  th { background: var(--table-stripe); font-weight: 600; color: var(--heading); }
+  tr:nth-child(even) td { background: var(--table-stripe); }
+
+  .math.display { display: block; overflow-x: auto; padding: 12px 0; margin: 1em 0; }
+  ul, ol { padding-left: 1.5em; margin-bottom: 1em; }
+  li { margin-bottom: 0.3em; }
+  hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+  img { max-width: min(100%, var(--media-max-width)); height: auto; border-radius: 6px; margin: 0 auto; display: block; }
+  #main-content img { cursor: zoom-in; }
+  p:has(img) { text-align: center; max-width: var(--media-max-width); margin: 0.6em auto 0; }
+  table:has(img) { width: min(100%, var(--media-max-width)) !important; margin-left: auto; margin-right: auto; }
+  p:has(img) + p { text-align: center; font-size: 0.9em; color: var(--text-secondary); margin-top: 0.15em; margin-bottom: 0.6em; }
+  .mermaid { text-align: center; margin: 1.5em 0; background: #fafbfc; border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+  .article-stats {
+    font-size: 0.85rem; color: var(--text-secondary);
+    padding: 10px 18px; margin-bottom: 28px;
+    background: #f8f9fa; border: 1px solid var(--border); border-radius: 8px;
+  }
+  body.image-lightbox-open { overflow: hidden; }
+  .image-lightbox {
+    position: fixed; inset: 0; z-index: 1000;
+    display: none;
+    background: rgba(9, 12, 20, 0.88);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+  }
+  .image-lightbox.is-open { display: block; }
+
+  /* Stage uses flexbox to center the image; safe alignment prevents
+     clipping when zoomed-in content overflows — it falls back to
+     start so scrollbars reach every pixel. */
+  .image-lightbox__stage {
+    width: 100%; height: 100%;
+    overflow: auto;
+    display: flex;
+    align-items: safe center;
+    justify-content: safe center;
+    padding: 24px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.18) transparent;
+  }
+
+  .image-lightbox__image {
+    max-width: none; max-height: none;
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 20px 70px rgba(0, 0, 0, 0.5);
+    cursor: zoom-in;
+    flex-shrink: 0;
+    transition: box-shadow 0.3s;
+  }
+
+  /* Close button — top-right glass circle */
+  .image-lightbox__close {
+    position: absolute; top: 20px; right: 20px; z-index: 1010;
+    width: 40px; height: 40px;
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.25);
+    color: rgba(255,255,255,0.85);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    transition: background 0.2s, border-color 0.2s, transform 0.2s, color 0.2s;
+  }
+  .image-lightbox__close:hover {
+    background: rgba(255,255,255,0.15);
+    border-color: rgba(255,255,255,0.3);
+    color: #fff;
+    transform: scale(1.08);
+  }
+
+  /* Zoom toolbar — bottom-center glass pill */
+  .image-lightbox__toolbar {
+    position: absolute; bottom: 28px; left: 50%; transform: translateX(-50%); z-index: 1010;
+    display: flex; align-items: center; gap: 4px;
+    padding: 6px;
+    background: rgba(30, 30, 45, 0.75);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 32px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.35);
+  }
+
+  .image-lightbox__btn {
+    width: 36px; height: 36px;
+    border: none; border-radius: 50%;
+    background: transparent;
+    color: rgba(255,255,255,0.82);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.2s, color 0.2s;
+  }
+  .image-lightbox__btn:hover {
+    background: rgba(255,255,255,0.13);
+    color: #fff;
+  }
+
+  .image-lightbox__zoom-val {
+    min-width: 52px; text-align: center;
+    color: rgba(255,255,255,0.82);
+    font: 600 12.5px/32px "Inter", -apple-system, sans-serif;
+    cursor: pointer; user-select: none;
+    border-radius: 20px; padding: 0 6px;
+    transition: background 0.2s, color 0.2s;
+    letter-spacing: -0.01em;
+  }
+  .image-lightbox__zoom-val:hover {
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+  }
+
+  .image-lightbox__caption {
+    position: absolute; left: 28px; right: 28px; bottom: 96px; z-index: 1005;
+    color: rgba(255,255,255,0.72); text-align: center;
+    font-size: 13px; line-height: 1.45;
+    pointer-events: none;
+  }
+
+  @media (max-width: 1024px) {
+    .sidebar { position: static; width: 100%; height: auto; max-height: 35vh; border-right: none; border-bottom: 1px solid var(--border); }
+    .main-wrapper { margin-left: 0; display: block; }
+    .content-inner { max-width: none; padding: 24px 20px 60px; }
+    .image-lightbox__stage { padding: 12px; }
+    .image-lightbox__close { top: 12px; right: 12px; width: 36px; height: 36px; }
+    .image-lightbox__toolbar { bottom: 18px; padding: 5px; gap: 2px; }
+    .image-lightbox__btn { width: 32px; height: 32px; }
+    .image-lightbox__caption { bottom: 78px; left: 18px; right: 18px; }
+  }
+</style>
+
+<script>
+MathJax = {
+  tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']], processEscapes: true, tags: 'none' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] }
+};
+</script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  mermaid.initialize({ startOnLoad: true, theme: 'neutral', securityLevel: 'loose' });
+});
+</script>
+
+</head>
+<body>
+
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-title">目录</div>
+  <ul class="toc-list">
+<li class="toc-h1"><a href="#latentomni-rethinking-omni-modal-understanding-via-unified-audio-visual-latent-reasoning">LatentOmni: Rethinking Omni-Modal Understanding via Unified Audio-Visual Latent Reasoning</a>
+<ul>
+</li>
+<li class="toc-h2"><a href="#_1">一、核心问题</a>
+</li>
+<li class="toc-h2"><a href="#_2">二、核心思路</a>
+</li>
+<li class="toc-h2"><a href="#_3">三、方法详解</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#31-audio-visual-latent-reasoning">3.1 音视频隐空间推理（Audio-Visual Latent Reasoning）</a>
+</li>
+<li class="toc-h3"><a href="#32-omni-sync-ospe">3.2 Omni-Sync 位置编码（OSPE）</a>
+</li>
+<li class="toc-h3"><a href="#33-latentomni-instruct-35k">3.3 数据集构建：LatentOmni-Instruct-35K</a>
+</li>
+<li class="toc-h3"><a href="#34">3.4 训练目标</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_4">四、实验与结果</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#41">4.1 实验设置</a>
+</li>
+<li class="toc-h3"><a href="#42">4.2 主要结果</a>
+</li>
+<li class="toc-h3"><a href="#43">4.3 消融实验</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_5">五、关键洞察与技术亮点</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#51">5.1 "文本瓶颈"的诊断与解决</a>
+</li>
+<li class="toc-h3"><a href="#52-feature-level-supervision">5.2 特征级隐空间监督（Feature-Level Supervision）</a>
+</li>
+<li class="toc-h3"><a href="#53">5.3 文本与隐空间的混合推理</a>
+</li>
+<li class="toc-h3"><a href="#54">5.4 实验设计的严谨性</a>
+</li>
+<li class="toc-h3"><a href="#55">5.5 数据合成流水线的工程价值</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_6">六、局限性</a>
+</li>
+<li class="toc-h2"><a href="#_7">七、关键概念速查</a>
+</ul></li>
+</li></ul>
+</nav>
+
+<main class="main-wrapper">
+  <div class="content-inner" id="main-content">
+<h1 id="latentomni-rethinking-omni-modal-understanding-via-unified-audio-visual-latent-reasoning">LatentOmni: Rethinking Omni-Modal Understanding via Unified Audio-Visual Latent Reasoning</h1>
+<div class="article-stats">3,364 字 · English 326 词 · 约 11 分钟阅读</div>
+
+<blockquote>
+<p><strong>论文信息</strong>
+- 作者：Yifan Dai（SJTU &amp; 快手 Kling）、Zhenhua Wu、Bohan Zeng、Daili Hua、Jialing Liu、Bozhou Li、Yuran Wang、Chengzhuo Tong、Hao Liang、Xiaochen Ma、Junbo Niu、Tianyu Guo、Yang Shi、Yue Ding、Yiyan Ji、Bingyin Mei、Yushuo Guan、Yuanxing Zhang、Pengfei Wan、Fangcheng Fu、Wentao Zhang
+- 机构：上海交大 AI 学院、快手 Kling 团队、北京大学、港科大、中科院自动化所、南京大学、中国人民大学、清华大学
+- arXiv ID：2605.22012
+- 基座模型：Qwen2.5-Omni-7B
+- 代码：未开源</p>
+</blockquote>
+<hr />
+<h2 id="_1">一、核心问题</h2>
+<p>当前多模态大模型（MLLM）在音视频联合推理任务上表现不佳。根本原因在于：<strong>主流方法将连续的音频和视觉信号压缩为离散文本 token 进行链式思考（Chain-of-Thought, CoT）</strong>，这一"文本瓶颈"导致两个严重后果：</p>
+<ol>
+<li><strong>信息损失（Information Loss）</strong>：高维连续的音视频信号被强制映射到离散词汇空间，时序对齐的细粒度信息（如同步的视听觉线索）在文本化过程中被丢失。</li>
+<li><strong>语言绑定现象（Language-Bound Phenomenon）</strong>：模型在推理过程中过度依赖语言先验，对原始音视频输入的注意力逐渐减弱，造成"感官脱离"和幻觉。</li>
+</ol>
+<blockquote>
+<p>直接表现：随着推理链加长，纯文本 CoT 对原始音视频信号的注意力持续下降，模型回答更多依赖语言统计规律而非真实的感官证据。</p>
+</blockquote>
+<p><img alt="图1：LatentOmni 与 Explicit Text CoT 基线的对比" src="assets/latentomni/fig1_new.jpg" /></p>
+<p><em>图1：LatentOmni 与 Explicit Text CoT 基线的定性+定量对比。</em><em>左侧</em><em>：针对同一个音视频推理问题，基线模型错误地关注了不相关的视觉区域（低注意力），而 LatentOmni 准确锁定了关键的跨模态线索（热力图深色区域），给出了正确答案。</em><em>右侧</em><em>：在 Daily-Omni 基准的不同任务类型上，LatentOmni 始终保持显著更高的音视频 token 注意力占比（AV Token Attention Ratio），尤其在需要精细对齐的 AV Alignment 任务上优势最为明显，验证了隐空间推理有效防止了"语言绑定"现象。</em></p>
+<hr />
+<h2 id="_2">二、核心思路</h2>
+<p>LatentOmni 的核心洞察是：<strong>连续隐空间（latent space）比离散文本更适合承载和保留音视频感官信息</strong>。与其把所有中间推理都写成文本，不如让模型在需要回顾音视频证据时，直接在连续隐空间中生成隐式推理状态。</p>
+<p>具体做法：</p>
+<ul>
+<li><strong>文本 + 隐空间交替推理</strong>：推理轨迹由文本 token（负责高层逻辑框架）和连续隐状态（负责密集音视频证据的保留和整合）交替组成。</li>
+<li>当模型需要重新审视音视频信息时，生成特殊 token <code>&lt;Unified_Latent&gt;</code> 切换到连续隐空间，生成 K 个隐向量后再用 <code>&lt;/Unified_Latent&gt;</code> 切回文本生成。</li>
+<li>通过 <strong>特征级监督</strong> 和 <strong>时序对齐的位置编码</strong> 确保隐状态忠实于原始感官信号。</li>
+</ul>
+<p><img alt="图2：LatentOmni 整体架构" src="assets/latentomni/model_overview_2.jpg" /></p>
+<p><em>图2：LatentOmni 整体框架。</em><em>左侧</em><em>为推理流程：模型在文本生成和隐空间推理之间交替——当遇到 <code>&lt;Unified_Latent&gt;</code> 触发 token 时，从离散词汇空间切换到连续隐空间，自回归生成 K 个隐状态（K_v 个视觉 + K_a 个音频），然后恢复到文本生成。</em><em>右侧</em><em>为训练目标：联合优化三个损失——文本预测损失（<span class="math inline">$\mathcal{L}_{\text{text}}$</span>）保持语言能力、隐空间对齐损失（<span class="math inline">$\mathcal{L}_{\text{latent}}$</span>）将隐状态锚定到感官特征、时序同步损失（<span class="math inline">$\mathcal{L}_{\text{sync}}$</span>）对齐跨模态时序。</em></p>
+<hr />
+<h2 id="_3">三、方法详解</h2>
+<h3 id="31-audio-visual-latent-reasoning">3.1 音视频隐空间推理（Audio-Visual Latent Reasoning）</h3>
+<p>LatentOmni 的推理轨迹是一个<strong>文本与隐状态交替的混合序列</strong>：</p>
+<p><div class="math display">$$S = \left[ w_{1:i}, u, z_{1:K}, u', w_{i+1:j}, u, z_{K+1:2K}, u', \dots, a \right]$$</div></p>
+<p>其中：</p>
+<ul>
+<li><span class="math inline">$w$</span> — 标准文本 token（离散）</li>
+<li><span class="math inline">$u$</span> / <span class="math inline">$u'$</span> — <code>&lt;Unified_Latent&gt;</code> 触发 / 停止 token</li>
+<li><span class="math inline">$z_k \in \mathbb{R}^d$</span> — 连续隐推理状态（transformer 最后一层输出，不经 LM head 映射回词汇表）</li>
+<li><span class="math inline">$a$</span> — 最终答案</li>
+</ul>
+<p>每个隐状态 <span class="math inline">$z_k$</span> 被直接作为下一个位置的输入 embedding 向前传播，形成<strong>完全连续</strong>的隐推理轨迹。前 <span class="math inline">$K_v$</span> 个位置分配给视觉隐状态，后 <span class="math inline">$K_a$</span> 个分配给音频隐状态（默认 <span class="math inline">$K=40$</span>，<span class="math inline">$K_v=32$</span>，<span class="math inline">$K_a=8$</span>）。</p>
+<p><strong>设计直觉</strong>：文本提供逻辑骨架（"发生了什么→为什么→答案是什么"），隐空间负责在关键证据节点保留和整合密集的多模态信息——两者各司其职，互不替代。</p>
+<h3 id="32-omni-sync-ospe">3.2 Omni-Sync 位置编码（OSPE）</h3>
+<p>问题：视觉和音频隐状态是<strong>依次生成</strong>的（先 <span class="math inline">$K_v$</span> 个视觉，再 <span class="math inline">$K_a$</span> 个音频），属于同一时刻的视听特征可能在位置上被拉开，导致时序对齐丢失。</p>
+<p>解决：OSPE 将 Qwen2.5-Omni 的 time-aligned multimodal RoPE 扩展到统一隐空间：</p>
+<p><div class="math display">$$\operatorname{OSPE}(h, t) = h \odot \cos(t \Theta) + \mathcal{R}(h) \odot \sin(t \Theta)$$</div></p>
+<ul>
+<li><span class="math inline">$t$</span> — 共享的物理时间戳（同一时刻的音视频帧使用相同的 <span class="math inline">$t$</span>）</li>
+<li><span class="math inline">$\Theta$</span> — 预定义的基频向量</li>
+<li><span class="math inline">$\mathcal{R}(\cdot)$</span> — 在相邻维度上的块对角旋转矩阵</li>
+</ul>
+<p>效果：即使视觉和音频隐状态在序列中位置不同，OSPE 通过注入同步的相对位置先验，使得同一时刻的音视频特征在注意力计算中保持对齐。</p>
+<h3 id="33-latentomni-instruct-35k">3.3 数据集构建：LatentOmni-Instruct-35K</h3>
+<p>训练隐空间推理需要一种特殊监督信号：<strong>标注了每一步应该参考哪个音视频片段</strong>的推理轨迹。现有数据集（通常是粗粒度的 QA 对）缺少这种片段级对齐。因此作者设计了三阶段数据合成 pipeline：</p>
+<p><img alt="图3：数据构建流水线" src="assets/latentomni/data.jpg" /></p>
+<p><em>图3：LatentOmni-Instruct-35K 数据构建三阶段流水线。</em><em>阶段 1</em><em>：从两个时间对齐的高质量音视频 caption 数据集（ASID-1M 和 AVoCaDO）出发，用 Qwen3-235B 将跨模态 caption 转化为符合严格跨模态依赖要求的 AVQA 对，再用 GLM-4.7 对每对 QA 进行三维度评分（难度、逻辑严谨性、模态依赖度，各 1-5 分），总分低于 13 分或类别不平衡超过 3× 的样本被丢弃。</em><em>阶段 2</em><em>：按时间戳切分原始音视频流，用 Qwen3-30B-Captioner 分别生成视觉和音频的片段级描述，再由 GLM-4.7 过滤幻觉、修复镜头碎片化、重新对齐时序。</em><em>阶段 3</em><em>：将 AVQA 对与片段级 caption 组合，由 GLM-4.7 生成包含显式片段引用标记的推理轨迹，Gemini-2.5-Flash 审核修正引用错误和冗余分支，最终替换标记为实际音视频片段，得到 35K 样本。</em></p>
+<p><strong>数据特点</strong>：</p>
+<ul>
+<li>每条轨迹要求至少引用 1 个、最多 3 个音视频片段</li>
+<li>推理过程明确要求从"感官证据"出发（prompt 禁止提及"caption"、"text"等词）</li>
+<li>包含 10 种推理类型：视听联合感知、动作识别、空间布局理解、时序理解、属性对比、计数量化、情感氛围感知、语义摘要、逻辑关系推理、意图预测</li>
+</ul>
+<h3 id="34">3.4 训练目标</h3>
+<p>LatentOmni 使用三个互补的损失函数联合优化：</p>
+<p><strong>（1）文本预测损失 <span class="math inline">$\mathcal{L}_{\text{text}}$</span></strong></p>
+<p>标准自回归交叉熵，仅在离散 token（文本推理步骤 <span class="math inline">$w$</span>、触发 token <span class="math inline">$u$</span>、答案 <span class="math inline">$a$</span>）上计算，保持模型的语言生成能力：</p>
+<p><div class="math display">$$\mathcal{L}_{\text{text}} = - \frac{1}{N_{\text{text}}} \sum_{t=1}^{L} \mathbb{I}(s_t \in \mathcal{V}) \log p(s_t \mid S_{&lt;t}, H^v, H^a, H^q)$$</div></p>
+<p><strong>（2）隐空间对齐损失 <span class="math inline">$\mathcal{L}_{\text{latent}}$</span></strong></p>
+<p>核心创新。从标注的音视频片段中提取特征（使用模型自身的视觉/音频编码器），通过无参数的 L2-norm 加权池化压缩为锚点序列 <span class="math inline">$A = [a_1, \dots, a_K]$</span>，然后用 MSE 将生成的隐状态对齐到锚点：</p>
+<p><div class="math display">$$\mathcal{L}_{\text{latent}} = \frac{1}{K} \sum_{k=1}^{K} \left\| z_k - a_k \right\|^2_2$$</div></p>
+<blockquote>
+<p>这是防止"语言绑定"的关键机制：它迫使隐状态 <span class="math inline">$z_k$</span> 直接重建原始音视频特征，确保隐空间中的推理忠实于感官证据。</p>
+</blockquote>
+<p><strong>（3）时序同步损失 <span class="math inline">$\mathcal{L}_{\text{sync}}$</span></strong></p>
+<p>对称 InfoNCE 对比损失，对同一时刻 <span class="math inline">$t$</span> 的视觉特征 <span class="math inline">$h_t^v$</span> 和音频特征 <span class="math inline">$h_t^a$</span> 拉近，不同时刻的推开：</p>
+<p><div class="math display">$$\mathcal{L}_{\text{sync}} = - \frac{1}{2 |\mathcal{T}|} \sum_{t \in \mathcal{T}} \left( \log \frac{\exp(\operatorname{sim}(h_t^v, h_t^a) / \tau)}{\sum_{t'} \exp(\operatorname{sim}(h_t^v, h_{t'}^a) / \tau)} + \log \frac{\exp(\operatorname{sim}(h_t^a, h_t^v) / \tau)}{\sum_{t'} \exp(\operatorname{sim}(h_t^a, h_{t'}^v) / \tau)} \right)$$</div></p>
+<p><strong>最终联合目标</strong>：</p>
+<p><div class="math display">$$\mathcal{L}_{\text{total}} = \mathcal{L}_{\text{text}} + \lambda_1 \mathcal{L}_{\text{latent}} + \lambda_2 \mathcal{L}_{\text{sync}}$$</div></p>
+<p>其中 <span class="math inline">$\lambda_1 = 0.005$</span>，<span class="math inline">$\lambda_2 = 1.0$</span>。</p>
+<p><strong>训练配置</strong>：</p>
+<ul>
+<li>基座模型：Qwen2.5-Omni-7B</li>
+<li>训练步数：750 steps（2 epochs）</li>
+<li>学习率：<span class="math inline">$10^{-5}$</span>，warmup 比例 0.05</li>
+<li>Batch size：1，梯度累积 12 步</li>
+<li>最大帧数/样本：256</li>
+<li>隐 token 数：固定 40（32 视觉 + 8 音频）</li>
+</ul>
+<hr />
+<h2 id="_4">四、实验与结果</h2>
+<h3 id="41">4.1 实验设置</h3>
+<p><strong>四个评测基准</strong>（覆盖不同难度的音视频联合推理）：
+| 基准 | 侧重点 | 特点 |
+|------|--------|------|
+| Daily-Omni | 日常场景推理 | 常见事件理解 |
+| WorldSense | 物理/时空常识 | 结构化常识推理 |
+| OmniVideoBench | 跨模态对齐与问答 | 细粒度音频类型和视频时长分片 |
+| LVOmniBench | 长时多感官理解 | 持续长输入推理 |</p>
+<p><strong>对照基线</strong>：</p>
+<ul>
+<li><strong>Qwen2.5-Omni-7B</strong>：基座模型（零样本推理）</li>
+<li><strong>Explicit Text CoT</strong>：移除 LatentOmni-Instruct-35K 中所有音视频片段，仅用纯文本推理轨迹微调</li>
+<li><strong>Vanilla SFT</strong>：直接用 LatentOmni-Instruct-35K 做标准指令微调（不使用隐空间推理）</li>
+<li>开源多模态模型：VideoLLaMA2-7B、MiniCPM-o-7B、VITA-1.5-7B、HumanOmniV2-7B、Baichuan-Omni-1.5、OmniVinci</li>
+<li>闭源模型：GPT-4o、Gemini-2.0-Flash、Gemini-2.5-Pro（作为参照）</li>
+<li>隐推理方法：Monet、LVR（在 VideoMME 视觉子集上对比）</li>
+</ul>
+<h3 id="42">4.2 主要结果</h3>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th style="text-align: center;">Daily-Omni</th>
+<th style="text-align: center;">WorldSense</th>
+<th style="text-align: center;">OmniVideoBench</th>
+<th style="text-align: center;">LVOmniBench</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>VideoLLaMA2-7B</td>
+<td style="text-align: center;">35.2</td>
+<td style="text-align: center;">25.4</td>
+<td style="text-align: center;">29.2</td>
+<td style="text-align: center;">27.0</td>
+</tr>
+<tr>
+<td>Qwen2.5-Omni-7B</td>
+<td style="text-align: center;">62.9</td>
+<td style="text-align: center;">45.4</td>
+<td style="text-align: center;">29.3</td>
+<td style="text-align: center;">32.0</td>
+</tr>
+<tr>
+<td>+ Explicit Text CoT</td>
+<td style="text-align: center;">65.6</td>
+<td style="text-align: center;">46.6</td>
+<td style="text-align: center;">33.2</td>
+<td style="text-align: center;">32.1</td>
+</tr>
+<tr>
+<td>+ Vanilla SFT</td>
+<td style="text-align: center;">62.0</td>
+<td style="text-align: center;">47.5</td>
+<td style="text-align: center;">30.5</td>
+<td style="text-align: center;">33.2</td>
+</tr>
+<tr>
+<td><strong>LatentOmni</strong></td>
+<td style="text-align: center;"><strong>67.4</strong></td>
+<td style="text-align: center;"><strong>48.9</strong></td>
+<td style="text-align: center;"><strong>35.4</strong></td>
+<td style="text-align: center;"><strong>35.1</strong></td>
+</tr>
+<tr>
+<td><em>Gemini-2.5-Pro</em></td>
+<td style="text-align: center;"><em>81.4</em></td>
+<td style="text-align: center;"><em>64.6</em></td>
+<td style="text-align: center;"><em>58.9</em></td>
+<td style="text-align: center;"><em>—</em></td>
+</tr>
+</tbody>
+</table>
+<p><strong>关键发现</strong>：</p>
+<ol>
+<li>
+<p><strong>相对基座模型</strong>：LatentOmni 在四个基准上分别提升 +4.5pp、+3.5pp、+6.1pp、+3.1pp，OmniVideoBench 上提升最显著（+6.1pp），说明隐空间推理特别有利于需要精细跨模态对齐的任务。</p>
+</li>
+<li>
+<p><strong>相对 Explicit Text CoT</strong>：全面超越纯文本 CoT（+1.8pp ~ +3.0pp），且增益随任务难度增加而增大。这表明隐空间推理的优势不是来自额外的数据或训练，而是来自<strong>在连续空间中保留音视频证据</strong>这一根本设计。</p>
+</li>
+<li>
+<p><strong>相对 Vanilla SFT</strong>：直接 SFT 反而在 Daily-Omni 上降低了 0.9pp（62.9→62.0），说明缺少隐空间推理机制的普通微调无法利用 interleaved 数据的结构优势；LatentOmni 相比 Vanilla SFT 提升 +5.4pp，差距远超 Text CoT 的 +3.6pp。</p>
+</li>
+<li>
+<p><strong>OmniVideoBench 细粒度分析</strong>：</p>
+</li>
+</ol>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th style="text-align: center;">Music</th>
+<th style="text-align: center;">Sound</th>
+<th style="text-align: center;">Speech</th>
+<th style="text-align: center;">(0,1]min</th>
+<th style="text-align: center;">(10,30]min</th>
+<th style="text-align: center;">平均</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Qwen2.5-Omni-7B</td>
+<td style="text-align: center;">23.1</td>
+<td style="text-align: center;">25.3</td>
+<td style="text-align: center;">30.7</td>
+<td style="text-align: center;">41.6</td>
+<td style="text-align: center;">26.7</td>
+<td style="text-align: center;">29.3</td>
+</tr>
+<tr>
+<td>+ Explicit Text CoT</td>
+<td style="text-align: center;">30.0</td>
+<td style="text-align: center;">32.0</td>
+<td style="text-align: center;">33.9</td>
+<td style="text-align: center;">39.4</td>
+<td style="text-align: center;">30.7</td>
+<td style="text-align: center;">33.2</td>
+</tr>
+<tr>
+<td><strong>LatentOmni</strong></td>
+<td style="text-align: center;"><strong>33.3</strong></td>
+<td style="text-align: center;">30.2</td>
+<td style="text-align: center;"><strong>36.7</strong></td>
+<td style="text-align: center;"><strong>45.2</strong></td>
+<td style="text-align: center;"><strong>34.0</strong></td>
+<td style="text-align: center;"><strong>35.4</strong></td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>在 Music（+3.3pp）和 Speech（+2.8pp）类别上优势明显，表明隐空间对非视觉信息的保留效果好于文本化</li>
+<li>
+<p>在长视频（10-30min）上 LatentOmni 达 34.0%，远超 Text CoT 的 30.7%（+3.3pp），证明隐空间推理对长时序信息保留特别有效</p>
+</li>
+<li>
+<p><strong>视觉隐推理对比</strong>（VideoMME，纯视觉设定）：</p>
+</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th style="text-align: center;">Overall</th>
+<th style="text-align: center;">Short</th>
+<th style="text-align: center;">Medium</th>
+<th style="text-align: center;">Long</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>LVR</td>
+<td style="text-align: center;">36.7</td>
+<td style="text-align: center;">39.2</td>
+<td style="text-align: center;">36.6</td>
+<td style="text-align: center;">34.3</td>
+</tr>
+<tr>
+<td>Monet</td>
+<td style="text-align: center;">51.6</td>
+<td style="text-align: center;">52.9</td>
+<td style="text-align: center;">56.0</td>
+<td style="text-align: center;">46.0</td>
+</tr>
+<tr>
+<td><strong>LatentOmni</strong></td>
+<td style="text-align: center;"><strong>60.8</strong></td>
+<td style="text-align: center;"><strong>70.8</strong></td>
+<td style="text-align: center;"><strong>60.5</strong></td>
+<td style="text-align: center;"><strong>50.4</strong></td>
+</tr>
+</tbody>
+</table>
+<p>即使去掉音频，LatentOmni 的隐推理设计在纯视觉任务上也显著优于专门的视觉隐推理方法，说明其架构通用性。</p>
+<h3 id="43">4.3 消融实验</h3>
+<p><img alt="图4：消融实验" src="assets/latentomni/ablation_benchmark_bars-2.jpg" /></p>
+<p><em>图4：LatentOmni 隐空间配置消融实验。</em><em>左侧两组</em><em>：在 Daily-Omni、WorldSense、OmniVideoBench 三个基准上测试隐 token 总数（20/30/40/50）和音视频分配比例（32V+8A vs 其他组合）的影响——40 token（32V+8A）在所有基准上最优，少于 40 限制表征容量，多于 40 引入噪声。</em><em>右侧</em><em>：测试超参数 <span class="math inline">$\lambda_1$</span>（<span class="math inline">$\mathcal{L}_{\text{latent}}$</span> 权重）和 <span class="math inline">$\lambda_2$</span>（<span class="math inline">$\mathcal{L}_{\text{sync}}$</span> 权重）的敏感度——<span class="math inline">$\lambda_1$</span> 过低导致"语言绑定"回退，<span class="math inline">$\lambda_2$</span> 过高限制语义灵活性，最终选择 <span class="math inline">$\lambda_1=0.005, \lambda_2=1.0$</span> 的均衡配置。</em></p>
+<p><strong>组件消融</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>配置</th>
+<th style="text-align: center;">Daily-Omni</th>
+<th style="text-align: center;">WorldSense</th>
+<th style="text-align: center;">OmniVideoBench</th>
+<th style="text-align: center;">LVOmniBench</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>LatentOmni（完整）</td>
+<td style="text-align: center;"><strong>67.4</strong></td>
+<td style="text-align: center;"><strong>48.9</strong></td>
+<td style="text-align: center;"><strong>35.4</strong></td>
+<td style="text-align: center;"><strong>35.1</strong></td>
+</tr>
+<tr>
+<td>w/o Audio in Latent Space</td>
+<td style="text-align: center;">65.9 (−1.5)</td>
+<td style="text-align: center;">47.8 (−1.1)</td>
+<td style="text-align: center;">33.6 (−1.8)</td>
+<td style="text-align: center;">31.6 (−3.5)</td>
+</tr>
+<tr>
+<td>w/o Visual in Latent Space</td>
+<td style="text-align: center;">63.5 (−3.9)</td>
+<td style="text-align: center;">47.2 (−1.7)</td>
+<td style="text-align: center;">33.5 (−1.9)</td>
+<td style="text-align: center;">32.1 (−3.0)</td>
+</tr>
+<tr>
+<td>w/o OSPE</td>
+<td style="text-align: center;">66.0 (−1.4)</td>
+<td style="text-align: center;">47.8 (−1.1)</td>
+<td style="text-align: center;">34.9 (−0.5)</td>
+<td style="text-align: center;">33.1 (−2.0)</td>
+</tr>
+<tr>
+<td>w/o <span class="math inline">$\mathcal{L}_{\text{latent}}$</span></td>
+<td style="text-align: center;">61.0 (−6.4)</td>
+<td style="text-align: center;">45.2 (−3.7)</td>
+<td style="text-align: center;">31.8 (−3.6)</td>
+<td style="text-align: center;">30.2 (−4.9)</td>
+</tr>
+<tr>
+<td>w/o <span class="math inline">$\mathcal{L}_{\text{sync}}$</span></td>
+<td style="text-align: center;">65.9 (−1.5)</td>
+<td style="text-align: center;">47.1 (−1.8)</td>
+<td style="text-align: center;">34.0 (−1.4)</td>
+<td style="text-align: center;">33.1 (−2.0)</td>
+</tr>
+<tr>
+<td>Qwen2.5-Omni-7B（基座）</td>
+<td style="text-align: center;">62.9</td>
+<td style="text-align: center;">45.4</td>
+<td style="text-align: center;">29.3</td>
+<td style="text-align: center;">32.0</td>
+</tr>
+</tbody>
+</table>
+<p><strong>关键发现</strong>：</p>
+<ul>
+<li><span class="math inline">$\mathcal{L}_{\text{latent}}$</span> 是最核心的组件，移除后性能暴跌（Daily-Omni 67.4→61.0），印证了特征级监督是防止"语言绑定"的主要机制</li>
+<li>去掉音频隐状态在 LVOmniBench 上损失最大（−3.5pp），说明长时多感官理解特别依赖音频信息的隐空间保留</li>
+<li>OSPE 在所有基准上都有正向贡献，尤其在长时任务（LVOmniBench）上最明显（−2.0pp），验证了时序对齐对持续推理的重要性</li>
+<li><span class="math inline">$\mathcal{L}_{\text{sync}}$</span> 提供互补增益——单独移除影响中等，但配合 <span class="math inline">$\mathcal{L}_{\text{latent}}$</span> 形成协同效果</li>
+</ul>
+<p><strong>隐 token 配置消融</strong>：</p>
+<ul>
+<li>Token 数从 20→40 逐步提升，40 达到峰值，50 反而下降（噪声引入）</li>
+<li>最优分配比例：32 视觉 + 8 音频——视觉推理需要更大表征带宽，但少量专用音频 token 对跨模态对齐仍然关键</li>
+</ul>
+<hr />
+<h2 id="_5">五、关键洞察与技术亮点</h2>
+<h3 id="51">5.1 "文本瓶颈"的诊断与解决</h3>
+<p>论文系统地诊断了 MLLM 音视频推理失败的根因——<strong>不是模型不够大，而是推理媒介不对</strong>。通过注意力可视化（图1）直接证明纯文本 CoT 对音视频信号的注意力持续衰减，这比单纯的准确率下降更有说服力。</p>
+<h3 id="52-feature-level-supervision">5.2 特征级隐空间监督（Feature-Level Supervision）</h3>
+<p>这是 LatentOmni 最精妙的设计。不同于之前工作（如 Coconut）仅通过语言建模目标隐式优化隐状态，LatentOmni 通过 <span class="math inline">$\mathcal{L}_{\text{latent}}$</span> 直接要求生成的隐状态<strong>重建原始感官特征</strong>。这相当于在隐空间中设置了一个"锚点"，强制模型在推理过程中不断回望原始证据。</p>
+<h3 id="53">5.3 文本与隐空间的混合推理</h3>
+<p>LatentOmni 不做"纯隐空间推理"（完全抛弃文本），也不做"纯文本 CoT"（完全抛弃连续信息）。通过交替机制，文本负责可解释的逻辑框架，隐空间负责信息密集的证据整合——这是一个务实的折中，既保留了 LLM 的语言推理先验，又克服了文本瓶颈。</p>
+<h3 id="54">5.4 实验设计的严谨性</h3>
+<p>三重对照（基座 vs Text CoT vs Vanilla SFT）的设计非常干净，排除了解释混淆：Vanilla SFT 的倒退（Daily-Omni 上 62.9→62.0）直接证明了"有 interleaved 数据但没有隐空间推理 = 浪费了数据结构"这一核心论点。</p>
+<h3 id="55">5.5 数据合成流水线的工程价值</h3>
+<p>35K 的高质量 interleaved 推理轨迹数据集的构建方法论（三阶段：QA 合成→片段 caption→轨迹合成）为后续工作提供了可复用的范式。特别是"禁止提及 caption/text"的 prompt 设计（将文本描述伪装成感官体验），是一个巧妙的工程技巧。</p>
+<hr />
+<h2 id="_6">六、局限性</h2>
+<ol>
+<li><strong>模态覆盖范围有限</strong>：当前仅支持视觉+音频+文本，未涉及 3D 空间表示、触觉、动作指令等物理交互信号。将更广泛的异构模态映射到统一隐空间仍是开放挑战。</li>
+<li><strong>固定隐 token 数的限制</strong>：当前使用固定 40 个隐 token，可能需要根据不同问题复杂度自适应调整。</li>
+<li><strong>训练规模有限</strong>：仅在 35K 数据上微调 2 个 epoch，更大规模数据上的 Scaling 行为未探索。</li>
+<li><strong>隐状态不可解释</strong>：连续隐状态无法像文本 CoT 那样直接阅读，调试和可信度评估存在挑战。</li>
+<li><strong>与闭源模型的差距</strong>：尽管在开源模型中达到最优，但与 Gemini-2.5-Pro（81.4 vs 67.4 在 Daily-Omni）仍有明显差距。</li>
+</ol>
+<hr />
+<h2 id="_7">七、关键概念速查</h2>
+<table>
+<thead>
+<tr>
+<th>概念</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Language-Bound Phenomenon</strong></td>
+<td>文本 CoT 导致模型过度依赖语言先验，忽视原始感官信号的倾向</td>
+</tr>
+<tr>
+<td><strong>Unified Latent Space</strong></td>
+<td>音视频特征和文本 embedding 共享的连续高维空间 <span class="math inline">$\mathbb{R}^d$</span></td>
+</tr>
+<tr>
+<td><strong>OSPE</strong></td>
+<td>Omni-Sync Position Embedding，通过共享物理时间戳的 RoPE 对齐跨模态隐状态</td>
+</tr>
+<tr>
+<td><strong><span class="math inline">$\mathcal{L}_{\text{latent}}$</span></strong></td>
+<td>隐空间对齐损失，用 MSE 将生成隐状态对齐到池化后的音视频特征锚点</td>
+</tr>
+<tr>
+<td><strong><span class="math inline">$\mathcal{L}_{\text{sync}}$</span></strong></td>
+<td>时序同步损失，对称 InfoNCE 对比损失拉近同时刻的音视频特征</td>
+</tr>
+<tr>
+<td><strong>LatentOmni-Instruct-35K</strong></td>
+<td>包含音视频片段引用标注的 interleaved 推理轨迹数据集</td>
+</tr>
+<tr>
+<td><strong>混合推理序列 S</strong></td>
+<td>文本 token 与连续隐状态交替的推理轨迹</td>
+</tr>
+<tr>
+<td><strong>K=40, K_v=32, K_a=8</strong></td>
+<td>默认隐 token 配置（总数 40，视觉 32，音频 8）</td>
+</tr>
+</tbody>
+</table>
+  </div>
+</main>
+
+
+<script>
+(function() {
+  const sidebar = document.getElementById('sidebar');
+  const links = sidebar.querySelectorAll('a');
+  const headings = document.querySelectorAll('h1[id], h2[id], h3[id], h4[id]');
+  if (headings.length === 0) return;
+
+  const linkMap = new Map();
+  links.forEach(function(a) {
+    const href = a.getAttribute('href');
+    if (href && href.startsWith('#')) linkMap.set(href.slice(1), a);
+  });
+
+  function onScroll() {
+    let currentId = null;
+    const scrollTop = window.scrollY + 80;
+    headings.forEach(function(h) { if (h.offsetTop <= scrollTop) currentId = h.id; });
+    links.forEach(function(a) { a.classList.remove('active'); });
+    if (currentId && linkMap.has(currentId)) {
+      const el = linkMap.get(currentId);
+      el.classList.add('active');
+      const sr = sidebar.getBoundingClientRect();
+      const er = el.getBoundingClientRect();
+      if (er.bottom > sr.bottom || er.top < sr.top) {
+        el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+    }
+  }
+
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+})();
+</script>
+
+
+<script>
+(function() {
+  const content = document.getElementById('main-content');
+  if (!content) return;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'image-lightbox';
+  overlay.setAttribute('role', 'dialog');
+  overlay.setAttribute('aria-modal', 'true');
+
+  overlay.innerHTML = `
+    <button type="button" class="image-lightbox__close" data-action="close" aria-label="关闭">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M5 5l10 10M15 5L5 15"/>
+      </svg>
+    </button>
+    <div class="image-lightbox__stage">
+      <img class="image-lightbox__image" alt="">
+    </div>
+    <div class="image-lightbox__toolbar" aria-label="图片缩放控制">
+      <button type="button" class="image-lightbox__btn" data-action="zoom-out" aria-label="缩小" title="缩小">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d="M3 9h12"/>
+        </svg>
+      </button>
+      <span class="image-lightbox__zoom-val" data-action="zoom-reset" title="点击重置缩放" role="button" tabindex="0">100%</span>
+      <button type="button" class="image-lightbox__btn" data-action="zoom-in" aria-label="放大" title="放大">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d="M3 9h12M9 3v12"/>
+        </svg>
+      </button>
+    </div>
+    <div class="image-lightbox__caption"></div>
+  `;
+  document.body.appendChild(overlay);
+
+  const stage = overlay.querySelector('.image-lightbox__stage');
+  const image = overlay.querySelector('.image-lightbox__image');
+  const zoomLabel = overlay.querySelector('.image-lightbox__zoom-val');
+  const caption = overlay.querySelector('.image-lightbox__caption');
+
+  const minZoom = 0.25;
+  const maxZoom = 5;
+  const step = 0.25;
+  let zoom = 1;
+  let fitWidth = 1;
+
+  function clamp(value) {
+    return Math.min(maxZoom, Math.max(minZoom, value));
+  }
+
+  function centerImage(animate) {
+    requestAnimationFrame(function() {
+      var left = Math.max(0, (stage.scrollWidth - stage.clientWidth) / 2);
+      var top = Math.max(0, (stage.scrollHeight - stage.clientHeight) / 2);
+      stage.scrollTo({ left: left, top: top, behavior: animate ? 'smooth' : 'auto' });
+    });
+  }
+
+  function applyZoom(animate) {
+    image.style.width = Math.max(1, Math.round(fitWidth * zoom)) + 'px';
+    zoomLabel.textContent = Math.round(zoom * 100) + '%';
+    centerImage(animate);
+  }
+
+  function setZoom(value, animate) {
+    zoom = clamp(value);
+    applyZoom(animate);
+  }
+
+  function computeFitSize() {
+    var w = image.naturalWidth || 1;
+    var h = image.naturalHeight || 1;
+    var maxW = Math.max(1, stage.clientWidth - 48);
+    var maxH = Math.max(1, stage.clientHeight - 48);
+    var fitScale = Math.min(1, maxW / w, maxH / h);
+    fitWidth = Math.max(1, w * fitScale);
+    applyZoom(false);
+  }
+
+  function openImage(source) {
+    image.onload = computeFitSize;
+    image.alt = source.alt || '';
+    caption.textContent = source.alt || '';
+    image.src = source.currentSrc || source.src;
+    zoom = 1;
+    overlay.classList.add('is-open');
+    document.body.classList.add('image-lightbox-open');
+    if (image.complete) computeFitSize();
+  }
+
+  function closeImage() {
+    overlay.classList.remove('is-open');
+    document.body.classList.remove('image-lightbox-open');
+    image.onload = null;
+    image.style.removeProperty('width');
+    image.removeAttribute('src');
+  }
+
+  overlay.addEventListener('click', function(event) {
+    var action = event.target.closest('[data-action]');
+    if (action) {
+      var type = action.getAttribute('data-action');
+      if (type === 'zoom-in') setZoom(zoom + step, true);
+      if (type === 'zoom-out') setZoom(zoom - step, true);
+      if (type === 'zoom-reset') setZoom(1, true);
+      if (type === 'close') closeImage();
+      return;
+    }
+    if (event.target === overlay || event.target === stage) closeImage();
+  });
+
+  overlay.addEventListener('wheel', function(event) {
+    if (!overlay.classList.contains('is-open')) return;
+    if (!event.ctrlKey && !event.metaKey) return;
+    event.preventDefault();
+    setZoom(zoom + (event.deltaY < 0 ? step : -step), true);
+  }, { passive: false });
+
+  document.addEventListener('keydown', function(event) {
+    if (!overlay.classList.contains('is-open')) return;
+    if (event.key === 'Escape') closeImage();
+    if (event.key === '+' || event.key === '=') setZoom(zoom + step, true);
+    if (event.key === '-' || event.key === '_') setZoom(zoom - step, true);
+    if (event.key === '0') setZoom(1, true);
+  });
+
+  window.addEventListener('resize', function() {
+    if (overlay.classList.contains('is-open')) computeFitSize();
+  });
+
+  content.querySelectorAll('img').forEach(function(img) {
+    if (img.closest('a')) return;
+    img.setAttribute('tabindex', '0');
+    img.setAttribute('title', img.getAttribute('title') || '点击放大查看');
+    img.addEventListener('click', function() { openImage(img); });
+    img.addEventListener('keydown', function(event) {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        openImage(img);
+      }
+    });
+  });
+})();
+</script>
+
+</body>
+</html>
