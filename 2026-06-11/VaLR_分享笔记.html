@@ -1,0 +1,1250 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VaLR 论文分享简明笔记</title>
+<!-- arxiv: 2602.04476 -->
+<!-- venue: ICML 2026 -->
+<!-- tags: MLLM, 多模态推理, 潜在推理, 表征学习 -->
+<!-- words-zh: 5020 -->
+<!-- words-en: 629 -->
+<!-- reading-time: 17 -->
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #ffffff;
+    --text: #1a1a2e;
+    --text-secondary: #555;
+    --border: #e1e4e8;
+    --link: #0969da;
+    --table-stripe: #f6f8fa;
+    --heading: #0d1117;
+    --blockquote-border: #0969da;
+    --blockquote-bg: #f0f6ff;
+    --inline-code: #d73a49;
+    --inline-code-bg: #f6f8fa;
+    --sidebar-width: 260px;
+    --toc-active: #0969da;
+    --content-max-width: 1350px;
+    --media-max-width: 1000px;
+    --content-padding: 48px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "Inter", "Noto Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 16px;
+    line-height: 1.75;
+    color: var(--text);
+    background: var(--bg);
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    width: var(--sidebar-width);
+    overflow-y: auto;
+    padding: 28px 20px 40px;
+    background: #fafbfc;
+    border-right: 1px solid var(--border);
+    z-index: 10;
+    scrollbar-width: thin;
+  }
+  .sidebar-title {
+    font-size: 13px; font-weight: 700; color: var(--text-secondary);
+    margin-bottom: 16px; letter-spacing: 0.06em; text-transform: uppercase;
+  }
+  .toc-list { list-style: none; padding: 0; margin: 0; }
+  .toc-list ul { list-style: none; padding-left: 14px; }
+  .toc-list li { margin: 1px 0; }
+  .toc-list a {
+    display: block; padding: 4px 12px; font-size: 13.5px; line-height: 1.45;
+    color: var(--text-secondary); text-decoration: none; border-radius: 4px;
+    border-left: 2px solid transparent; transition: all 0.15s;
+  }
+  .toc-list a:hover { color: var(--link); background: #e8f0fe; }
+  .toc-list a.active {
+    color: var(--toc-active); font-weight: 600;
+    border-left-color: var(--toc-active); background: #e8f0fe;
+  }
+  .toc-h1 a { font-weight: 600; color: var(--heading); font-size: 14px; }
+  .toc-h3 a { padding-left: 24px; font-size: 13px; }
+  .toc-h4 a { padding-left: 36px; font-size: 12.5px; }
+  .toc-empty { color: var(--text-secondary); font-size: 13px; font-style: italic; }
+
+  .main-wrapper {
+    margin-left: var(--sidebar-width);
+    min-height: 100vh;
+    display: flex; justify-content: center;
+  }
+  .content-inner {
+    width: 100%;
+    max-width: var(--content-max-width);
+    padding: 40px var(--content-padding) 80px;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    color: var(--heading); font-weight: 700; line-height: 1.3;
+    margin-top: 2em; margin-bottom: 0.6em; scroll-margin-top: 24px;
+  }
+  h1 { font-size: 2em; border-bottom: 2px solid var(--border); padding-bottom: 0.3em; margin-top: 0; }
+  h2 { font-size: 1.5em; border-bottom: 1px solid var(--border); padding-bottom: 0.25em; }
+  h3 { font-size: 1.25em; }
+  h4 { font-size: 1.1em; }
+  p { margin-bottom: 1em; }
+  a { color: var(--link); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  strong { font-weight: 600; }
+
+  blockquote {
+    border-left: 4px solid var(--blockquote-border);
+    background: var(--blockquote-bg);
+    padding: 12px 20px; margin: 1em 0;
+    border-radius: 0 6px 6px 0; color: var(--text-secondary);
+  }
+  blockquote p:last-child { margin-bottom: 0; }
+
+  code {
+    font-family: "JetBrains Mono", "SF Mono", "Fira Code", monospace;
+    font-size: 0.875em; background: var(--inline-code-bg);
+    padding: 2px 6px; border-radius: 4px; color: var(--inline-code);
+  }
+  pre {
+    background: #f6f8fa; color: #24292f;
+    border: 1px solid var(--border);
+    border-radius: 8px; padding: 16px 20px; overflow-x: auto;
+    margin: 1em 0; font-size: 14px; line-height: 1.55;
+  }
+  pre code { background: none; padding: 0; border-radius: 0; color: inherit; font-size: inherit; }
+
+  .codehilite { background: #f6f8fa; border: 1px solid var(--border); border-radius: 8px; padding: 16px 20px; overflow-x: auto; margin: 1em 0; }
+  .codehilite pre { background: none; padding: 0; margin: 0; border-radius: 0; }
+  .codehilite .hll { background-color: #fff8c5; }
+  .codehilite .c  { color: #6e7781; font-style: italic; }
+  .codehilite .k  { color: #cf222e; }
+  .codehilite .o  { color: #0550ae; }
+  .codehilite .s  { color: #0a3069; }
+  .codehilite .n  { color: #24292f; }
+  .codehilite .p  { color: #24292f; }
+  .codehilite .mi { color: #0550ae; }
+  .codehilite .nf { color: #8250df; }
+  .codehilite .nb { color: #953800; }
+  .codehilite .nc { color: #953800; }
+  .codehilite .bp { color: #953800; }
+
+  table { width: 100%; border-collapse: collapse; margin: 1em 0; font-size: 0.925em; }
+  th, td { border: 1px solid var(--border); padding: 10px 14px; text-align: left; }
+  th { background: var(--table-stripe); font-weight: 600; color: var(--heading); }
+  tr:nth-child(even) td { background: var(--table-stripe); }
+
+  .math.display { display: block; overflow-x: auto; padding: 12px 0; margin: 1em 0; }
+  ul, ol { padding-left: 1.5em; margin-bottom: 1em; }
+  li { margin-bottom: 0.3em; }
+  hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+  img { max-width: min(100%, var(--media-max-width)); height: auto; border-radius: 6px; margin: 0 auto; display: block; }
+  #main-content img { cursor: zoom-in; }
+  p:has(img) { text-align: center; max-width: var(--media-max-width); margin: 0.6em auto 0; }
+  table:has(img) { width: min(100%, var(--media-max-width)) !important; margin-left: auto; margin-right: auto; }
+  p:has(img) + p { text-align: center; font-size: 0.9em; color: var(--text-secondary); margin-top: 0.15em; margin-bottom: 0.6em; }
+  .mermaid { text-align: center; margin: 1.5em 0; background: #fafbfc; border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+  .article-stats {
+    font-size: 0.85rem; color: var(--text-secondary);
+    padding: 10px 18px; margin-bottom: 28px;
+    background: #f8f9fa; border: 1px solid var(--border); border-radius: 8px;
+  }
+  body.image-lightbox-open { overflow: hidden; }
+  .image-lightbox {
+    position: fixed; inset: 0; z-index: 1000;
+    display: none;
+    background: rgba(9, 12, 20, 0.88);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+  }
+  .image-lightbox.is-open { display: block; }
+
+  /* Stage uses flexbox to center the image; safe alignment prevents
+     clipping when zoomed-in content overflows — it falls back to
+     start so scrollbars reach every pixel. */
+  .image-lightbox__stage {
+    width: 100%; height: 100%;
+    overflow: auto;
+    display: flex;
+    align-items: safe center;
+    justify-content: safe center;
+    padding: 24px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.18) transparent;
+  }
+
+  .image-lightbox__image {
+    max-width: none; max-height: none;
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 20px 70px rgba(0, 0, 0, 0.5);
+    cursor: zoom-in;
+    flex-shrink: 0;
+    transition: box-shadow 0.3s;
+  }
+
+  /* Close button — top-right glass circle */
+  .image-lightbox__close {
+    position: absolute; top: 20px; right: 20px; z-index: 1010;
+    width: 40px; height: 40px;
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.25);
+    color: rgba(255,255,255,0.85);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    transition: background 0.2s, border-color 0.2s, transform 0.2s, color 0.2s;
+  }
+  .image-lightbox__close:hover {
+    background: rgba(255,255,255,0.15);
+    border-color: rgba(255,255,255,0.3);
+    color: #fff;
+    transform: scale(1.08);
+  }
+
+  /* Zoom toolbar — bottom-center glass pill */
+  .image-lightbox__toolbar {
+    position: absolute; bottom: 28px; left: 50%; transform: translateX(-50%); z-index: 1010;
+    display: flex; align-items: center; gap: 4px;
+    padding: 6px;
+    background: rgba(30, 30, 45, 0.75);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 32px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.35);
+  }
+
+  .image-lightbox__btn {
+    width: 36px; height: 36px;
+    border: none; border-radius: 50%;
+    background: transparent;
+    color: rgba(255,255,255,0.82);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.2s, color 0.2s;
+  }
+  .image-lightbox__btn:hover {
+    background: rgba(255,255,255,0.13);
+    color: #fff;
+  }
+
+  .image-lightbox__zoom-val {
+    min-width: 52px; text-align: center;
+    color: rgba(255,255,255,0.82);
+    font: 600 12.5px/32px "Inter", -apple-system, sans-serif;
+    cursor: pointer; user-select: none;
+    border-radius: 20px; padding: 0 6px;
+    transition: background 0.2s, color 0.2s;
+    letter-spacing: -0.01em;
+  }
+  .image-lightbox__zoom-val:hover {
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+  }
+
+  .image-lightbox__caption {
+    position: absolute; left: 28px; right: 28px; bottom: 96px; z-index: 1005;
+    color: rgba(255,255,255,0.72); text-align: center;
+    font-size: 13px; line-height: 1.45;
+    pointer-events: none;
+  }
+
+  @media (max-width: 1024px) {
+    .sidebar { position: static; width: 100%; height: auto; max-height: 35vh; border-right: none; border-bottom: 1px solid var(--border); }
+    .main-wrapper { margin-left: 0; display: block; }
+    .content-inner { max-width: none; padding: 24px 20px 60px; }
+    .image-lightbox__stage { padding: 12px; }
+    .image-lightbox__close { top: 12px; right: 12px; width: 36px; height: 36px; }
+    .image-lightbox__toolbar { bottom: 18px; padding: 5px; gap: 2px; }
+    .image-lightbox__btn { width: 32px; height: 32px; }
+    .image-lightbox__caption { bottom: 78px; left: 18px; right: 18px; }
+  }
+</style>
+
+<script>
+MathJax = {
+  tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']], processEscapes: true, tags: 'none' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] }
+};
+</script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  mermaid.initialize({ startOnLoad: true, theme: 'neutral', securityLevel: 'loose' });
+});
+</script>
+
+</head>
+<body>
+
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-title">目录</div>
+  <ul class="toc-list">
+<li class="toc-h1"><a href="#valr">VaLR 论文分享简明笔记</a>
+<ul>
+</li>
+<li class="toc-h2"><a href="#1">1. 一句话讲清楚</a>
+</li>
+<li class="toc-h2"><a href="#2">2. 论文要解决什么问题</a>
+</li>
+<li class="toc-h2"><a href="#3">3. 方法总览</a>
+</li>
+<li class="toc-h2"><a href="#4">4. 核心方法细节</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#41-latent-reasoning">4.1 潜在推理机制（Latent Reasoning）</a>
+</li>
+<li class="toc-h3"><a href="#42-repa">4.2 REPA 表征对齐</a>
+</li>
+<li class="toc-h3"><a href="#43">4.3 多编码器对齐</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#5">5. 训练流程</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#stage-1-cot-sft">Stage 1：标准 CoT SFT</a>
+</li>
+<li class="toc-h3"><a href="#stage-2latent-token-repa">Stage 2：Latent Token 训练 + REPA</a>
+</li>
+<li class="toc-h3"><a href="#_1">训练资源</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#6">6. 实验结论</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#61-3d-vsi-bench">6.1 3D 空间推理（VSI-Bench）</a>
+</li>
+<li class="toc-h3"><a href="#62-benchmark">6.2 感知任务 Benchmark</a>
+</li>
+<li class="toc-h3"><a href="#63-test-time-scaling">6.3 Test-time Scaling 行为（论文最大亮点）</a>
+</li>
+<li class="toc-h3"><a href="#64">6.4 消融实验</a>
+</li>
+<li class="toc-h3"><a href="#65">6.5 特征可视化</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#7">7. 这篇论文的核心贡献</a>
+</li>
+<li class="toc-h2"><a href="#8">8. 常见问题</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#q1latent-token">Q1：latent token 是可解释的自然语言吗？</a>
+</li>
+<li class="toc-h3"><a href="#q2repa">Q2：REPA 对齐只在训练时使用，推理时怎么保证模型还记得视觉信息？</a>
+</li>
+<li class="toc-h3"><a href="#q3-dinov3-token-llm">Q3：为什么不直接把 DINOv3 特征作为输入 token 喂给 LLM？</a>
+</li>
+<li class="toc-h3"><a href="#q4valr-last-r1heima-latent-reasoning">Q4：VaLR 和 LaST-R1、Heima 等其他 latent reasoning 工作有什么关系？</a>
+</li>
+<li class="toc-h3"><a href="#q5valr">Q5：VaLR 的最大局限是什么？</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#9-takeaway">9. 最短版 takeaway</a>
+</ul></li>
+</li></ul>
+</nav>
+
+<main class="main-wrapper">
+  <div class="content-inner" id="main-content">
+<h1 id="valr">VaLR 论文分享简明笔记</h1>
+<div class="article-stats">5,020 字 · English 629 词 · 约 17 分钟阅读</div>
+
+<blockquote>
+<p>本文基于以下本地材料整理：</p>
+<ul>
+<li>详细笔记：<code>VaLR_阅读笔记.md</code></li>
+<li>论文 tex 源码：<code>arXiv-2602.04476v2/main.tex</code></li>
+<li>论文图片：<code>arXiv-2602.04476v2/images/*.pdf</code></li>
+<li>本文图片导出目录：<code>assets/valr/</code></li>
+</ul>
+</blockquote>
+<h2 id="1">1. 一句话讲清楚</h2>
+<p>VaLR 的核心想法是：MLLM 在做 CoT 推理时，每一步思考之前先默默地"看一眼"图像——动态生成一组与视觉特征对齐的 latent token，防止视觉信息随着推理链变长而逐渐"忘掉"。</p>
+<p>这篇论文的核心不是又做了一个更大的 MLLM，而是发现并解决了 MLLM 的关键缺陷：<strong>随着生成序列增长，视觉信号会逐渐衰减（dilution of visual information）</strong>，而 VaLR 通过在每步推理前插入 vision-aligned latent token 作为"视觉检查点"，让模型始终保持在视觉 grounding 上。</p>
+<p><img alt="VaLR 总览" src="assets/valr/figure_1.jpg" /></p>
+<p><em>图 1：VaLR 框架总览。图片分左右两个子图，展示 VaLR 的推理机制和训练方式。</em></p>
+<p><strong>子图 (a) VaLR 推理过程</strong>：展示模型在一次完整推理中的 token 生成流程。左侧输入图像 I_0, I_1, I_2（多视角图像，颜色深浅代表不同视角）和文本问题。推理从左到右展开：</p>
+<ul>
+<li>首先处理图像 token（左侧橙色横条）和文本 token（紫色横条），经过 Transformer 得到 hidden states（蓝色竖条）。</li>
+<li>然后进入"潜在模式"（latent mode，绿色区域）：模型预测 <code>&lt;latent&gt;</code> 特殊 token 后，开始生成 K 个连续 latent token。每个 latent token 的输入不是普通 token embedding，而是上一个 latent token 的 hidden state h_i（图中弯箭头所示），形成自循环。latent token 不与任何文字对应，是纯连续向量。</li>
+<li>K 步后预测 <code>&lt;/latent&gt;</code>，切换回"语言模式"（language mode，蓝色区域）：生成第一段文本推理步骤 r^(1)（如"Step 1: Identify objects"）。</li>
+<li>再次进入潜在模式（第二个绿色区域），生成新一轮 latent token，再回到语言模式生成 r^(2)，以此类推，直至最终输出 answer。</li>
+<li>底部标注："Per-step visual recall via latent tokens"（每步通过 latent token 回注视觉信息），强调 latte nt token 的作用是为每步推理提供视觉锚点。</li>
+</ul>
+<p><strong>子图 (b) REPA 对齐训练（仅训练时使用，推理时不依赖）</strong>：</p>
+<ul>
+<li>左侧：原始输入图像 I^(i) 经过冻结的外部视觉编码器（如 DINOv3、SigLIP、CLIP、π³），提取出 patch-wise 视觉特征 F_φ^(i)（蓝色特征图网格）。</li>
+<li>右侧：MLLM 在潜在模式下生成的 latent token hidden states，通过可学习的 MLP 投影头 ψ 和 Upsample 操作映射到与视觉特征相同的维度，得到 F̂_MLLM^(i)（绿色特征图网格）。</li>
+<li>中间：计算两组特征图的 patch-wise 余弦相似度，作为 REPA 对齐损失 L_REPA。这个损失强制 MLLM 的 latent 表示向视觉编码器学到的真实视觉特征靠拢。</li>
+<li>核心洞察：外部视觉编码器<strong>仅在训练时使用</strong>（"External vision encoders used during training only"），训练完成后 MLLM 自己就内化了视觉 grounding 能力，推理时无需额外编码器。</li>
+</ul>
+<div class="codehilite"><pre><span></span><code>以前：image + question -&gt; CoT 推理 -&gt; answer
+            ↓ 视觉信号逐渐衰减
+现在：image + question -&gt; [看眼图] step1 -&gt; [看眼图] step2 -&gt; ... -&gt; answer
+            ↑ 每步前用 latent token 回注视觉信息
+关键：latent token 与视觉编码器特征对齐，训练后内化视觉 grounding 能力
+</code></pre></div>
+
+<h2 id="2">2. 论文要解决什么问题</h2>
+<p>MLLM 在常规 VQA 上表现不错，但一到需要长链推理的任务就容易"跑偏"。根本原因不是语言推理能力不够，而是：</p>
+<div class="codehilite"><pre><span></span><code>image + question -&gt; step1 -&gt; step2 -&gt; step3 -&gt; ... -&gt; stepN -&gt; answer
+  ↑视觉信号                                     ↑视觉信号几乎没了
+</code></pre></div>
+
+<p>两个核心痛点：</p>
+<ol>
+<li>
+<p><strong>视觉信号稀释</strong>：自回归生成过程中，文本 token 越生成越多，图像 token 在长序列中的相对权重越来越小。模型逐渐"忘记"图像里有什么，推理变成纯文本游戏。</p>
+</li>
+<li>
+<p><strong>现有方法不可持续</strong>：</p>
+<ul>
+<li>纯文本 CoT 增强（如 Math-LLaVA、Flow-DPO）：增强的是文本推理，不解决视觉衰减。</li>
+<li>交错视觉 token（如 DeepEyes、Machine-CoT）：视觉信息只作为初始固定上下文一次性注入，后续推理步骤无法重新感知图像。</li>
+<li>潜在空间推理（如 Monet、CoVT、LVR）：仍然只使用静态的初始视觉特征，没有动态回注机制。</li>
+</ul>
+</li>
+</ol>
+<p>VaLR 的切入点是：<strong>与其一次性给足视觉信息然后指望模型记住，不如在每一步推理前都给模型一个"再看一眼"的机会。</strong> 这个"再看一眼"不是重新跑视觉编码器，而是通过训练让模型学会在 latent token 中内化视觉信息。</p>
+<h2 id="3">3. 方法总览</h2>
+<p>VaLR 把一次多模态推理拆成交替的两段：</p>
+<div class="codehilite"><pre><span></span><code>image + question
+  -&gt; &lt;latent&gt; latent_tokens &lt;/latent&gt;   (visual checkpoint)
+  -&gt; reasoning step 1
+  -&gt; &lt;latent&gt; latent_tokens &lt;/latent&gt;   (visual checkpoint)
+  -&gt; reasoning step 2
+  -&gt; ...
+  -&gt; answer
+</code></pre></div>
+
+<p>直观解释：</p>
+<ul>
+<li><strong><code>&lt;latent&gt; ... &lt;/latent&gt;</code></strong>：模型进入"潜在模式"，生成 K 个连续 latent token。这些 token 不对应任何文本词汇，而是以模型内部 hidden state 的形式传播。</li>
+<li><strong>latent token 的训练目标</strong>：与外部视觉编码器（DINOv3、SigLIP、CLIP 等）的 patch-wise 特征做余弦相似度对齐（REPA loss），鼓励 latent token 编码丰富的视觉信息。</li>
+<li><strong>推理步骤</strong>：latent token 为后续的文本 CoT 推理提供"视觉锚点"，让模型知道现在看到的是什么、应该关注图像的哪些区域。</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>模块</th>
+<th>做什么</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Latent token generation</td>
+<td>在每步推理前生成 K 个潜在 token，作为视觉检查点</td>
+</tr>
+<tr>
+<td>REPA alignment</td>
+<td>训练时将 latent token 的 hidden states 对齐到视觉编码器特征</td>
+</tr>
+<tr>
+<td>Multi-encoder alignment</td>
+<td>利用多个视觉编码器的互补表征（语义 + 空间 + 3D）</td>
+</tr>
+<tr>
+<td>Two-stage curriculum</td>
+<td>Stage 1 学 CoT 推理 → Stage 2 学 latent 推理 + REPA</td>
+</tr>
+</tbody>
+</table>
+<h2 id="4">4. 核心方法细节</h2>
+<h3 id="41-latent-reasoning">4.1 潜在推理机制（Latent Reasoning）</h3>
+<p>VaLR 在推理时交替切换两种模式：</p>
+<p><strong>语言模式</strong>（正常自回归）：</p>
+<div class="codehilite"><pre><span></span><code>E_{t+1} = [E_t; e(x_{t+1})]    # 输入是下一个 token 的 embedding
+H_{t+1} = Transformer(E_{t+1})
+</code></pre></div>
+
+<p><strong>潜在模式</strong>（latent reasoning）：</p>
+<div class="codehilite"><pre><span></span><code>E_{t+1} = [E_t; h_t]           # 输入是上一时刻的 hidden state
+H_{t+1} = Transformer(E_{t+1})
+</code></pre></div>
+
+<p>关键区别：潜在模式下不使用 token embedding，而是直接把上一时刻的 hidden state <code>h_t</code> 喂回 Transformer。这让模型在连续向量空间中"思考"，不受离散词汇表的限制。</p>
+<p>模型通过预测特殊 token 来切换模式：</p>
+<ul>
+<li>预测 <code>&lt;latent&gt;</code> → 进入潜在模式，固定 K 步后自动退出</li>
+<li>预测 <code>&lt;/latent&gt;</code> → 回到语言模式，继续文本生成</li>
+</ul>
+<h3 id="42-repa">4.2 REPA 表征对齐</h3>
+<p>latent token 不能是"空的"——它们需要编码视觉信息才有意义。VaLR 的做法是：训练时将 MLLM 中间层的 latent token hidden states 对齐到预训练视觉编码器的特征。</p>
+<p><strong>直觉</strong>：就像教学生画画时给他一张参考图，告诉他"你画的应该像这个"——REPA 告诉 MLLM"你的 latent 表示应该像 DINOv3 对这张图的理解"。</p>
+<p>具体流程：</p>
+<ol>
+<li>对每步推理对应的目标图像 <code>I^(i)</code>，用冻结的视觉编码器 φ 提取 patch-wise 特征：<code>F_φ^(i) ∈ R^(P×D)</code></li>
+<li>提取 MLLM 第 12 层（中间层）的 latent token hidden states：<code>F_MLLM^(i)</code></li>
+<li>通过可学习 MLP ψ 投影并 upsample 到与视觉特征相同维度：<code>F̂_MLLM^(i) = ψ(Upsample(F_MLLM^(i)))</code></li>
+<li>计算 patch-wise 余弦相似度作为对齐损失：</li>
+</ol>
+<p><div class="math display">$$L_REPA = -\frac{1}{NP} \sum_{i=1}^{N} \sum_{p=1}^P \text{sim}\left(\hat{F}_{MLLM}^{(i)}[p,:], F_\phi^{(i)}[p,:]\right)$$</div></p>
+<p><strong>关键设计选择</strong>：</p>
+<ul>
+<li>对齐目标层选在 MLLM 第 12 层（中间层），消融实验证实这里视觉信息最显著</li>
+<li>对齐只用于训练，推理时不依赖外部编码器——MLLM 已经内化了视觉 grounding 能力</li>
+<li>可以同时对齐多个编码器，获取互补的视觉表征（见下文）</li>
+</ul>
+<h3 id="43">4.3 多编码器对齐</h3>
+<p>不同视觉编码器有不同"专长"，VaLR 可以同时对齐多个：</p>
+<table>
+<thead>
+<tr>
+<th>编码器</th>
+<th>擅长能力</th>
+<th>典型代表</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CLIP / SigLIPv2</td>
+<td>语义理解（这是什么物体）</td>
+<td>CLIP ViT-L, SigLIPv2 ViT-L</td>
+</tr>
+<tr>
+<td>DINOv2/v3</td>
+<td>细粒度外观 + 空间关系（物体在哪里、什么结构）</td>
+<td>DINOv3 ViT-L</td>
+</tr>
+<tr>
+<td>π³</td>
+<td>3D 空间结构（深度、几何关系）</td>
+<td>π³ ViT-L</td>
+</tr>
+</tbody>
+</table>
+<p>多编码器 REPA 损失就是各编码器 REPA 损失的均值，每个编码器有独立的投影头 ψ_m：</p>
+<p><div class="math display">$$L_REPA^multi = \frac{1}{M} \sum_{m=1}^{M} L_REPA^{(m)}$$</div></p>
+<p>消融实验的核心规律是"专长互补"：</p>
+<ul>
+<li>π³ 加入后，VSI-Bench（3D 空间推理）大幅提升：41.5% → 52.4%</li>
+<li>SigLIPv2 加入后，MMStar（语义理解）提升：70.8% → 72.0%</li>
+<li>三者全部启用达到全局最优</li>
+</ul>
+<p><img alt="REPA vs Input Tokens" src="assets/valr/figure_4.jpg" /></p>
+<p><em>图 2：REPA 对齐 vs 将 DINOv3 特征作为输入 token 两种使用外部视觉特征的方式对比。图片分左右两个子图，并在三个 benchmark 上比较。</em></p>
+<p><strong>子图 (a) Visual features as input tokens（绿色）</strong>：将 DINOv3 提取的视觉特征直接拼接为 MLLM 的输入 token（类似给模型额外加一组图像 token）。这种方式相当于在推理开始时一次性注入额外视觉信息，但特征作为固定输入存在于整个序列中，不会随推理步骤动态更新。图表左侧显示输入流程：Image → DINOv3 → Input tokens of MLLM。</p>
+<p><strong>子图 (b) VaLR REPA alignment（红色）</strong>：本文提出的 REPA 对齐方式。DINOv3 特征不作为输入 token，而是在训练时作为 latent token 的对齐目标（REPA loss）。图表左侧显示训练流程：Image → DINOv3 → MLLM embeddings，标注 "Align the embeddings via REPA"。注意推理时不需要 DINOv3（标注 "Testing"）。</p>
+<p><strong>三组柱状图对比</strong>（横轴为 benchmark，纵轴为准确率 %）：</p>
+<ul>
+<li><strong>VSI-Bench</strong>：REPA（红色）约 41.5% vs Input token（绿色）约 34%，REPA 高约 7.5 个百分点，优势最明显——证明在需要多视角长上下文理解的任务中，动态对齐远优于静态注入。</li>
+<li><strong>BLINK</strong>：REPA 约 63% vs Input token 约 57%，高约 6 个百分点。</li>
+<li><strong>V*</strong>：REPA 约 86% vs Input token 约 82%，高约 4 个百分点。</li>
+<li>三个 benchmark 上 REPA 全面优于输入 token 方式。核心优势：(1) 推理时不需要外部编码器，效率更高；(2) REPA 使每步推理都能动态回注视觉信息，而输入 token 方式仅提供一次性静态信息。</li>
+</ul>
+<h2 id="5">5. 训练流程</h2>
+<p>论文采用两阶段课程学习，逐步赋予 MLLM 潜在推理能力：</p>
+<p><pre class="mermaid">flowchart TD
+    A["Qwen2.5-VL-7B&lt;br/>(预训练 MLLM)"] --> B["Stage 1: 标准 CoT SFT&lt;br/>450K 样本"]
+    B --> C["Stage 2: Latent Token 训练 + REPA&lt;br/>450K 样本"]
+    C --> D["VaLR&lt;br/>具备 vision-aligned latent reasoning"]</pre></p>
+<h3 id="stage-1-cot-sft">Stage 1：标准 CoT SFT</h3>
+<ul>
+<li>数据集：450K 样本混合（Zebra-CoT、CogCoM、ReFocus、Visual-CoT、OneThinker-SFT、GCoT）</li>
+<li>目标：标准的自回归语言建模（CE loss），让模型学会 CoT 推理范式</li>
+<li>冻结视觉编码器，仅训练语言模型解码器</li>
+<li>学习率 1e-5，DeepSpeed ZeRO-2，4× A100</li>
+</ul>
+<h3 id="stage-2latent-token-repa">Stage 2：Latent Token 训练 + REPA</h3>
+<ul>
+<li>将 CoT 数据改造：每个推理步骤前插入 K=16 个 latent token（首尾用 <code>&lt;latent&gt;</code> / <code>&lt;/latent&gt;</code> 包裹）</li>
+<li>多视角数据：用 GPT-4o 自动标注每个推理步骤对应的目标图像</li>
+<li>交错数据：利用数据集中自然存在的图像插入位置触发 latent 模式</li>
+<li>总损失：<code>L = L_CE + λ·L_REPA</code>（λ=0.5，消融实验证实最优）</li>
+<li>学习率 2e-6（LLM）+ 1e-5（MLP 投影头）</li>
+</ul>
+<h3 id="_1">训练资源</h3>
+<table>
+<thead>
+<tr>
+<th>阶段</th>
+<th>数据量</th>
+<th>硬件</th>
+<th>关键配置</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Stage 1 SFT</td>
+<td>450K CoT 样本</td>
+<td>4× A100</td>
+<td>lr=1e-5, DeepSpeed ZeRO-2, batch=2/GPU, grad_accum=16</td>
+</tr>
+<tr>
+<td>Stage 2 REPA</td>
+<td>450K CoT 样本</td>
+<td>4× A100</td>
+<td>lr=2e-6(LLM) / 1e-5(MLP), λ=0.5, K=16, epoch=1</td>
+</tr>
+</tbody>
+</table>
+<h2 id="6">6. 实验结论</h2>
+<h3 id="61-3d-vsi-bench">6.1 3D 空间推理（VSI-Bench）</h3>
+<p>VSI-Bench 需要模型从多视角图像中整合空间信息做推理，是对长上下文视觉记忆的硬核测试。</p>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th style="text-align: right;">Avg.</th>
+<th style="text-align: right;">物体计数</th>
+<th style="text-align: right;">绝对距离</th>
+<th style="text-align: right;">相对距离</th>
+<th style="text-align: right;">路径规划</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GPT-4o</td>
+<td style="text-align: right;">34.0</td>
+<td style="text-align: right;">46.2</td>
+<td style="text-align: right;">5.3</td>
+<td style="text-align: right;">37.0</td>
+<td style="text-align: right;">31.5</td>
+</tr>
+<tr>
+<td>Qwen2.5-VL-7B</td>
+<td style="text-align: right;">33.0</td>
+<td style="text-align: right;">40.9</td>
+<td style="text-align: right;">14.8</td>
+<td style="text-align: right;">38.6</td>
+<td style="text-align: right;">33.0</td>
+</tr>
+<tr>
+<td>+ vanilla SFT</td>
+<td style="text-align: right;">33.7</td>
+<td style="text-align: right;">42.3</td>
+<td style="text-align: right;">14.7</td>
+<td style="text-align: right;">39.4</td>
+<td style="text-align: right;">32.5</td>
+</tr>
+<tr>
+<td>+ LVR</td>
+<td style="text-align: right;">18.4</td>
+<td style="text-align: right;">21.4</td>
+<td style="text-align: right;">3.6</td>
+<td style="text-align: right;">35.1</td>
+<td style="text-align: right;">32.0</td>
+</tr>
+<tr>
+<td>+ CoVT</td>
+<td style="text-align: right;">18.6</td>
+<td style="text-align: right;">16.5</td>
+<td style="text-align: right;">2.3</td>
+<td style="text-align: right;">35.9</td>
+<td style="text-align: right;">25.8</td>
+</tr>
+<tr>
+<td>+ Monet</td>
+<td style="text-align: right;">14.0</td>
+<td style="text-align: right;">1.9</td>
+<td style="text-align: right;">0.1</td>
+<td style="text-align: right;">38.0</td>
+<td style="text-align: right;">24.2</td>
+</tr>
+<tr>
+<td><strong>VaLR-S</strong> (单编码器)</td>
+<td style="text-align: right;"><strong>41.5</strong></td>
+<td style="text-align: right;"><strong>49.0</strong></td>
+<td style="text-align: right;"><strong>24.5</strong></td>
+<td style="text-align: right;"><strong>43.9</strong></td>
+<td style="text-align: right;"><strong>34.0</strong></td>
+</tr>
+<tr>
+<td><strong>VaLR-M</strong> (多编码器)</td>
+<td style="text-align: right;"><strong>52.9</strong></td>
+<td style="text-align: right;"><strong>66.4</strong></td>
+<td style="text-align: right;"><strong>40.6</strong></td>
+<td style="text-align: right;"><strong>50.0</strong></td>
+<td style="text-align: right;"><strong>35.1</strong></td>
+</tr>
+</tbody>
+</table>
+<p>最值得关注的数据：</p>
+<ul>
+<li><strong>LVR、CoVT、Monet 在 VSI-Bench 上全部崩溃</strong>（14-18%），远不如不做任何改动的原始 Qwen2.5-VL（33.0%）。这强烈证明：没有视觉对齐的潜在推理在长上下文任务上不如不推理。</li>
+<li><strong>VaLR-M 从 33.0% 提升到 52.9%</strong>，提高 19.9 个百分点，在 8 个子任务上全面 SOTA。尤其在需要精确空间测量的子任务（绝对距离 5.3% → 40.6%，物体计数 40.9% → 66.4%）上提升巨大。</li>
+</ul>
+<h3 id="62-benchmark">6.2 感知任务 Benchmark</h3>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th>BLINK</th>
+<th>MMVP</th>
+<th>MMStar</th>
+<th>V^*</th>
+<th>CVBench</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GPT-4o</td>
+<td>63.0</td>
+<td>68.7</td>
+<td>65.2</td>
+<td>42.9</td>
+<td>79.2</td>
+</tr>
+<tr>
+<td>Qwen2.5-VL-7B</td>
+<td>55.7</td>
+<td>56.0</td>
+<td>67.1</td>
+<td>76.4</td>
+<td>74.5</td>
+</tr>
+<tr>
+<td>+ LVR</td>
+<td>52.8</td>
+<td>59.3</td>
+<td>64.4</td>
+<td>81.7</td>
+<td>76.9</td>
+</tr>
+<tr>
+<td>+ CoVT</td>
+<td>56.0</td>
+<td>58.7</td>
+<td>69.2</td>
+<td>78.0</td>
+<td>80.0</td>
+</tr>
+<tr>
+<td>+ Monet</td>
+<td>49.1</td>
+<td>50.0</td>
+<td>53.3</td>
+<td>83.3</td>
+<td>71.1</td>
+</tr>
+<tr>
+<td><strong>VaLR-S</strong></td>
+<td><strong>63.1</strong></td>
+<td><strong>60.3</strong></td>
+<td><strong>70.8</strong></td>
+<td><strong>86.4</strong></td>
+<td><strong>83.1</strong></td>
+</tr>
+<tr>
+<td><strong>VaLR-M</strong></td>
+<td><strong>64.7</strong></td>
+<td><strong>60.3</strong></td>
+<td><strong>72.3</strong></td>
+<td><strong>86.9</strong></td>
+<td><strong>87.6</strong></td>
+</tr>
+</tbody>
+</table>
+<p>关键观察：</p>
+<ul>
+<li>VaLR 不仅在长上下文任务上提升显著，在短上下文感知任务上也全面优于 baseline——说明视觉 grounding 是通用能力，不是长任务专属。</li>
+<li>与推理模型 R1-OneVision（50.1% BLINK）和 Ocean-R1（56.8% BLINK、78.0% V^*）相比，VaLR 表现更稳定。推理模型在某些 benchmark 上强、某些上弱（如 Ocean-R1 在 BLINK 仅 56.8%），而 VaLR 在所有感知 benchmark 上一致提升。</li>
+</ul>
+<h3 id="63-test-time-scaling">6.3 Test-time Scaling 行为（论文最大亮点）</h3>
+<p><img alt="Reasoning Length Analysis" src="assets/valr/figure_2.jpg" /></p>
+<p><em>图 3：推理长度 vs 模型性能分析。四个子图分别对应四个 benchmark，横轴均为推理长度（generated reasoning length in tokens），测试模型在不同推理长度下的性能变化趋势。VaLR 是唯一在推理长度增加时性能单调提升的方法。</em></p>
+<p><strong>四个子图的布局和含义</strong>：</p>
+<p>四个 benchmark 覆盖不同类型的推理任务——MathVista（数学推理）、MathVision（数学视觉推理）、MMhalu（多模态幻觉检测，越低越好）、MMVP（细粒度视觉感知）。对每个 benchmark，将测试样本按生成的推理 token 数分组，统计每组的准确率或幻觉率。红色曲线 = VaLR，蓝色曲线 = Ocean-R1，绿色曲线 = LVR。</p>
+<p><strong>子图 (a) MathVista（Acc. %）</strong>：</p>
+<ul>
+<li>横轴：推理长度（tokens），从约 100 到 500+ tokens。</li>
+<li>纵轴：准确率（%），约 55-70% 区间。</li>
+<li>Ocean-R1（蓝色）在约 200 tokens 时达到峰值约 66%，之后随推理长度增加持续退化，到 500+ tokens 降至约 60%。</li>
+<li>LVR（绿色）整体低于 Ocean-R1，在中等长度达到峰值后同样退化。</li>
+<li>VaLR（红色）起点约 60%，随着推理长度从 100 → 500+ tokens，性能从 60% 持续单调提升至约 68%，全程无退化。</li>
+</ul>
+<p><strong>子图 (b) MathVision（Acc. %）</strong>：</p>
+<ul>
+<li>横轴：推理长度（tokens），约 100 到 500+ tokens。</li>
+<li>纵轴：准确率（%），约 25-42% 区间。注意整体数值低于 MathVista，因为 MathVision 是更难的视觉数学推理 benchmark。</li>
+<li>Ocean-R1（蓝色）和 LVR（绿色）在约 200-300 tokens 后均出现明显退化，LVR 退化更严重。</li>
+<li>VaLR（红色）从约 28% 起步，在 400+ tokens 处升至约 38-42%，表现出一致的上升趋势。</li>
+</ul>
+<p><strong>子图 (c) MMhalu（Hal. Rate %，越低越好）</strong>：</p>
+<ul>
+<li>横轴：推理长度（tokens），约 100 到 500+ tokens。</li>
+<li>纵轴：幻觉率（%），越低越好，约 35-55% 区间。</li>
+<li>这是唯一一个"越低越好"的指标。Ocean-R1（蓝色）的幻觉率随推理长度增加而持续上升（从约 42% 升至约 52%），推理越长幻觉越多。</li>
+<li>LVR（绿色）同样随推理长度增加而幻觉率上升。</li>
+<li>VaLR（红色）的幻觉率随推理长度增加而持续下降（从约 48% 降至约 38%），推理越长幻觉越少——这是反直觉且强有力的结论，直接证明视觉对齐让模型"看清楚了细节"而不是"脑补"。</li>
+</ul>
+<p><strong>子图 (d) MMVP（Acc. %）</strong>：</p>
+<ul>
+<li>横轴：推理长度（tokens），约 60 到 350 tokens。注意这个 benchmark 的推理长度范围比其他三个窄。</li>
+<li>纵轴：准确率（%），约 50-68% 区间。</li>
+<li>Ocean-R1（蓝色）在约 150 tokens 达到峰值约 63%，之后急剧退化至约 57%，推理长度从 150→300 tokens 下降约 6 个百分点。</li>
+<li>LVR（绿色）全程低于 60%，表现最差，说明缺乏视觉对齐的潜在推理在细粒度视觉任务上完全失效。</li>
+<li>VaLR（红色）从约 56% 起步，持续提升至约 66%，全程高于所有基线，且在 300 tokens 处仍保持上升趋势。</li>
+</ul>
+<p><strong>核心结论</strong>：四个 benchmark 上的趋势高度一致——Ocean-R1 和 LVR 在中等推理长度后开始退化，VaLR 在全部四个 benchmark 上均表现出单调提升。这直接验证了论文的核心主张：没有视觉对齐，更长的推理反而有害（模型在"脑补"）；有了视觉对齐，推理越长越受益。这是 MLLM 领域首次观察到类似 LLM 的 test-time scaling law。</p>
+<h3 id="64">6.4 消融实验</h3>
+<p><strong>REPA 表征对齐的有效性：</strong></p>
+<table>
+<thead>
+<tr>
+<th>配置</th>
+<th>VSI-Bench</th>
+<th>BLINK</th>
+<th>V^*</th>
+<th>CVBench</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Qwen2.5-VL-7B</td>
+<td>33.0</td>
+<td>55.7</td>
+<td>76.4</td>
+<td>74.5</td>
+</tr>
+<tr>
+<td>VaLR w/o VA（无视觉对齐）</td>
+<td>34.0</td>
+<td>57.1</td>
+<td>75.9</td>
+<td>73.4</td>
+</tr>
+<tr>
+<td>VaLR w/ QE（Qwen 原生编码器对齐）</td>
+<td>39.6</td>
+<td>58.9</td>
+<td>81.7</td>
+<td>81.6</td>
+</tr>
+<tr>
+<td><strong>VaLR w/ DINOv3</strong></td>
+<td><strong>41.5</strong></td>
+<td><strong>63.1</strong></td>
+<td><strong>86.4</strong></td>
+<td><strong>83.1</strong></td>
+</tr>
+</tbody>
+</table>
+<p>三层信息：</p>
+<ol>
+<li>纯潜在推理（w/o VA）：几乎无提升（VSI-Bench 34.0 vs 33.0），<strong>视觉对齐是 VaLR 的核心</strong>。</li>
+<li>使用 Qwen 原生编码器对齐：有效但不如外部编码器（VSI-Bench 39.6 vs 41.5），说明外部编码器的特征更丰富。</li>
+<li>DINOv3 对齐效果最好，因为它提供细粒度的空间和外观特征。V^* 上达到 86.4%（+10.0 个百分点），在所有编码器中最优。</li>
+</ol>
+<p><strong>不同视觉编码器的通用性：</strong></p>
+<table>
+<thead>
+<tr>
+<th>对齐编码器</th>
+<th>BLINK</th>
+<th>MMVP</th>
+<th>MMStar</th>
+<th>V^*</th>
+<th>CVBench</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Qwen2.5-VL-7B (baseline)</td>
+<td>55.7</td>
+<td>56.0</td>
+<td>67.1</td>
+<td>76.4</td>
+<td>74.5</td>
+</tr>
+<tr>
+<td>+ CLIP</td>
+<td>62.3</td>
+<td>59.3</td>
+<td>71.0</td>
+<td>83.2</td>
+<td>79.1</td>
+</tr>
+<tr>
+<td>+ SigLIPv2</td>
+<td>62.8</td>
+<td>59.7</td>
+<td>71.3</td>
+<td>83.2</td>
+<td>81.9</td>
+</tr>
+<tr>
+<td>+ DINOv2</td>
+<td>62.7</td>
+<td>60.0</td>
+<td>70.7</td>
+<td>83.8</td>
+<td>81.8</td>
+</tr>
+<tr>
+<td>+ DINOv3</td>
+<td><strong>63.1</strong></td>
+<td><strong>60.3</strong></td>
+<td>70.8</td>
+<td><strong>86.4</strong></td>
+<td><strong>83.1</strong></td>
+</tr>
+</tbody>
+</table>
+<p>VaLR 对 CLIP、SigLIPv2、DINOv2、DINOv3 全部有效，编码器越强增益越大。DINOv3 在 V^* 上达到 86.4%（+10.0 个百分点），在所有编码器中最优。</p>
+<p><strong>多编码器的互补效应：</strong></p>
+<table>
+<thead>
+<tr>
+<th>π³</th>
+<th>DINOv3</th>
+<th>SigLIPv2</th>
+<th>VSI-Bench</th>
+<th>BLINK</th>
+<th>MMStar</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>✗</td>
+<td>✗</td>
+<td>✗</td>
+<td>33.0</td>
+<td>55.7</td>
+<td>67.1</td>
+</tr>
+<tr>
+<td>✓</td>
+<td>✓</td>
+<td>✗</td>
+<td>52.4</td>
+<td>64.6</td>
+<td>68.9</td>
+</tr>
+<tr>
+<td>✗</td>
+<td>✓</td>
+<td>✓</td>
+<td>41.9</td>
+<td>62.5</td>
+<td>72.0</td>
+</tr>
+<tr>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+<td><strong>52.9</strong></td>
+<td><strong>64.7</strong></td>
+<td><strong>72.3</strong></td>
+</tr>
+</tbody>
+</table>
+<p>π³ 对 3D 任务（VSI-Bench）提升巨大（41.9 → 52.4），SigLIPv2 对语义任务（MMStar）增益明显（68.9 → 72.0）。三者结合达到全局最优，验证了专长互补的假设。</p>
+<p><strong>数据扩展性：</strong></p>
+<p><img alt="Data Scalability" src="assets/valr/scalability.jpg" /></p>
+<p><em>图 4：数据扩展性分析。三个子图分别对比 Vanilla SFT（灰色）、VaLR-S（单编码器，蓝色）、VaLR-M（多编码器，红色）在三个 benchmark 上随训练样本增加的性能变化。</em></p>
+<p><strong>三个子图的布局</strong>：横轴均为训练数据量（Training data size），五个刻度为 10K、50K、100K、200K、450K。纵轴均为准确率（Accuracy %）。三条曲线分别代表三种训练配置。</p>
+<p><strong>子图 (a) VSI-Bench</strong>：</p>
+<ul>
+<li>横轴：训练数据量（10K → 450K）。</li>
+<li>纵轴：准确率（%），约 32-54% 区间。</li>
+<li>Vanilla SFT（灰色）：起点约 32%，在 200K 后趋于饱和，450K 时约 34%。</li>
+<li>VaLR-S（蓝色）：10K 时约 34%，随数据增长持续提升，450K 达约 41%。</li>
+<li>VaLR-M（红色）：10K 时约 36%，全程高于其他两条曲线，450K 达约 53%。从 10K → 450K 提升约 17 个百分点，增长斜率最大。</li>
+</ul>
+<p><strong>子图 (b) BLINK</strong>：</p>
+<ul>
+<li>纵轴：准确率（%），约 55-65% 区间。</li>
+<li>Vanilla SFT（灰色）：10K 时约 55%，200K 时约 57%，几乎不增长。</li>
+<li>VaLR-S（蓝色）：10K 时约 57%，增长平缓，450K 时约 63%。</li>
+<li>VaLR-M（红色）：10K 时约 59%，450K 时约 65%，全程领先。</li>
+</ul>
+<p><strong>子图 (c) V*</strong>：</p>
+<ul>
+<li>纵轴：准确率（%），约 70-87% 区间。这个 benchmark 上数据扩展性差异最显著。</li>
+<li>Vanilla SFT（灰色）：10K 时约 73%，200K 后约 78% 就几乎不再增长，呈现明显的数据饱和。</li>
+<li>VaLR-S（蓝色）：10K 时约 74%，450K 时约 86%。值得注意的是，VaLR-S 在约 50K 时就达到了 Vanilla SFT 在 450K 时的性能水平（~82%），数据效率提升近 9 倍。</li>
+<li>VaLR-M（红色）：10K 时约 78%，450K 时约 87%。VaLR-M 在 10K 时就超过了 Vanilla SFT 在 200K 时的性能，论文声称 <strong>VaLR-M 达到同等性能所需的训练数据仅为 Vanilla SFT 的 1/20 以下</strong>。</li>
+</ul>
+<p><strong>核心结论</strong>：(1) Vanilla SFT 在 200K 后明显饱和，VaLR 两种变体都随数据增长持续提升，说明视觉对齐让模型更有效地从训练数据中提取信息；(2) 多编码器（VaLR-M）在数据效率上远超单编码器和 vanilla SFT；(3) 在所有数据点上，VaLR-M &gt; VaLR-S &gt; Vanilla SFT，呈现一致的层级关系。</p>
+<p><strong>推理效率：</strong></p>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th>32-view (秒)</th>
+<th>1-view (秒)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Qwen2.5-VL</td>
+<td>1.21</td>
+<td>0.64</td>
+</tr>
+<tr>
+<td>+ vanilla SFT</td>
+<td>1.43</td>
+<td>0.68</td>
+</tr>
+<tr>
+<td>+ LVR</td>
+<td>1.49</td>
+<td>0.66</td>
+</tr>
+<tr>
+<td>+ Monet</td>
+<td>1.51</td>
+<td>0.79</td>
+</tr>
+<tr>
+<td><strong>+ VaLR</strong></td>
+<td><strong>1.55</strong></td>
+<td><strong>0.80</strong></td>
+</tr>
+</tbody>
+</table>
+<p>VaLR 的推理开销很小（比 vanilla SFT 仅慢约 10%），且推理时完全不需要外部视觉编码器。</p>
+<h3 id="65">6.5 特征可视化</h3>
+<p><img alt="Feature Visualization" src="assets/valr/feature_viz.jpg" /></p>
+<p><em>图 5：MLLM 中间层特征可视化。对比 VaLR 训练前后 MLLM 第 12 层 hidden states 的主成分可视化，直观展示 REPA 对齐对内部表征的影响。</em></p>
+<p>图中展示多组图像的三列对比：</p>
+<ul>
+<li><strong>左列（输入图像）</strong>：原始输入图像。</li>
+<li><strong>中列（Before REPA / w/o VA）</strong>：未做 REPA 对齐时，MLLM 第 12 层 hidden states 的主成分可视化。特征图呈现模糊、扩散的全局激活模式，没有明确的物体边界或语义结构——模型的内部表征缺乏视觉 grounding。</li>
+<li><strong>右列（After REPA / VaLR）</strong>：REPA 对齐训练后，同样层的 hidden states 主成分可视化。特征图呈现清晰的物体轮廓、语义分割和空间结构——猫的头部形状、室内场景的墙面和家具布局、物体的边缘轮廓都变得清晰可辨。</li>
+</ul>
+<p><strong>核心信息</strong>：REPA 对齐不是抽象的数字提升，而是从根本上改变了 MLLM 内部表征的质量——从"模糊感知"变为"清晰看见"。这与图 3 的 test-time scaling 行为形成闭环：因为 MLLM 真的"看清楚了"，所以推理越长越受益；而 baseline 因为"看不清楚"，推理越长越容易脑补幻觉。</p>
+<h2 id="7">7. 这篇论文的核心贡献</h2>
+<p>可以概括成三点：</p>
+<ol>
+<li>
+<p><strong>发现并解决了 MLLM 视觉信号衰减问题。</strong>
+   明确指出 MLLM 在长上下文推理中视觉信息逐渐稀释，这是限制 test-time scaling 的根本原因。</p>
+</li>
+<li>
+<p><strong>提出 VaLR 框架。</strong>
+   通过在每步 CoT 推理前动态生成 vision-aligned latent token，让模型始终保持在视觉 grounding 上，以极小推理开销（+10%）实现显著性能提升。</p>
+</li>
+<li>
+<p><strong>首次在 MLLM 上展示 test-time scaling 行为。</strong>
+   VaLR 是第一个随着推理链增长性能单调提升的 MLLM 方法——baseline 在长推理中退化，VaLR 持续受益。这为 MLLM 的推理效率研究开辟了新方向。</p>
+</li>
+</ol>
+<h2 id="8">8. 常见问题</h2>
+<h3 id="q1latent-token">Q1：latent token 是可解释的自然语言吗？</h3>
+<p>不是。latent token 是连续向量，不映射到任何文字。它们更像是模型内部的"视觉摘要"——通过 REPA 对齐学到的、关于图像的紧凑表示。这些表示对后续的文本推理提供视觉 grounding，但本身不是人类可读的。</p>
+<h3 id="q2repa">Q2：REPA 对齐只在训练时使用，推理时怎么保证模型还记得视觉信息？</h3>
+<p>这正是 VaLR 设计的巧妙之处：REPA 对齐是一种<strong>知识蒸馏</strong>——训练时逼着 MLLM 的中间层学习输出与视觉编码器相似的特征。训练完成后，这种能力被内化到模型参数中。推理时，模型生成 latent token 的过程自然产生了富含视觉信息的 hidden states，不需要再跑外部编码器。</p>
+<p>消融实验也证实了这一点：用 Qwen 原生编码器（非外部）对齐同样有效，说明关键不是"外部编码器更好"，而是"对齐提供了一个有效的视觉特征学习信号"。</p>
+<h3 id="q3-dinov3-token-llm">Q3：为什么不直接把 DINOv3 特征作为输入 token 喂给 LLM？</h3>
+<p>论文对比了这两种方法（图 2），REPA 对齐全面优于直接输入视觉特征。原因是：</p>
+<ul>
+<li><strong>效率</strong>：作为输入 token 会增加序列长度和推理计算量，且每次推理都要跑 DINOv3。REPA 方式推理时不依赖外部编码器。</li>
+<li><strong>效果</strong>：输入 token 方式只提供一次性的静态信息；REPA 方式让每个推理步骤都可以动态地从图像中提取所需信息。</li>
+</ul>
+<h3 id="q4valr-last-r1heima-latent-reasoning">Q4：VaLR 和 LaST-R1、Heima 等其他 latent reasoning 工作有什么关系？</h3>
+<p>都使用了 latent token 作为"思考"媒介，但定位不同：</p>
+<ul>
+<li><strong>LaST-R1</strong>：latent token 用于机器人 VLA 中的物理推理，target 来自 DINOv3 的 <code>&lt;CLS&gt;</code> token</li>
+<li><strong>Heima</strong>：latent token 用于高效推理，核心是隐藏思考过程</li>
+<li><strong>VaLR</strong>：latent token 用于多模态 CoT 推理中的视觉信息保持，核心贡献是发现了视觉信号衰减问题并通过每步视觉对齐解决</li>
+</ul>
+<p>VaLR 的独特之处在于：它是<strong>每步推理前都做一次视觉对齐</strong>，而不是仅在开始或结束时对齐一次。</p>
+<h3 id="q5valr">Q5：VaLR 的最大局限是什么？</h3>
+<ol>
+<li><strong>数据依赖</strong>：多视角数据需要 GPT-4o 辅助标注每步推理对应的目标图像，引入了外部依赖和一定的数据质量不确定性。</li>
+<li><strong>固定 K 值</strong>：目前 K=16 是固定长度，不如 LaST-R1 的 adaptive CoT 那样可以根据需要动态调整 latent 长度。</li>
+<li><strong>Benchmark 验证</strong>：主要在 VQA benchmark 上验证，论文定位的 CUA 和 VLA 场景缺少真实环境评估。</li>
+<li><strong>与 RL 推理的关系</strong>：与 R1-style 强化学习推理（如 R1-OneVision）的对比有限——后者在某些 benchmark 上意外退步，原因值得深入。</li>
+</ol>
+<h2 id="9-takeaway">9. 最短版 takeaway</h2>
+<p>VaLR = <code>CoT reasoning</code> + <code>vision-aligned latent checkpoint per step</code>。</p>
+<p>它的核心洞察是：MLLM 在做长推理时会逐渐"忘记"图像——不是因为推理能力不够，而是因为视觉信号被文本序列稀释了。VaLR 的解决方法是在每个推理步骤前插入一组与视觉编码器特征对齐的 latent token，作为"视觉检查点"。这种方法简单、高效（推理开销 +10%）、通用（适配任何视觉编码器），且首次让 MLLM 展现出类似 LLM 的 test-time scaling 行为。</p>
+  </div>
+</main>
+
+
+<script>
+(function() {
+  const sidebar = document.getElementById('sidebar');
+  const links = sidebar.querySelectorAll('a');
+  const headings = document.querySelectorAll('h1[id], h2[id], h3[id], h4[id]');
+  if (headings.length === 0) return;
+
+  const linkMap = new Map();
+  links.forEach(function(a) {
+    const href = a.getAttribute('href');
+    if (href && href.startsWith('#')) linkMap.set(href.slice(1), a);
+  });
+
+  function onScroll() {
+    let currentId = null;
+    const scrollTop = window.scrollY + 80;
+    headings.forEach(function(h) { if (h.offsetTop <= scrollTop) currentId = h.id; });
+    links.forEach(function(a) { a.classList.remove('active'); });
+    if (currentId && linkMap.has(currentId)) {
+      const el = linkMap.get(currentId);
+      el.classList.add('active');
+      const sr = sidebar.getBoundingClientRect();
+      const er = el.getBoundingClientRect();
+      if (er.bottom > sr.bottom || er.top < sr.top) {
+        el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+    }
+  }
+
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+})();
+</script>
+
+
+<script>
+(function() {
+  const content = document.getElementById('main-content');
+  if (!content) return;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'image-lightbox';
+  overlay.setAttribute('role', 'dialog');
+  overlay.setAttribute('aria-modal', 'true');
+
+  overlay.innerHTML = `
+    <button type="button" class="image-lightbox__close" data-action="close" aria-label="关闭">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M5 5l10 10M15 5L5 15"/>
+      </svg>
+    </button>
+    <div class="image-lightbox__stage">
+      <img class="image-lightbox__image" alt="">
+    </div>
+    <div class="image-lightbox__toolbar" aria-label="图片缩放控制">
+      <button type="button" class="image-lightbox__btn" data-action="zoom-out" aria-label="缩小" title="缩小">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d="M3 9h12"/>
+        </svg>
+      </button>
+      <span class="image-lightbox__zoom-val" data-action="zoom-reset" title="点击重置缩放" role="button" tabindex="0">100%</span>
+      <button type="button" class="image-lightbox__btn" data-action="zoom-in" aria-label="放大" title="放大">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d="M3 9h12M9 3v12"/>
+        </svg>
+      </button>
+    </div>
+    <div class="image-lightbox__caption"></div>
+  `;
+  document.body.appendChild(overlay);
+
+  const stage = overlay.querySelector('.image-lightbox__stage');
+  const image = overlay.querySelector('.image-lightbox__image');
+  const zoomLabel = overlay.querySelector('.image-lightbox__zoom-val');
+  const caption = overlay.querySelector('.image-lightbox__caption');
+
+  const minZoom = 0.25;
+  const maxZoom = 5;
+  const step = 0.25;
+  let zoom = 1;
+  let fitWidth = 1;
+
+  function clamp(value) {
+    return Math.min(maxZoom, Math.max(minZoom, value));
+  }
+
+  function centerImage(animate) {
+    requestAnimationFrame(function() {
+      var left = Math.max(0, (stage.scrollWidth - stage.clientWidth) / 2);
+      var top = Math.max(0, (stage.scrollHeight - stage.clientHeight) / 2);
+      stage.scrollTo({ left: left, top: top, behavior: animate ? 'smooth' : 'auto' });
+    });
+  }
+
+  function applyZoom(animate) {
+    image.style.width = Math.max(1, Math.round(fitWidth * zoom)) + 'px';
+    zoomLabel.textContent = Math.round(zoom * 100) + '%';
+    centerImage(animate);
+  }
+
+  function setZoom(value, animate) {
+    zoom = clamp(value);
+    applyZoom(animate);
+  }
+
+  function computeFitSize() {
+    var w = image.naturalWidth || 1;
+    var h = image.naturalHeight || 1;
+    var maxW = Math.max(1, stage.clientWidth - 48);
+    var maxH = Math.max(1, stage.clientHeight - 48);
+    var fitScale = Math.min(1, maxW / w, maxH / h);
+    fitWidth = Math.max(1, w * fitScale);
+    applyZoom(false);
+  }
+
+  function openImage(source) {
+    image.onload = computeFitSize;
+    image.alt = source.alt || '';
+    caption.textContent = source.alt || '';
+    image.src = source.currentSrc || source.src;
+    zoom = 1;
+    overlay.classList.add('is-open');
+    document.body.classList.add('image-lightbox-open');
+    if (image.complete) computeFitSize();
+  }
+
+  function closeImage() {
+    overlay.classList.remove('is-open');
+    document.body.classList.remove('image-lightbox-open');
+    image.onload = null;
+    image.style.removeProperty('width');
+    image.removeAttribute('src');
+  }
+
+  overlay.addEventListener('click', function(event) {
+    var action = event.target.closest('[data-action]');
+    if (action) {
+      var type = action.getAttribute('data-action');
+      if (type === 'zoom-in') setZoom(zoom + step, true);
+      if (type === 'zoom-out') setZoom(zoom - step, true);
+      if (type === 'zoom-reset') setZoom(1, true);
+      if (type === 'close') closeImage();
+      return;
+    }
+    if (event.target === overlay || event.target === stage) closeImage();
+  });
+
+  overlay.addEventListener('wheel', function(event) {
+    if (!overlay.classList.contains('is-open')) return;
+    if (!event.ctrlKey && !event.metaKey) return;
+    event.preventDefault();
+    setZoom(zoom + (event.deltaY < 0 ? step : -step), true);
+  }, { passive: false });
+
+  document.addEventListener('keydown', function(event) {
+    if (!overlay.classList.contains('is-open')) return;
+    if (event.key === 'Escape') closeImage();
+    if (event.key === '+' || event.key === '=') setZoom(zoom + step, true);
+    if (event.key === '-' || event.key === '_') setZoom(zoom - step, true);
+    if (event.key === '0') setZoom(1, true);
+  });
+
+  window.addEventListener('resize', function() {
+    if (overlay.classList.contains('is-open')) computeFitSize();
+  });
+
+  content.querySelectorAll('img').forEach(function(img) {
+    if (img.closest('a')) return;
+    img.setAttribute('tabindex', '0');
+    img.setAttribute('title', img.getAttribute('title') || '点击放大查看');
+    img.addEventListener('click', function() { openImage(img); });
+    img.addEventListener('keydown', function(event) {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        openImage(img);
+      }
+    });
+  });
+})();
+</script>
+
+</body>
+</html>
