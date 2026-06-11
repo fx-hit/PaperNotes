@@ -81,15 +81,7 @@ SLVR 提出一个**两阶段学习框架**，核心思想：先让 latent 编码
 
 在 `<|vision_end|>` 之后插入特殊 token `<sem>`，其隐藏状态作为**语义 latent** $\mathbf{z}_{sem}$，用于聚合区域级语义信息。
 
-**三个监督信号：**
-
-| 损失 | 目标 | 公式 |
-|------|------|------|
-| $\mathcal{L}_{vis}$ | 区域视觉 latent 对齐 vision encoder 特征 | $\sum_{t=1}^{T_v} \| \mathbf{h}^{lat}_t - \mathbf{v}^{enc}_t \|_2^2$ |
-| $\mathcal{L}_{sem}$ | 语义 latent 对齐属性语义嵌入 | $\text{MSE}(W\mathbf{z}_{sem}, \mathbf{e})$，其中 $\mathbf{e} \in \mathbb{R}^{4096}$ 是 Qwen3 embedding 编码的属性描述 |
-| $\mathcal{L}_{ans}$ | 答案监督（标准 LM loss） | 自回归交叉熵 |
-
-总目标：$\mathcal{L}_{stage1} = \mathcal{L}_{vis} + \mathcal{L}_{sem}$
+Stage 1 通过三路损失联合优化（详见[三、训练目标](#三训练目标)）：视觉重建损失 $\mathcal{L}_{vis}$（MSE 对齐 vision encoder 特征）、语义对齐损失 $\mathcal{L}_{sem}$（MSE 对齐 Qwen3 embedding 编码的属性描述）、答案监督损失 $\mathcal{L}_{ans}$（标准 LM loss）。总目标为 $\mathcal{L}_{stage1} = \mathcal{L}_{vis} + \mathcal{L}_{sem}$。
 
 **关键设计（代码印证）：**
 
@@ -118,41 +110,13 @@ class SLVRTextHead(nn.Module):
 
 Stage 2 的核心是 **M-GRPO**（Multi-query Group Relative Policy Optimization），继承自 DeepSeek-R1 的 GRPO 框架，但针对多查询场景做了扩展。
 
-**核心思想：** 对同一区域 $r$ 的两个语义不同的问题 $q_1, q_2$，模型分别产生 latent 对 $(H_{vis}^{(i)}, z_{sem}^{(i)})$，M-GRPO 通过三项奖励联合优化——
-
-| 奖励项 | 作用 | 公式 |
-|--------|------|------|
-| $\mathcal{R}_{ans}^{(i)}$ | 答案正确性（LLM judge 评估） | $\mathbb{I}(\hat{y}_i = y_i)$ |
-| $\mathcal{R}_{cons}$ | **跨查询 latent 一致性**（同时约束视觉和语义 latent） | $-\sum_{i \neq j} \left( \lambda_{sem}\|z_{sem}^{(i)} - z_{sem}^{(j)}\|_2 + \lambda_{vis}\frac{1}{T_v}\sum_t \|h_t^{(i)} - h_t^{(j)}\|_2 \right)$ |
-| $\mathcal{R}_{stab}^{(i)}$ | **稳定性正则化**（防止偏离 Stage 1 分布） | $-\max(0, \|z_{sem}^{(i)} - \bar{z}_{sem}\|_2 - \tau_{sem}) - \max(0, \frac{1}{T_v}\sum_t \|h_t^{(i)} - \bar{h}_t\|_2 - \tau_{vis})$ |
-
-**GRPO 更新公式：**
-
-$$\mathcal{J}_{\text{M-GRPO}}(\theta) = \mathbb{E}_{(I,r), (q_1,q_2), o \sim \pi_{\theta_{old}}} \left[ \frac{1}{2}\sum_{i=1}^{2} \frac{1}{G}\sum_{g=1}^{G} \frac{1}{|O_{i,g}|}\sum_t \min(\rho_{i,g,t} \hat{A}_{i,g,t}, \text{clip}(\rho_{i,g,t}, 1-\epsilon, 1+\epsilon) \hat{A}_{i,g,t}) - \beta D_{KL}(\pi_\theta \| \pi_{\theta_{old}}) \right]$$
-
-**代码印证（src/params.py）：**
-
-```python
-# M-GRPO 关键超参数
-lambda_sem: float = 0.01    # 语义 latent 一致性权重
-lambda_vis: float = 0.01    # 视觉 latent 一致性权重
-tau_sem: float = 1.0        # 语义 latent 稳定容忍度
-tau_vis: float = 1.0        # 视觉 latent 稳定容忍度
-lambda_consistency: float = 0.05   # 整体一致性奖励
-lambda_stability: float = 0.05     # 整体稳定性奖励
-```
-
-**Judge 机制（src/train/mgrpo_reward_funcs.py）：**
-- 使用 Qwen3-Max 作为 LLM judge，通过 vLLM 推理服务
-- 后台线程定期从 broker 刷新 IP 池，ThreadPoolExecutor 并发调用
-- 支持 judge 不可用时自动回退到字符串匹配
-- 正确答案性判断：语义等价性比较（支持字母选项 / 文本答案 / 数字匹配）
+**核心思想：** 对同一区域 $r$ 的两个语义不同的问题 $q_1, q_2$，模型分别产生 latent 对 $(H_{vis}^{(i)}, z_{sem}^{(i)})$，M-GRPO 通过三项奖励联合优化——答案正确性 $\mathcal{R}_{ans}$（LLM judge 语义等价判断）、跨查询 latent 一致性 $\mathcal{R}_{cons}$（惩罚同一区域两个问题产生的 latent 不一致）、稳定性正则化 $\mathcal{R}_{stab}$（防止 RL 探索偏离 Stage 1 分布）。三项奖励的具体公式和 GRPO 更新目标详见[三、训练目标](#三训练目标)。
 
 ---
 
-## 三、数据集构建
+### 2.3 数据集构建
 
-### 3.1 SLV-Set
+#### 2.3.1 SLV-Set
 
 基于 Visual-CoT（ViSCoT）数据集构建，包含两个互补组件：
 
@@ -187,15 +151,149 @@ lambda_stability: float = 0.05     # 整体稳定性奖励
 
 每个样本格式：$(q, i, b, \mathcal{A}, \mathbf{e})$ — 问题、图像、边界框、属性集、4096 维语义嵌入。
 
-### 3.2 SV-QA 评估基准
+#### 2.3.2 SV-QA 评估基准
 
 基于 V*、HRBench-4K、HRBench-8K 构建，每个区域从原始问题 $q_1$ 和生成的 $q_2$ 两个语义维度提问。**591 对样本**，经人工审查修正（19 题与原始题过度重叠、8 题含幻觉内容）。
 
 ---
 
-## 四、代码架构
+## 三、训练目标
 
-### 4.1 项目结构
+SLVR 的训练分为两个阶段，各有明确的目标函数。
+
+### 3.1 Stage 1：结构化 Latent 学习的联合损失
+
+Stage 1 的目标是让模型同时学会视觉保真和语义编码，通过三路损失联合优化：
+
+| 损失 | 目标 | 公式 |
+|------|------|------|
+| $\mathcal{L}_{vis}$ | 区域视觉 latent 对齐 vision encoder 特征 | $\sum_{t=1}^{T_v} \| \mathbf{h}^{lat}_t - \mathbf{v}^{enc}_t \|_2^2$ |
+| $\mathcal{L}_{sem}$ | 语义 latent 对齐属性语义嵌入 | $\text{MSE}(W\mathbf{z}_{sem}, \mathbf{e})$，其中 $\mathbf{e} \in \mathbb{R}^{4096}$ 是 Qwen3 embedding 编码的属性描述 |
+| $\mathcal{L}_{ans}$ | 答案监督（标准 LM loss） | 自回归交叉熵 |
+
+**整体目标：**
+
+$$\mathcal{L}_{stage1} = \mathcal{L}_{vis} + \mathcal{L}_{sem}$$
+
+$\mathcal{L}_{ans}$ 通过 Qwen2.5-VL 的标准 CrossEntropy 同时优化 latent 和答案生成（代码中由 `loss_slvr_fct` 控制主损失类型，`loss_slvr_lambda` 和 `loss_slvr_text_lambda` 分别控制视觉和语义 latent 损失的权重）。
+
+### 3.2 Stage 2：M-GRPO 的多项奖励函数
+
+Stage 2 的目标是通过强化学习让 latent 在不同语义角度的提问下保持稳定和一致。M-GRPO 使用三项奖励联合优化：
+
+| 奖励项 | 作用 | 公式 |
+|--------|------|------|
+| $\mathcal{R}_{ans}^{(i)}$ | 答案正确性（LLM judge 评估） | $\mathbb{I}(\hat{y}_i = y_i)$ |
+| $\mathcal{R}_{cons}$ | **跨查询 latent 一致性**（同时约束语义和视觉 latent） | $-\sum_{i \neq j} \left( \lambda_{sem}\|z_{sem}^{(i)} - z_{sem}^{(j)}\|_2 + \lambda_{vis}\frac{1}{T_v}\sum_t \|h_t^{(i)} - h_t^{(j)}\|_2 \right)$ |
+| $\mathcal{R}_{stab}^{(i)}$ | **稳定性正则化**（防止偏离 Stage 1 分布） | $-\max(0, \|z_{sem}^{(i)} - \bar{z}_{sem}\|_2 - \tau_{sem}) - \max(0, \frac{1}{T_v}\sum_t \|h_t^{(i)} - \bar{h}_t\|_2 - \tau_{vis})$ |
+
+**GRPO 更新目标：**
+
+$$\mathcal{J}_{\text{M-GRPO}}(\theta) = \mathbb{E}_{(I,r), (q_1,q_2), o \sim \pi_{\theta_{old}}} \left[ \frac{1}{2}\sum_{i=1}^{2} \frac{1}{G}\sum_{g=1}^{G} \frac{1}{|O_{i,g}|}\sum_t \min(\rho_{i,g,t} \hat{A}_{i,g,t}, \text{clip}(\rho_{i,g,t}, 1-\epsilon, 1+\epsilon) \hat{A}_{i,g,t}) - \beta D_{KL}(\pi_\theta \| \pi_{\theta_{old}}) \right]$$
+
+**关键超参数（来自 `src/params.py`）：**
+
+| 参数 | 值 | 含义 |
+|------|-----|------|
+| `lambda_sem` | 0.01 | 语义 latent 一致性权重 |
+| `lambda_vis` | 0.01 | 视觉 latent 一致性权重 |
+| `tau_sem` | 1.0 | 语义 latent 稳定容忍度 |
+| `tau_vis` | 1.0 | 视觉 latent 稳定容忍度 |
+| `lambda_consistency` | 0.05 | 整体一致性奖励权重 |
+| `lambda_stability` | 0.05 | 整体稳定性奖励权重 |
+
+> **实现注意**：论文中 $\mathcal{R}_{cons}$ 和 $\mathcal{R}_{stab}$ 用 L2 距离描述，但实际代码使用 **cosine similarity**（即 $1 - \cos(\cdot,\cdot)$），范围 [0, 2] 更稳定。Stage 2 的 accuracy_reward 使用加权组合（q1 权重 0.7, q2 权重 0.3），而非论文中看似等权的形式。
+
+Judge 机制使用 Qwen3-Max 作为 LLM judge，通过 vLLM 推理服务调用。后台线程定期从 broker 刷新 IP 池，ThreadPoolExecutor 并发调用，judge 不可用时自动回退到字符串匹配。
+
+---
+
+## 四、实验与结果
+
+### 4.1 标准 VQA 基准
+
+| 模型 | 推理范式 | OKVQA | GQA | VizWiz | ChartQA | TextVQA | AI2D |
+|------|---------|-------|-----|--------|---------|---------|------|
+| Qwen2.5-VL-7B | 纯文本 | 58.9 | 53.2 | 54.1 | 74.4 | 79.1 | 69.5 |
+| GRIT | 文本 CoT | 43.1 | 54.8 | 39.4 | 24.6 | 60.8 | 75.5 |
+| DeepEyes | 文本+显式裁剪 | 40.0 | 45.5 | 32.2 | -- | 40.4 | 37.0 |
+| Visual-SR1 | 文本 CoT | 49.0 | 52.3 | 35.8 | 71.7 | 70.1 | 69.0 |
+| LVR | 视觉 latent | 50.6 | **57.4** | 33.1 | 64.4 | 75.1 | **77.3** |
+| **SLVR-7B** | 视觉 + 语义 latent | **61.8** | 55.6 | **57.8** | **77.2** | **79.3** | 76.0 |
+| *Gain over LVR* | | *+11.2* | *-1.8* | *+24.7* | *+12.8* | *+4.2* | *-1.3* |
+
+**关键发现：** SLVR 在 OKVQA（+11.2）、VizWiz（+24.7）、ChartQA（+12.8）上对 LVR 提升显著，说明语义 latent 在这些需要细粒度语义理解的场景中作用突出。
+
+### 4.2 SV-QA 基准（核心实验）
+
+| 设置 | 推理范式 | V* Q1 | V* Q2 | V* Both | HRBench-4K Q1 | HRBench-4K Q2 | HRBench-4K Both | HRBench-8K Q1 | HRBench-8K Q2 | HRBench-8K Both |
+|------|---------|-------|-------|---------|-------------|-------------|----------------|-------------|-------------|----------------|
+| Qwen2.5-VL | 纯文本 | 76.4 | 55.5 | 44.0 | 60.5 | 74.1 | 45.8 | 53.5 | 66.1 | 37.5 |
+| GRIT | 文本 CoT | 69.6 | 61.8 | 49.7 | 58.4 | 70.4 | 48.6 | 49.1 | 61.9 | 38.6 |
+| DeepEyes | 文本+显式裁剪 | **83.3** | 79.1 | **70.2** | **71.3** | 79.3 | 60.6 | **65.1** | 72.4 | 49.0 |
+| Visual-SR1 | 文本 CoT | 75.9 | 73.3 | 62.8 | 63.9 | 76.4 | 54.6 | 56.3 | 67.4 | 44.4 |
+| LVR | 视觉 latent | 81.7 | 77.5 | 65.4 | 70.1 | 80.4 | 57.9 | 62.9 | 71.1 | 46.6 |
+| **SLVR-7B** | 视觉+语义 latent | 82.2 | **80.1** | 69.1 | 70.4 | **82.8** | **61.1** | 62.5 | **73.6** | **50.6** |
+| *Gain over LVR* | | *+0.5* | *+2.6* | *+3.7* | *+0.3* | *+2.4* | *+3.2* | *-0.4* | *+2.5* | *+4.0* |
+
+**关键发现：**
+- SLVR 在 Both Correct（两个问题都答对）指标上全面超越 LVR（+3.2 ~ +4.0），证明语义 latent 能同时编码多种语义维度
+- Q2 准确性提升（所有数据集 +2.4 ~ +2.6）是 SLVR 的核心优势——语义 latent 帮助模型更好地回答"另一个角度"的问题
+- 与其他 method 对比：纯文本方法（Qwen2.5-VL）在 Q2 上性能暴跌（V* Q1 76.4 → Q2 55.5），说明文本推理无法稳定支持语义变化；GRIT 和 Visual-SR1 虽引入显式推理链（CoT），但在多查询场景下（Both Correct）仍远落后于 latent 推理方法
+- DeepEyes 在 V* Q1 和 HRBench-8K Q1 上最高，但这是通过**推理时显式图像裁剪**实现的，计算开销巨大；SLVR 完全通过 latent 推理实现 competitive 的 Q1 性能
+
+### 4.3 VisualPuzzles 推理能力评估
+
+| 模型 | Algorithmic | Analogical | Deductive | Inductive | Spatial | Overall |
+|------|-------------|------------|-----------|-----------|---------|---------|
+| Qwen2.5-VL | 35.9 | 26.1 | 35.5 | **28.7** | 21.3 | 29.2 |
+| LVR | 31.3 | 25.6 | 40.5 | 24.4 | 26.2 | 29.4 |
+| **SLVR** | **37.4** | **28.0** | **45.5** | 26.3 | **33.6** | **34.2** |
+
+**关键发现：** SLVR 在 Deductive（+5.0）和 Spatial（+7.4）推理类别上大幅超越 LVR，证明属性级语义监督帮助模型捕获了结构化关系和空间线索，这些是纯视觉监督 latent 所遗漏的。
+
+### 4.4 消融实验
+
+| 设置 | 组件 | V* Both | HRBench-4K Both | HRBench-8K Both |
+|------|------|---------|------------------|------------------|
+| **文本基线** | | | | |
+| SFT (single-Q) | — | 51.8 | 52.8 | 43.5 |
+| SFT (multi-Q) | +多查询数据 | 57.1 | 50.1 | 41.1 |
+| SFT + GRPO (multi-Q) | +强化学习 | 58.6 | 55.5 | 47.8 |
+| **Latent 推理** | | | | |
+| LVR | 基线 | 65.4 | 57.9 | 46.6 |
+| + Stage 1 | +语义 latent 监督 | 67.5 | 59.6 | 46.9 |
+| + GRPO (Single-Q) | +单查询 GRPO | 62.8 | 57.6 | 49.3 |
+| + Multi-Q | +多查询 GRPO（无 M-GRPO） | 68.1 | 60.3 | 49.9 |
+| **SLVR-7B (Full)** | +M-GRPO 显式一致性约束 | **69.1** | **61.1** | **50.6** |
+
+**核心消融结论：**
+
+1. **文本 vs. Latent**：即使是数据量相同的最强文本基线（SFT + GRPO multi-Q），Both Correct 也全面落后 latent 推理方法（V* 58.6 vs. 69.1），说明文本链式思维在"同一区域多角度提问"场景中难以维持稳定 grounding。
+2. **Stage 1 语义监督**：加入语义 latent 后，V* Both 从 65.4 提升到 67.5，验证属性级语义信息有助于 joint correctness。
+3. **多查询 vs. 单查询 GRPO**：Multi-Q（多查询数据 + 标准 GRPO）比 Single-Q GRPO 提升了 Both Correct，说明更多样的训练信号本身有益。
+4. **M-GRPO 一致性约束是关键**：M-GRPO（显式 latent 一致性约束）在 Multi-Q 基础上进一步提升，证明显式对齐同一区域上的 cross-query latent 对语义一致性至关重要。
+
+---
+
+## 五、关键洞察与技术亮点
+
+### 5.1 为什么需要语义 latent 而不只是视觉 latent？
+
+LVR 的视觉 latent 通过直接对齐 vision encoder 特征来保留视觉信息，但 vision encoder 的 patch 特征本身不显式编码"这是红色"、"这个人在跑"等属性语义——这些语义分散在深层特征中，缺乏显式的结构化引导。SLVR 引入一个额外的 `<sem>` token 作为**语义聚合点**，直接以结构化属性文本的嵌入作为监督，迫使模型将分散的视觉语义压缩到该 token 的 hidden state 中。
+
+### 5.2 M-GRPO 的 motivation
+
+Stage 1 虽然给单个 latent 编码了语义信息，但没有保证**在不同问题的扰动下该语义能稳定激活**。M-GRPO 的 latent consistency reward 直接对"两个不同问题产生不同 latent"这种 drift 进行惩罚，保证同一区域的核心语义表征不受问题表述方式的影响，而只保留 task-specific 的微小差异。
+
+### 5.3 与 DeepEyes 等"看图思考"方法的关系
+
+DeepEyes 通过推理时反复裁剪区域图像来获取高分辨率视觉证据，准确率高但计算开销大。SLVR 通过 latent 学习一次性地将区域信息压缩为 compact 表征，推理时无需显式图像操作。两者不是互斥的——理想情况下，semantic-enriched latent 可以作为 DeepEyes 等方法的"内化"版本，减少裁剪迭代次数。
+
+---
+## 六、代码实现解读
+
+### 6.1 项目结构
 
 ```
 slvr/
@@ -226,7 +324,7 @@ slvr/
 └── requirements.txt
 ```
 
-### 4.2 数据流架构图
+### 6.2 数据流架构图
 
 ```
 输入数据格式（M-GRPO 训练单样本）：
@@ -304,7 +402,7 @@ M-GRPO 训练循环（mgrpo_trainer.py）：
 └──────────────────────────────────────────────────────┘
 ```
 
-### 4.3 关键技术细节
+### 6.3 关键技术细节
 
 **Bounding Box → Token 索引映射（`QwenVLBboxTokenMapper`）：**
 - 基于 Qwen 2.5 VL 的 vision tower 参数：patch_size=14, spatial_merge_size=2
@@ -329,7 +427,7 @@ M-GRPO 训练循环（mgrpo_trainer.py）：
 - `DECODING_STRATEGY = "latent"` 启用 SLVR 式推理
 - 自动检测可用 GPU，OOM 时自动回退
 
-### 4.4 公式 → 代码函数映射
+### 6.4 公式 → 代码函数映射
 
 | 公式 | 对应代码 | 位置 |
 |------|---------|------|
@@ -350,88 +448,6 @@ M-GRPO 训练循环（mgrpo_trainer.py）：
 - Stage 2 的 `accuracy_reward` 使用 **加权组合**：q1 权重 0.7, q2 权重 0.3（受环境变量 `MGRPO_ACC_Q2_WEIGHT` 控制），而非论文中看似等权的 $\mathcal{R}_{ans}^{(i)}$。
 
 ---
-
-## 五、实验结果
-
-### 5.1 标准 VQA 基准
-
-| 模型 | 推理范式 | OKVQA | GQA | VizWiz | ChartQA | TextVQA | AI2D |
-|------|---------|-------|-----|--------|---------|---------|------|
-| Qwen2.5-VL-7B | 纯文本 | 58.9 | 53.2 | 54.1 | 74.4 | 79.1 | 69.5 |
-| GRIT | 文本 CoT | 43.1 | 54.8 | 39.4 | 24.6 | 60.8 | 75.5 |
-| DeepEyes | 文本+显式裁剪 | 40.0 | 45.5 | 32.2 | -- | 40.4 | 37.0 |
-| Visual-SR1 | 文本 CoT | 49.0 | 52.3 | 35.8 | 71.7 | 70.1 | 69.0 |
-| LVR | 视觉 latent | 50.6 | **57.4** | 33.1 | 64.4 | 75.1 | **77.3** |
-| **SLVR-7B** | 视觉 + 语义 latent | **61.8** | 55.6 | **57.8** | **77.2** | **79.3** | 76.0 |
-| *Gain over LVR* | | *+11.2* | *-1.8* | *+24.7* | *+12.8* | *+4.2* | *-1.3* |
-
-**关键发现：** SLVR 在 OKVQA（+11.2）、VizWiz（+24.7）、ChartQA（+12.8）上对 LVR 提升显著，说明语义 latent 在这些需要细粒度语义理解的场景中作用突出。
-
-### 5.2 SV-QA 基准（核心实验）
-
-| 设置 | 推理范式 | V* Q1 | V* Q2 | V* Both | HRBench-4K Q1 | HRBench-4K Q2 | HRBench-4K Both | HRBench-8K Q1 | HRBench-8K Q2 | HRBench-8K Both |
-|------|---------|-------|-------|---------|-------------|-------------|----------------|-------------|-------------|----------------|
-| Qwen2.5-VL | 纯文本 | 76.4 | 55.5 | 44.0 | 60.5 | 74.1 | 45.8 | 53.5 | 66.1 | 37.5 |
-| GRIT | 文本 CoT | 69.6 | 61.8 | 49.7 | 58.4 | 70.4 | 48.6 | 49.1 | 61.9 | 38.6 |
-| DeepEyes | 文本+显式裁剪 | **83.3** | 79.1 | **70.2** | **71.3** | 79.3 | 60.6 | **65.1** | 72.4 | 49.0 |
-| Visual-SR1 | 文本 CoT | 75.9 | 73.3 | 62.8 | 63.9 | 76.4 | 54.6 | 56.3 | 67.4 | 44.4 |
-| LVR | 视觉 latent | 81.7 | 77.5 | 65.4 | 70.1 | 80.4 | 57.9 | 62.9 | 71.1 | 46.6 |
-| **SLVR-7B** | 视觉+语义 latent | 82.2 | **80.1** | 69.1 | 70.4 | **82.8** | **61.1** | 62.5 | **73.6** | **50.6** |
-| *Gain over LVR* | | *+0.5* | *+2.6* | *+3.7* | *+0.3* | *+2.4* | *+3.2* | *-0.4* | *+2.5* | *+4.0* |
-
-**关键发现：**
-- SLVR 在 Both Correct（两个问题都答对）指标上全面超越 LVR（+3.2 ~ +4.0），证明语义 latent 能同时编码多种语义维度
-- Q2 准确性提升（所有数据集 +2.4 ~ +2.6）是 SLVR 的核心优势——语义 latent 帮助模型更好地回答"另一个角度"的问题
-- 与其他 method 对比：纯文本方法（Qwen2.5-VL）在 Q2 上性能暴跌（V* Q1 76.4 → Q2 55.5），说明文本推理无法稳定支持语义变化；GRIT 和 Visual-SR1 虽引入显式推理链（CoT），但在多查询场景下（Both Correct）仍远落后于 latent 推理方法
-- DeepEyes 在 V* Q1 和 HRBench-8K Q1 上最高，但这是通过**推理时显式图像裁剪**实现的，计算开销巨大；SLVR 完全通过 latent 推理实现 competitive 的 Q1 性能
-
-### 5.3 VisualPuzzles 推理能力评估
-
-| 模型 | Algorithmic | Analogical | Deductive | Inductive | Spatial | Overall |
-|------|-------------|------------|-----------|-----------|---------|---------|
-| Qwen2.5-VL | 35.9 | 26.1 | 35.5 | **28.7** | 21.3 | 29.2 |
-| LVR | 31.3 | 25.6 | 40.5 | 24.4 | 26.2 | 29.4 |
-| **SLVR** | **37.4** | **28.0** | **45.5** | 26.3 | **33.6** | **34.2** |
-
-**关键发现：** SLVR 在 Deductive（+5.0）和 Spatial（+7.4）推理类别上大幅超越 LVR，证明属性级语义监督帮助模型捕获了结构化关系和空间线索，这些是纯视觉监督 latent 所遗漏的。
-
-### 5.4 消融实验
-
-| 设置 | 组件 | V* Both | HRBench-4K Both | HRBench-8K Both |
-|------|------|---------|------------------|------------------|
-| **文本基线** | | | | |
-| SFT (single-Q) | — | 51.8 | 52.8 | 43.5 |
-| SFT (multi-Q) | +多查询数据 | 57.1 | 50.1 | 41.1 |
-| SFT + GRPO (multi-Q) | +强化学习 | 58.6 | 55.5 | 47.8 |
-| **Latent 推理** | | | | |
-| LVR | 基线 | 65.4 | 57.9 | 46.6 |
-| + Stage 1 | +语义 latent 监督 | 67.5 | 59.6 | 46.9 |
-| + GRPO (Single-Q) | +单查询 GRPO | 62.8 | 57.6 | 49.3 |
-| + Multi-Q | +多查询 GRPO（无 M-GRPO） | 68.1 | 60.3 | 49.9 |
-| **SLVR-7B (Full)** | +M-GRPO 显式一致性约束 | **69.1** | **61.1** | **50.6** |
-
-**核心消融结论：**
-
-1. **文本 vs. Latent**：即使是数据量相同的最强文本基线（SFT + GRPO multi-Q），Both Correct 也全面落后 latent 推理方法（V* 58.6 vs. 69.1），说明文本链式思维在"同一区域多角度提问"场景中难以维持稳定 grounding。
-2. **Stage 1 语义监督**：加入语义 latent 后，V* Both 从 65.4 提升到 67.5，验证属性级语义信息有助于 joint correctness。
-3. **多查询 vs. 单查询 GRPO**：Multi-Q（多查询数据 + 标准 GRPO）比 Single-Q GRPO 提升了 Both Correct，说明更多样的训练信号本身有益。
-4. **M-GRPO 一致性约束是关键**：M-GRPO（显式 latent 一致性约束）在 Multi-Q 基础上进一步提升，证明显式对齐同一区域上的 cross-query latent 对语义一致性至关重要。
-
----
-
-## 六、关键洞察与讨论
-
-### 6.1 为什么需要语义 latent 而不只是视觉 latent？
-
-LVR 的视觉 latent 通过直接对齐 vision encoder 特征来保留视觉信息，但 vision encoder 的 patch 特征本身不显式编码"这是红色"、"这个人在跑"等属性语义——这些语义分散在深层特征中，缺乏显式的结构化引导。SLVR 引入一个额外的 `<sem>` token 作为**语义聚合点**，直接以结构化属性文本的嵌入作为监督，迫使模型将分散的视觉语义压缩到该 token 的 hidden state 中。
-
-### 6.2 M-GRPO 的 motivation
-
-Stage 1 虽然给单个 latent 编码了语义信息，但没有保证**在不同问题的扰动下该语义能稳定激活**。M-GRPO 的 latent consistency reward 直接对"两个不同问题产生不同 latent"这种 drift 进行惩罚，保证同一区域的核心语义表征不受问题表述方式的影响，而只保留 task-specific 的微小差异。
-
-### 6.3 与 DeepEyes 等"看图思考"方法的关系
-
-DeepEyes 通过推理时反复裁剪区域图像来获取高分辨率视觉证据，准确率高但计算开销大。SLVR 通过 latent 学习一次性地将区域信息压缩为 compact 表征，推理时无需显式图像操作。两者不是互斥的——理想情况下，semantic-enriched latent 可以作为 DeepEyes 等方法的"内化"版本，减少裁剪迭代次数。
 
 ---
 
