@@ -1,0 +1,1225 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LVR (Latent Visual Reasoning) — 阅读笔记</title>
+<!-- arxiv: 2509.24251 -->
+<!-- venue: ICLR 2026 -->
+<!-- tags: MLLM, 视觉推理, 强化学习 -->
+<!-- words-zh: 5409 -->
+<!-- words-en: 828 -->
+<!-- reading-time: 20 -->
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #ffffff;
+    --text: #1a1a2e;
+    --text-secondary: #555;
+    --border: #e1e4e8;
+    --link: #0969da;
+    --table-stripe: #f6f8fa;
+    --heading: #0d1117;
+    --blockquote-border: #0969da;
+    --blockquote-bg: #f0f6ff;
+    --inline-code: #d73a49;
+    --inline-code-bg: #f6f8fa;
+    --sidebar-width: 260px;
+    --toc-active: #0969da;
+    --content-max-width: 1350px;
+    --media-max-width: 1000px;
+    --content-padding: 48px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "Inter", "Noto Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 16px;
+    line-height: 1.75;
+    color: var(--text);
+    background: var(--bg);
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    width: var(--sidebar-width);
+    overflow-y: auto;
+    padding: 28px 20px 40px;
+    background: #fafbfc;
+    border-right: 1px solid var(--border);
+    z-index: 10;
+    scrollbar-width: thin;
+  }
+  .sidebar-title {
+    font-size: 13px; font-weight: 700; color: var(--text-secondary);
+    margin-bottom: 16px; letter-spacing: 0.06em; text-transform: uppercase;
+  }
+  .toc-list { list-style: none; padding: 0; margin: 0; }
+  .toc-list ul { list-style: none; padding-left: 14px; }
+  .toc-list li { margin: 1px 0; }
+  .toc-list a {
+    display: block; padding: 4px 12px; font-size: 13.5px; line-height: 1.45;
+    color: var(--text-secondary); text-decoration: none; border-radius: 4px;
+    border-left: 2px solid transparent; transition: all 0.15s;
+  }
+  .toc-list a:hover { color: var(--link); background: #e8f0fe; }
+  .toc-list a.active {
+    color: var(--toc-active); font-weight: 600;
+    border-left-color: var(--toc-active); background: #e8f0fe;
+  }
+  .toc-h1 a { font-weight: 600; color: var(--heading); font-size: 14px; }
+  .toc-h3 a { padding-left: 24px; font-size: 13px; }
+  .toc-h4 a { padding-left: 36px; font-size: 12.5px; }
+  .toc-empty { color: var(--text-secondary); font-size: 13px; font-style: italic; }
+
+  .main-wrapper {
+    margin-left: var(--sidebar-width);
+    min-height: 100vh;
+    display: flex; justify-content: center;
+  }
+  .content-inner {
+    width: 100%;
+    max-width: var(--content-max-width);
+    padding: 40px var(--content-padding) 80px;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    color: var(--heading); font-weight: 700; line-height: 1.3;
+    margin-top: 2em; margin-bottom: 0.6em; scroll-margin-top: 24px;
+  }
+  h1 { font-size: 2em; border-bottom: 2px solid var(--border); padding-bottom: 0.3em; margin-top: 0; }
+  h2 { font-size: 1.5em; border-bottom: 1px solid var(--border); padding-bottom: 0.25em; }
+  h3 { font-size: 1.25em; }
+  h4 { font-size: 1.1em; }
+  p { margin-bottom: 1em; }
+  a { color: var(--link); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  strong { font-weight: 600; }
+
+  blockquote {
+    border-left: 4px solid var(--blockquote-border);
+    background: var(--blockquote-bg);
+    padding: 12px 20px; margin: 1em 0;
+    border-radius: 0 6px 6px 0; color: var(--text-secondary);
+  }
+  blockquote p:last-child { margin-bottom: 0; }
+
+  code {
+    font-family: "JetBrains Mono", "SF Mono", "Fira Code", monospace;
+    font-size: 0.875em; background: var(--inline-code-bg);
+    padding: 2px 6px; border-radius: 4px; color: var(--inline-code);
+  }
+  pre {
+    background: #f6f8fa; color: #24292f;
+    border: 1px solid var(--border);
+    border-radius: 8px; padding: 16px 20px; overflow-x: auto;
+    margin: 1em 0; font-size: 14px; line-height: 1.55;
+  }
+  pre code { background: none; padding: 0; border-radius: 0; color: inherit; font-size: inherit; }
+
+  .codehilite { background: #f6f8fa; border: 1px solid var(--border); border-radius: 8px; padding: 16px 20px; overflow-x: auto; margin: 1em 0; }
+  .codehilite pre { background: none; padding: 0; margin: 0; border-radius: 0; }
+  .codehilite .hll { background-color: #fff8c5; }
+  .codehilite .c  { color: #6e7781; font-style: italic; }
+  .codehilite .k  { color: #cf222e; }
+  .codehilite .o  { color: #0550ae; }
+  .codehilite .s  { color: #0a3069; }
+  .codehilite .n  { color: #24292f; }
+  .codehilite .p  { color: #24292f; }
+  .codehilite .mi { color: #0550ae; }
+  .codehilite .nf { color: #8250df; }
+  .codehilite .nb { color: #953800; }
+  .codehilite .nc { color: #953800; }
+  .codehilite .bp { color: #953800; }
+
+  table { width: 100%; border-collapse: collapse; margin: 1em 0; font-size: 0.925em; }
+  th, td { border: 1px solid var(--border); padding: 10px 14px; text-align: left; }
+  th { background: var(--table-stripe); font-weight: 600; color: var(--heading); }
+  tr:nth-child(even) td { background: var(--table-stripe); }
+
+  .math.display { display: block; overflow-x: auto; padding: 12px 0; margin: 1em 0; }
+  ul, ol { padding-left: 1.5em; margin-bottom: 1em; }
+  li { margin-bottom: 0.3em; }
+  hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+  img { max-width: min(100%, var(--media-max-width)); height: auto; border-radius: 6px; margin: 0 auto; display: block; }
+  #main-content img { cursor: zoom-in; }
+  p:has(img) { text-align: center; max-width: var(--media-max-width); margin: 0.6em auto 0; }
+  table:has(img) { width: min(100%, var(--media-max-width)) !important; margin-left: auto; margin-right: auto; }
+  p:has(img) + p { text-align: center; font-size: 0.9em; color: var(--text-secondary); margin-top: 0.15em; margin-bottom: 0.6em; }
+  .mermaid { text-align: center; margin: 1.5em 0; background: #fafbfc; border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+  .article-stats {
+    font-size: 0.85rem; color: var(--text-secondary);
+    padding: 10px 18px; margin-bottom: 28px;
+    background: #f8f9fa; border: 1px solid var(--border); border-radius: 8px;
+  }
+  body.image-lightbox-open { overflow: hidden; }
+  .image-lightbox {
+    position: fixed; inset: 0; z-index: 1000;
+    display: none;
+    background: rgba(9, 12, 20, 0.88);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+  }
+  .image-lightbox.is-open { display: block; }
+
+  /* Stage uses flexbox to center the image; safe alignment prevents
+     clipping when zoomed-in content overflows — it falls back to
+     start so scrollbars reach every pixel. */
+  .image-lightbox__stage {
+    width: 100%; height: 100%;
+    overflow: auto;
+    display: flex;
+    align-items: safe center;
+    justify-content: safe center;
+    padding: 24px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.18) transparent;
+  }
+
+  .image-lightbox__image {
+    max-width: none; max-height: none;
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 20px 70px rgba(0, 0, 0, 0.5);
+    cursor: zoom-in;
+    flex-shrink: 0;
+    transition: box-shadow 0.3s;
+  }
+
+  /* Close button — top-right glass circle */
+  .image-lightbox__close {
+    position: absolute; top: 20px; right: 20px; z-index: 1010;
+    width: 40px; height: 40px;
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.25);
+    color: rgba(255,255,255,0.85);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    transition: background 0.2s, border-color 0.2s, transform 0.2s, color 0.2s;
+  }
+  .image-lightbox__close:hover {
+    background: rgba(255,255,255,0.15);
+    border-color: rgba(255,255,255,0.3);
+    color: #fff;
+    transform: scale(1.08);
+  }
+
+  /* Zoom toolbar — bottom-center glass pill */
+  .image-lightbox__toolbar {
+    position: absolute; bottom: 28px; left: 50%; transform: translateX(-50%); z-index: 1010;
+    display: flex; align-items: center; gap: 4px;
+    padding: 6px;
+    background: rgba(30, 30, 45, 0.75);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 32px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.35);
+  }
+
+  .image-lightbox__btn {
+    width: 36px; height: 36px;
+    border: none; border-radius: 50%;
+    background: transparent;
+    color: rgba(255,255,255,0.82);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.2s, color 0.2s;
+  }
+  .image-lightbox__btn:hover {
+    background: rgba(255,255,255,0.13);
+    color: #fff;
+  }
+
+  .image-lightbox__zoom-val {
+    min-width: 52px; text-align: center;
+    color: rgba(255,255,255,0.82);
+    font: 600 12.5px/32px "Inter", -apple-system, sans-serif;
+    cursor: pointer; user-select: none;
+    border-radius: 20px; padding: 0 6px;
+    transition: background 0.2s, color 0.2s;
+    letter-spacing: -0.01em;
+  }
+  .image-lightbox__zoom-val:hover {
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+  }
+
+  .image-lightbox__caption {
+    position: absolute; left: 28px; right: 28px; bottom: 96px; z-index: 1005;
+    color: rgba(255,255,255,0.72); text-align: center;
+    font-size: 13px; line-height: 1.45;
+    pointer-events: none;
+  }
+
+  @media (max-width: 1024px) {
+    .sidebar { position: static; width: 100%; height: auto; max-height: 35vh; border-right: none; border-bottom: 1px solid var(--border); }
+    .main-wrapper { margin-left: 0; display: block; }
+    .content-inner { max-width: none; padding: 24px 20px 60px; }
+    .image-lightbox__stage { padding: 12px; }
+    .image-lightbox__close { top: 12px; right: 12px; width: 36px; height: 36px; }
+    .image-lightbox__toolbar { bottom: 18px; padding: 5px; gap: 2px; }
+    .image-lightbox__btn { width: 32px; height: 32px; }
+    .image-lightbox__caption { bottom: 78px; left: 18px; right: 18px; }
+  }
+</style>
+
+<script>
+MathJax = {
+  tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']], processEscapes: true, tags: 'none' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] }
+};
+</script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  mermaid.initialize({ startOnLoad: true, theme: 'neutral', securityLevel: 'loose' });
+});
+</script>
+
+</head>
+<body>
+
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-title">目录</div>
+  <ul class="toc-list">
+<li class="toc-h1"><a href="#lvr-latent-visual-reasoning">LVR (Latent Visual Reasoning) — 阅读笔记</a>
+<ul>
+</li>
+<li class="toc-h2"><a href="#1">1. 一句话讲清楚</a>
+</li>
+<li class="toc-h2"><a href="#2">2. 论文要解决什么问题</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#21">2.1 现有多模态推理的两个瓶颈</a>
+</li>
+<li class="toc-h3"><a href="#22">2.2 核心洞察</a>
+</li>
+<li class="toc-h3"><a href="#23">2.3 问题定义</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#3">3. 方法总览</a>
+</li>
+<li class="toc-h2"><a href="#4">4. 模型与训练细节</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#41">4.1 基础架构</a>
+</li>
+<li class="toc-h3"><a href="#42-token">4.2 特殊 Token 体系</a>
+</li>
+<li class="toc-h3"><a href="#43">4.3 训练数据与资源</a>
+</li>
+<li class="toc-h3"><a href="#44-monkey-patch">4.4 前向传播的 Monkey Patch</a>
+</li>
+<li class="toc-h3"><a href="#45">4.5 数据打包</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#5">5. 解码策略分析</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#51-fixed-token">5.1 Fixed Token（论文采用）</a>
+</li>
+<li class="toc-h3"><a href="#52-latent-end-token">5.2 Latent End Token（失败）</a>
+</li>
+<li class="toc-h3"><a href="#53-mode-switching-loss">5.3 Mode Switching Loss（完全失败）</a>
+</li>
+<li class="toc-h3"><a href="#54">5.4 小结</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#6">6. 实验结果深度解读</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#61-7b">6.1 主要结果（7B 模型）</a>
+</li>
+<li class="toc-h3"><a href="#62-rl-3b">6.2 RL 结果（3B 模型）</a>
+</li>
+<li class="toc-h3"><a href="#63">6.3 消融实验深度分析</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#7">7. 代码实现关键细节</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#71-forward-monkey-patch">7.1 多种 forward 模式的 Monkey Patch</a>
+</li>
+<li class="toc-h3"><a href="#72">7.2 解码的三条路径</a>
+</li>
+<li class="toc-h3"><a href="#73">7.3 数值稳定性</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#8">8. 核心贡献总结</a>
+</li>
+<li class="toc-h2"><a href="#9">9. 常见问题与讨论</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#q1lvr-coconut">Q1：LVR 和 COCONUT 的关系是什么？</a>
+</li>
+<li class="toc-h3"><a href="#q2lvr-hidden-state">Q2：LVR 的 hidden state 是什么？能被可视化吗？</a>
+</li>
+<li class="toc-h3"><a href="#q3-projector">Q3：为什么冻结视觉编码器和 projector？</a>
+</li>
+<li class="toc-h3"><a href="#q4lvr">Q4：LVR 在什么任务上最有效？什么时候可能有害？</a>
+</li>
+<li class="toc-h3"><a href="#q5">Q5：论文最应该关注的局限是什么？</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#10-takeaway">10. Takeaway</a>
+</ul></li>
+</li></ul>
+</nav>
+
+<main class="main-wrapper">
+  <div class="content-inner" id="main-content">
+<h1 id="lvr-latent-visual-reasoning">LVR (Latent Visual Reasoning) — 阅读笔记</h1>
+<div class="article-stats">5,409 字 · English 828 词 · 约 20 分钟阅读</div>
+
+<blockquote>
+<p>本文基于以下本地材料整理：</p>
+<ul>
+<li>论文 TeX 源码：<code>arXiv-2509.24251v2/</code></li>
+<li>论文图片：<code>arXiv-2509.24251v2/figures/*.pdf</code></li>
+<li>官方代码仓库：<code>lvr/</code></li>
+<li>本文图片导出目录：<code>assets/lvr/</code></li>
+</ul>
+<p><strong>主页</strong>：<a href="https://vincentleebang.github.io/lvr-project-page/">vincentleebang.github.io/lvr-project-page</a>　<strong>代码</strong>：<a href="https://github.com/VincentLeebang/lvr">github.com/VincentLeebang/lvr</a>　<strong>模型</strong>：<a href="https://huggingface.co/vincentleebang/LVR-7B">huggingface.co/vincentleebang/LVR-7B</a></p>
+</blockquote>
+<hr />
+<h2 id="1">1. 一句话讲清楚</h2>
+<p>LVR 的核心想法是：MLLM 在回答视觉问题前，先在 visual embedding 空间里"想一想"——用 LLM 的 hidden state 重建图像中与问题相关的 ROI 视觉语义；然后用 SFT + GRPO 两阶段训练让模型学会"怎么想"和"怎么答"。</p>
+<p>这篇论文的核心不是又做了一个更大的 MLLM，而是提出了一个<strong>全新的多模态推理范式</strong>：让 LLM 在视觉和文本共享的语义空间中直接推理，打破"推理只能在文本空间进行"的固有假设。</p>
+<div class="codehilite"><pre><span></span><code>以前：image → LLM → text tokens → think about image → answer
+      image → LLM → call tools → edit image → re-encode → answer
+现在：image → LLM → latent visual reasoning (hidden states) → answer
+关键：视觉推理直接在 embedding 空间完成，不经过文本中转，也不依赖外部工具
+</code></pre></div>
+
+<h2 id="2">2. 论文要解决什么问题</h2>
+<h3 id="21">2.1 现有多模态推理的两个瓶颈</h3>
+<p>当前 MLLM 的推理范式分两种，但都面临根本约束：</p>
+<p><strong>范式一：Think about Images（在文本空间推理）</strong></p>
+<div class="codehilite"><pre><span></span><code>image + question → LLM → text CoT tokens → ... → answer
+</code></pre></div>
+
+<p>代表方法：LLaVA-CoT、Vision-R1、PAPO。模型在文字空间做 CoT 分解，生成额外的文本 token 辅助理解图像。</p>
+<p><strong>问题</strong>：(1) 文本空间是视觉信息的间接、低效表示——模型被迫把"看到什么"翻译成"文字描述"，再基于描述推理；(2) 过多文本 token 会主导上下文窗口，产生 <strong>cross-modal interference</strong>——文本信号盖过视觉信号。实验中 PAPO 和 Vision-R1 在 V* 基准上反而比基座模型更差（PAPO: 78.5 → 36.1），就是个直接证据。</p>
+<p><strong>范式二：Think with Images（调用外部工具操作图像）</strong></p>
+<div class="codehilite"><pre><span></span><code>image + question → LLM → tool call (crop/zoom/OCR) → re-encode → ... → answer
+</code></pre></div>
+
+<p>代表方法：PixelReasoner、Argus-X3、ViperGPT。模型在推理中调用外部工具编辑图像，将增强后的视觉 token 重新注入。</p>
+<p><strong>问题</strong>：(1) 受限于预定义工具的 API 能力——工具集固定，难以扩展；(2) 许多基本视觉操作（如缩放、裁剪 ROI）本可由 MLLM 自身的视觉编码器完成，不需要绕道工具调用；(3) 工具输出的图像被重新编码后会丢失原始信息。</p>
+<h3 id="22">2.2 核心洞察</h3>
+<p>论文提出了一个简洁而深刻的问题：</p>
+<blockquote>
+<p><em>如果视觉 token 和文本 token 已经嵌入在 MLLM 的同一个共享语义空间中，为什么不同时在这个空间中对两者进行推理？</em></p>
+</blockquote>
+<p>灵感来自 NLP 中的 <strong>COCONUT</strong>（Continuous Thought）——它发现 LLM 可以通过传递 last hidden state 而非离散 token 来表达更高效的推理过程。LVR 把这个思想从纯文本扩展到<strong>文本+视觉联合推理</strong>：让 hidden state 直接逼近问题相关的视觉语义（ROI 的 visual embeddings），而不是把视觉信息转成文本再思考。</p>
+<p><img alt="LVR 概念图" src="assets/lvr/lvr-teaser.png" /></p>
+<p><em>图 1：论文 teaser，一张图概括三种多模态推理范式。</em></p>
+<ul>
+<li><strong>(a) Think about Images</strong>：图像编码后，LLM 完全在文本空间进行 CoT 推理（"I see a clock... the time is...")。视觉信息在整个推理链中只作为静态条件输入一次，后续推理步骤不直接触及视觉 token。问题：文本描述是视觉的有损压缩，精细的视觉细节（钟表指针角度、物体纹理、空间位置关系）在转成文字时已经丢失。</li>
+<li><strong>(b) Think with Images</strong>：LLM 在推理过程中调用外部工具裁剪图像 ROI 并重新编码。相比 (a)，增强的视觉信息被注入推理过程。但问题在于：工具集是封闭的（只能 crop/zoom/OCR），且新注入的视觉 token 需要在统一框架中与文本 token 对齐，这会受训练数据偏差影响——模型可能学会了"忽视"重新注入的子图像。</li>
+<li><strong>(c) LVR（本论文）</strong>：不转成文字、不调用工具——LLM 进入 latent reasoning 模式，用 hidden state 直接向 ROI 的 visual embedding 空间逼近（绿色→灰色 token 的过程）。视觉推理和文本生成在同一个自动回归过程中交替进行，共享同一套 attention 机制和 KV cache。关键区别：LVR 重建的是<strong>视觉语义</strong>（semantic-level ROI representation），而不是像素级图像。</li>
+</ul>
+<h3 id="23">2.3 问题定义</h3>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>Think about Images</th>
+<th>Think with Images</th>
+<th>LVR</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>推理空间</td>
+<td>纯文本 token</td>
+<td>文本 + 外部工具编辑的图像</td>
+<td>visual embedding + 文本 token 联合</td>
+</tr>
+<tr>
+<td>视觉信号</td>
+<td>静态，仅在开始时注入</td>
+<td>动态，但依赖工具 API</td>
+<td>动态，模型自生成</td>
+</tr>
+<tr>
+<td>信息损失</td>
+<td>大（视觉→文本）</td>
+<td>中（重编码损失）</td>
+<td>小（在 embedding 空间操作）</td>
+</tr>
+<tr>
+<td>工具依赖</td>
+<td>无</td>
+<td>强</td>
+<td>无</td>
+</tr>
+<tr>
+<td>可扩展性</td>
+<td>好（但效果差）</td>
+<td>差</td>
+<td>好</td>
+</tr>
+</tbody>
+</table>
+<h2 id="3">3. 方法总览</h2>
+<p>LVR 把一次视觉问答拆成三段：</p>
+<div class="codehilite"><pre><span></span><code>image + question
+  → text tokens (understanding)
+  → &lt;|lvr_start|&gt;
+  → latent visual reasoning (hidden state 自循环，逼近 ROI embedding)
+  → &lt;|lvr_end|&gt;
+  → answer (text tokens)
+</code></pre></div>
+
+<p>直观解释：</p>
+<ul>
+<li><code>&lt;|lvr_start|&gt;</code>：表示"我需要先看清楚图中的关键区域再回答"。</li>
+<li><code>latent visual reasoning</code>：LLM 进入特殊模式——每一步不预测离散 token，而是将 last hidden state 直接作为下一位置的 input embedding 传递。这些 hidden state 在 SFT 阶段被训练来逼近 ROI 视觉 token 的 ground-truth。相当于模型在心里"复现"关键视觉信息。</li>
+<li><code>&lt;|lvr_end|&gt;</code>：表示"我看清楚了，可以开始回答了"。</li>
+<li><code>answer</code>：基于增强后的上下文（包含 LVR 产生的视觉语义）进行标准文本生成。</li>
+</ul>
+<p><img alt="LVR 训练和推理流程" src="assets/lvr/lvr_main.png" /></p>
+<p><em>图 2：LVR 训练和推理流程，两栏分别展示 SFT 和 RL 阶段，以及推理时的三种解码策略。</em></p>
+<p><strong>左栏 — SFT 训练（Teacher Forcing）：</strong></p>
+<ul>
+<li>输入：图像 + 问题 + ROI 边界框标注 + 答案。使用 <strong>Visual COT</strong> 数据集（438K QA 对，每对都有问题相关 ROI 的 bbox 标注）。</li>
+<li>序列构造：<code>[Image Tokens] [Question] &lt;|lvr_start|&gt; &lt;|lvr|&gt; &lt;|lvr|&gt; ... &lt;|lvr_end|&gt; [Answer]</code>。<code>&lt;|lvr|&gt;</code> 位置上预先插入 ROI 的 ground-truth visual embedding（通过 bbox 从原始 image tokens 中按索引提取，O(1) 时间）。</li>
+<li>联合损失：<ul>
+<li><strong>LVR Loss (MSE)</strong>：<code>&lt;|lvr_start|&gt;</code> 位置的 LLM last hidden state → 逼近对应 <code>&lt;|lvr|&gt;</code> 位置的 ground-truth visual embedding。公式：<span class="math inline">$\mathcal{L}_{\text{LVR}} = \frac{1}{T_v} \sum_{t=1}^{T_v} \| \mathbf{h}_t - \mathbf{v}_t \|_2^2$</span></li>
+<li><strong>NTP Loss (CE)</strong>：答案部分的 standard next-token prediction。</li>
+<li>总损失：<span class="math inline">$\mathcal{L} = \mathcal{L}_{\text{NTP}} + \lambda_{\text{LVR}} \cdot \mathcal{L}_{\text{LVR}}$</span></li>
+</ul>
+</li>
+<li>此阶段仅训练 LLM 参数（冻结视觉编码器和 projector），让 LLM 学会在 hidden state 空间中表示视觉语义。</li>
+<li>LVR 输出的 hidden state 序列 <code>&lt;H1, H2, H3, ...&gt;</code> 作为后续答案生成的增强上下文——它们为文本生成提供了额外的视觉先验。</li>
+</ul>
+<p><strong>右栏 — RL 训练（GRPO_latent）：</strong></p>
+<ul>
+<li>使用 ViRL 数据集。SFT 后的模型加载 checkpoint，进入 GRPO 在线训练。</li>
+<li>关键挑战：标准 GRPO 的 policy gradient loss <span class="math inline">$\min(r_t(\theta) \hat{A}_t, \text{clip}(r_t(\theta), 1-\varepsilon, 1+\varepsilon) \hat{A}_t)$</span> 定义在 token log-probability ratio <span class="math inline">$r_t(\theta) = \frac{\pi_\theta(y_t|...)}{\pi_{\theta_{\text{old}}}(y_t|...)}$</span> 上，但 LVR 过程不产生离散 token — 没有 log-prob 可算。</li>
+<li><strong>GRPO_latent 的核心 trick</strong>：Rollout 时记录 LVR 阶段的 hidden states <span class="math inline">$\widetilde{h}^{\text{latent}}$</span>；计算 importance ratio 时，做一次 teacher-forcing forward pass，把这些 hidden states 直接 patch 回 LVR 位置，使得模型在<strong>完全相同的 LVR 上下文</strong>下预测文本 token：</li>
+</ul>
+<p><div class="math display">$$r_{i,t}(\theta) = \frac{\pi_{\theta}(y_{i,t} \mid q, I, \widetilde{h}^{\text{latent}}_{i}, y_{i,&lt;t})}{\pi_{\theta_{\text{old}}}(y_{i,t} \mid q, I, \widetilde{h}^{\text{latent}}_{i}, y_{i,&lt;t})}$$</div></p>
+<ul>
+<li>奖励设计：<ul>
+<li><strong>格式奖励</strong>（format reward）：输出是否同时包含 <code>&lt;|lvr_start|&gt;</code> 和 <code>&lt;|lvr_end|&gt;</code>（鼓励模型用 LVR）。</li>
+<li><strong>准确性奖励</strong>（accuracy reward）：答案是否正确（间接监督 LVR 的推理质量）。</li>
+</ul>
+</li>
+<li>和 SFT 的关键区别：RL 不约束 LVR 中间输出——不指定 ROI、不指定长度、不要求逼近特定 embedding。环境奖励"间接"告诉模型 LVR 做得好不好。这等价于让 LVR 过程"自我进化"。</li>
+</ul>
+<p><strong>底部 — 三种推理解码策略：</strong></p>
+<ul>
+<li><strong>Fixed Token</strong>（论文默认）：设定固定步数预算（4/8/16），用完即退出。好处是推理时完全确定，不需要额外判断逻辑。</li>
+<li><strong>Latent End Token</strong>：训练一个可学习的 end vector，LVR hidden state 与它的距离小于阈值时退出。但实验发现严重不稳定。</li>
+<li><strong>Mode Switching Loss</strong>：BCE loss 监督 LM Head 在正确时机预测 <code>&lt;|lvr_end|&gt;</code>。但 LVR 步数坍缩到 0。</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>模块</th>
+<th>做什么</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SFT (Visual COT)</td>
+<td>用 ROI bbox 数据让 LLM 学会在 hidden state 空间中重建视觉语义</td>
+</tr>
+<tr>
+<td>GRPO_latent (ViRL)</td>
+<td>用环境奖励让 LVR 过程自我进化，不约束中间输出</td>
+</tr>
+<tr>
+<td>Fixed Token Decoding</td>
+<td>推理时设定固定 LVR 步数，稳定可控</td>
+</tr>
+</tbody>
+</table>
+<h2 id="4">4. 模型与训练细节</h2>
+<h3 id="41">4.1 基础架构</h3>
+<p>基于 <strong>Qwen2.5-VL 3B / 7B</strong>。视觉编码器最大分辨率 5120×28×28 pixels，最小 128×28×28。<strong>冻结</strong>视觉编码器和 multimodal projector，<strong>仅训练 LLM 参数</strong>。这样的设计选择是有意为之：论文的假说是"最优的模态投影可以在不调 projector 的情况下学到"，关键在 LLM 内部学会 visual reasoning，而非依赖 projector 的对齐。</p>
+<h3 id="42-token">4.2 特殊 Token 体系</h3>
+<div class="codehilite"><pre><span></span><code><span class="o">&lt;|</span><span class="n">lvr_start</span><span class="o">|&gt;</span><span class="w">       </span><span class="err">→</span><span class="w"> </span><span class="n">触发</span><span class="w"> </span><span class="n">LVR</span><span class="w"> </span><span class="n">模式</span><span class="err">，</span><span class="n">LLM</span><span class="w"> </span><span class="n">从此位置开始传</span><span class="w"> </span><span class="n">hidden</span><span class="w"> </span><span class="n">state</span>
+<span class="o">&lt;|</span><span class="n">lvr</span><span class="o">|&gt;</span><span class="w">             </span><span class="err">→</span><span class="w"> </span><span class="n">训练时的占位</span><span class="w"> </span><span class="n">token</span><span class="err">，</span><span class="n">实际</span><span class="w"> </span><span class="n">embedding</span><span class="w"> </span><span class="n">被替换为</span><span class="w"> </span><span class="n">ground</span><span class="o">-</span><span class="n">truth</span><span class="w"> </span><span class="n">visual</span><span class="w"> </span><span class="n">embedding</span>
+<span class="o">&lt;|</span><span class="n">lvr_end</span><span class="o">|&gt;</span><span class="w">         </span><span class="err">→</span><span class="w"> </span><span class="n">退出</span><span class="w"> </span><span class="n">LVR</span><span class="w"> </span><span class="n">模式</span><span class="err">，</span><span class="n">恢复文本生成</span>
+<span class="o">&lt;|</span><span class="n">lvr_latent_end</span><span class="o">|&gt;</span><span class="w">  </span><span class="err">→</span><span class="w"> </span><span class="n">可学习向量</span><span class="err">，</span><span class="n">用于</span><span class="w"> </span><span class="n">Latent</span><span class="w"> </span><span class="n">End</span><span class="w"> </span><span class="n">Token</span><span class="w"> </span><span class="n">策略</span><span class="err">（</span><span class="n">消融用</span><span class="err">，</span><span class="n">非主线</span><span class="err">）</span>
+</code></pre></div>
+
+<h3 id="43">4.3 训练数据与资源</h3>
+<table>
+<thead>
+<tr>
+<th>阶段</th>
+<th>模型</th>
+<th>数据</th>
+<th>关键参数</th>
+<th>硬件</th>
+<th>训练时间</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SFT</td>
+<td>3B + 7B</td>
+<td>Visual COT (438K QA，均含 ROI bbox)</td>
+<td>lr=1e-5, 2500 steps, λ_LVR (MSE), 数据打包 batch≈3.2/device</td>
+<td>4×AMD MI250</td>
+<td>~40h (7B)</td>
+</tr>
+<tr>
+<td>RL</td>
+<td>仅 3B</td>
+<td>ViRL (视觉推理 QA，不含 bbox)</td>
+<td>lr=1e-5, τ=0.9, β=0.04, 8 rollouts/input, ~1500 steps</td>
+<td>4×AMD MI250</td>
+<td>~20h</td>
+</tr>
+</tbody>
+</table>
+<p>注：RL 阶段未扩展到 7B 是因为计算资源限制（论文明确指出），而非方法本身不支持。从 3B 的 RL 收益推断，7B + RL 应能取得更强结果。</p>
+<h3 id="44-monkey-patch">4.4 前向传播的 Monkey Patch</h3>
+<p>LVR 通过在 Qwen2.5-VL 标准 forward 函数上 monkey patch 实现，核心逻辑（代码来自 <code>monkey_patch_forward_lvr.py</code>）：</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># 推理时的关键：上一位置的 last hidden state → 当前位置的 input embedding</span>
+<span class="k">if</span> <span class="n">lvr_mode_switch</span><span class="p">:</span>
+    <span class="n">inputs_embeds</span><span class="p">[</span><span class="n">lvr_mode_switch</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">last_position_hidden_state</span><span class="p">[</span><span class="n">lvr_mode_switch</span><span class="p">]</span>
+
+<span class="c1"># 训练时的关键：LVR token 位置插入 ground-truth visual embedding</span>
+<span class="k">if</span> <span class="n">lvr_tokens</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="c1"># lvr_tokens 是 ROI 内 visual tokens 的全局索引列表</span>
+    <span class="n">selected_lvr_embeds</span> <span class="o">=</span> <span class="n">image_embeds</span><span class="p">[</span><span class="n">global_lvr_token_indices</span><span class="p">]</span>  <span class="c1"># [L_total, H]</span>
+    <span class="n">inputs_embeds</span><span class="p">[</span><span class="n">batch_indices</span><span class="p">,</span> <span class="n">seq_positions</span><span class="p">]</span> <span class="o">=</span> <span class="n">selected_lvr_embeds</span>
+</code></pre></div>
+
+<p>训练和推理的区别仅在于 <code>lvr_mode_switch</code> vs <code>lvr_tokens</code> 哪个被传入。</p>
+<h3 id="45">4.5 数据打包</h3>
+<p>LVR 的一个实现细节：由于不同图像的 visual token 数量差异很大（分辨率 × 内容复杂度），加上不同 ROI 的 token 数量也不同，batch 内长度极度不平衡。论文使用 InternVL 的自适应多模态数据打包策略——多个短实例拼成一个长序列，长实例单独处理。平均有效 batch size ~3.2 per device。不打包的话 GPU 利用率会很低（大量 padding）。</p>
+<h2 id="5">5. 解码策略分析</h2>
+<p>LVR 在推理时面临一个关键挑战：<strong>如何判断 LVR 已经"想够了"</strong>？</p>
+<p>这个问题本质上是在连续 hidden state 空间中定义"停止条件"。论文探索了三种方案：</p>
+<h3 id="51-fixed-token">5.1 Fixed Token（论文采用）</h3>
+<p>设定固定步数 <code>k</code>（4/8/16），LLM 在 <code>&lt;|lvr_start|&gt;</code> 后强制运行 <code>k</code> 步 hidden-state 自循环，然后自动退出。</p>
+<p><strong>为什么有效</strong>：虽然看起来是"粗暴"方案，但实验表明只要步数 ≥ 4，性能就显著优于不推理的基线。8 步通常在大多数 benchmark 上达到最优。固定步数让训练和推理完全一致（SFT 阶段也是固定步数的 teacher forcing），不存在 train-test mismatch。</p>
+<p><strong>为什么不是最优</strong>：理论上简单问题可能只需要 1-2 步，复杂问题可能需要 16+ 步。固定步数意味着简单问题浪费计算、复杂问题可能不够用。</p>
+<h3 id="52-latent-end-token">5.2 Latent End Token（失败）</h3>
+<p>训练一个可学习的 <code>lvr_latent_end</code> 向量。在 LVR 模式下，每一步计算 hidden state 与这个向量的距离（MSE / L1 / cosine），距离小于阈值就退出。</p>
+<p><strong>失败原因</strong>（论文的人类评估）：无论用哪种距离度量、哪种阈值，模型要么不退出（一直跑到 max length），要么提前退出（推理还没完成就终止）。根本原因是在 7B 模型的 3584 维 continuous hidden state 空间中，定义一个稳定、可泛化的"边界"极其困难——训练数据中的距离分布无法覆盖测试时的多样性。</p>
+<h3 id="53-mode-switching-loss">5.3 Mode Switching Loss（完全失败）</h3>
+<p>在 SFT 阶段给 LM Head 添加 BCE loss：对 LVR 序列中最后一个 <code>&lt;|lvr|&gt;</code> token，监督 LM Head 在该位置输出高 <code>&lt;|lvr_end|&gt;</code> 概率；对其他 <code>&lt;|lvr|&gt;</code> token，监督低概率。推理时当 LM Head 预测 <code>&lt;|lvr_end|&gt;</code> 时退出。</p>
+<p><strong>失败原因</strong>：这种监督信号只在 SFT 数据中有明确的"最后一步"概念时才能工作。但在实际情况中，LM Head 在 LVR 模式下收到的 hidden state（而非正常 token embedding）与其训练分布不匹配，导致 <code>&lt;|lvr_end|&gt;</code> 的概率一直是噪声——模型 LVR 步数完全坍缩到 0。</p>
+<h3 id="54">5.4 小结</h3>
+<table>
+<thead>
+<tr>
+<th>策略</th>
+<th>原理</th>
+<th>效果</th>
+<th>核心问题</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Fixed Token</td>
+<td>固定步数 k，用完退出</td>
+<td><strong>最优</strong>（k=8 在多数 benchmark 表现最好）</td>
+<td>无法自适应</td>
+</tr>
+<tr>
+<td>Latent End Token</td>
+<td>hidden state 与 learnable vector 距离 &lt; 阈值退出</td>
+<td>严重不稳定（V*: 81.7→39.8）</td>
+<td>continuous 空间无可靠边界</td>
+</tr>
+<tr>
+<td>Mode Switching Loss</td>
+<td>BCE 监督 LM Head 预测 <code>&lt;\|lvr_end\|&gt;</code> 时机</td>
+<td>完全失败（步数→0）</td>
+<td>train-test 分布不匹配</td>
+</tr>
+</tbody>
+</table>
+<p>论文最终选择 Fixed Token 作为默认策略。这是一个务实的折中——在可变长度推理的稳定性问题解决之前，固定步数至少提供了可靠、可复现的 strong baseline。</p>
+<h2 id="6">6. 实验结果深度解读</h2>
+<h3 id="61-7b">6.1 主要结果（7B 模型）</h3>
+<div class="codehilite"><pre><span></span><code>Benchmark 说明：
+
+- V*：综合视觉细节理解（含两个子集）
+- V*_DA (Detail Attribute)：细粒度视觉细节搜索
+- V*_RP (Relative Position)：相对空间关系推理
+- MMVP：通过微调图像细节扰动来测试感知鲁棒性
+- Counting：场景中特定物体计数
+- IQ-Test：几何/图形推理
+- JigSaw：从碎片重建图像
+- Relative Reflectance：像素级反射率比较（需多图像）
+- Spatial Relation：场景内物体空间关系理解
+</code></pre></div>
+
+<p><strong>在 Qwen2.5-VL-7B 基座上的表现</strong>（论文 Table 1）：</p>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th>V*</th>
+<th>V*_DA</th>
+<th>V*_RP</th>
+<th>MMVP</th>
+<th>Counting</th>
+<th>IQ-Test</th>
+<th>JigSaw</th>
+<th>R.Refl</th>
+<th>Spatial</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Qwen2.5-VL（基座）</td>
+<td>78.5</td>
+<td>81.7</td>
+<td>73.7</td>
+<td>66.7</td>
+<td>66.7</td>
+<td>26.0</td>
+<td>52.0</td>
+<td>38.8</td>
+<td>87.4</td>
+</tr>
+<tr>
+<td>PAPO（Think about）</td>
+<td>36.1</td>
+<td>25.2</td>
+<td>52.6</td>
+<td>54.3</td>
+<td>66.7</td>
+<td>29.3</td>
+<td>52.0</td>
+<td>39.6</td>
+<td>88.8</td>
+</tr>
+<tr>
+<td>Vision-R1（Think about）</td>
+<td>70.2</td>
+<td>70.4</td>
+<td>69.7</td>
+<td>46.7</td>
+<td>51.7</td>
+<td>26.7</td>
+<td>27.3</td>
+<td><strong>44.8</strong></td>
+<td>66.4</td>
+</tr>
+<tr>
+<td>PixelReasoner（Think with）</td>
+<td>80.1</td>
+<td>81.7</td>
+<td>77.6</td>
+<td>67.0</td>
+<td>66.7</td>
+<td>25.3</td>
+<td>52.7</td>
+<td>42.5</td>
+<td>88.1</td>
+</tr>
+<tr>
+<td>SFT（同数据训练但不含 LVR）</td>
+<td>79.1</td>
+<td>82.6</td>
+<td>73.7</td>
+<td>65.7</td>
+<td>67.5</td>
+<td>26.7</td>
+<td>45.3</td>
+<td>33.6</td>
+<td>88.8</td>
+</tr>
+<tr>
+<td><strong>LVR (4 Steps)</strong></td>
+<td>81.2</td>
+<td><strong>84.4</strong></td>
+<td>76.3</td>
+<td><strong>72.0</strong></td>
+<td>69.2</td>
+<td>28.7</td>
+<td><strong>52.7</strong></td>
+<td>42.5</td>
+<td><strong>89.5</strong></td>
+</tr>
+<tr>
+<td><strong>LVR (8 Steps)</strong></td>
+<td><strong>81.7</strong></td>
+<td><strong>84.4</strong></td>
+<td>77.6</td>
+<td>71.7</td>
+<td>70.0</td>
+<td><strong>29.3</strong></td>
+<td>52.0</td>
+<td>42.5</td>
+<td>86.0</td>
+</tr>
+<tr>
+<td><strong>LVR (16 Steps)</strong></td>
+<td>80.6</td>
+<td>81.7</td>
+<td><strong>79.0</strong></td>
+<td>71.7</td>
+<td><strong>70.8</strong></td>
+<td>27.3</td>
+<td><strong>52.7</strong></td>
+<td>41.8</td>
+<td>87.4</td>
+</tr>
+</tbody>
+</table>
+<p><strong>逐组对比分析：</strong></p>
+<p><strong>① LVR vs 基座 Qwen2.5-VL（核心提升）：</strong></p>
+<ul>
+<li>V*：<code>78.5 → 81.7</code>（+3.2pp）——LVR 让模型在综合视觉细节理解上超越基座。注意 V* 是 V*_DA 和 V*_RP 的综合分，提升来自两个子集的协同增长。</li>
+<li>V*_DA（细节搜索）：<code>81.7 → 84.4</code>（+2.7pp）。这是靠"心里复现 ROI 细节"来实现的——模型不再需要从原始 image tokens 中大海捞针，而是用 LVR 把注意力引导到正确区域。</li>
+<li>V*_RP（空间推理）：<code>73.7 → 79.0</code>（+5.3pp，最大单项提升）。空间关系是一种难以用文字精确描述的信息（"A 在 B 的左上方，距离约 3 厘米" vs 直接在心里表示这个空间配置），所以 LVR 在空间推理上受益最大。</li>
+<li>MMVP（感知鲁棒性）：<code>66.7 → 72.0</code>（+5.3pp）。MMVP 通过微调图像细节测试模型是否真的"看清楚"了。LVR 让模型先重建关键区域的视觉语义再做判断，相当于多了一层 verification，减少了对微小变化的敏感度。</li>
+<li>Counting：<code>66.7 → 70.8</code>（+4.1pp）。计数任务需要精确遍历图像中的目标实例——LVR 让模型在"心里标出"目标位置后再数，比直接从全局图像 embedding 中推断更可靠。</li>
+</ul>
+<p><strong>② LVR vs "Think about Images"（范式级对比）：</strong></p>
+<ul>
+<li>PAPO：V* 从 78.5 <strong>暴跌到 36.1</strong>（-42.4pp）。这不是 bug，这是"文本空间 CoT 引入跨模态干扰"的直接证据。PAPO 在文本 CoT 中生成大量文字描述，导致 LLM 的 attention 从视觉 token 偏移到文本 token，模型"遗忘"了自己看到了什么。值得注意的是 PAPO 在 Spatial 上反而略优于基座（88.8 vs 87.4）——因为空间关系推理中，文本 CoT 的"逻辑链"确实有帮助；但当任务需要精确的视觉细节时，CoT 反成障碍。</li>
+<li>Vision-R1：V* 从 78.5 <strong>降到 70.2</strong>（-8.3pp）。Vision-R1 也用了 CoT，但它的"think before answer"格式比 PAPO 更保守（先分析、再回答），文本 token 总量更少，所以 degradation 没有 PAPO 严重。但在 MMVP 上降至 46.7（-20.0pp），说明即使是轻度 CoT 也会损害对图像细节的判断——因为 CoT 让模型进入"语言模式"，离开"视觉模式"。</li>
+<li>LVR 成功的关键在于：<strong>推理和感知在同一个 embedding 空间中连续进行，不存在"切换模式"导致的信号丢失</strong>。Attention 始终能同时关注 visual token 和 reasoning hidden states。</li>
+</ul>
+<p><strong>③ LVR vs "Think with Images"（工具依赖对比）：</strong></p>
+<ul>
+<li>PixelReasoner：V* 80.1 vs LVR 81.7；V*_RP 77.6 vs LVR 77.6（持平）。PixelReasoner 通过裁剪 ROI 子图像并重新编码来增强视觉信息，这已经是工具类方法中的最强基线。LVR 在不使用任何外部工具的情况下，仅靠 LLM 的 hidden state 循环就实现了匹配或超越。</li>
+</ul>
+<p><strong>为什么重建优于裁剪</strong>：裁剪的 ROI 子图像被重新编码时，视觉编码器的输出是"从零开始"的——它在子图像局部范围内重新做 ViT 编码，丢失了子图像在原图全局上下文中的语义关系。而 LVR 的 hidden state 始终在原始 image tokens + 文本的完整上下文中自回归生成，保留了原图的全局信息。</p>
+<p><strong>④ LVR vs SFT 基线（隔离数据因素）：</strong></p>
+<ul>
+<li>SFT 是"用和 LVR 完全相同的数据做标准 SFT，但不使用 LVR 机制"的对照。SFT 在大多数 benchmark 上与基座持平甚至略差（V*_RP 73.7→73.7、JigSaw 52.0→45.3），说明 Visual COT 数据集本身的质量并不能单独带来提升——<strong>提升来自 LVR 机制，而不是训练数据</strong>。</li>
+</ul>
+<p><strong>⑤ 步数选择的影响：</strong></p>
+<ul>
+<li>4→8 步：V* 从 81.2 提升到 81.7，Counting 从 69.2 提升到 70.0。增加推理步数对需要遍历/搜索的任务（计数）有持续收益。</li>
+<li>8→16 步：V*_RP 从 77.6 提升到 79.0（空间推理持续受益），但 V* 从 81.7 降到 80.6、IQ-Test 从 29.3 降到 27.3。步数过多反而在某些任务上产生噪声——LVR 生成过多 hidden state 可能引入伪影（偏离了精确的 ROI 语义，混入了无关的视觉信号）。</li>
+</ul>
+<p><strong>⑥ 唯一短板 Relative Reflectance：</strong></p>
+<ul>
+<li>LVR (4/8/16) 在此 benchmark 上从基座的 38.8 略有提升（42.5/42.5/41.8），但低于 Vision-R1 的 44.8。Relative Reflectance 需要比较两张图像的像素级反射率差异，是多图像推理任务。LVR 的 SFT 数据和训练机制都是单图像的，无法对跨图像对比建模。论文明确指出这是"分布偏移"问题——不是方法不适用，而是训练未见。</li>
+</ul>
+<h3 id="62-rl-3b">6.2 RL 结果（3B 模型）</h3>
+<p><strong>在 Qwen2.5-VL-3B 基座上的 GRPO_latent 效果</strong>（论文 Table 2）：</p>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th>V*</th>
+<th>V*_DA</th>
+<th>V*_RP</th>
+<th>MMVP</th>
+<th>IQ-Test</th>
+<th>JigSaw</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PAPO（Think about）</td>
+<td>31.9</td>
+<td>22.6</td>
+<td>46.1</td>
+<td>50.0</td>
+<td>31.3</td>
+<td>46.7</td>
+</tr>
+<tr>
+<td><strong>LVR SFT (4/8/16 Steps)</strong></td>
+<td>64.9 / 65.5 / 66.5</td>
+<td>69.6 / 71.3 / 71.3</td>
+<td>60.5 / 60.5 / 56.6</td>
+<td>54.7 / 56.0 / 56.0</td>
+<td>29.3 / 30.7 / 30.0</td>
+<td>52.7 / 52.7 / 52.0</td>
+</tr>
+<tr>
+<td><strong>LVR RL (4/8/16 Steps)</strong></td>
+<td>65.5 / <strong>67.0</strong> / 66.5</td>
+<td>69.6 / <strong>72.2</strong> / 71.3</td>
+<td>59.2 / 59.2 / 59.2</td>
+<td>55.3 / 55.3 / <strong>58.0</strong></td>
+<td>30.7 / <strong>32.0</strong> / 30.0</td>
+<td>52.7 / 52.7 / 50.7</td>
+</tr>
+</tbody>
+</table>
+<p><strong>柱状对比分析（3B 尺度）：</strong></p>
+<ul>
+<li>PAPO 的灾难性失败在 3B 上被放大：V* 仅 31.9，V*_DA 仅 22.6——<strong>3B 的文本生成能力更弱，CoT 产生的"文本噪音"对视觉信号的干扰更大</strong>。</li>
+<li>LVR SFT 已经将 PAPO 的 V* 从 31.9 提升到 66.5（+34.6pp，翻倍！），说明即使是最小的 3B 模型，只要有 latent visual reasoning，就能在视觉细节理解上远超过"在文本空间中挣扎推理"。</li>
+<li>LVR RL → SFT 的提升：<ul>
+<li>V*：65.5 → 67.0（+1.5pp）</li>
+<li>V*_DA：71.3 → 72.2（+0.9pp）</li>
+<li>MMVP：56.0 → 58.0（+2.0pp）</li>
+<li>IQ-Test：30.7 → 32.0（+1.3pp）</li>
+</ul>
+</li>
+<li><strong>RL 的提升不是毁灭性的，但非常稳健</strong>。这符合"RL should not destroy SFT"的原则——GRPO_latent 的 KL 正则化（β=0.04）有效约束了策略不会偏离 SFT 太远。提升主要来自格式奖励引导模型更频繁、更有效地使用 LVR。</li>
+</ul>
+<p><strong>格式奖励的必要性（消融发现）：</strong></p>
+<p>去除格式奖励（即不奖励输出 <code>&lt;|lvr_start|&gt;</code> 和 <code>&lt;|lvr_end|&gt;</code> 的行为），训练立即崩溃——模型退化为纯文本输出，LVR 模块被完全绕过。这揭示了 LVR RL 的一个关键问题：<strong>准确性奖励对 LVR 的监督是间接的</strong>（"答对了"本身无法告诉模型"LVR 做得好"），格式奖励充当了"使用 LVR"的直接引导信号。没有格式奖励，模型的最优策略就是"不用 LVR，直接猜"，因为这样能最快完成 rollout。</p>
+<h3 id="63">6.3 消融实验深度分析</h3>
+<p><strong>6.3.1 LVR Head 的消融</strong>（7B 模型，论文 Table 3）：</p>
+<table>
+<thead>
+<tr>
+<th>变体</th>
+<th>V*</th>
+<th>V*_DA</th>
+<th>V*_RP</th>
+<th>MMVP</th>
+<th>IQ-Test</th>
+<th>JigSaw</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>标准 LVR（无 Head）</strong></td>
+<td><strong>81.7</strong></td>
+<td><strong>84.4</strong></td>
+<td><strong>77.6</strong></td>
+<td><strong>71.7</strong></td>
+<td><strong>29.3</strong></td>
+<td><strong>52.0</strong></td>
+</tr>
+<tr>
+<td>LVR + MLP Head</td>
+<td>74.4</td>
+<td>76.5</td>
+<td>71.1</td>
+<td>69.7</td>
+<td>23.3</td>
+<td>50.0</td>
+</tr>
+<tr>
+<td>LVR + GLU Head</td>
+<td>79.6</td>
+<td>82.6</td>
+<td>75.0</td>
+<td>69.0</td>
+<td>25.3</td>
+<td>44.0</td>
+</tr>
+<tr>
+<td>LVR + Latent End Token</td>
+<td>39.8</td>
+<td>32.2</td>
+<td>51.3</td>
+<td>19.0</td>
+<td>6.7</td>
+<td>13.3</td>
+</tr>
+</tbody>
+</table>
+<p><strong>为什么不加 Head 反而最好？</strong></p>
+<p>论文探索了两种 Head 设计：MLP Head（LayerNorm + 2 层 MLP，无 up-proj）和 GLU Head（3 倍中间维度的 Gated Linear Unit，模仿 LLM 内部的 FFN 结构）。结果两种 Head 都不如不加。</p>
+<ul>
+<li><strong>MLP Head</strong>：V* 从 81.7 降到 74.4（-7.3pp）。MLP Head 引入了额外的可学习投影参数，将 LLM 的 hidden state 映射到一个"视觉语义空间"。但这个投影是在有标注的 Visual COT 数据上学到的——它学会了把 hidden state 映射到"Visual COT 的 ROI 分布"，但在其他 benchmark 的视觉分布上引入了分布偏移（domain shift）。标准 LVR 直接用 LLM 原生的 hidden state，它在所有训练数据（不仅仅是 Visual COT）上学到的语义空间更通用。</li>
+<li><strong>GLU Head</strong>：V* 降到 79.6（-2.1pp）。GLU Head 比 MLP Head 表现好，因为它的 gating 机制提供了更灵活的映射。但在 JigSaw 上暴跌到 44.0（vs 52.0），说明更大的参数容量反而导致在特定任务上过拟合。</li>
+<li><strong>核心洞察</strong>：Vision Encoder → Projector 已经把视觉特征映射到了与 LLM hidden space 对齐的空间。在这个空间中，LLM 的 hidden state 可以直接表示视觉语义，不需要额外的"翻译层"。这印证了论文的最初假说：<strong>在多模态投影之后的联合语义空间中，视觉和文本表示已经足够接近，推理可以直接进行</strong>。</li>
+</ul>
+<p><strong>6.3.2 Latent End Token 的灾难性失败：</strong></p>
+<ul>
+<li>V*：81.7 → 39.8（-41.9pp）。这几乎等于整个 LVR 机制被破坏——模型无法正常使用 LVR，又无法顺利回归纯文本，产生混乱输出。</li>
+<li>MMVP：71.7 → 19.0（-52.7pp）。在需要精确感知的任务上，不可靠的停止条件导致灾难性后果。</li>
+<li>论文测试了 MSE/L1/cosine 三种距离度量和多种阈值，均无法解决。根本问题：在 3584/4096 维的 continuous space 中，两个向量之间的"距离"的语义含义极度依赖于上下文。同一组距离值，在一个问题中意味着"推理完成"，在另一个问题中可能只是正常的 embedding 波动。</li>
+</ul>
+<h2 id="7">7. 代码实现关键细节</h2>
+<h3 id="71-forward-monkey-patch">7.1 多种 forward 模式的 Monkey Patch</h3>
+<p>LVR 不是修改 Qwen2.5-VL 源码，而是通过 monkey patch 替换 forward 函数。<code>replace_qwen2_5_with_mixed_modality_forward_lvr()</code> 根据参数组合切换不同 forward：</p>
+<table>
+<thead>
+<tr>
+<th>场景</th>
+<th>forward 函数</th>
+<th>触发条件</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SFT 训练（无 Head）</td>
+<td><code>qwen2_5_mixed_modality_forward_lvr</code></td>
+<td><code>inference_mode=False, lvr_head=False</code></td>
+</tr>
+<tr>
+<td>SFT 训练（有 Head）</td>
+<td><code>qwen2_5_mixed_modality_forward_lvr_with_head</code></td>
+<td><code>lvr_head=True</code></td>
+</tr>
+<tr>
+<td>SFT + LatentEndToken</td>
+<td><code>*_with_latentEndToken</code></td>
+<td><code>latent_end_token=True</code></td>
+</tr>
+<tr>
+<td>SFT + ModeSwitchLoss</td>
+<td><code>*_with_modeSwitchLoss</code></td>
+<td><code>mode_switch_loss=True</code></td>
+</tr>
+<tr>
+<td>推理（无 Head）</td>
+<td><code>qwen2_5_mixed_modality_forward_lvr_inference</code></td>
+<td><code>inference_mode=True</code></td>
+</tr>
+<tr>
+<td>推理（有 Head）</td>
+<td><code>*_with_head_inference</code></td>
+<td><code>inference_mode=True, lvr_head=True</code></td>
+</tr>
+<tr>
+<td>RL GRPO</td>
+<td><code>qwen2_5_mixed_modality_forward_lvr_grpo</code></td>
+<td><code>rl=True</code></td>
+</tr>
+</tbody>
+</table>
+<p>训练和推理的 forward 逻辑<strong>故意分开</strong>——训练时需要处理 <code>lvr_tokens</code>（ground-truth visual embedding 注入），推理时需要处理 <code>lvr_mode_switch</code>（hidden state 自循环），两者有不同的 attention mask、position embedding 和数据流。</p>
+<h3 id="72">7.2 解码的三条路径</h3>
+<p><code>QwenWithLVR.generate()</code> 根据 <code>decoding_strategy</code> 参数分派到三种解码函数：</p>
+<div class="codehilite"><pre><span></span><code><span class="nv">decoding_strategy</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s2">&quot;steps&quot;</span><span class="w">  </span>→<span class="w"> </span><span class="nv">_lvr_deocding_by_steps</span><span class="ss">()</span><span class="w">     </span>#<span class="w"> </span><span class="nv">Fixed</span><span class="w"> </span><span class="nv">Token</span>
+<span class="nv">decoding_strategy</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s2">&quot;latent&quot;</span><span class="w"> </span>→<span class="w"> </span><span class="nv">_lvr_deocding_with_latentend</span><span class="ss">()</span><span class="w"> </span>#<span class="w"> </span><span class="nv">Latent</span><span class="w"> </span><span class="k">End</span><span class="w"> </span><span class="nv">Token</span>
+<span class="k">else</span><span class="w">                          </span>→<span class="w"> </span><span class="nv">_lvr_deocding</span><span class="ss">()</span><span class="w">                </span>#<span class="w"> </span><span class="nv">Vanilla</span><span class="w"> </span><span class="ss">(</span><span class="nv">token</span><span class="o">-</span><span class="nv">driven</span><span class="ss">)</span>
+</code></pre></div>
+
+<p>Fixed Token 解码的关键是维护一个 <code>lvr_remaining_steps</code> 配额——进入 LVR 时重置为原始预算，每步递减，耗尽时自动退出。这个逻辑完全基于 counter，不依赖任何模型的内部状态判断，因此绝对稳定。</p>
+<h3 id="73">7.3 数值稳定性</h3>
+<p>Qwen2.5-VL 的 3D 卷积在 visual patch embedding 过程中可能产生 NaN（极端分辨率下）。代码通过 <code>monkey_patch_patch_emb.py</code> 把相关计算从 fp16/bf16 切换到 fp32，并注册 NaN 检测 hook。</p>
+<h2 id="8">8. 核心贡献总结</h2>
+<ol>
+<li>
+<p><strong>提出 LVR 范式</strong>：首次将 latent reasoning 从纯文本扩展到多模态，让 MLLM 在 visual embedding 空间中直接推理。这打破了"推理必须在文本空间"的固有假设。</p>
+</li>
+<li>
+<p><strong>两阶段训练 + GRPO_latent</strong>：SFT（teacher forcing）提供基础 visual reasoning 能力，GRPO_latent（回放 hidden state 计算 importance ratio）实现 RL 自进化。特别是方案解决了"没有 token 分布时如何做 policy gradient"这个核心工程挑战。</p>
+</li>
+<li>
+<p><strong>实证发现</strong>：</p>
+<ul>
+<li>文本空间 CoT <strong>损害</strong>视觉感知（PAPO V*: 78.5→36.1）</li>
+<li>隐式重建 ROI 语义 <strong>优于</strong>显式工具调用（LVR &gt; PixelReasoner）</li>
+<li>LLM 原生 hidden space <strong>不需要额外投影头</strong>就能直接容纳视觉语义（不加 Head 最好）</li>
+<li>仅 4 步 latent reasoning 即可显著超越基座</li>
+</ul>
+</li>
+</ol>
+<h2 id="9">9. 常见问题与讨论</h2>
+<h3 id="q1lvr-coconut">Q1：LVR 和 COCONUT 的关系是什么？</h3>
+<p>COCONUT 是纯文本 latent reasoning——模型用 hidden state 传递"思考"但不输出文字。LVR = COCONUT + visual grounding：hidden state 不再是无目标的"自由思考"，而是有明确的逼近目标（ROI visual embedding）。这个 grounding 是 LVR 能实际工作的关键——纯文本 latent reasoning 在 NLP 中的监督非常困难（因为没有"标准思维"），而 LVR 可以通过 bbox 标注获取 ground-truth visual target。</p>
+<h3 id="q2lvr-hidden-state">Q2：LVR 的 hidden state 是什么？能被可视化吗？</h3>
+<p>LVR hidden state 是 LLM 最后一层输出的 3584 维（3B）/ 4096 维（7B）向量。它不是可解释的文本，也不对应可渲染的图像像素——它是<strong>视觉语义的 latent representation</strong>，位于 Vision Projector 输出所在的联合语义空间中。从实验来看，它编码了 ROI 内物体的类别、属性、空间关系等高级视觉语义，但无法直接可视化为图像（因为缺少 decoder）。</p>
+<h3 id="q3-projector">Q3：为什么冻结视觉编码器和 projector？</h3>
+<p>论文的假说是：Vision Encoder → Projector 已经提供了足够好的模态投影，LLM 学会 LVR 不需要调整这个投影。解冻它们会增加训练不稳定性和计算成本，且可能引入 projector 对特定数据集的过拟合。实验证明这个选择是合理的——仅训练 LLM 参数已经带来显著提升。</p>
+<h3 id="q4lvr">Q4：LVR 在什么任务上最有效？什么时候可能有害？</h3>
+<p><strong>最有效</strong>：需要精确视觉细节的任务（V*_DA +2.7pp）、需要空间关系推理的任务（V*_RP +5.3pp）、感知鲁棒性测试（MMVP +5.3pp）。这些任务的特点是"答案高度依赖对图像特定区域的精确理解"。</p>
+<p><strong>可能有害</strong>：多图像比较任务（Relative Reflectance 提升有限）、已由基座充分解决的任务（Spatial 87.4→89.5，天花板效应）。此外，如果步数选择不当（如 16 步）可能在部分任务上引入退化。</p>
+<h3 id="q5">Q5：论文最应该关注的局限是什么？</h3>
+<ol>
+<li><strong>可变长度推理不可靠</strong>：Fixed Token 虽然好用但显然不是终极方案。论文在 Latent End Token 和 Mode Switching Loss 上的负结果说明，continuous space 中定义停止条件仍然是一个开放问题。</li>
+<li><strong>RL 只在 3B 上验证</strong>：计算资源限制导致 7B 的 RL 效果未知。3B 上的 RL 提升虽稳健但不大（+1-2pp），7B 上的 RL 是否有同样/更强的提升尚未验证。</li>
+<li><strong>多图像场景未覆盖</strong>：Relative Reflectance 的表现暴露了单图像训练的限制。扩展到多图像需要重新设计 LVR 的推理目标。</li>
+<li><strong>GRPO_latent 的工程复杂度</strong>：训练时需要记录每个 rollout 的 hidden states 并在重放时精确 patch，增加了训练代码的复杂度和内存开销。</li>
+</ol>
+<h2 id="10-takeaway">10. Takeaway</h2>
+<p>LVR = <code>latent visual reasoning in embedding space</code> + <code>SFT with ROI reconstruction</code> + <code>GRPO_latent with hidden-state replay</code>。</p>
+<p>核心洞察：MLLM 的 Vision-Projector-LLM 架构已经创造了一个视觉和文本共享的语义空间，<strong>直接在这个空间中对视觉语义进行推理，比把视觉转成文字或调用外部工具都更自然、更高效</strong>。LVR 的成功在于它识别到了这个被忽视的设计空间，并用最少的改动（仅改变解码方式、添加 loss）实现了一个可训练的新范式。</p>
+<hr />
+<p><em>笔记生成时间：2026-06-11</em></p>
+  </div>
+</main>
+
+
+<script>
+(function() {
+  const sidebar = document.getElementById('sidebar');
+  const links = sidebar.querySelectorAll('a');
+  const headings = document.querySelectorAll('h1[id], h2[id], h3[id], h4[id]');
+  if (headings.length === 0) return;
+
+  const linkMap = new Map();
+  links.forEach(function(a) {
+    const href = a.getAttribute('href');
+    if (href && href.startsWith('#')) linkMap.set(href.slice(1), a);
+  });
+
+  function onScroll() {
+    let currentId = null;
+    const scrollTop = window.scrollY + 80;
+    headings.forEach(function(h) { if (h.offsetTop <= scrollTop) currentId = h.id; });
+    links.forEach(function(a) { a.classList.remove('active'); });
+    if (currentId && linkMap.has(currentId)) {
+      const el = linkMap.get(currentId);
+      el.classList.add('active');
+      const sr = sidebar.getBoundingClientRect();
+      const er = el.getBoundingClientRect();
+      if (er.bottom > sr.bottom || er.top < sr.top) {
+        el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+    }
+  }
+
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+})();
+</script>
+
+
+<script>
+(function() {
+  const content = document.getElementById('main-content');
+  if (!content) return;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'image-lightbox';
+  overlay.setAttribute('role', 'dialog');
+  overlay.setAttribute('aria-modal', 'true');
+
+  overlay.innerHTML = `
+    <button type="button" class="image-lightbox__close" data-action="close" aria-label="关闭">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M5 5l10 10M15 5L5 15"/>
+      </svg>
+    </button>
+    <div class="image-lightbox__stage">
+      <img class="image-lightbox__image" alt="">
+    </div>
+    <div class="image-lightbox__toolbar" aria-label="图片缩放控制">
+      <button type="button" class="image-lightbox__btn" data-action="zoom-out" aria-label="缩小" title="缩小">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d="M3 9h12"/>
+        </svg>
+      </button>
+      <span class="image-lightbox__zoom-val" data-action="zoom-reset" title="点击重置缩放" role="button" tabindex="0">100%</span>
+      <button type="button" class="image-lightbox__btn" data-action="zoom-in" aria-label="放大" title="放大">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d="M3 9h12M9 3v12"/>
+        </svg>
+      </button>
+    </div>
+    <div class="image-lightbox__caption"></div>
+  `;
+  document.body.appendChild(overlay);
+
+  const stage = overlay.querySelector('.image-lightbox__stage');
+  const image = overlay.querySelector('.image-lightbox__image');
+  const zoomLabel = overlay.querySelector('.image-lightbox__zoom-val');
+  const caption = overlay.querySelector('.image-lightbox__caption');
+
+  const minZoom = 0.25;
+  const maxZoom = 5;
+  const step = 0.25;
+  let zoom = 1;
+  let fitWidth = 1;
+
+  function clamp(value) {
+    return Math.min(maxZoom, Math.max(minZoom, value));
+  }
+
+  function centerImage(animate) {
+    requestAnimationFrame(function() {
+      var left = Math.max(0, (stage.scrollWidth - stage.clientWidth) / 2);
+      var top = Math.max(0, (stage.scrollHeight - stage.clientHeight) / 2);
+      stage.scrollTo({ left: left, top: top, behavior: animate ? 'smooth' : 'auto' });
+    });
+  }
+
+  function applyZoom(animate) {
+    image.style.width = Math.max(1, Math.round(fitWidth * zoom)) + 'px';
+    zoomLabel.textContent = Math.round(zoom * 100) + '%';
+    centerImage(animate);
+  }
+
+  function setZoom(value, animate) {
+    zoom = clamp(value);
+    applyZoom(animate);
+  }
+
+  function computeFitSize() {
+    var w = image.naturalWidth || 1;
+    var h = image.naturalHeight || 1;
+    var maxW = Math.max(1, stage.clientWidth - 48);
+    var maxH = Math.max(1, stage.clientHeight - 48);
+    var fitScale = Math.min(1, maxW / w, maxH / h);
+    fitWidth = Math.max(1, w * fitScale);
+    applyZoom(false);
+  }
+
+  function openImage(source) {
+    image.onload = computeFitSize;
+    image.alt = source.alt || '';
+    caption.textContent = source.alt || '';
+    image.src = source.currentSrc || source.src;
+    zoom = 1;
+    overlay.classList.add('is-open');
+    document.body.classList.add('image-lightbox-open');
+    if (image.complete) computeFitSize();
+  }
+
+  function closeImage() {
+    overlay.classList.remove('is-open');
+    document.body.classList.remove('image-lightbox-open');
+    image.onload = null;
+    image.style.removeProperty('width');
+    image.removeAttribute('src');
+  }
+
+  overlay.addEventListener('click', function(event) {
+    var action = event.target.closest('[data-action]');
+    if (action) {
+      var type = action.getAttribute('data-action');
+      if (type === 'zoom-in') setZoom(zoom + step, true);
+      if (type === 'zoom-out') setZoom(zoom - step, true);
+      if (type === 'zoom-reset') setZoom(1, true);
+      if (type === 'close') closeImage();
+      return;
+    }
+    if (event.target === overlay || event.target === stage) closeImage();
+  });
+
+  overlay.addEventListener('wheel', function(event) {
+    if (!overlay.classList.contains('is-open')) return;
+    if (!event.ctrlKey && !event.metaKey) return;
+    event.preventDefault();
+    setZoom(zoom + (event.deltaY < 0 ? step : -step), true);
+  }, { passive: false });
+
+  document.addEventListener('keydown', function(event) {
+    if (!overlay.classList.contains('is-open')) return;
+    if (event.key === 'Escape') closeImage();
+    if (event.key === '+' || event.key === '=') setZoom(zoom + step, true);
+    if (event.key === '-' || event.key === '_') setZoom(zoom - step, true);
+    if (event.key === '0') setZoom(1, true);
+  });
+
+  window.addEventListener('resize', function() {
+    if (overlay.classList.contains('is-open')) computeFitSize();
+  });
+
+  content.querySelectorAll('img').forEach(function(img) {
+    if (img.closest('a')) return;
+    img.setAttribute('tabindex', '0');
+    img.setAttribute('title', img.getAttribute('title') || '点击放大查看');
+    img.addEventListener('click', function() { openImage(img); });
+    img.addEventListener('keydown', function(event) {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        openImage(img);
+      }
+    });
+  });
+})();
+</script>
+
+</body>
+</html>
