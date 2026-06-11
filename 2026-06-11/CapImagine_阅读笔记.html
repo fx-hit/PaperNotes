@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Imagination Helps Visual Reasoning, But Not Yet in Latent Space</title>
+<!-- arxiv: 2602.22766 -->
+<!-- venue: ICML 2026 -->
+<!-- tags: 视觉推理, MLLM, 因果分析 -->
+<!-- words-zh: 3423 -->
+<!-- words-en: 453 -->
+<!-- reading-time: 12 -->
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #ffffff;
+    --text: #1a1a2e;
+    --text-secondary: #555;
+    --border: #e1e4e8;
+    --link: #0969da;
+    --table-stripe: #f6f8fa;
+    --heading: #0d1117;
+    --blockquote-border: #0969da;
+    --blockquote-bg: #f0f6ff;
+    --inline-code: #d73a49;
+    --inline-code-bg: #f6f8fa;
+    --sidebar-width: 260px;
+    --toc-active: #0969da;
+    --content-max-width: 1350px;
+    --media-max-width: 1000px;
+    --content-padding: 48px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "Inter", "Noto Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 16px;
+    line-height: 1.75;
+    color: var(--text);
+    background: var(--bg);
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    width: var(--sidebar-width);
+    overflow-y: auto;
+    padding: 28px 20px 40px;
+    background: #fafbfc;
+    border-right: 1px solid var(--border);
+    z-index: 10;
+    scrollbar-width: thin;
+  }
+  .sidebar-title {
+    font-size: 13px; font-weight: 700; color: var(--text-secondary);
+    margin-bottom: 16px; letter-spacing: 0.06em; text-transform: uppercase;
+  }
+  .toc-list { list-style: none; padding: 0; margin: 0; }
+  .toc-list ul { list-style: none; padding-left: 14px; }
+  .toc-list li { margin: 1px 0; }
+  .toc-list a {
+    display: block; padding: 4px 12px; font-size: 13.5px; line-height: 1.45;
+    color: var(--text-secondary); text-decoration: none; border-radius: 4px;
+    border-left: 2px solid transparent; transition: all 0.15s;
+  }
+  .toc-list a:hover { color: var(--link); background: #e8f0fe; }
+  .toc-list a.active {
+    color: var(--toc-active); font-weight: 600;
+    border-left-color: var(--toc-active); background: #e8f0fe;
+  }
+  .toc-h1 a { font-weight: 600; color: var(--heading); font-size: 14px; }
+  .toc-h3 a { padding-left: 24px; font-size: 13px; }
+  .toc-h4 a { padding-left: 36px; font-size: 12.5px; }
+  .toc-empty { color: var(--text-secondary); font-size: 13px; font-style: italic; }
+
+  .main-wrapper {
+    margin-left: var(--sidebar-width);
+    min-height: 100vh;
+    display: flex; justify-content: center;
+  }
+  .content-inner {
+    width: 100%;
+    max-width: var(--content-max-width);
+    padding: 40px var(--content-padding) 80px;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    color: var(--heading); font-weight: 700; line-height: 1.3;
+    margin-top: 2em; margin-bottom: 0.6em; scroll-margin-top: 24px;
+  }
+  h1 { font-size: 2em; border-bottom: 2px solid var(--border); padding-bottom: 0.3em; margin-top: 0; }
+  h2 { font-size: 1.5em; border-bottom: 1px solid var(--border); padding-bottom: 0.25em; }
+  h3 { font-size: 1.25em; }
+  h4 { font-size: 1.1em; }
+  p { margin-bottom: 1em; }
+  a { color: var(--link); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  strong { font-weight: 600; }
+
+  blockquote {
+    border-left: 4px solid var(--blockquote-border);
+    background: var(--blockquote-bg);
+    padding: 12px 20px; margin: 1em 0;
+    border-radius: 0 6px 6px 0; color: var(--text-secondary);
+  }
+  blockquote p:last-child { margin-bottom: 0; }
+
+  code {
+    font-family: "JetBrains Mono", "SF Mono", "Fira Code", monospace;
+    font-size: 0.875em; background: var(--inline-code-bg);
+    padding: 2px 6px; border-radius: 4px; color: var(--inline-code);
+  }
+  pre {
+    background: #f6f8fa; color: #24292f;
+    border: 1px solid var(--border);
+    border-radius: 8px; padding: 16px 20px; overflow-x: auto;
+    margin: 1em 0; font-size: 14px; line-height: 1.55;
+  }
+  pre code { background: none; padding: 0; border-radius: 0; color: inherit; font-size: inherit; }
+
+  .codehilite { background: #f6f8fa; border: 1px solid var(--border); border-radius: 8px; padding: 16px 20px; overflow-x: auto; margin: 1em 0; }
+  .codehilite pre { background: none; padding: 0; margin: 0; border-radius: 0; }
+  .codehilite .hll { background-color: #fff8c5; }
+  .codehilite .c  { color: #6e7781; font-style: italic; }
+  .codehilite .k  { color: #cf222e; }
+  .codehilite .o  { color: #0550ae; }
+  .codehilite .s  { color: #0a3069; }
+  .codehilite .n  { color: #24292f; }
+  .codehilite .p  { color: #24292f; }
+  .codehilite .mi { color: #0550ae; }
+  .codehilite .nf { color: #8250df; }
+  .codehilite .nb { color: #953800; }
+  .codehilite .nc { color: #953800; }
+  .codehilite .bp { color: #953800; }
+
+  table { width: 100%; border-collapse: collapse; margin: 1em 0; font-size: 0.925em; }
+  th, td { border: 1px solid var(--border); padding: 10px 14px; text-align: left; }
+  th { background: var(--table-stripe); font-weight: 600; color: var(--heading); }
+  tr:nth-child(even) td { background: var(--table-stripe); }
+
+  .math.display { display: block; overflow-x: auto; padding: 12px 0; margin: 1em 0; }
+  ul, ol { padding-left: 1.5em; margin-bottom: 1em; }
+  li { margin-bottom: 0.3em; }
+  hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+  img { max-width: min(100%, var(--media-max-width)); height: auto; border-radius: 6px; margin: 0 auto; display: block; }
+  #main-content img { cursor: zoom-in; }
+  p:has(img) { text-align: center; max-width: var(--media-max-width); margin: 0.6em auto 0; }
+  table:has(img) { width: min(100%, var(--media-max-width)) !important; margin-left: auto; margin-right: auto; }
+  p:has(img) + p { text-align: center; font-size: 0.9em; color: var(--text-secondary); margin-top: 0.15em; margin-bottom: 0.6em; }
+  .mermaid { text-align: center; margin: 1.5em 0; background: #fafbfc; border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+  .article-stats {
+    font-size: 0.85rem; color: var(--text-secondary);
+    padding: 10px 18px; margin-bottom: 28px;
+    background: #f8f9fa; border: 1px solid var(--border); border-radius: 8px;
+  }
+  body.image-lightbox-open { overflow: hidden; }
+  .image-lightbox {
+    position: fixed; inset: 0; z-index: 1000;
+    display: none;
+    background: rgba(9, 12, 20, 0.88);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+  }
+  .image-lightbox.is-open { display: block; }
+
+  /* Stage uses flexbox to center the image; safe alignment prevents
+     clipping when zoomed-in content overflows — it falls back to
+     start so scrollbars reach every pixel. */
+  .image-lightbox__stage {
+    width: 100%; height: 100%;
+    overflow: auto;
+    display: flex;
+    align-items: safe center;
+    justify-content: safe center;
+    padding: 24px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.18) transparent;
+  }
+
+  .image-lightbox__image {
+    max-width: none; max-height: none;
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 20px 70px rgba(0, 0, 0, 0.5);
+    cursor: zoom-in;
+    flex-shrink: 0;
+    transition: box-shadow 0.3s;
+  }
+
+  /* Close button — top-right glass circle */
+  .image-lightbox__close {
+    position: absolute; top: 20px; right: 20px; z-index: 1010;
+    width: 40px; height: 40px;
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.25);
+    color: rgba(255,255,255,0.85);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    transition: background 0.2s, border-color 0.2s, transform 0.2s, color 0.2s;
+  }
+  .image-lightbox__close:hover {
+    background: rgba(255,255,255,0.15);
+    border-color: rgba(255,255,255,0.3);
+    color: #fff;
+    transform: scale(1.08);
+  }
+
+  /* Zoom toolbar — bottom-center glass pill */
+  .image-lightbox__toolbar {
+    position: absolute; bottom: 28px; left: 50%; transform: translateX(-50%); z-index: 1010;
+    display: flex; align-items: center; gap: 4px;
+    padding: 6px;
+    background: rgba(30, 30, 45, 0.75);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 32px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.35);
+  }
+
+  .image-lightbox__btn {
+    width: 36px; height: 36px;
+    border: none; border-radius: 50%;
+    background: transparent;
+    color: rgba(255,255,255,0.82);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.2s, color 0.2s;
+  }
+  .image-lightbox__btn:hover {
+    background: rgba(255,255,255,0.13);
+    color: #fff;
+  }
+
+  .image-lightbox__zoom-val {
+    min-width: 52px; text-align: center;
+    color: rgba(255,255,255,0.82);
+    font: 600 12.5px/32px "Inter", -apple-system, sans-serif;
+    cursor: pointer; user-select: none;
+    border-radius: 20px; padding: 0 6px;
+    transition: background 0.2s, color 0.2s;
+    letter-spacing: -0.01em;
+  }
+  .image-lightbox__zoom-val:hover {
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+  }
+
+  .image-lightbox__caption {
+    position: absolute; left: 28px; right: 28px; bottom: 96px; z-index: 1005;
+    color: rgba(255,255,255,0.72); text-align: center;
+    font-size: 13px; line-height: 1.45;
+    pointer-events: none;
+  }
+
+  @media (max-width: 1024px) {
+    .sidebar { position: static; width: 100%; height: auto; max-height: 35vh; border-right: none; border-bottom: 1px solid var(--border); }
+    .main-wrapper { margin-left: 0; display: block; }
+    .content-inner { max-width: none; padding: 24px 20px 60px; }
+    .image-lightbox__stage { padding: 12px; }
+    .image-lightbox__close { top: 12px; right: 12px; width: 36px; height: 36px; }
+    .image-lightbox__toolbar { bottom: 18px; padding: 5px; gap: 2px; }
+    .image-lightbox__btn { width: 32px; height: 32px; }
+    .image-lightbox__caption { bottom: 78px; left: 18px; right: 18px; }
+  }
+</style>
+
+<script>
+MathJax = {
+  tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']], processEscapes: true, tags: 'none' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] }
+};
+</script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  mermaid.initialize({ startOnLoad: true, theme: 'neutral', securityLevel: 'loose' });
+});
+</script>
+
+</head>
+<body>
+
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-title">目录</div>
+  <ul class="toc-list">
+<li class="toc-h1"><a href="#imagination-helps-visual-reasoning-but-not-yet-in-latent-space">Imagination Helps Visual Reasoning, But Not Yet in Latent Space</a>
+<ul>
+</li>
+<li class="toc-h2"><a href="#_1">一、核心问题</a>
+</li>
+<li class="toc-h2"><a href="#capimagine">二、核心方法：因果中介分析 + CapImagine</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#21">2.1 问题形式化</a>
+</li>
+<li class="toc-h3"><a href="#22-splaceholder000010pfinding-1">2.2 因果分析：$X \rightarrow Z$（Finding 1）</a>
+</li>
+<li class="toc-h3"><a href="#23-splaceholder000011pfindings-2-3">2.3 因果分析：$Z \rightarrow Y$（Findings 2 &amp; 3）</a>
+</li>
+<li class="toc-h3"><a href="#24-latent-token">2.4 小结：Latent Token 到底在干什么？</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#capimagine_1">三、CapImagine：回到文本空间进行想象</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#31-data-rewriting">3.1 数据重写（Data Rewriting）</a>
+</li>
+<li class="toc-h3"><a href="#32-data-filtering">3.2 数据过滤（Data Filtering）</a>
+</li>
+<li class="toc-h3"><a href="#33">3.3 训练</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_2">四、实验与结果</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#41">4.1 主实验：高分辨率感知基准</a>
+</li>
+<li class="toc-h3"><a href="#42-tablevqa">4.2 TableVQA 结果</a>
+</li>
+<li class="toc-h3"><a href="#43">4.3 消融实验（严格控制的对比）</a>
+</li>
+<li class="toc-h3"><a href="#44-capimagine">4.4 CapImagine 的因果分析</a>
+</li>
+<li class="toc-h3"><a href="#45">4.5 推理效率</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_3">五、关键洞察与技术亮点</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#51">5.1 学术贡献</a>
+</li>
+<li class="toc-h3"><a href="#52">5.2 技术亮点</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_4">六、关键概念速查</a>
+</li>
+<li class="toc-h2"><a href="#_5">七、局限性</a>
+</ul></li>
+</li></ul>
+</nav>
+
+<main class="main-wrapper">
+  <div class="content-inner" id="main-content">
+<h1 id="imagination-helps-visual-reasoning-but-not-yet-in-latent-space">Imagination Helps Visual Reasoning, But Not Yet in Latent Space</h1>
+<div class="article-stats">3,423 字 · English 453 词 · 约 12 分钟阅读</div>
+
+<blockquote>
+<p><strong>论文信息</strong>
+- 作者：You Li（北京交通大学）、Chi Chen（清华大学，通讯）、Yanghao Li（清华大学，通讯）、Fanhu Zeng（清华大学）、Kaiyu Huang（北京交通大学）、Jinan Xu（北京交通大学）、Maosong Sun（清华大学）
+- 机构：北京交通大学计算机学院、清华大学
+- 投稿方向：ICML 2026（accepted）
+- arXiv ID：2602.22766v2
+- 代码：https://github.com/AI9Stars/CapImagine</p>
+</blockquote>
+<hr />
+<h2 id="_1">一、核心问题</h2>
+<p>多模态大模型（MLLM）的视觉推理近年来备受关注。随着任务复杂度提升，研究者开始探索让模型在推理过程中"主动感知"视觉内容，而非仅在文本空间被动编码图像特征。</p>
+<p><strong>Latent Visual Reasoning（LVR，潜在视觉推理）</strong> 试图模仿人类的"想象"过程——模型在隐空间中生成若干 latent token，期望这些 token 编码丰富的视觉语义，从而辅助模型在不显式生成图像的情况下完成视觉推理。然而，这些 latent token 内部到底发生了什么、是否真正承载了视觉想象，至今缺乏系统性的理解。</p>
+<p>本文通过<strong>因果中介分析（Causal Mediation Analysis）</strong> 框架，系统考察了 latent token 在视觉推理过程中的实际作用，发现了两个关键的因果断裂，进而提出了一种直接替代方案：<strong>在文本空间进行显式想象</strong>。</p>
+<hr />
+<h2 id="capimagine">二、核心方法：因果中介分析 + CapImagine</h2>
+<h3 id="21">2.1 问题形式化</h3>
+<p>论文将 latent visual reasoning 建模为一条因果链：</p>
+<p><div class="math display">$$X \rightarrow Z \rightarrow Y$$</div></p>
+<p>其中：</p>
+<ul>
+<li><span class="math inline">$X$</span>：输入（图像 + 问题）</li>
+<li><span class="math inline">$Z$</span>：中间 latent token（"想象"的载体）</li>
+<li><span class="math inline">$Y$</span>：最终答案</li>
+</ul>
+<p>论文对 <span class="math inline">$X \rightarrow Z$</span>（输入到 latent）和 <span class="math inline">$Z \rightarrow Y$</span>（latent 到答案）两个环节分别进行了系统性干预和探测分析。</p>
+<p><img alt="图1：视觉推理范式对比" src="assets/capimagine/image1.jpg" /></p>
+<p><em>图1：三种视觉推理范式对比。</em><em>(a)</em><em> 工具辅助推理——模型通过 zoom-in 或绘图等预定义工具函数感知视觉内容，生成 interleaved 多模态推理轨迹（如框出目标区域、放大关键细节）；</em><em>(b)</em><em> 潜在空间想象——模型通过隐状态（latent token）在 embedding 空间进行视觉推理，无需显式生成图像；</em><em>(c)</em><em> 文本空间想象（CapImagine）——将视觉操作转化为文本描述，模型在文本空间中"想象"视觉变化，如描述"高亮区域显示该物体的颜色是红色"。</em></p>
+<p><img alt="图2：系统性 latent 分析框架" src="assets/capimagine/image2.jpg" /></p>
+<p><em>图2：系统性 latent 分析框架，揭示 latent token 的内部机制和行为模式。</em><em>(a)</em><em> Model Inference——展示 latent token 的生成流程：输入图像和问题后，模型通过 <code>&lt;|latent_start|&gt;</code> 进入 latent 模式，此时将上一层 hidden state 作为下一层的输入，连续生成多个 latent token，最后以 <code>&lt;|latent_end|&gt;</code> 退出 latent 模式，恢复正常文本解码。</em><em>(b)</em><em> <span class="math inline">$X \rightarrow Z$</span> 因果分析——包括 Inter-instance（同一位置、不同实例的 latent token 相似度对比）和 Intra-instance（同一实例内所有 latent token 的相似度变化）两个维度。图中热力图显示 latent token 在跨实例时高度相似（红色），而文本/image token 在跨实例时保持低相似度（蓝色/绿色），呈现鲜明对比。</em><em>(c)</em><em> <span class="math inline">$Z \rightarrow Y$</span> 因果分析——包括 Intervention on <span class="math inline">$Z$</span>（将 latent token 替换为相同张量、注入高斯噪声、替换为纯噪声、设为接近零小值等干预方式，观察最终答案变化）和 Probing Analysis（用 latent token 作为唯一输入回答衍生问题，测试 latent 编码了多少视觉语义）。实验结果的柱状图显示：无论哪种干预，模型性能几乎不变；而 probing 中 latent-only 输入远低于随机猜测。</em></p>
+<h3 id="22-splaceholder000010pfinding-1">2.2 因果分析：<span class="math inline">$X \rightarrow Z$</span>（Finding 1）</h3>
+<blockquote>
+<p><strong>Finding 1：Latent token 在不同实例和不同任务间高度相似，并在推理过程中逐步坍缩为几乎相同的状态。</strong></p>
+</blockquote>
+<p><strong>实验设置</strong>：在三种代表性 LVR 方法（Monet、LVR、Mirage）上，从 V*、MME、OCRBench-v2、MME-RealWorld-Lite、TableVQA 中采样 100 个测试实例，从两个角度考察 latent token：</p>
+<ul>
+<li><strong>Inter-instance（跨实例）</strong>：固定位置，比较不同实例的 latent token 余弦相似度</li>
+<li><strong>Intra-instance（实例内）</strong>：同一实例内，观察所有 latent token 的相似度变化</li>
+</ul>
+<p><strong>关键发现</strong>：</p>
+<ol>
+<li>
+<p><strong>跨实例高度同质</strong>：同一位置、不同实例的 latent token 余弦相似度极高，说明 latent token 几乎没有编码输入图像或问题的差异化信息。不同任务的 latent token 也同样高度相似——连粗粒度的任务级区分都无法做到。</p>
+</li>
+<li>
+<p><strong>逐步退化现象</strong>：随着推理推进，latent token 之间的相似度越来越高，最终坍缩为几乎一致的表示。相比之下，文本 token、图像 token 和 MLLM 内部表示都携带了丰富的区分性语义。</p>
+</li>
+<li>
+<p><strong>不同方法退化模式不同</strong>：Monet 退化较慢但最终收敛到高度均匀空间；LVR 快速坍缩但部分 token 保留一定区分性；Mirage（将长视觉 token 压缩为少数 latent）全程几乎无区分性。</p>
+</li>
+</ol>
+<p><strong>物理直觉</strong>：在标准离散 CoT 中，<code>lm_head</code> + <code>argmax</code>/采样操作引入了强非线性，将表示从退化锥中拉出。Latent token 完全在连续空间操作，缺乏这种投影机制，因而被困在各向异性的狭窄锥中，导致余弦相似度极高。</p>
+<h3 id="23-splaceholder000011pfindings-2-3">2.3 因果分析：<span class="math inline">$Z \rightarrow Y$</span>（Findings 2 &amp; 3）</h3>
+<blockquote>
+<p><strong>Finding 2：对 latent token <span class="math inline">$Z$</span> 施加根本性改变，仅导致答案 <span class="math inline">$Y$</span> 的微小变化。</strong></p>
+</blockquote>
+<p><strong>干预实验</strong>：</p>
+<p>对 Monet（通用场景），将所有 latent token 替换为共享的相同张量：</p>
+<table>
+<thead>
+<tr>
+<th>干预方式</th>
+<th>V*</th>
+<th>HR-Bench4K</th>
+<th>MME-RW-Lite</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Monet 原版</td>
+<td>82.7</td>
+<td>71.1</td>
+<td>46.9</td>
+</tr>
+<tr>
+<td>Monet <span class="math inline">$do(Z)$</span>（全部同张量）</td>
+<td><strong>83.3</strong> (+0.6)</td>
+<td>70.1 (-1.0)</td>
+<td>46.2 (-0.7)</td>
+</tr>
+</tbody>
+</table>
+<p>在 V* 上性能甚至略有提升！只有 HR-Bench-4K 和 MME-RealWorld-Lite 上出现微小的 1.0% 和 0.7% 退化。</p>
+<p>对 Mirage（任务特定），进一步尝试多种干预策略：</p>
+<table>
+<thead>
+<tr>
+<th>干预方式</th>
+<th style="text-align: center;">Mirage-Stage1</th>
+<th style="text-align: center;">Mirage-Stage2</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>原版 latent</td>
+<td style="text-align: center;">64.2</td>
+<td style="text-align: center;">77.0</td>
+</tr>
+<tr>
+<td>全部替换为同一张量</td>
+<td style="text-align: center;">64.0 (-0.2)</td>
+<td style="text-align: center;">77.2 (+0.2)</td>
+</tr>
+<tr>
+<td>注入高斯噪声</td>
+<td style="text-align: center;">64.0 (-0.2)</td>
+<td style="text-align: center;">76.7 (-0.3)</td>
+</tr>
+<tr>
+<td>全部替换为高斯噪声</td>
+<td style="text-align: center;"><strong>64.5 (+0.3)</strong></td>
+<td style="text-align: center;">76.2 (-0.8)</td>
+</tr>
+<tr>
+<td>全部设为接近零的小值</td>
+<td style="text-align: center;">65.0 (+0.8)</td>
+<td style="text-align: center;">35.5 (-41.5)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>即使将 latent token 全部替换为随机噪声，性能几乎不变</strong>——这强烈说明模型根本没有关注 latent token，也没有在其内部编码关键信息。Mirage-Stage2 只在"全部设为零"的极端干预下才崩溃（触发了重复生成）。</p>
+<blockquote>
+<p><strong>Finding 3：Latent token 仅编码了极有限的视觉语义，无法独立支撑下游推理。</strong></p>
+</blockquote>
+<p><strong>探测实验</strong>：从 V* 中采样问题-图像对 <span class="math inline">$(I_i, q_i)$</span>，收集对应的 latent embedding <span class="math inline">$\{Z_i\}$</span>，然后构造 30 道不同的多选题——这些题关注同一图像区域但询问不同属性。将 <span class="math inline">$\{Z_i\}$</span> 和衍生问题 <span class="math inline">$\tilde{q}$</span> 一起喂给模型：</p>
+<ul>
+<li><strong>Latent-only 输入</strong>（<span class="math inline">$\{Z_i\}, \tilde{q}$</span>）：远低于随机猜测水平</li>
+<li><strong>原始图像输入</strong>（<span class="math inline">$I_i, \tilde{q}$</span>）：Monet 和 Qwen3-VL-32B 都达到 76.67%</li>
+</ul>
+<p>说明 latent token 根本没有保留足够的视觉语义——模型不是通过 latent token"看到"图像的。</p>
+<h3 id="24-latent-token">2.4 小结：Latent Token 到底在干什么？</h3>
+<p>三个 findings 共同指向一个结论：</p>
+<blockquote>
+<p><strong>Latent token 更像是 soft prompt 或 placeholder，而非视觉想象或推理的主动载体。模型可能走了一条绕过 latent reasoning 的隐式捷径。</strong></p>
+</blockquote>
+<hr />
+<h2 id="capimagine_1">三、CapImagine：回到文本空间进行想象</h2>
+<p>既然 latent token 几乎没用，那如何有效利用 interleaved 多模态推理数据中的视觉信息？答案出奇简单：<strong>把中间图像的操作变成文本描述</strong>。</p>
+<p><img alt="图3：CapImagine 方法和数据构建流程" src="assets/capimagine/image3.jpg" /></p>
+<p><em>图3：CapImagine 方法与数据构建流程。上半部分为原始 interleaved 格式的训练数据（文本推理 + 中间辅助图像）；中间部分对比了两种方法论差异——Latent-space reasoning 尝试将视觉操作压缩到隐空间，而 Text-space imagination 将语义变化转化为文本描述；下半部分展示数据构建流程。</em></p>
+<h3 id="31-data-rewriting">3.1 数据重写（Data Rewriting）</h3>
+<p>基于 Monet-SFT-125K 数据集（由 Monet 构建的 interleaved 多模态推理数据），将中间辅助图像替换为文本描述：</p>
+<ul>
+<li><strong>Zoom-in 类数据</strong>（Visual-CoT、Zebra-CoT）：提供原图 + 高亮区域给 Qwen3-VL-4B，让它生成聚焦于高亮区域的准确描述</li>
+<li><strong>图像操作类数据</strong>（Refocus、CogCoM）：同时呈现原图和操作后的图给 Qwen3-VL-4B，让它描述视觉差异（如标注的数值、高亮的文本实体等）</li>
+</ul>
+<p>为避免直接插入导致推理链断裂，还使用 MLLM 进行全局重写，让文本描述自然融入原推理过程。</p>
+<h3 id="32-data-filtering">3.2 数据过滤（Data Filtering）</h3>
+<p>Monet-SFT-125K 中 94.88% 来自 Visual-CoT 数据，但质量堪忧：</p>
+<ol>
+<li>原问题的答案常与新生成的视觉观察冲突</li>
+<li>大量问题本身模糊到无法回答</li>
+</ol>
+<p>使用 MLLM 对整个训练实例进行质量评估，过滤后保留 <strong>17k 高质量实例</strong>（仅占原始的 ~14%）。</p>
+<h3 id="33">3.3 训练</h3>
+<p>基于 Qwen2.5-VL-7B，使用 Monet 代码库做 CoT-SFT 微调。8 张 A800-80G GPU，batch size 1、gradient accumulation 16。在训练中选取 best checkpoint 以应对训练不稳定问题。</p>
+<hr />
+<h2 id="_2">四、实验与结果</h2>
+<h3 id="41">4.1 主实验：高分辨率感知基准</h3>
+<table>
+<thead>
+<tr>
+<th>模型</th>
+<th style="text-align: center;">V* (Overall)</th>
+<th style="text-align: center;">HR-Bench4K</th>
+<th style="text-align: center;">HR-Bench8K</th>
+<th style="text-align: center;">MME-RW-Lite</th>
+<th style="text-align: center;">BLINK (Jigsaw/MV)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GPT-4o</td>
+<td style="text-align: center;">67.5</td>
+<td style="text-align: center;">59.0</td>
+<td style="text-align: center;">55.5</td>
+<td style="text-align: center;">52.0</td>
+<td style="text-align: center;">55.3/59.4</td>
+</tr>
+<tr>
+<td>Qwen2.5VL-7B (基座)</td>
+<td style="text-align: center;">76.4</td>
+<td style="text-align: center;">68.0</td>
+<td style="text-align: center;">63.8</td>
+<td style="text-align: center;">45.8</td>
+<td style="text-align: center;">62.7/42.9</td>
+</tr>
+<tr>
+<td><strong>工具方法</strong></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+</tr>
+<tr>
+<td>PixelReasoner</td>
+<td style="text-align: center;">80.6</td>
+<td style="text-align: center;">72.9</td>
+<td style="text-align: center;">66.9</td>
+<td style="text-align: center;">49.7</td>
+<td style="text-align: center;">-</td>
+</tr>
+<tr>
+<td>DeepEyes</td>
+<td style="text-align: center;"><strong>90.0</strong></td>
+<td style="text-align: center;">75.1</td>
+<td style="text-align: center;">72.6</td>
+<td style="text-align: center;">53.2</td>
+<td style="text-align: center;">-</td>
+</tr>
+<tr>
+<td><strong>想象方法（Latent）</strong></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+</tr>
+<tr>
+<td>LVR</td>
+<td style="text-align: center;">81.7</td>
+<td style="text-align: center;">70.8</td>
+<td style="text-align: center;">63.0</td>
+<td style="text-align: center;">50.6</td>
+<td style="text-align: center;">52.0/46.6</td>
+</tr>
+<tr>
+<td>Monet</td>
+<td style="text-align: center;">83.3</td>
+<td style="text-align: center;">71.0</td>
+<td style="text-align: center;">68.0</td>
+<td style="text-align: center;">46.9</td>
+<td style="text-align: center;">50.0/47.4</td>
+</tr>
+<tr>
+<td><strong>想象方法（Text）</strong></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+</tr>
+<tr>
+<td><strong>CapImagine</strong></td>
+<td style="text-align: center;"><strong>85.9</strong></td>
+<td style="text-align: center;"><strong>74.1</strong></td>
+<td style="text-align: center;"><strong>70.7</strong></td>
+<td style="text-align: center;"><strong>54.8</strong></td>
+<td style="text-align: center;"><strong>64.7/49.6</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>核心观察</strong>：</p>
+<ol>
+<li>
+<p><strong>CapImagine 全面超越 Monet</strong>：V* 提升 2.6%，HR-Bench 平均提升 3.44%，MME-RealWorld-Lite 提升 7.9%。这证明了同一个数据源下，文本空间想象远超潜在空间。</p>
+</li>
+<li>
+<p><strong>vs 工具方法</strong>：DeepEyes 在部分任务上更强（90.0 vs 85.9 on V*），但它直接操作图像（zoom-in），有天然信息优势。CapImagine 仅靠文本想象就能接近工具方法的水平。</p>
+</li>
+<li>
+<p><strong>抽象推理泛化</strong>：在 BLINK 的 Jigsaw（64.7 vs 50.0）和 Multi-View（49.6 vs 47.4）上大幅领先 Monet，说明文本想象不仅适用于"放大看细节"，也适用于"空间重构"这类抽象推理。</p>
+</li>
+</ol>
+<h3 id="42-tablevqa">4.2 TableVQA 结果</h3>
+<table>
+<thead>
+<tr>
+<th>模型</th>
+<th style="text-align: center;">VWTQ</th>
+<th style="text-align: center;">VWTQ-syn</th>
+<th style="text-align: center;">VTabFact</th>
+<th style="text-align: center;">Overall</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Monet</td>
+<td style="text-align: center;">55.3</td>
+<td style="text-align: center;">60.4</td>
+<td style="text-align: center;">78.8</td>
+<td style="text-align: center;">64.8</td>
+</tr>
+<tr>
+<td><strong>CapImagine</strong></td>
+<td style="text-align: center;"><strong>60.9</strong></td>
+<td style="text-align: center;"><strong>68.0</strong></td>
+<td style="text-align: center;"><strong>83.2</strong></td>
+<td style="text-align: center;"><strong>70.7</strong></td>
+</tr>
+</tbody>
+</table>
+<p>在图表/表格理解任务上，CapImagine 整体提升 5.9%，说明文本空间想象同样适用于非自然图像。</p>
+<h3 id="43">4.3 消融实验（严格控制的对比）</h3>
+<table>
+<thead>
+<tr>
+<th>消融设置</th>
+<th style="text-align: center;">V*</th>
+<th style="text-align: center;">HR-Bench4K</th>
+<th style="text-align: center;">HR-Bench8K</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>CapImagine（完整版）</strong></td>
+<td style="text-align: center;"><strong>85.9</strong></td>
+<td style="text-align: center;"><strong>74.1</strong></td>
+<td style="text-align: center;"><strong>70.7</strong></td>
+</tr>
+<tr>
+<td>+ w/o Rewriting（去掉文本想象，用 <code>&lt;think_image&gt;</code> 代替）</td>
+<td style="text-align: center;">82.7 (-3.2)</td>
+<td style="text-align: center;">74.1</td>
+<td style="text-align: center;">69.8</td>
+</tr>
+<tr>
+<td>+ w/o Filtering（直接用原始 Monet-SFT-125K）</td>
+<td style="text-align: center;">82.7 (-3.2)</td>
+<td style="text-align: center;">72.5</td>
+<td style="text-align: center;">69.3</td>
+</tr>
+<tr>
+<td>Monet + subset（用 CapImagine 相同的 17k 子集训练 Monet）</td>
+<td style="text-align: center;">79.6 (-6.3)</td>
+<td style="text-align: center;">70.7</td>
+<td style="text-align: center;">67.9</td>
+</tr>
+</tbody>
+</table>
+<p>三条关键结论：</p>
+<ol>
+<li><strong>数据重写至关重要</strong>：去掉文本想象（用 <code>&lt;think_image&gt;</code> token 替代），V* 掉 3.1%</li>
+<li><strong>数据过滤不可或缺</strong>：不过滤直接用 Monet-SFT-125K，性能继续下降</li>
+<li><strong>方法差距是真实的</strong>：在完全相同的数据（17k subset）下训练 Monet，效果远不如 CapImagine。且 SFT 版本的 Monet（去掉 Policy Optimization）与原本持平，进一步质疑了 latent reasoning 中 Policy Optimization 阶段的实际作用</li>
+</ol>
+<h3 id="44-capimagine">4.4 CapImagine 的因果分析</h3>
+<p>论文对 CapImagine 进行了与 latent token 相同的因果中介分析：</p>
+<p><img alt="图4：CapImagine 的因果分析" src="assets/capimagine/image4.jpg" /></p>
+<p><em>图4：CapImagine 推理过程中隐状态在跨实例（Inter-instance）和实例内（Intra-instance）两个维度的相似度分析。跨实例余弦相似度始终较低，表明 <span class="math inline">$X \rightarrow Z$</span> 存在强因果依赖；实例内相邻隐状态之间有显著差异，表明每个想象 token 编码了不同的语义内容。</em></p>
+<p><strong>Inter-instance 分析</strong>：跨实例余弦相似度始终较低——说明文本想象的内容确实与输入相关，<span class="math inline">$X \rightarrow Z$</span> 具有强因果依赖。</p>
+<p><strong>Intra-instance 分析</strong>：相邻隐状态间有显著差异——每个想象 token 编码了不同语义，而非逐步退化。</p>
+<p><strong>干预 <span class="math inline">$Z$</span> 的结果</strong>：使用 Qwen3-32B 故意篡改想象内容使其导向错误答案，再让 CapImagine 基于错误想象继续推理：</p>
+<table>
+<thead>
+<tr>
+<th>模型</th>
+<th style="text-align: center;">V*</th>
+<th style="text-align: center;">HR-Bench4K</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CapImagine</td>
+<td style="text-align: center;">85.9</td>
+<td style="text-align: center;">74.1</td>
+</tr>
+<tr>
+<td>CapImagine <span class="math inline">$do(Z)$</span></td>
+<td style="text-align: center;"><strong>22.5</strong> (-63.4)</td>
+<td style="text-align: center;"><strong>24.0</strong> (-50.1)</td>
+</tr>
+</tbody>
+</table>
+<p>性能断崖式下跌——证明文本想象内容在推理过程中起到了真正的因果作用。这与 latent token 的"改不动"形成鲜明对比。</p>
+<h3 id="45">4.5 推理效率</h3>
+<p><img alt="图5：推理速度对比" src="assets/capimagine/image5.jpg" /></p>
+<p><em>图5：Monet、CapImagine 和 DeepEyes 在 V</em> 各子类上的推理速度对比。纵轴为解码时间（秒），横轴为 V<em> benchmark 的不同类别。CapImagine 虽然使用了较长的文本想象序列，但推理速度与 latent 方法 Monet 基本相当，且耗时仅为工具方法 DeepEyes 的一半左右。</em></p>
+<ul>
+<li>CapImagine vs Monet：速度相当（虽然文本更长，但避开了 latent token 的额外计算）</li>
+<li>CapImagine vs DeepEyes：速度快近一倍，同时保持竞争力性能</li>
+</ul>
+<hr />
+<h2 id="_3">五、关键洞察与技术亮点</h2>
+<h3 id="51">5.1 学术贡献</h3>
+<ol>
+<li>
+<p><strong>首次系统性的因果分析</strong>：用因果中介分析框架对 LVR 进行 <span class="math inline">$X \rightarrow Z$</span> 和 <span class="math inline">$Z \rightarrow Y$</span> 两个方向的系统考察，用数据说话而非直觉猜测。三个 findings 层层递进——latent token 同质化（Finding 1）→ 改了也没影响（Finding 2）→ 根本没有有效语义（Finding 3）。</p>
+</li>
+<li>
+<p><strong>"皇帝的新衣"式洞察</strong>：LVR 领域一系列方法通过监督 latent token 匹配视觉特征（Mirage → LVR → Monet），在 benchmark 上表现出色，但因果分析揭示这些 latent token 可能是"搭便车"——模型通过其他路径解决问题，latent token 退化成了 soft prompt。这是一个重要的领域反思。</p>
+</li>
+<li>
+<p><strong>简单方案的胜利</strong>：CapImagine 无需复杂设计（蒸馏、Policy Optimization、latent 监督），仅靠数据重写 + 过滤就从同一数据源获得了显著提升。这种"返璞归真"的实验结果本身就是对 complex latent method 的有力质疑。</p>
+</li>
+</ol>
+<h3 id="52">5.2 技术亮点</h3>
+<ol>
+<li>
+<p><strong>从数据角度解构方法</strong>：通过严格的数据平权（相同 17k subset 训练 Monet vs CapImagine），将方法差异从数据差异中隔离出来，消融实验设计严谨。</p>
+</li>
+<li>
+<p><strong>退化的物理直觉解释</strong>：给出了 latent token 退化现象的合理解释——Transformer 隐状态自然倾向于聚入各向异性锥，而离散解码的 <code>argmax</code>/采样提供了"出锥"的非线性力。Latent token 全程连续操作，缺失这种机制。</p>
+</li>
+<li>
+<p><strong>端到端的因果验证</strong>：不仅分析了 latent token 的"失效"，还对 CapImagine 做了同样的因果中介分析，证明文本想象 <span class="math inline">$X \rightarrow Z \rightarrow Y$</span> 的完整因果链——干预 <span class="math inline">$Z$</span> 会导致 <span class="math inline">$Y$</span> 断崖下跌。</p>
+</li>
+</ol>
+<hr />
+<h2 id="_4">六、关键概念速查</h2>
+<table>
+<thead>
+<tr>
+<th>概念</th>
+<th>解释</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>LVR（Latent Visual Reasoning）</strong></td>
+<td>在 MLLM 隐空间中通过专门的 latent token 进行视觉推理，不显式生成图像</td>
+</tr>
+<tr>
+<td><strong>Causal Mediation Analysis</strong></td>
+<td>因果中介分析——通过对中间变量 <span class="math inline">$Z$</span> 进行干预 <span class="math inline">$do(Z)$</span> 并观察结果 <span class="math inline">$Y$</span> 的变化，判断 <span class="math inline">$Z$</span> 是否真正起到中介作用</td>
+</tr>
+<tr>
+<td><strong>Monet</strong></td>
+<td>蒸馏式 LVR 方法，将梯度传播限制在 latent token 上，同时保留中间图像和文本线索的语义</td>
+</tr>
+<tr>
+<td><strong>Mirage</strong></td>
+<td>首个 LVR 方法，通过压缩中间推理图像的视觉特征来监督 latent token</td>
+</tr>
+<tr>
+<td><strong>LVR（方法）</strong></td>
+<td>使用图像特征作为 latent 监督信号的通用 LVR 方法</td>
+</tr>
+<tr>
+<td><strong>CapImagine</strong></td>
+<td>本文提出的文本空间想象方法，将 interleaved 视觉操作转为文本描述</td>
+</tr>
+<tr>
+<td><strong>Representation Degeneration</strong></td>
+<td>Transformer 隐状态自然聚入各向异性锥的现象，导致表示高度相似</td>
+</tr>
+<tr>
+<td><strong>Inter-instance / Intra-instance</strong></td>
+<td>跨实例（同一位置不同实例）vs 实例内（同一实例不同位置）的 latent token 分析</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="_5">七、局限性</h2>
+<ol>
+<li><strong>数据集构建依赖 MLLM</strong>：数据重写（Qwen3-VL-4B）和过滤（MLLM judge）两个关键步骤都依赖 MLLM，可能引入模型偏差</li>
+<li><strong>仅验证了 7B 模型</strong>：所有实验基于 Qwen2.5-VL-7B，不同规模的模型上 latent token 行为是否一致有待验证</li>
+<li><strong>文本想象的长度开销</strong>：文本描述天然比 latent token 长，虽然推理速度相当（因为避开了 latent 切换开销），但 prompt 长度和 KV cache 占用可能更大</li>
+<li><strong>工具方法的优势</strong>：DeepEyes 等直接操作图像的方法在部分任务上仍然领先，说明真正的视觉操作（zoom-in、draw）的信息量可能超过纯文本描述</li>
+<li><strong>因果分析的破坏性干预局限</strong>：将 latent token 全部替换为同一张量或随机噪声是非常强的干预，模型可能通过残差连接"绕路"。更精细的干预设计可能得出更细致的结论</li>
+</ol>
+<hr />
+<p><em>本笔记基于论文 "Imagination Helps Visual Reasoning, But Not Yet in Latent Space"（arXiv: 2602.22766v2, ICML 2026）撰写。</em></p>
+  </div>
+</main>
+
+
+<script>
+(function() {
+  const sidebar = document.getElementById('sidebar');
+  const links = sidebar.querySelectorAll('a');
+  const headings = document.querySelectorAll('h1[id], h2[id], h3[id], h4[id]');
+  if (headings.length === 0) return;
+
+  const linkMap = new Map();
+  links.forEach(function(a) {
+    const href = a.getAttribute('href');
+    if (href && href.startsWith('#')) linkMap.set(href.slice(1), a);
+  });
+
+  function onScroll() {
+    let currentId = null;
+    const scrollTop = window.scrollY + 80;
+    headings.forEach(function(h) { if (h.offsetTop <= scrollTop) currentId = h.id; });
+    links.forEach(function(a) { a.classList.remove('active'); });
+    if (currentId && linkMap.has(currentId)) {
+      const el = linkMap.get(currentId);
+      el.classList.add('active');
+      const sr = sidebar.getBoundingClientRect();
+      const er = el.getBoundingClientRect();
+      if (er.bottom > sr.bottom || er.top < sr.top) {
+        el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+    }
+  }
+
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+})();
+</script>
+
+
+<script>
+(function() {
+  const content = document.getElementById('main-content');
+  if (!content) return;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'image-lightbox';
+  overlay.setAttribute('role', 'dialog');
+  overlay.setAttribute('aria-modal', 'true');
+
+  overlay.innerHTML = `
+    <button type="button" class="image-lightbox__close" data-action="close" aria-label="关闭">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M5 5l10 10M15 5L5 15"/>
+      </svg>
+    </button>
+    <div class="image-lightbox__stage">
+      <img class="image-lightbox__image" alt="">
+    </div>
+    <div class="image-lightbox__toolbar" aria-label="图片缩放控制">
+      <button type="button" class="image-lightbox__btn" data-action="zoom-out" aria-label="缩小" title="缩小">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d="M3 9h12"/>
+        </svg>
+      </button>
+      <span class="image-lightbox__zoom-val" data-action="zoom-reset" title="点击重置缩放" role="button" tabindex="0">100%</span>
+      <button type="button" class="image-lightbox__btn" data-action="zoom-in" aria-label="放大" title="放大">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d="M3 9h12M9 3v12"/>
+        </svg>
+      </button>
+    </div>
+    <div class="image-lightbox__caption"></div>
+  `;
+  document.body.appendChild(overlay);
+
+  const stage = overlay.querySelector('.image-lightbox__stage');
+  const image = overlay.querySelector('.image-lightbox__image');
+  const zoomLabel = overlay.querySelector('.image-lightbox__zoom-val');
+  const caption = overlay.querySelector('.image-lightbox__caption');
+
+  const minZoom = 0.25;
+  const maxZoom = 5;
+  const step = 0.25;
+  let zoom = 1;
+  let fitWidth = 1;
+
+  function clamp(value) {
+    return Math.min(maxZoom, Math.max(minZoom, value));
+  }
+
+  function centerImage(animate) {
+    requestAnimationFrame(function() {
+      var left = Math.max(0, (stage.scrollWidth - stage.clientWidth) / 2);
+      var top = Math.max(0, (stage.scrollHeight - stage.clientHeight) / 2);
+      stage.scrollTo({ left: left, top: top, behavior: animate ? 'smooth' : 'auto' });
+    });
+  }
+
+  function applyZoom(animate) {
+    image.style.width = Math.max(1, Math.round(fitWidth * zoom)) + 'px';
+    zoomLabel.textContent = Math.round(zoom * 100) + '%';
+    centerImage(animate);
+  }
+
+  function setZoom(value, animate) {
+    zoom = clamp(value);
+    applyZoom(animate);
+  }
+
+  function computeFitSize() {
+    var w = image.naturalWidth || 1;
+    var h = image.naturalHeight || 1;
+    var maxW = Math.max(1, stage.clientWidth - 48);
+    var maxH = Math.max(1, stage.clientHeight - 48);
+    var fitScale = Math.min(1, maxW / w, maxH / h);
+    fitWidth = Math.max(1, w * fitScale);
+    applyZoom(false);
+  }
+
+  function openImage(source) {
+    image.onload = computeFitSize;
+    image.alt = source.alt || '';
+    caption.textContent = source.alt || '';
+    image.src = source.currentSrc || source.src;
+    zoom = 1;
+    overlay.classList.add('is-open');
+    document.body.classList.add('image-lightbox-open');
+    if (image.complete) computeFitSize();
+  }
+
+  function closeImage() {
+    overlay.classList.remove('is-open');
+    document.body.classList.remove('image-lightbox-open');
+    image.onload = null;
+    image.style.removeProperty('width');
+    image.removeAttribute('src');
+  }
+
+  overlay.addEventListener('click', function(event) {
+    var action = event.target.closest('[data-action]');
+    if (action) {
+      var type = action.getAttribute('data-action');
+      if (type === 'zoom-in') setZoom(zoom + step, true);
+      if (type === 'zoom-out') setZoom(zoom - step, true);
+      if (type === 'zoom-reset') setZoom(1, true);
+      if (type === 'close') closeImage();
+      return;
+    }
+    if (event.target === overlay || event.target === stage) closeImage();
+  });
+
+  overlay.addEventListener('wheel', function(event) {
+    if (!overlay.classList.contains('is-open')) return;
+    if (!event.ctrlKey && !event.metaKey) return;
+    event.preventDefault();
+    setZoom(zoom + (event.deltaY < 0 ? step : -step), true);
+  }, { passive: false });
+
+  document.addEventListener('keydown', function(event) {
+    if (!overlay.classList.contains('is-open')) return;
+    if (event.key === 'Escape') closeImage();
+    if (event.key === '+' || event.key === '=') setZoom(zoom + step, true);
+    if (event.key === '-' || event.key === '_') setZoom(zoom - step, true);
+    if (event.key === '0') setZoom(1, true);
+  });
+
+  window.addEventListener('resize', function() {
+    if (overlay.classList.contains('is-open')) computeFitSize();
+  });
+
+  content.querySelectorAll('img').forEach(function(img) {
+    if (img.closest('a')) return;
+    img.setAttribute('tabindex', '0');
+    img.setAttribute('title', img.getAttribute('title') || '点击放大查看');
+    img.addEventListener('click', function() { openImage(img); });
+    img.addEventListener('keydown', function(event) {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        openImage(img);
+      }
+    });
+  });
+})();
+</script>
+
+</body>
+</html>
