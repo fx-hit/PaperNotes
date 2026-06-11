@@ -1137,10 +1137,12 @@ VGGT 作为额外的几何编码器处理相同输入图像，产生几何 token
     if (currentId && linkMap.has(currentId)) {
       const el = linkMap.get(currentId);
       el.classList.add('active');
-      const sr = sidebar.getBoundingClientRect();
-      const er = el.getBoundingClientRect();
-      if (er.bottom > sr.bottom || er.top < sr.top) {
-        el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      if (getComputedStyle(sidebar).position === 'fixed') {
+        const sr = sidebar.getBoundingClientRect();
+        const er = el.getBoundingClientRect();
+        if (er.bottom > sr.bottom || er.top < sr.top) {
+          el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }
       }
     }
   }

@@ -1785,10 +1785,12 @@ python<span class="w"> </span>-u<span class="w"> </span>-m<span class="w"> </spa
     if (currentId && linkMap.has(currentId)) {
       const el = linkMap.get(currentId);
       el.classList.add('active');
-      const sr = sidebar.getBoundingClientRect();
-      const er = el.getBoundingClientRect();
-      if (er.bottom > sr.bottom || er.top < sr.top) {
-        el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      if (getComputedStyle(sidebar).position === 'fixed') {
+        const sr = sidebar.getBoundingClientRect();
+        const er = el.getBoundingClientRect();
+        if (er.bottom > sr.bottom || er.top < sr.top) {
+          el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }
       }
     }
   }
