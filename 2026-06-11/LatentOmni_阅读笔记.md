@@ -1,21 +1,21 @@
 <!-- arxiv: 2605.22012 -->
-<!-- venue: 投稿中 (under review) -->
+<!-- venue: arXiv 2026（投稿中） -->
 <!-- tags: 全模态, 多模态理解, 链式思考 -->
 
 # LatentOmni: Rethinking Omni-Modal Understanding via Unified Audio-Visual Latent Reasoning
 
-> 本文基于以下本地材料整理：
-> - 论文 tex 源码：`arXiv-2605.22012v1/latentomni.tex`
-> - 论文章节文件：`arXiv-2605.22012v1/sections/`
-> - 论文图片：`arXiv-2605.22012v1/fig/`
-> - 本文图片导出目录：`assets/latentomni/`
-
 > **论文信息**
 > - 作者：Yifan Dai（SJTU & 快手 Kling）、Zhenhua Wu、Bohan Zeng、Daili Hua、Jialing Liu、Bozhou Li、Yuran Wang、Chengzhuo Tong、Hao Liang、Xiaochen Ma、Junbo Niu、Tianyu Guo、Yang Shi、Yue Ding、Yiyan Ji、Bingyin Mei、Yushuo Guan、Yuanxing Zhang、Pengfei Wan、Fangcheng Fu、Wentao Zhang
 > - 机构：上海交大 AI 学院、快手 Kling 团队、北京大学、港科大、中科院自动化所、南京大学、中国人民大学、清华大学
+> - 投稿方向：arXiv 2026（投稿中）
 > - arXiv：https://arxiv.org/abs/2605.22012
 > - 基座模型：Qwen2.5-Omni-7B
 > - 代码：未开源
+
+> 本文基于以下本地材料整理：
+> - 论文 tex 源码：`arXiv-2605.22012v1/latentomni.tex`
+> - 论文图片：`arXiv-2605.22012v1/fig/`
+> - 本文图片导出目录：`assets/latentomni/`
 
 ---
 
@@ -387,4 +387,3 @@ LatentOmni 不做"纯隐空间推理"（完全抛弃文本），也不做"纯文
 | **LatentOmni-Instruct-35K** | 包含音视频片段引用标注的 interleaved 推理轨迹数据集 |
 | **混合推理序列 S** | 文本 token 与连续隐状态交替的推理轨迹 |
 | **K=40, K_v=32, K_a=8** | 默认隐 token 配置（总数 40，视觉 32，音频 8） |
-

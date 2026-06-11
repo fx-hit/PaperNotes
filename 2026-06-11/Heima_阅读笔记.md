@@ -1,13 +1,16 @@
 <!-- arxiv: 2501.19201 -->
 <!-- venue: ICML 2026 -->
-<!-- tags: MLLM, CoT, 推理效率, 信息论, 知识蒸馏 -->
+<!-- tags: 多模态理解, 链式思考, 知识蒸馏 -->
 
 # Heima：通过隐藏思考实现高效推理
 
-> **论文**: Efficient Reasoning with Hidden Thinking
-> **作者**: Xuan Shen, Yizhou Wang, Yufa Zhou, Xiangxi Shi, Pu Zhao, Yanzhi Wang, Jiuxiang Gu
-> **机构**: Zhejiang University / Adobe / Duke / Oregon State / Northeastern
-> **代码**: [shawnricecake/Heima](https://github.com/shawnricecake/Heima)
+> **论文信息**
+> - 论文：Efficient Reasoning with Hidden Thinking
+> - 作者：Xuan Shen, Yizhou Wang, Yufa Zhou, Xiangxi Shi, Pu Zhao, Yanzhi Wang, Jiuxiang Gu
+> - 机构：Zhejiang University / Adobe / Duke / Oregon State / Northeastern
+> - 投稿方向：ICML 2026（accepted）
+> - arXiv ID：2501.19201v2
+> - 代码：[shawnricecake/Heima](https://github.com/shawnricecake/Heima)
 
 > 本文基于以下本地材料整理：
 >

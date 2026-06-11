@@ -1,6 +1,6 @@
 <!-- arxiv: 2605.19342 -->
 <!-- venue: ICML 2026 -->
-<!-- tags: VLA, 视觉推理, 强化学习 -->
+<!-- tags: 视觉推理, 强化学习, 表征学习 -->
 
 # SLVR: Semantic-Enriched Latent Visual Reasoning
 

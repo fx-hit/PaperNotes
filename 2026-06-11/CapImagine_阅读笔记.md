@@ -1,15 +1,8 @@
 <!-- arxiv: 2602.22766 -->
 <!-- venue: ICML 2026 -->
-<!-- tags: 视觉推理, MLLM, 因果分析, 中介分析 -->
+<!-- tags: 视觉推理, 多模态理解, 表征学习 -->
 
 # CapImagine：Imagination Helps Visual Reasoning, But Not Yet in Latent Space
-
-> 本文基于以下本地材料整理：
->
-> - 论文 TeX 源码：`2026-06-11/arXiv-2602.22766v2/example_paper.tex`
-> - 论文图片：`2026-06-11/arXiv-2602.22766v2/image1.pdf`、`image2.pdf`、`image3.pdf`、`image4.pdf`、`image5.png`、`image6.png`
-> - 官方代码：`https://github.com/AI9Stars/CapImagine`（基于 Monet 代码库，CoT-SFT on Qwen2.5-VL-7B）
-> - 本文图片导出目录：`2026-06-11/assets/capimagine/`
 
 > **论文信息**
 > - 作者：You Li（北京交通大学）、Chi Chen（清华大学，通讯）、Yanghao Li（清华大学，通讯）、Fanhu Zeng（清华大学）、Kaiyu Huang（北京交通大学）、Jinan Xu（北京交通大学）、Maosong Sun（清华大学）
@@ -17,6 +10,13 @@
 > - 投稿方向：ICML 2026（accepted）
 > - arXiv ID：2602.22766v2
 > - 代码：https://github.com/AI9Stars/CapImagine
+
+> 本文基于以下本地材料整理：
+>
+> - 论文 TeX 源码：`2026-06-11/arXiv-2602.22766v2/example_paper.tex`
+> - 论文图片：`2026-06-11/arXiv-2602.22766v2/image1.pdf`、`image2.pdf`、`image3.pdf`、`image4.pdf`、`image5.png`、`image6.png`
+> - 官方代码：`https://github.com/AI9Stars/CapImagine`（基于 Monet 代码库，CoT-SFT on Qwen2.5-VL-7B）
+> - 本文图片导出目录：`2026-06-11/assets/capimagine/`
 
 ## 一、核心问题
 

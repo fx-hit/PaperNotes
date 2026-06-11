@@ -6,7 +6,7 @@
 <title>CapImagine：Imagination Helps Visual Reasoning, But Not Yet in Latent Space</title>
 <!-- arxiv: 2602.22766 -->
 <!-- venue: ICML 2026 -->
-<!-- tags: 视觉推理, MLLM, 因果分析, 中介分析 -->
+<!-- tags: 视觉推理, 多模态理解, 表征学习 -->
 <!-- words-zh: 6077 -->
 <!-- words-en: 798 -->
 <!-- reading-time: 21 -->
@@ -376,6 +376,12 @@ document.addEventListener('DOMContentLoaded', function() {
 <div class="article-stats">6,077 字 · English 798 词 · 约 21 分钟阅读</div>
 
 <blockquote>
+<p><strong>论文信息</strong>
+- 作者：You Li（北京交通大学）、Chi Chen（清华大学，通讯）、Yanghao Li（清华大学，通讯）、Fanhu Zeng（清华大学）、Kaiyu Huang（北京交通大学）、Jinan Xu（北京交通大学）、Maosong Sun（清华大学）
+- 机构：北京交通大学计算机学院、清华大学
+- 投稿方向：ICML 2026（accepted）
+- arXiv ID：2602.22766v2
+- 代码：https://github.com/AI9Stars/CapImagine</p>
 <p>本文基于以下本地材料整理：</p>
 <ul>
 <li>论文 TeX 源码：<code>2026-06-11/arXiv-2602.22766v2/example_paper.tex</code></li>
@@ -383,12 +389,6 @@ document.addEventListener('DOMContentLoaded', function() {
 <li>官方代码：<code>https://github.com/AI9Stars/CapImagine</code>（基于 Monet 代码库，CoT-SFT on Qwen2.5-VL-7B）</li>
 <li>本文图片导出目录：<code>2026-06-11/assets/capimagine/</code></li>
 </ul>
-<p><strong>论文信息</strong>
-- 作者：You Li（北京交通大学）、Chi Chen（清华大学，通讯）、Yanghao Li（清华大学，通讯）、Fanhu Zeng（清华大学）、Kaiyu Huang（北京交通大学）、Jinan Xu（北京交通大学）、Maosong Sun（清华大学）
-- 机构：北京交通大学计算机学院、清华大学
-- 投稿方向：ICML 2026（accepted）
-- arXiv ID：2602.22766v2
-- 代码：https://github.com/AI9Stars/CapImagine</p>
 </blockquote>
 <h2 id="_1">一、核心问题</h2>
 <p>Latent Visual Reasoning 领域声称"模型在 latent space 中进行视觉想象"——但本文用因果中介分析证明：latent token 既不受输入影响、也不影响输出，更像 placeholder 而非推理载体。于是提出 <strong>CapImagine</strong>：把中间图像操作转化为文本描述，让模型在文本空间显式想象，在同一数据源下全面超越 latent-space baseline。</p>

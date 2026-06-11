@@ -1,8 +1,15 @@
 <!-- arxiv: 2509.24251 -->
 <!-- venue: ICLR 2026 -->
-<!-- tags: MLLM, 视觉推理, 强化学习 -->
+<!-- tags: 视觉推理, 强化学习, 表征学习 -->
 
 # LVR (Latent Visual Reasoning) — 阅读笔记
+
+> **论文信息**
+> - 论文：Latent Visual Reasoning
+> - 主页：[vincentleebang.github.io/lvr-project-page](https://vincentleebang.github.io/lvr-project-page/)
+> - 代码：[github.com/VincentLeebang/lvr](https://github.com/VincentLeebang/lvr)
+> - 模型：[huggingface.co/vincentleebang/LVR-7B](https://huggingface.co/vincentleebang/LVR-7B)
+> - arXiv ID：2509.24251v2
 
 > 本文基于以下本地材料整理：
 >
@@ -10,8 +17,6 @@
 > - 论文图片：`arXiv-2509.24251v2/figures/*.pdf`
 > - 官方代码仓库：`lvr/`
 > - 本文图片导出目录：`assets/lvr/`
->
-> **主页**：[vincentleebang.github.io/lvr-project-page](https://vincentleebang.github.io/lvr-project-page/)　**代码**：[github.com/VincentLeebang/lvr](https://github.com/VincentLeebang/lvr)　**模型**：[huggingface.co/vincentleebang/LVR-7B](https://huggingface.co/vincentleebang/LVR-7B)
 
 ---
 

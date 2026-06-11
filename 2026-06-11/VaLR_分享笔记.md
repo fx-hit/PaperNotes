@@ -1,8 +1,16 @@
 <!-- arxiv: 2602.04476 -->
 <!-- venue: ICML 2026 -->
-<!-- tags: MLLM, 多模态推理, 潜在推理, 表征学习 -->
+<!-- tags: 多模态理解, 视觉推理, 表征学习 -->
 
 # VaLR 论文分享简明笔记
+
+> **论文信息**
+> - 论文：Vision-aligned Latent Reasoning for Multi-modal Large Language Model
+> - 作者：Byungwoo Jeon、Yoonwoo Jeong、Hyunseok Lee、Minsu Cho、Jinwoo Shin
+> - 机构：KAIST、POSTECH、RLWRLD
+> - 投稿方向：ICML 2026（accepted）
+> - arXiv ID：2602.04476v2
+> - 代码：论文指向项目页 https://rootyjeon.github.io/valr/；本地未克隆官方代码
 
 > 本文基于以下本地材料整理：
 >
