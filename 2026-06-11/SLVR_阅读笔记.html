@@ -7,9 +7,9 @@
 <!-- arxiv: 2605.19342 -->
 <!-- venue: ICML 2026 -->
 <!-- tags: VLA, 视觉推理, 强化学习 -->
-<!-- words-zh: 2179 -->
-<!-- words-en: 397 -->
-<!-- reading-time: 8 -->
+<!-- words-zh: 4512 -->
+<!-- words-en: 662 -->
+<!-- reading-time: 16 -->
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
@@ -351,7 +351,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <main class="main-wrapper">
   <div class="content-inner" id="main-content">
 <h1 id="slvr-semantic-enriched-latent-visual-reasoning">SLVR: Semantic-Enriched Latent Visual Reasoning</h1>
-<div class="article-stats">2,179 字 · English 397 词 · 约 8 分钟阅读</div>
+<div class="article-stats">4,512 字 · English 662 词 · 约 16 分钟阅读</div>
 
 <blockquote>
 <p><strong>论文信息</strong>
@@ -371,13 +371,36 @@ document.addEventListener('DOMContentLoaded', function() {
 <li><strong>单一查询视角</strong>：现有方法的 latent 训练由单一任务驱动，没有统一的机制让同一个 rich latent 支持同一区域上的多种推理粒度。当同一区域被从不同语义角度提问时，单查询训练的 latent 无法稳定支持所有回答。</li>
 </ol>
 <p><img alt="图1：三种视觉推理范式对比" src="assets/slvr/figure1_n.png" /></p>
-<p><em>图1：三种视觉推理范式对比。(a) 显式推理或裁剪证据；(b) 仅视觉监督的 latent 推理；(c) SLVR：视觉 + 语义双重监督，跨问题对比对齐。</em></p>
+<p><em>图 1：三种视觉推理范式的概念对比，也是 paper 的 teaser 图。全图分为三栏，从左到右按推理效率和语义丰富度递进排列。</em></p>
+<p><strong>子图 (a) 显式推理或裁剪证据（"thinking with images"）：</strong></p>
+<p>左侧面板展示的是当前主流范式——模型在推理过程中反复访问原始图像：先用视觉编码器处理整张图，根据问题确定需要关注的区域，然后通过图像裁剪（crop）或缩放（zoom-in）获取该区域的高分辨率视图，再对裁剪后的图像块单独编码，最终结合裁剪证据输出答案。代表方法包括 DeepEyes（自适应缩放）、GRIT（RL 引导区域选择）、V*（引导式视觉搜索）。这种范式的优势是信息保真——模型直接"看"原始像素，对细粒度细节（如小文字、远距离物体）有最强的分辨能力。代价是计算效率——每次裁剪都需要重新编码图像，多次迭代下推理延迟远高于纯文本方法。图中用多个蓝色方块表示多轮裁剪—编码循环，箭头表示信息流反复经过 vision encoder。</p>
+<p><strong>子图 (b) 仅视觉监督的 latent 推理（LVR 范式）：</strong></p>
+<p>中间面板展示的是 Latent Visual Reasoning（LVR）的思路——不反复裁剪图像，而是将目标区域的视觉信息一次性压缩为 compact latent 向量。流程：输入图像和问题 → 视觉编码器提取 patch features → 选出 ROI 对应 patches → LLM 在 latent space 中自回归推理 → 输出答案。关键约束是 latent 仅由视觉特征重建损失（MSE 对齐 vision encoder features）监督，确保 latent "长得像"目标区域。但这种监督隐含地假设：如果 latent 数值上接近视觉特征，它就应该蕴含足够的语义信息来支持推理。这个假设的漏洞在于 vision encoder 的 patch features 本身不显式编码语义属性（如颜色类别、动作类型、空间关系），它们编码的是像素级的纹理和边缘特征。图中以虚线框标出 latent vector、以简单的箭头流向表示"一次压缩、直接推理"的高效路径——对比子图(a)的多次裁剪循环，计算量大幅下降。</p>
+<p><strong>子图 (c) SLVR：视觉 + 语义双重监督 + 跨问题对比对齐（本文提出）：</strong></p>
+<p>右侧面板展示了 SLVR 的核心创新——在 LVR 的 visual latent 基础上，新增了一个独立的 semantic latent（以 <code>&lt;sem&gt;</code> token 表示），由属性级文本监督驱动。流程分为两阶段：Stage 1（下排）：图像编码后同时产生 visual latent（绿色方块，MSE 对齐视觉特征）和 semantic latent（紫色方块，MSE 对齐 Qwen3 embedding 编码的属性描述）。属性描述涵盖颜色、形状、材质、动作、空间关系等结构化语义字段。Stage 2（上排）：同一区域的两个不同语义角度的问题（Question A：颜色相关、Question B：动作相关）各自产生 latent pair，M-GRPO 的 cross-question contrast 奖励迫使两个 latent pair 在保持答案正确性的同时互相一致——这样无论问颜色还是问动作，latent 都稳定编码了区域的完整语义。图中用双箭头表示 consistency 约束，用紫色渐变表示 semantic latent 从属性描述中获取的丰富语义信息，与子图(b)的"纯绿色"形成直观对比：SLVR 的 latent 不仅"像"对应区域，还"理解"区域里的语义。*</p>
 <hr />
 <h2 id="_2">二、核心思路 / 方法</h2>
 <p>SLVR 提出一个<strong>两阶段学习框架</strong>，核心思想：先让 latent 编码丰富的属性级语义，再通过多查询优化对齐 latent 与多样的推理目标。</p>
 <h3 id="21-stage-1-latent-structured-latent-learning">2.1 Stage 1：结构化 Latent 学习（Structured Latent Learning）</h3>
-<p><img alt="图2：SLVR 框架概览（Stage 1 &amp; Stage 2）" src="assets/slvr/figure2.png" /></p>
-<p><em>图2：SLVR 框架概览。(a) Stage 1 结构化 latent 学习；(b) Stage 2 M-GRPO 多查询优化。</em></p>
+<p><img alt="图2：SLVR 方法框架总览" src="assets/slvr/figure2.png" /></p>
+<p><em>图 2：SLVR 两阶段框架总览。全图分为上下两栏，分别对应 Stage 1（结构化 Latent 学习）和 Stage 2（M-GRPO 多查询优化），是理解论文方法最核心的图。</em></p>
+<p><strong>子图 (a) Stage 1：结构化 Latent 学习（Structured Latent Learning）：</strong></p>
+<p>上半部分展示了 Stage 1 的输入、模型组件和信息流。数据输入由三部分组成——一张整图（Image）、一个自然语言问题（Question："描述该区域中的猫的外观"）、以及一个目标区域的 bounding box（ROI，如红色框标注的猫所在区域）。这三者联合输入模型。模型结构从下往上包含三个颜色编码的模块：绿色模块是视觉编码器（Vision Encoder），负责把整张图像编码为 patch feature 序列，对于 7B 模型通常产生数千个 3584 维的视觉 token；紫色模块是文本投影头（Text Embedding Projector），将 semantic latent 映射到 4096 维语义嵌入空间；蓝色模块是 LLM Backbone（基于 Qwen2.5-VL-7B），负责处理 token 序列并执行推理。</p>
+<p>信息流的详细路径：图像经过 Vision Encoder 得到 patch features <span class="math inline">$\{\mathbf{v}^{enc}_t\}$</span>。ROI 指定的 token indices（通过 Bbox→Token 映射选出）对应的 patch features 被包裹在 <code>&lt;|vision_start|&gt;</code> 和 <code>&lt;|vision_end|&gt;</code> 之间，这些位置的 LLM hidden states 构成区域视觉 latent <span class="math inline">$\mathcal{H}_{vis}$</span>。紧接着 <code>&lt;|vision_end|&gt;</code> 之后是 <code>&lt;sem&gt;</code> 特殊 token，其 hidden state 先经过 LLM backbone 的一层处理，然后送入紫色 Text Embedding Projector 投影为 <span class="math inline">$\hat{\mathbf{e}}_{sem} \in \mathbb{R}^{4096}$</span>。三个阶段被三个损失函数联合监督——<span class="math inline">$\mathcal{L}_{vis}$</span>（绿色箭头，MSE 对齐 visual latent 与 vision encoder 的 patch features）、<span class="math inline">$\mathcal{L}_{sem}$</span>（紫色箭头，MSE 对齐投影后的 semantic latent 与 Qwen3 embedding 编码的属性描述向量 <span class="math inline">$\mathbf{e}$</span>）、以及未在图中显式画出但实际存在的 <span class="math inline">$\mathcal{L}_{ans}$</span>（自回归答案生成损失）。图中底部的"Answer Supervision"文本提示模型最终还需要正确回答问题——三路损失同时作用，确保 latent 既视觉保真又语义丰富。</p>
+<p><strong>子图 (b) Stage 2：M-GRPO 多查询分组相对策略优化：</strong></p>
+<p>下半部分展示了 Stage 2 的优化逻辑，这是本文方法区别于 LVR 的核心差异点。同一个图像区域 <span class="math inline">$(I, r)$</span> 关联两个语义不同的问题——图中示例为 <span class="math inline">$q_1$</span>（"猫的毛是什么颜色？"）和 <span class="math inline">$q_2$</span>（"猫在做什么？"）。模型分别为每个问题生成对应的 latent 对——<span class="math inline">$q_1$</span> 产生 <span class="math inline">$(\mathcal{H}_{vis}^{(1)}, z_{sem}^{(1)})$</span>（左侧 Latent 1），<span class="math inline">$q_2$</span> 产生 <span class="math inline">$(\mathcal{H}_{vis}^{(2)}, z_{sem}^{(2)})$</span>（右侧 Latent 2）。这两个 latent 对在三项奖励的驱动下被联合优化：</p>
+<ol>
+<li>
+<p><strong>Answer Correctness Reward</strong>（<span class="math inline">$\mathcal{R}_{ans}$</span>，橙色标注）：由 Qwen3-Max 作为 LLM Judge 评估每个问题的预测答案是否与 ground truth 语义等价。两个问题各有一个独立的正确性奖励，确保 multi-query 优化不会牺牲任一单个问题的准确性。</p>
+</li>
+<li>
+<p><strong>Latent Consistency Reward</strong>（<span class="math inline">$\mathcal{R}_{cons}$</span>，绿色双向箭头）：分别惩罚 semantic latent 和 visual latent 在两个问题之间的不一致——如果同一个区域对 q1 产生了一种 latent、对 q2 产生了截然不同的另一种 latent，说明 latent 的语义编码不够稳定，会被扣分。图中以双向绿色箭头连接两个 Latent，箭头上的 <span class="math inline">$\| \cdot \|_2$</span> 符号表示用 L2 距离度量差异。</p>
+</li>
+<li>
+<p><strong>Stability Regularization</strong>（<span class="math inline">$\mathcal{R}_{stab}$</span>，灰色锁定图标）：将当前 latent 与 Stage 1 冻结模型在同样样本上产生的参考 latent（Reference Latent）做 margin-based L2 对齐——偏离超过容忍度 <span class="math inline">$\tau$</span> 时才扣分。这类似于 PPO 的 KL 惩罚，防止 RL 探索摧毁 Stage 1 已经学好的语义结构。图中以 Stage 1 Latent（灰色虚线框）作为锚点，用灰色箭头指向当前优化的 latent。</p>
+</li>
+</ol>
+<p>三项奖励按权重合并后（<span class="math inline">$\mathcal{R} = \lambda_{ans}\mathcal{R}_{ans} + \lambda_{cons}\mathcal{R}_{cons} + \lambda_{stab}\mathcal{R}_{stab}$</span>），通过 GRPO 的 group-relative advantage + clipped importance sampling 机制更新 latent-generation policy。图最底部标注了 M-GRPO 的核心技术——Multiple Queries 联合 Group Relative Policy Optimization。*</p>
 <p><strong>输入与 Token 构造：</strong></p>
 <p>给定图像 <span class="math inline">$I$</span> 和问题 <span class="math inline">$q$</span>，通过 vision encoder 编码后，用 bounding box 指定的 ROI token 序列被包裹在 <code>&lt;|vision_start|&gt;</code> 和 <code>&lt;|vision_end|&gt;</code> 之间，形成<strong>区域视觉 latent</strong> <span class="math inline">$\mathcal{H}_{vis} = \{\mathbf{h}^{lat}_t\}_{t=1}^{T_v}$</span>。</p>
 <p>在 <code>&lt;|vision_end|&gt;</code> 之后插入特殊 token <code>&lt;sem&gt;</code>，其隐藏状态作为<strong>语义 latent</strong> <span class="math inline">$\mathbf{z}_{sem}$</span>，用于聚合区域级语义信息。</p>
@@ -498,8 +521,17 @@ document.addEventListener('DOMContentLoaded', function() {
 </tr>
 </tbody>
 </table>
-<p><img alt="图3：数据集构建示意" src="assets/slvr/dataset_region_multiq.png" /></p>
-<p><em>图3：数据集构建流程。(a) 区域语义档案构建（属性级标注）；(b) 多查询问题生成。</em></p>
+<p><img alt="图3：数据集构建流程" src="assets/slvr/dataset_region_multiq.png" /></p>
+<p><em>图 3：SLV-Set 数据集构建流水线，分为两个子图，分别对应属性级语义标注和多查询问题生成两大环节。</em></p>
+<p><strong>子图 (a) Region-Centric Prompt 和属性级语义标注：</strong></p>
+<p>上半部分展示了如何用 Qwen3-VL-235B 为每个关键区域生成结构化的"区域语义档案"（Region Semantic Profile）。流程从左到右分为三步：</p>
+<p>第一步——输入（左侧）：给定一张图像及其原始问题（如"这个物体是什么颜色？"），通过 bounding box 标注出关键区域（如红框框出的物体区域）。区域相关的视觉信息作为模型关注的焦点。</p>
+<p>第二步——Region-Centric Prompting（中间）：设计专门的 prompt 策略，引导 Qwen3-VL-235B 只关注 bounding box 指定的区域，从标准化字段描述该区域的语义。Prompt 要求模型输出结构化字段，覆盖四个维度——Appearance 属性（实体类别 Entity、颜色 Color、形状 Shape、材质 Material）、Action &amp; Interaction 属性（区域内实体正在做的动作、与其他物体的交互关系）、Spatial 属性（相对位置、方向、深度关系）、以及 Visible Text（区域内出现的文字内容）。图中用多层展开的彩色标签表示这些字段，左右对称排列，直观展示每个属性维度的内容。这个结构化档案确保了语义监督信号是细粒度且可解释的——不像 LVR 只用一个标量 MSE 值来隐式衡量"像不像"。</p>
+<p>第三步——语义嵌入编码（右侧）：生成的文本属性描述（Region Semantic Profile → Description 1, Description 2, ...）被送入 Qwen3 Embedding Model，编码为一个统一的 4096 维语义向量 <span class="math inline">$\mathbf{e} \in \mathbb{R}^{4096}$</span>。这个向量随后成为 Stage 1 语义 latent 的训练目标。图中以蓝色方块 "4096-dim" 表示最终的嵌入向量。</p>
+<p><strong>子图 (b) Multi-Query Question Generation（多查询问题生成）：</strong></p>
+<p>下半部分展示了如何基于同一视觉区域生成多个语义角度不同的 QA 对。关键设计是："语义不同"不是随机的——每个问题被设计为探测区域的不同语义维度。图示流程：</p>
+<p>左侧是同一个被 bounding box 标注的目标区域（如一个穿某颜色衣服的人、或某个特定物体）。Qwen3-VL-235B 被 prompt 引导，围绕该区域生成 2-4 个问题，每个问题从不同的语义角度切入——例如一个问题是关于颜色的（"这个人穿什么颜色的衣服？"），另一个问题是关于动作的（"这个人在做什么？"），还可能有关于空间关系（"这个人站在什么东西的旁边？"）或物体属性（"这个人手里拿着什么？"）的问题。图中用不同颜色的矩形框（黄色、橙色、蓝色等）区分不同角度的问题。</p>
+<p>每个问题都是完整的 QA 对，包含自然语言问题（如 "Q: What is the color of the car?"）、对应的答案选项或自由文本答案、以及指向同一个 bounding box 的标注。这些 QA 对随后被组织为训练样本，每个样本格式为 <span class="math inline">$(i, q_1, q_2, b)$</span>——图像、两个语义不同的问题、共享的 bounding box。这是在为 Stage 2 M-GRPO 的 joint optimization 准备数据——M-GRPO 要求同一区域有多于一个问题才能计算跨查询一致性奖励。图底部以树状分叉结构表示：一个区域（树干）→ 多个语义角度的问题（树枝）→ 各自独立的答案（树叶），直观表达了同一个 latent 需要支撑多种语义查询的设计意图。*</p>
 <p><strong>质量验证：</strong> 人工后验检查全部 SLV-Set，发现 29,457 条错误标注（错误率 7.29%）。主要错误类型：颜色错配（19.94%）、动作/姿态错误（14.55%）、空间关系错误（13.28%）、幻觉属性（11.80%）。</p>
 <p>每个样本格式：<span class="math inline">$(q, i, b, \mathcal{A}, \mathbf{e})$</span> — 问题、图像、边界框、属性集、4096 维语义嵌入。</p>
 <h3 id="32-sv-qa">3.2 SV-QA 评估基准</h3>
