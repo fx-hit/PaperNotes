@@ -1,8 +1,8 @@
 <!-- arxiv: 2601.22730 -->
 <!-- venue: ICML 2026 -->
-<!-- tags: 语言模型, 链式思考, 表征学习 -->
+<!-- tags: 语言模型, 链式思考 -->
 
-# ImgCoT：将长思维链压缩为紧凑视觉 Token 以实现大语言模型高效推理
+# ImgCoT: Compressing Long Chain of Thought into Compact Visual Tokens for Efficient Reasoning of Large Language Model
 
 > **论文信息**
 > - 作者：Xiaoshu Chen, Sihang Zhou, Ke Liang, Taichun Zhou, Xinwang Liu（国防科技大学）

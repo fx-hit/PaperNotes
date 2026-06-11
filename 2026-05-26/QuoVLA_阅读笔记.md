@@ -1,6 +1,6 @@
 <!-- arxiv: 2605.24890 -->
 <!-- venue: NeurIPS 2026（投稿中） -->
-<!-- tags: VLA, 表征学习 -->
+<!-- tags: VLA -->
 
 # QuoVLA: Quotient Space for Vision-Language-Action Models
 

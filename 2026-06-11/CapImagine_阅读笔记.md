@@ -1,8 +1,8 @@
 <!-- arxiv: 2602.22766 -->
 <!-- venue: ICML 2026 -->
-<!-- tags: 视觉推理, 多模态理解, 表征学习 -->
+<!-- tags: 视觉推理, 多模态理解 -->
 
-# CapImagine：Imagination Helps Visual Reasoning, But Not Yet in Latent Space
+# CapImagine: Imagination Helps Visual Reasoning, But Not Yet in Latent Space
 
 > **论文信息**
 > - 作者：You Li（北京交通大学）、Chi Chen（清华大学，通讯）、Yanghao Li（清华大学，通讯）、Fanhu Zeng（清华大学）、Kaiyu Huang（北京交通大学）、Jinan Xu（北京交通大学）、Maosong Sun（清华大学）

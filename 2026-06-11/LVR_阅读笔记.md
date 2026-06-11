@@ -1,8 +1,8 @@
 <!-- arxiv: 2509.24251 -->
 <!-- venue: ICLR 2026 -->
-<!-- tags: 视觉推理, 强化学习, 表征学习 -->
+<!-- tags: 视觉推理, 强化学习 -->
 
-# LVR (Latent Visual Reasoning) — 阅读笔记
+# LVR: Latent Visual Reasoning
 
 > **论文信息**
 > - 论文：Latent Visual Reasoning

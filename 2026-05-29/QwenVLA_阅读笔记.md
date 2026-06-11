@@ -1,6 +1,6 @@
 <!-- arxiv: 2605.30280 -->
 <!-- venue: 千问VLA技术报告 -->
-<!-- tags: VLA, 导航, 泛化 -->
+<!-- tags: VLA, 泛化 -->
 
 # Qwen-VLA: Unifying Vision-Language-Action Modeling across Tasks, Environments, and Robot Embodiments
 

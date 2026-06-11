@@ -1,6 +1,6 @@
 <!-- arxiv: 2602.19083 -->
 <!-- venue: CVPR 2026 Oral -->
-<!-- tags: 图像编辑, 扩散模型, 最优传输 -->
+<!-- tags: 图像编辑, 扩散模型 -->
 
 # ChordEdit: One-Step Low-Energy Transport for Image Editing
 

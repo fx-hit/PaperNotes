@@ -1,8 +1,8 @@
 <!-- arxiv: 2602.04476 -->
 <!-- venue: ICML 2026 -->
-<!-- tags: 多模态理解, 视觉推理, 表征学习 -->
+<!-- tags: 多模态理解, 视觉推理 -->
 
-# VaLR 论文分享简明笔记
+# VaLR: Vision-aligned Latent Reasoning for Multi-modal Large Language Model
 
 > **论文信息**
 > - 论文：Vision-aligned Latent Reasoning for Multi-modal Large Language Model

@@ -1,6 +1,6 @@
 <!-- arxiv: 2605.22012 -->
 <!-- venue: arXiv 2026（投稿中） -->
-<!-- tags: 全模态, 多模态理解, 链式思考 -->
+<!-- tags: 音视频推理, 多模态理解, 链式思考 -->
 
 # LatentOmni: Rethinking Omni-Modal Understanding via Unified Audio-Visual Latent Reasoning
 

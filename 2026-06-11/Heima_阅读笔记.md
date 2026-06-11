@@ -2,7 +2,7 @@
 <!-- venue: ICML 2026 -->
 <!-- tags: 多模态理解, 链式思考, 知识蒸馏 -->
 
-# Heima：通过隐藏思考实现高效推理
+# Heima: Efficient Reasoning with Hidden Thinking
 
 > **论文信息**
 > - 论文：Efficient Reasoning with Hidden Thinking
