@@ -7,9 +7,9 @@
 <!-- arxiv: 2605.19342 -->
 <!-- venue: ICML 2026 -->
 <!-- tags: VLA, 视觉推理, 强化学习 -->
-<!-- words-zh: 4550 -->
-<!-- words-en: 670 -->
-<!-- reading-time: 16 -->
+<!-- words-zh: 5470 -->
+<!-- words-en: 834 -->
+<!-- reading-time: 20 -->
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
@@ -316,7 +316,11 @@ document.addEventListener('DOMContentLoaded', function() {
 </li>
 <li class="toc-h3"><a href="#41">4.1 项目结构</a>
 </li>
-<li class="toc-h3"><a href="#42">4.2 关键技术细节</a>
+<li class="toc-h3"><a href="#42">4.2 数据流架构图</a>
+</li>
+<li class="toc-h3"><a href="#43">4.3 关键技术细节</a>
+</li>
+<li class="toc-h3"><a href="#44">4.4 公式 → 代码函数映射</a>
 </ul></li>
 </li>
 <li class="toc-h2"><a href="#_5">五、实验结果</a>
@@ -339,11 +343,11 @@ document.addEventListener('DOMContentLoaded', function() {
 <li class="toc-h3"><a href="#62-m-grpo-motivation">6.2 M-GRPO 的 motivation</a>
 </li>
 <li class="toc-h3"><a href="#63-deepeyes">6.3 与 DeepEyes 等"看图思考"方法的关系</a>
-</li>
-<li class="toc-h3"><a href="#64">6.4 局限性</a>
 </ul></li>
 </li>
-<li class="toc-h2"><a href="#_7">七、总结</a>
+<li class="toc-h2"><a href="#_7">七、局限性</a>
+</li>
+<li class="toc-h2"><a href="#_8">八、关键概念速查</a>
 </ul></li>
 </li></ul>
 </nav>
@@ -351,7 +355,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <main class="main-wrapper">
   <div class="content-inner" id="main-content">
 <h1 id="slvr-semantic-enriched-latent-visual-reasoning">SLVR: Semantic-Enriched Latent Visual Reasoning</h1>
-<div class="article-stats">4,550 字 · English 670 词 · 约 16 分钟阅读</div>
+<div class="article-stats">5,470 字 · English 834 词 · 约 20 分钟阅读</div>
 
 <blockquote>
 <p><strong>论文信息</strong>
@@ -441,15 +445,23 @@ document.addEventListener('DOMContentLoaded', function() {
 <p>总目标：<span class="math inline">$\mathcal{L}_{stage1} = \mathcal{L}_{vis} + \mathcal{L}_{sem}$</span></p>
 <p><strong>关键设计（代码印证）：</strong></p>
 <div class="codehilite"><pre><span></span><code><span class="c1"># 特殊 token 定义（src/constants.py）</span>
-<span class="n">VISION_START_TOKEN</span> <span class="o">=</span> <span class="s2">&quot;&lt;|vision_start|&gt;&quot;</span>
-<span class="n">VISION_END_TOKEN</span> <span class="o">=</span> <span class="s2">&quot;&lt;|vision_end|&gt;&quot;</span>
-<span class="n">SEM_TOKEN</span> <span class="o">=</span> <span class="s2">&quot;&lt;|sem|&gt;&quot;</span>
-<span class="n">SEM_END_TOKEN</span> <span class="o">=</span> <span class="s2">&quot;&lt;/sem&gt;&quot;</span>
+<span class="n">VISION_START_TOKEN</span> <span class="o">=</span> <span class="s2">&quot;&lt;|vision_start|&gt;&quot;</span>       <span class="c1"># visual latent 起始</span>
+<span class="n">VISION_END_TOKEN</span> <span class="o">=</span> <span class="s2">&quot;&lt;|vision_end|&gt;&quot;</span>           <span class="c1"># visual latent 结束（实际是占位符）</span>
+<span class="n">SEM_START_TOKEN</span> <span class="o">=</span> <span class="s2">&quot;&lt;sem&gt;&quot;</span>                     <span class="c1"># semantic latent 起始</span>
+<span class="n">SEM_END_TOKEN</span> <span class="o">=</span> <span class="s2">&quot;&lt;/sem&gt;&quot;</span>                      <span class="c1"># semantic latent 结束</span>
 
 <span class="c1"># 语义投影头（src/model/slvr_heads.py）</span>
 <span class="k">class</span> <span class="nc">SLVRTextHead</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
     <span class="c1"># 将 hidden_size → 4096 维语义嵌入空间</span>
-    <span class="c1"># 结构：LayerNorm → Linear → GELU → Linear</span>
+    <span class="c1"># 结构：LayerNorm → Linear(4096) → GELU → Linear(4096)</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">hidden_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ln_q</span> <span class="o">=</span> <span class="n">LayerNorm</span><span class="p">(</span><span class="n">hidden_size</span><span class="p">,</span> <span class="n">eps</span><span class="o">=</span><span class="mf">1e-6</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mlp</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Sequential</span><span class="p">(</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">hidden_size</span><span class="p">,</span> <span class="mi">4096</span><span class="p">),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">GELU</span><span class="p">(),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">hidden_size</span><span class="p">,</span> <span class="mi">4096</span><span class="p">),</span>
+        <span class="p">)</span>
 </code></pre></div>
 
 <h3 id="22-stage-2m-grpo">2.2 Stage 2：多查询分组相对策略优化（M-GRPO）</h3>
@@ -574,7 +586,83 @@ document.addEventListener('DOMContentLoaded', function() {
 <span class="err">└──</span><span class="w"> </span><span class="n">requirements</span><span class="o">.</span><span class="n">txt</span>
 </code></pre></div>
 
-<h3 id="42">4.2 关键技术细节</h3>
+<h3 id="42">4.2 数据流架构图</h3>
+<div class="codehilite"><pre><span></span><code><span class="n">输入数据格式</span><span class="err">（</span><span class="n">M</span><span class="o">-</span><span class="n">GRPO</span><span class="w"> </span><span class="n">训练单样本</span><span class="err">）：</span>
+<span class="err">┌─────────────────────────────────────────────────────┐</span>
+<span class="err">│</span><span class="w">  </span><span class="nl">prompt</span><span class="p">:</span><span class="w"> </span><span class="err">{</span><span class="w">                                           </span><span class="err">│</span>
+<span class="err">│</span><span class="w">    </span><span class="k">role</span><span class="err">:</span><span class="w"> </span><span class="ss">&quot;user&quot;</span><span class="p">,</span><span class="w">                                     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">    </span><span class="nl">content</span><span class="p">:</span><span class="w"> </span><span class="o">[</span><span class="n">                                        │</span>
+<span class="n">│      { type: &quot;image&quot;, image: &lt;tensor&gt; },             │</span>
+<span class="n">│      { type: &quot;text1&quot;, text1: &quot;猫的毛是什么颜色？&quot; },   │</span>
+<span class="n">│      { type: &quot;text2&quot;, text2: &quot;猫在做什么？&quot; },         │</span>
+<span class="n">│    </span><span class="o">]</span><span class="w">                                                  </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">}</span><span class="w">                                                    </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="nl">assistant</span><span class="p">:</span><span class="w"> </span><span class="err">{</span><span class="w">                                         </span><span class="err">│</span>
+<span class="err">│</span><span class="w">    </span><span class="ss">&quot;text1-answer&quot;</span><span class="err">:</span><span class="w"> </span><span class="ss">&quot;白色&quot;</span><span class="p">,</span><span class="w">                             </span><span class="err">│</span>
+<span class="err">│</span><span class="w">    </span><span class="ss">&quot;text2-answer&quot;</span><span class="err">:</span><span class="w"> </span><span class="ss">&quot;睡觉&quot;</span><span class="w">                              </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">}</span><span class="w">                                                     </span><span class="err">│</span>
+<span class="err">└─────────────────────────────────────────────────────┘</span>
+
+<span class="n">前向传播流程</span><span class="err">（</span><span class="n">monkey_patch_forward_slvr</span><span class="p">.</span><span class="n">py</span><span class="err">）：</span>
+<span class="err">┌────────────────────────────────────────────────────────────┐</span>
+<span class="err">│</span><span class="w">  </span><span class="n">Vision</span><span class="w"> </span><span class="n">Encoder</span><span class="w">                                            </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="p">(</span><span class="n">patch_size</span><span class="o">=</span><span class="mi">14</span><span class="p">,</span><span class="w"> </span><span class="n">spatial_merge_size</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span><span class="w">                     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">         </span><span class="err">│</span><span class="w">                                                  </span><span class="err">│</span>
+<span class="err">│</span><span class="w">         </span><span class="err">▼</span><span class="w">                                                  </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="n">Patch</span><span class="w"> </span><span class="n">Features</span><span class="w"> </span><span class="err">{</span><span class="n">v_enc_t</span><span class="err">}</span><span class="w">  </span><span class="p">(</span><span class="n">T_patches</span><span class="w"> </span><span class="err">×</span><span class="w"> </span><span class="mi">3584</span><span class="p">)</span><span class="w">              </span><span class="err">│</span>
+<span class="err">│</span><span class="w">         </span><span class="err">│</span><span class="w">                                                  </span><span class="err">│</span>
+<span class="err">│</span><span class="w">         </span><span class="err">▼</span><span class="w">                                                  </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="nl">QwenVLBboxTokenMapper</span><span class="p">:</span><span class="w"> </span><span class="n">bbox</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="o">[</span><span class="n">token_indices</span><span class="o">]</span><span class="w">             </span><span class="err">│</span>
+<span class="err">│</span><span class="w">         </span><span class="err">│</span><span class="w">                                                  </span><span class="err">│</span>
+<span class="err">│</span><span class="w">         </span><span class="err">▼</span><span class="w">                                                  </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="n">ROI</span><span class="w"> </span><span class="n">Features</span><span class="w"> </span><span class="o">&lt;|</span><span class="n">vision_start</span><span class="o">|&gt;</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="o">&lt;|</span><span class="n">vision_end</span><span class="o">|&gt;</span><span class="w">           </span><span class="err">│</span>
+<span class="err">│</span><span class="w">         </span><span class="err">│</span><span class="w">  </span><span class="err">←</span><span class="w"> </span><span class="n">hidden</span><span class="w"> </span><span class="n">states</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">视觉</span><span class="w"> </span><span class="n">latent</span><span class="w"> </span><span class="n">H_vis</span><span class="w">             </span><span class="err">│</span>
+<span class="err">│</span><span class="w">         </span><span class="err">▼</span><span class="w">                                                  </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="o">&lt;</span><span class="n">sem</span><span class="o">&gt;</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="o">&lt;/</span><span class="n">sem</span><span class="o">&gt;</span><span class="w">                                          </span><span class="err">│</span>
+<span class="err">│</span><span class="w">         </span><span class="err">│</span><span class="w">  </span><span class="err">←</span><span class="w"> </span><span class="n">hidden</span><span class="w"> </span><span class="n">states</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">语义</span><span class="w"> </span><span class="n">latent</span><span class="w"> </span><span class="n">z_sem</span><span class="w">             </span><span class="err">│</span>
+<span class="err">│</span><span class="w">         </span><span class="err">▼</span><span class="w">                                                  </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="nl">SLVRTextHead</span><span class="p">:</span><span class="w"> </span><span class="n">z_sem</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="mi">4096</span><span class="o">-</span><span class="n">dim</span><span class="w"> </span><span class="n">e_hat</span><span class="w">                      </span><span class="err">│</span>
+<span class="err">│</span><span class="w">         </span><span class="err">│</span><span class="w">                                                  </span><span class="err">│</span>
+<span class="err">│</span><span class="w">         </span><span class="err">▼</span><span class="w">                                                  </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="n">Question</span><span class="w"> </span><span class="n">tokens</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">LLM</span><span class="w"> </span><span class="n">Backbone</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="o">&lt;</span><span class="n">answer</span><span class="o">&gt;</span><span class="p">...</span><span class="o">&lt;/</span><span class="n">answer</span><span class="o">&gt;</span><span class="w">     </span><span class="err">│</span>
+<span class="err">└────────────────────────────────────────────────────────────┘</span>
+
+<span class="n">三路损失与奖励计算</span><span class="err">：</span>
+<span class="err">┌────────────────────────────────────────────────┐</span>
+<span class="err">│</span><span class="w">  </span><span class="n">Stage</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="p">(</span><span class="n">SFT</span><span class="p">)</span><span class="w">                                  </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="n">L_vis</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="n">MSE</span><span class="p">(</span><span class="n">H_vis</span><span class="p">,</span><span class="w"> </span><span class="n">v_enc</span><span class="p">)</span><span class="w">      </span><span class="n">视觉重建损失</span><span class="w">    </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="n">L_sem</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="n">MSE</span><span class="p">(</span><span class="n">e_hat</span><span class="p">,</span><span class="w"> </span><span class="n">e</span><span class="p">)</span><span class="w">          </span><span class="n">语义对齐损失</span><span class="w">    </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="n">L_ans</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="n">CrossEntropy</span><span class="w">           </span><span class="n">答案监督损失</span><span class="w">    </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="n">L_stage1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">L_vis</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">L_sem</span><span class="w">                      </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                 </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="n">Stage</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="p">(</span><span class="n">M</span><span class="o">-</span><span class="n">GRPO</span><span class="p">)</span><span class="w">                               </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="n">R_ans</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="n">Judge</span><span class="p">(</span><span class="n">预测答案</span><span class="p">,</span><span class="w"> </span><span class="n">真实答案</span><span class="p">)</span><span class="w">  </span><span class="n">正确性奖励</span><span class="w">    </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="n">R_cons</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">-[</span><span class="n">lambda_sem * cos(z1,z2)             │</span>
+<span class="n">│           + lambda_vis * cos(h1,h2)</span><span class="o">]</span><span class="w">  </span><span class="n">一致性奖励</span><span class="w">  </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="n">R_stab</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">-[</span><span class="n">clamp(cos(z,ref)-tau_sem)           │</span>
+<span class="n">│           + clamp(cos(h,ref)-tau_vis)</span><span class="o">]</span><span class="w"> </span><span class="n">稳定性奖励</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="n">R</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">R_ans</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">lambda_cons</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">R_cons</span><span class="w">               </span><span class="err">│</span>
+<span class="err">│</span><span class="w">          </span><span class="o">+</span><span class="w"> </span><span class="n">lambda_stab</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">R_stab</span><span class="w">                  </span><span class="err">│</span>
+<span class="err">└────────────────────────────────────────────────┘</span>
+
+<span class="n">M</span><span class="o">-</span><span class="n">GRPO</span><span class="w"> </span><span class="n">训练循环</span><span class="err">（</span><span class="n">mgrpo_trainer</span><span class="p">.</span><span class="n">py</span><span class="err">）：</span>
+<span class="err">┌──────────────────────────────────────────────────────┐</span>
+<span class="err">│</span><span class="w">  </span><span class="k">for</span><span class="w"> </span><span class="k">each</span><span class="w"> </span><span class="nl">step</span><span class="p">:</span><span class="w">                                      </span><span class="err">│</span>
+<span class="err">│</span><span class="w">    </span><span class="mf">1.</span><span class="w"> </span><span class="n">构建</span><span class="w"> </span><span class="n">q1</span><span class="p">,</span><span class="w"> </span><span class="n">q2</span><span class="w"> </span><span class="n">两组</span><span class="w"> </span><span class="n">prompts</span><span class="err">（</span><span class="n">共享</span><span class="w"> </span><span class="nc">image</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">bbox</span><span class="err">）</span><span class="w">   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">    </span><span class="mf">2.</span><span class="w"> </span><span class="n">model</span><span class="p">.</span><span class="n">generate</span><span class="p">()</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">两组</span><span class="w"> </span><span class="n">completions</span><span class="w">             </span><span class="err">│</span>
+<span class="err">│</span><span class="w">    </span><span class="mf">3.</span><span class="w"> </span><span class="n">lm_head</span><span class="w"> </span><span class="n">前向</span><span class="w"> </span><span class="n">hook</span><span class="w"> </span><span class="n">捕获</span><span class="w"> </span><span class="n">hidden</span><span class="w"> </span><span class="n">states</span><span class="w">            </span><span class="err">│</span>
+<span class="err">│</span><span class="w">    </span><span class="mf">4.</span><span class="w"> </span><span class="n">_extract_latents_from_hidden</span><span class="p">()</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">sem</span><span class="p">,</span><span class="w"> </span><span class="n">vis</span><span class="w">      </span><span class="err">│</span>
+<span class="err">│</span><span class="w">    </span><span class="mf">5.</span><span class="w"> </span><span class="nl">外部奖励</span><span class="p">:</span><span class="w"> </span><span class="n">accuracy_reward</span><span class="p">()</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">format_reward</span><span class="p">()</span><span class="w">    </span><span class="err">│</span>
+<span class="err">│</span><span class="w">    </span><span class="mf">6.</span><span class="w"> </span><span class="nl">内部奖励</span><span class="p">:</span><span class="w"> </span><span class="n">_consistency_reward</span><span class="p">()</span><span class="w"> </span><span class="o">+</span><span class="w">               </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                 </span><span class="n">_stability_reward</span><span class="p">()</span><span class="w">                   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">    </span><span class="mf">7.</span><span class="w"> </span><span class="n">合并奖励</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="k">group</span><span class="o">-</span><span class="k">relative</span><span class="w"> </span><span class="n">advantage</span><span class="w">             </span><span class="err">│</span>
+<span class="err">│</span><span class="w">    </span><span class="mf">8.</span><span class="w"> </span><span class="n">GRPO</span><span class="w"> </span><span class="n">loss</span><span class="w"> </span><span class="p">(</span><span class="n">clipped</span><span class="w"> </span><span class="n">importance</span><span class="w"> </span><span class="n">sampling</span><span class="p">)</span><span class="w">         </span><span class="err">│</span>
+<span class="err">│</span><span class="w">    </span><span class="mf">9.</span><span class="w"> </span><span class="n">KL</span><span class="w"> </span><span class="n">penalty</span><span class="w"> </span><span class="n">against</span><span class="w"> </span><span class="k">old</span><span class="w"> </span><span class="n">policy</span><span class="w">                   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">   </span><span class="mf">10.</span><span class="w"> </span><span class="nl">每步日志</span><span class="p">:</span><span class="w"> </span><span class="n">reward_cases</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">inference_probe</span><span class="w">        </span><span class="err">│</span>
+<span class="err">└──────────────────────────────────────────────────────┘</span>
+</code></pre></div>
+
+<h3 id="43">4.3 关键技术细节</h3>
 <p><strong>Bounding Box → Token 索引映射（<code>QwenVLBboxTokenMapper</code>）：</strong></p>
 <ul>
 <li>基于 Qwen 2.5 VL 的 vision tower 参数：patch_size=14, spatial_merge_size=2</li>
@@ -602,6 +690,74 @@ document.addEventListener('DOMContentLoaded', function() {
 <li><code>DECODING_STRATEGY = "latent"</code> 启用 SLVR 式推理</li>
 <li>自动检测可用 GPU，OOM 时自动回退</li>
 </ul>
+<h3 id="44">4.4 公式 → 代码函数映射</h3>
+<table>
+<thead>
+<tr>
+<th>公式</th>
+<th>对应代码</th>
+<th>位置</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><span class="math inline">$\mathcal{L}_{vis} = \sum_t \| \mathbf{h}^{lat}_t - \mathbf{v}^{enc}_t \|_2^2$</span></td>
+<td><code>F.mse_loss(h_latent, v_roi_feat)</code></td>
+<td><code>monkey_patch_forward_slvr.py</code> SLVR 损失计算部分</td>
+</tr>
+<tr>
+<td><span class="math inline">$\mathcal{L}_{sem} = \text{MSE}(W\mathbf{z}_{sem}, \mathbf{e})$</span></td>
+<td><code>F.mse_loss(proj_sem, sem_embeds)</code></td>
+<td>同上</td>
+</tr>
+<tr>
+<td><span class="math inline">$\hat{\mathbf{e}}_{sem} = W \mathbf{z}_{sem}$</span></td>
+<td><code>SLVRTextHead.forward(x)</code> 输出 4096 维</td>
+<td><code>src/model/slvr_heads.py:38</code></td>
+</tr>
+<tr>
+<td><span class="math inline">$\mathcal{H}_{vis} = \{\mathbf{h}^{lat}_t\}_{t=1}^{T_v}$</span></td>
+<td><code>_extract_latents_from_hidden()</code> 收集 <code>vision_start+1</code> 到 <code>sem_start</code> 的 hidden states</td>
+<td><code>src/trainer/mgrpo_trainer.py:110-116</code></td>
+</tr>
+<tr>
+<td><span class="math inline">$\mathbf{z}_{sem}$</span></td>
+<td>同上函数，mean-pool <code>sem_start+1</code> 到 <code>sem_end</code> 区间</td>
+<td><code>src/trainer/mgrpo_trainer.py:121-125</code></td>
+</tr>
+<tr>
+<td><span class="math inline">$\mathcal{R}_{ans}^{(i)} = \mathbb{I}(\hat{y}_i = y_i)$</span></td>
+<td><code>accuracy_reward()</code> → LLM Judge (Qwen3-Max) / 字符串回退</td>
+<td><code>src/train/mgrpo_reward_funcs.py:218-324</code></td>
+</tr>
+<tr>
+<td><span class="math inline">$\mathcal{R}_{cons}$</span></td>
+<td><code>_consistency_reward()</code> 使用 cosine similarity（实际实现与论文 L2 不同）</td>
+<td><code>src/trainer/mgrpo_trainer.py:246-253</code></td>
+</tr>
+<tr>
+<td><span class="math inline">$\mathcal{R}_{stab}$</span></td>
+<td><code>_stability_reward()</code> 使用 cosine similarity + clipping</td>
+<td><code>src/trainer/mgrpo_trainer.py:255-263</code></td>
+</tr>
+<tr>
+<td><span class="math inline">$\mathcal{J}_{\text{M-GRPO}}$</span> GRPO clipped objective</td>
+<td><code>trl.GRPOTrainer.loss()</code> 中的 <code>min(rho*A, clip(rho)*A) - beta*KL</code></td>
+<td><code>src/trainer/qq_grpo_trainer.py</code>（父类）</td>
+</tr>
+<tr>
+<td>Bbox → Token 映射</td>
+<td><code>QwenVLBboxTokenMapper.get_token_indices_from_bbox()</code></td>
+<td><code>src/slvr_utils.py</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>实现注意（与论文公式的差异）：</strong></p>
+<ul>
+<li>论文中 <span class="math inline">$\mathcal{R}_{cons}$</span> 和 <span class="math inline">$\mathcal{R}_{stab}$</span> 用 L2 距离描述，但实际代码使用 <strong>cosine similarity</strong>（即 <span class="math inline">$1 - \cos(\cdot,\cdot)$</span>），范围 [0, 2] 更稳定；L2 在向量空间维度过高（3584 / 4096）时每个维度的扰动对整体距离贡献过小。</li>
+<li>论文中将 <span class="math inline">$\mathcal{L}_{ans}$</span> 作为独立损失项，但实现中 Stage 1 通过 Qwen2.5-VL 的标准 CrossEntropy（<code>loss_slvr_fct</code> 控制主损失类型）同时优化 latent 和答案生成，<code>loss_slvr_lambda</code> 和 <code>loss_slvr_text_lambda</code> 分别控制视觉和语义 latent 损失的权重。</li>
+<li>Stage 2 的 <code>accuracy_reward</code> 使用 <strong>加权组合</strong>：q1 权重 0.7, q2 权重 0.3（受环境变量 <code>MGRPO_ACC_Q2_WEIGHT</code> 控制），而非论文中看似等权的 <span class="math inline">$\mathcal{R}_{ans}^{(i)}$</span>。</li>
+</ul>
 <hr />
 <h2 id="_5">五、实验结果</h2>
 <h3 id="51-vqa">5.1 标准 VQA 基准</h3>
@@ -628,6 +784,36 @@ document.addEventListener('DOMContentLoaded', function() {
 <td>74.4</td>
 <td>79.1</td>
 <td>69.5</td>
+</tr>
+<tr>
+<td>GRIT</td>
+<td>文本 CoT</td>
+<td>43.1</td>
+<td>54.8</td>
+<td>39.4</td>
+<td>24.6</td>
+<td>60.8</td>
+<td>75.5</td>
+</tr>
+<tr>
+<td>DeepEyes</td>
+<td>文本+显式裁剪</td>
+<td>40.0</td>
+<td>45.5</td>
+<td>32.2</td>
+<td>--</td>
+<td>40.4</td>
+<td>37.0</td>
+</tr>
+<tr>
+<td>Visual-SR1</td>
+<td>文本 CoT</td>
+<td>49.0</td>
+<td>52.3</td>
+<td>35.8</td>
+<td>71.7</td>
+<td>70.1</td>
+<td>69.0</td>
 </tr>
 <tr>
 <td>LVR</td>
@@ -667,52 +853,108 @@ document.addEventListener('DOMContentLoaded', function() {
 <thead>
 <tr>
 <th>设置</th>
+<th>推理范式</th>
 <th>V* Q1</th>
 <th>V* Q2</th>
 <th>V* Both</th>
+<th>HRBench-4K Q1</th>
+<th>HRBench-4K Q2</th>
 <th>HRBench-4K Both</th>
+<th>HRBench-8K Q1</th>
+<th>HRBench-8K Q2</th>
 <th>HRBench-8K Both</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>Qwen2.5-VL</td>
+<td>纯文本</td>
 <td>76.4</td>
 <td>55.5</td>
 <td>44.0</td>
+<td>60.5</td>
+<td>74.1</td>
 <td>45.8</td>
+<td>53.5</td>
+<td>66.1</td>
 <td>37.5</td>
 </tr>
 <tr>
-<td>DeepEyes（显式裁剪）</td>
+<td>GRIT</td>
+<td>文本 CoT</td>
+<td>69.6</td>
+<td>61.8</td>
+<td>49.7</td>
+<td>58.4</td>
+<td>70.4</td>
+<td>48.6</td>
+<td>49.1</td>
+<td>61.9</td>
+<td>38.6</td>
+</tr>
+<tr>
+<td>DeepEyes</td>
+<td>文本+显式裁剪</td>
 <td><strong>83.3</strong></td>
 <td>79.1</td>
 <td><strong>70.2</strong></td>
+<td><strong>71.3</strong></td>
+<td>79.3</td>
 <td>60.6</td>
+<td><strong>65.1</strong></td>
+<td>72.4</td>
 <td>49.0</td>
 </tr>
 <tr>
+<td>Visual-SR1</td>
+<td>文本 CoT</td>
+<td>75.9</td>
+<td>73.3</td>
+<td>62.8</td>
+<td>63.9</td>
+<td>76.4</td>
+<td>54.6</td>
+<td>56.3</td>
+<td>67.4</td>
+<td>44.4</td>
+</tr>
+<tr>
 <td>LVR</td>
+<td>视觉 latent</td>
 <td>81.7</td>
 <td>77.5</td>
 <td>65.4</td>
+<td>70.1</td>
+<td>80.4</td>
 <td>57.9</td>
+<td>62.9</td>
+<td>71.1</td>
 <td>46.6</td>
 </tr>
 <tr>
 <td><strong>SLVR-7B</strong></td>
+<td>视觉+语义 latent</td>
 <td>82.2</td>
 <td><strong>80.1</strong></td>
 <td>69.1</td>
+<td>70.4</td>
+<td><strong>82.8</strong></td>
 <td><strong>61.1</strong></td>
+<td>62.5</td>
+<td><strong>73.6</strong></td>
 <td><strong>50.6</strong></td>
 </tr>
 <tr>
 <td><em>Gain over LVR</em></td>
+<td></td>
 <td><em>+0.5</em></td>
 <td><em>+2.6</em></td>
 <td><em>+3.7</em></td>
+<td><em>+0.3</em></td>
+<td><em>+2.4</em></td>
 <td><em>+3.2</em></td>
+<td><em>-0.4</em></td>
+<td><em>+2.5</em></td>
 <td><em>+4.0</em></td>
 </tr>
 </tbody>
@@ -720,8 +962,9 @@ document.addEventListener('DOMContentLoaded', function() {
 <p><strong>关键发现：</strong></p>
 <ul>
 <li>SLVR 在 Both Correct（两个问题都答对）指标上全面超越 LVR（+3.2 ~ +4.0），证明语义 latent 能同时编码多种语义维度</li>
-<li>与其他 method 对比：纯文本方法（Qwen2.5-VL）在 Q2 上性能暴跌（Q1 76.4 → Q2 55.5），说明文本推理无法稳定支持语义变化</li>
-<li>DeepEyes 在 V<em> Q1 上最高（83.3），但这是通过</em><em>推理时显式图像裁剪</em>*实现的，计算开销巨大；SLVR 完全通过 latent 推理实现 competitive 的 Q1 性能</li>
+<li>Q2 准确性提升（所有数据集 +2.4 ~ +2.6）是 SLVR 的核心优势——语义 latent 帮助模型更好地回答"另一个角度"的问题</li>
+<li>与其他 method 对比：纯文本方法（Qwen2.5-VL）在 Q2 上性能暴跌（V* Q1 76.4 → Q2 55.5），说明文本推理无法稳定支持语义变化；GRIT 和 Visual-SR1 虽引入显式推理链（CoT），但在多查询场景下（Both Correct）仍远落后于 latent 推理方法</li>
+<li>DeepEyes 在 V<em> Q1 和 HRBench-8K Q1 上最高，但这是通过</em><em>推理时显式图像裁剪</em>*实现的，计算开销巨大；SLVR 完全通过 latent 推理实现 competitive 的 Q1 性能</li>
 </ul>
 <h3 id="53-visualpuzzles">5.3 VisualPuzzles 推理能力评估</h3>
 <table>
@@ -866,22 +1109,162 @@ document.addEventListener('DOMContentLoaded', function() {
 <p>Stage 1 虽然给单个 latent 编码了语义信息，但没有保证<strong>在不同问题的扰动下该语义能稳定激活</strong>。M-GRPO 的 latent consistency reward 直接对"两个不同问题产生不同 latent"这种 drift 进行惩罚，保证同一区域的核心语义表征不受问题表述方式的影响，而只保留 task-specific 的微小差异。</p>
 <h3 id="63-deepeyes">6.3 与 DeepEyes 等"看图思考"方法的关系</h3>
 <p>DeepEyes 通过推理时反复裁剪区域图像来获取高分辨率视觉证据，准确率高但计算开销大。SLVR 通过 latent 学习一次性地将区域信息压缩为 compact 表征，推理时无需显式图像操作。两者不是互斥的——理想情况下，semantic-enriched latent 可以作为 DeepEyes 等方法的"内化"版本，减少裁剪迭代次数。</p>
-<h3 id="64">6.4 局限性</h3>
+<hr />
+<h2 id="_7">七、局限性</h2>
 <ul>
-<li>语义监督依赖 Qwen3-VL-235B 生成属性标注，存在 7.29% 的错误率（颜色错配、动作/姿态错误等），语义 latent 的上限受制于属性标注质量</li>
-<li>语义 latent 通过 L2 对齐 Qwen3 embedding 来学习，没有显式验证学到的 latent 是否保留了可解释的语义维度</li>
-<li>实验在 Qwen2.5-VL-7B 上进行，更大规模模型的 scaling behavior 未知</li>
-<li>M-GRPO 的两问题联合优化目前限制在 q1 + q2 组内，扩展到 3+ 问题可能需要新的 group 构建策略</li>
+<li>语义监督依赖 Qwen3-VL-235B 生成属性标注（SLV-Set 人工验证检测到 29,457 条错误，整体错误率 7.29%）。错误分布见下表，其中颜色错配（19.94%）、动作/姿态错误（14.55%）和空间关系错误（13.28%）是最主要的错误类型：</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>错误类别</th>
+<th>数量</th>
+<th>占比 (%)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>颜色错配 (Color mismatch)</td>
+<td>5,873</td>
+<td>19.94</td>
+</tr>
+<tr>
+<td>动作/姿态错误 (Action/pose error)</td>
+<td>4,286</td>
+<td>14.55</td>
+</tr>
+<tr>
+<td>空间关系错误 (Spatial relation error)</td>
+<td>3,912</td>
+<td>13.28</td>
+</tr>
+<tr>
+<td>幻觉属性 (Hallucinated attributes)</td>
+<td>3,476</td>
+<td>11.80</td>
+</tr>
+<tr>
+<td>不可见物体 (Invisible objects)</td>
+<td>3,158</td>
+<td>10.72</td>
+</tr>
+<tr>
+<td>手持物体错误 (Incorrect held object)</td>
+<td>2,941</td>
+<td>9.98</td>
+</tr>
+<tr>
+<td>模糊指代 (Ambiguous references)</td>
+<td>2,834</td>
+<td>9.62</td>
+</tr>
+<tr>
+<td>过于模糊 (Overly vague)</td>
+<td>2,267</td>
+<td>7.70</td>
+</tr>
+<tr>
+<td>其他 (Others)</td>
+<td>710</td>
+<td>2.41</td>
+</tr>
+<tr>
+<td><strong>合计 (Total)</strong></td>
+<td><strong>29,457</strong></td>
+<td><strong>100.00</strong></td>
+</tr>
+</tbody>
+</table>
+<p>语义 latent 的上限受制于属性标注质量，尤其是颜色错配和幻觉属性这类系统性错误。</p>
+<ul>
+<li>语义 latent 通过 L2 对齐 Qwen3 embedding 来学习，没有显式验证学到的 latent 是否保留了可解释的语义维度。MSE 损失只要求数值接近，不保证 latent 的不同维度对应可解释的语义属性（如颜色的红色/蓝色、动作的跑/跳等）。</li>
+<li>实验在 Qwen2.5-VL-7B 上进行，更大规模模型（如 72B+）的 scaling behavior 未知。从算力角度，Stage 1 的 SFT + Stage 2 的 M-GRPO 两阶段训练需要维持两个模型副本（policy 和 reference），对显存要求较高。</li>
+<li>M-GRPO 的两问题联合优化目前限制在 q1 + q2 组内，扩展到 3+ 问题可能需要新的 group 构建策略或分组采样方法，目前框架中每组的 query 数量硬编码为 2。</li>
+<li>推理时需要 <code>decoding_strategy = "latent"</code> 并配置 <code>slvr_steps</code> 步数（默认 8），与标准自回归解码路径不同，增加了推理代码的复杂度。当前 <code>inf_batch_dir_old.py</code> 的 OOM 自动回退机制在处理长序列时仍可能失败。</li>
 </ul>
 <hr />
-<h2 id="_7">七、总结</h2>
-<p>SLVR 通过两阶段训练为 latent visual reasoning 引入<strong>细粒度属性级语义监督</strong>和<strong>多查询一致性对齐</strong>：</p>
-<ul>
-<li><strong>Stage 1</strong>：在 LVR 的视觉 latent 重建基础上，新增 <code>&lt;sem&gt;</code> 语义 latent 和属性语义对齐损失，使 latent 编码结构化语义</li>
-<li><strong>Stage 2</strong>：设计 M-GRPO，同时优化同一区域两个语义不同问题的答案正确性、latent 一致性和分布稳定性</li>
-<li>配套构建 SLV-Set（~400K 属性 + 800K QA 对）和 SV-QA（591 对多角度问题）数据集</li>
-<li>在 SV-QA 的 Both Correct 指标上全面超越 LVR（+3.2 ~ +4.0），在 VisualPuzzles 的 Deductive 推理上超越 LVR 5 个百分点</li>
-</ul>
+<h2 id="_8">八、关键概念速查</h2>
+<table>
+<thead>
+<tr>
+<th>概念</th>
+<th>定义</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>SLVR</strong></td>
+<td>Semantic-Enriched Latent Visual Reasoning。两阶段框架：先通过属性级语义监督丰富 latent 表征，再通过多查询对齐确保 latent 在不同问题下稳定激活。</td>
+<td>本文核心方法</td>
+</tr>
+<tr>
+<td><strong>M-GRPO</strong></td>
+<td>Multi-query Group Relative Policy Optimization。扩展自 DeepSeek-R1 的 GRPO，针对同一区域上两个语义不同的问题联合优化 latent，用三项奖励（答案正确性、latent 一致性、稳定性正则化）驱动更新。</td>
+<td>Stage 2 核心</td>
+</tr>
+<tr>
+<td><strong>Latent Visual Reasoning (LVR)</strong></td>
+<td>隐式视觉推理范式，将区域视觉信息压缩为 compact latent 向量，代替显式图像裁剪。latent 仅由 MSE 对齐 vision encoder 特征监督。</td>
+<td>基线方法</td>
+</tr>
+<tr>
+<td><strong><code>&lt;|vision_start|&gt;</code> / <code>&lt;|vision_end|&gt;</code></strong></td>
+<td>包裹区域视觉 latent 的特殊 token。两个 token 之间的 hidden states 构成视觉 latent <span class="math inline">$\mathcal{H}_{vis}$</span>，通过 MSE 对齐 vision encoder 的 patch features。</td>
+<td>模型特殊 token</td>
+</tr>
+<tr>
+<td><strong><code>&lt;sem&gt;</code> / <code>&lt;/sem&gt;</code></strong></td>
+<td>包裹语义 latent 的特殊 token。<code>&lt;sem&gt;</code> 之后的 hidden states（经 SLVRTextHead 投影后）对齐 Qwen3 embedding 编码的属性描述向量 <span class="math inline">$\mathbf{e} \in \mathbb{R}^{4096}$</span>。</td>
+<td>模型特殊 token</td>
+</tr>
+<tr>
+<td><strong>SLVRTextHead</strong></td>
+<td>语义投影头：<code>LayerNorm → Linear(4096) → GELU → Linear(4096)</code>。将 LLM hidden state 投影到 4096 维文本嵌入空间。</td>
+<td><code>src/model/slvr_heads.py</code></td>
+</tr>
+<tr>
+<td><strong>SLVRHead</strong></td>
+<td>视觉投影头：<code>LayerNorm → Linear → GELU → Linear</code>（保持 hidden_size 不变）。</td>
+<td><code>src/model/slvr_heads.py</code></td>
+</tr>
+<tr>
+<td><strong>QwenVLBboxTokenMapper</strong></td>
+<td>Bounding box → Token 索引映射器。基于 patch_size=14, spatial_merge_size=2，将归一化 bbox 坐标映射到 vision tower 输出的 token 网格索引。支持 xyxy 和 xywh 格式。</td>
+<td><code>src/slvr_utils.py</code></td>
+</tr>
+<tr>
+<td><strong>SLV-Set</strong></td>
+<td>两组件数据集：(1) ~400K 区域属性级语义标注（结构化字段：实体、颜色、形状、材质、动作、交互、空间关系、文字）；(2) ~800K 多查询 QA 对（每区域 2-4 个语义角度问题）。</td>
+<td>数据集</td>
+</tr>
+<tr>
+<td><strong>SV-QA</strong></td>
+<td>评估基准。基于 V*、HRBench-4K、HRBench-8K 构建，共 591 对样本，每区域两语义角度提问（Q1: 原题, Q2: 新题）。经人工审查修正。</td>
+<td>评估基准</td>
+</tr>
+<tr>
+<td><strong>Qwen3-Max Judge</strong></td>
+<td>M-GRPO 的答案正确性评估器。通过 vLLM 推理服务调用 Qwen3-Max，后台线程定期刷新 IP 池。判断预测答案与 ground truth 是否语义等价。不可用时回退到字符串精确/子串匹配。</td>
+<td>奖励计算核心</td>
+</tr>
+<tr>
+<td><strong>Latent Consistency Reward</strong></td>
+<td><span class="math inline">$\mathcal{R}_{cons}$</span>：同时约束 semantic latent 和 visual latent 在两个问题间的一致程度。使用 cosine similarity（而非 L2 距离）衡量，更加数值稳定。</td>
+<td>M-GRPO 第2项奖励</td>
+</tr>
+<tr>
+<td><strong>Stability Regularization</strong></td>
+<td><span class="math inline">$\mathcal{R}_{stab}$</span>：margin-based L2 约束，防止 RL 探索摧毁 Stage 1 学好的语义结构。漂移超过 <span class="math inline">$\tau_{sem}=1.0$</span>（语义）/ <span class="math inline">$\tau_{vis}=1.0$</span>（视觉）时才扣分。</td>
+<td>M-GRPO 第3项奖励</td>
+</tr>
+<tr>
+<td><strong>Monkey-patch 前向传播</strong></td>
+<td>替换 Qwen2.5-VL 的 <code>Qwen2_5_VLForConditionalGeneration.forward</code>，在 hidden states 中提取 SLVR 特殊 token 位置的 latent。支持 SFT、RL、推理三种模式。~121K 代码量。</td>
+<td><code>monkey_patch_forward_slvr.py</code></td>
+</tr>
+</tbody>
+</table>
   </div>
 </main>
 

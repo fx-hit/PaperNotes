@@ -7,9 +7,9 @@
 <!-- arxiv: 2501.19201 -->
 <!-- venue: ICML 2026 -->
 <!-- tags: MLLM, CoT, 推理效率, 信息论, 知识蒸馏 -->
-<!-- words-zh: 3271 -->
-<!-- words-en: 506 -->
-<!-- reading-time: 12 -->
+<!-- words-zh: 4124 -->
+<!-- words-en: 712 -->
+<!-- reading-time: 15 -->
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
@@ -293,9 +293,9 @@ document.addEventListener('DOMContentLoaded', function() {
 <li class="toc-h1"><a href="#heima">Heima：通过隐藏思考实现高效推理</a>
 <ul>
 </li>
-<li class="toc-h2"><a href="#1">1. 动机与问题</a>
+<li class="toc-h2"><a href="#_1">一、核心问题</a>
 </li>
-<li class="toc-h2"><a href="#2">2. 方法概览</a>
+<li class="toc-h2"><a href="#_2">二、核心思路/方法</a>
 <ul>
 </li>
 <li class="toc-h3"><a href="#21-token">2.1 思考 Token 与渐进式蒸馏</a>
@@ -305,19 +305,31 @@ document.addEventListener('DOMContentLoaded', function() {
 <li class="toc-h3"><a href="#23-interpreter">2.3 解释器（Interpreter）设计</a>
 </ul></li>
 </li>
-<li class="toc-h2"><a href="#3">3. 实验配置</a>
-</li>
-<li class="toc-h2"><a href="#4">4. 主要结果</a>
+<li class="toc-h2"><a href="#_3">三、训练目标</a>
 <ul>
 </li>
-<li class="toc-h3"><a href="#41">4.1 推理效率与精度</a>
+<li class="toc-h3"><a href="#31">3.1 数据集准备</a>
 </li>
-<li class="toc-h3"><a href="#42">4.2 跨模型架构泛化</a>
+<li class="toc-h3"><a href="#32">3.2 蒸馏目标</a>
 </li>
-<li class="toc-h3"><a href="#43">4.3 解释器重建质量</a>
+<li class="toc-h3"><a href="#33">3.3 渐近式蒸馏</a>
+</li>
+<li class="toc-h3"><a href="#34-interpreter">3.4 解释器（Interpreter）训练目标</a>
 </ul></li>
 </li>
-<li class="toc-h2"><a href="#5">5. 消融实验</a>
+<li class="toc-h2"><a href="#_4">四、实验与结果</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#41">4.1 实验配置</a>
+</li>
+<li class="toc-h3"><a href="#42">4.2 推理效率与精度</a>
+</li>
+<li class="toc-h3"><a href="#43">4.3 跨模型架构泛化</a>
+</li>
+<li class="toc-h3"><a href="#44">4.4 解释器重建质量</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_5">五、消融实验 &amp; 关键洞察</a>
 <ul>
 </li>
 <li class="toc-h3"><a href="#51-token">5.1 思考 token 数量</a>
@@ -327,17 +339,21 @@ document.addEventListener('DOMContentLoaded', function() {
 <li class="toc-h3"><a href="#53">5.3 解释器数量</a>
 </ul></li>
 </li>
-<li class="toc-h2"><a href="#6">6. 代码仓库结构</a>
-</li>
-<li class="toc-h2"><a href="#7">7. 总结与思考</a>
+<li class="toc-h2"><a href="#_6">六、代码实现解读</a>
 <ul>
 </li>
-<li class="toc-h3"><a href="#_1">核心贡献</a>
+<li class="toc-h3"><a href="#61">6.1 代码结构</a>
 </li>
-<li class="toc-h3"><a href="#_2">值得关注的点</a>
+<li class="toc-h3"><a href="#62">6.2 训练流程架构图</a>
 </li>
-<li class="toc-h3"><a href="#_3">局限与展望</a>
+<li class="toc-h3"><a href="#63">6.3 推理流程图</a>
+</li>
+<li class="toc-h3"><a href="#64">6.4 公式 → 代码映射</a>
 </ul></li>
+</li>
+<li class="toc-h2"><a href="#_7">七、局限性</a>
+</li>
+<li class="toc-h2"><a href="#_8">八、关键概念速查</a>
 </ul></li>
 </li></ul>
 </nav>
@@ -345,7 +361,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <main class="main-wrapper">
   <div class="content-inner" id="main-content">
 <h1 id="heima">Heima：通过隐藏思考实现高效推理</h1>
-<div class="article-stats">3,271 字 · English 506 词 · 约 12 分钟阅读</div>
+<div class="article-stats">4,124 字 · English 712 词 · 约 15 分钟阅读</div>
 
 <blockquote>
 <p><strong>论文</strong>: Efficient Reasoning with Hidden Thinking
@@ -361,11 +377,11 @@ document.addEventListener('DOMContentLoaded', function() {
 </ul>
 </blockquote>
 <hr />
-<h2 id="1">1. 动机与问题</h2>
+<h2 id="_1">一、核心问题</h2>
 <p>Chain-of-Thought（CoT）推理已成为提升多模态大语言模型（MLLM）复杂问题求解能力的关键技术。然而，CoT 推理需要生成大量中间文本（对复杂问题可达数百 tokens），导致高昂的推理成本。</p>
 <p><strong>核心问题</strong>：CoT 的冗长文本包含大量冗余信息，能否将推理过程压缩到隐空间，以极少的"思考 token"替代冗长的文本 CoT，从而大幅提升推理效率？</p>
 <hr />
-<h2 id="2">2. 方法概览</h2>
+<h2 id="_2">二、核心思路/方法</h2>
 <p>Heima（hidden llama 的谐音）提出了一套完整的 CoT 压缩框架：用 MLLM 将多阶段 CoT 推理压缩为极少量的思考 token，再用纯文本 LLM 作为解释器重建推理过程。</p>
 <p><img alt="图 1：Heima 整体流程" src="assets/heima/introduction_whole_pipeline.png" /></p>
 <p><em>图 1：Heima 框架总览，用一个具体 Demo（识别图中汽车品牌）串联全流程。图片分为上下两栏。</em></p>
@@ -433,7 +449,31 @@ Heima（冻结的 MLLM）基于图像（Vision Input）和问题（Text Query）
 </ol>
 <p><strong>关键设计</strong>：解释器为纯文本 LLM，不接收图像输入。这意味着思考 token 的隐表示中<strong>必须编码了视觉信息</strong>，解释器才能重构出包含视觉细节的推理过程。</p>
 <hr />
-<h2 id="3">3. 实验配置</h2>
+<h2 id="_3">三、训练目标</h2>
+<h3 id="31">3.1 数据集准备</h3>
+<p>原始 CoT 训练数据集定义如下（<span class="math inline">$N$</span> 为总样本数）：</p>
+<p><div class="math display">$$D := \big\{ \bigl(X,\, \mathrm{CoTs},\, Y \bigr) \big\}, ~~ |D| = N$$</div></p>
+<p>其中 <span class="math inline">$X$</span> 为视觉 + 问题输入，<span class="math inline">$\mathrm{CoTs} = \{\mathrm{CoT}_{(k)}\}_{k=1}^{K_i}$</span> 为 <span class="math inline">$K_i$</span> 个阶段的文本 CoT，<span class="math inline">$Y$</span> 为最终答案。</p>
+<p>将每个阶段的 CoT 文本替换为对应的思考 token，得到 Heima 数据集：</p>
+<p><div class="math display">$$D_H := \bigl\{ \bigl( X, \texttt{&lt;CoTs>}, Y \bigr) \bigr\}, ~~ |D_H| = N$$</div></p>
+<p>其中 <span class="math inline">$\texttt{&lt;CoTs>} := \{\texttt{&lt;CoT>}_{(k)}\}_{k=1}^{K_i}$</span>，每个思考 token 在 vocabulary 中定义为唯一的特殊 token（如 <code>&lt;THINKING_OF_SUMMARY&gt;</code>）。</p>
+<h3 id="32">3.2 蒸馏目标</h3>
+<p>标准 next-token prediction 损失：</p>
+<p><div class="math display">$$\mathcal{L}(\theta) = -\mathbb{E}_{(X, Y, \texttt{&lt;CoTs>}) \sim D_H} \log P_\theta(\texttt{&lt;CoTs>}, Y \mid X)$$</div></p>
+<h3 id="33">3.3 渐近式蒸馏</h3>
+<p><span class="math inline">$M$</span> 个训练阶段，第 <span class="math inline">$s$</span> 阶段的训练数据为：</p>
+<p><div class="math display">$$D_P := \bigl\{ \bigl( X, \{\texttt{&lt;CoT>}_{(k)}\}_{k=1}^{s}, \{\mathrm{CoT}_{(k)}\}_{k=s+1}^{K_i}, Y \bigr) \bigr\}$$</div></p>
+<p>第 <span class="math inline">$s$</span> 阶段的优化目标为：</p>
+<p><div class="math display">$$\max_{\theta} \mathbb{E} \log P_\theta \Bigl( \{\texttt{&lt;CoT>}_{(k)}\}_{k=1}^{s}, \{\mathrm{CoT}_{(k)}\}_{k=s+1}^{K_i}, Y \mid X \Bigr)$$</div></p>
+<p>渐进式蒸馏结束后，额外执行一步 Recovering Stage（纯思考 token 微调）。</p>
+<h3 id="34-interpreter">3.4 解释器（Interpreter）训练目标</h3>
+<p>第 <span class="math inline">$k$</span> 个解释器的训练集：</p>
+<p><div class="math display">$$D_I := \bigl\{ (X_{e}, X_q, \texttt{&lt;CoT>}_{(k)}, H_{\texttt{&lt;CoT>}_{(k)}}, \mathrm{CoT}_{(k)}) \bigr\}$$</div></p>
+<p>训练目标：</p>
+<p><div class="math display">$$\max_{\theta_k} \mathbb{E} \log P_{\theta_k} \Bigl( \mathrm{CoT}_{(k)} \mid X_{e}, X_q, H_{\texttt{&lt;CoT>}_{(k)}} \Bigr)$$</div></p>
+<hr />
+<h2 id="_4">四、实验与结果</h2>
+<h3 id="41">4.1 实验配置</h3>
 <table>
 <thead>
 <tr>
@@ -444,12 +484,12 @@ Heima（冻结的 MLLM）基于图像（Vision Input）和问题（Text Query）
 </thead>
 <tbody>
 <tr>
-<td>Heima Encoder</td>
+<td>Heima (MLLM)</td>
 <td>Llama-3.2-11B-Vision-Instruct</td>
 <td>LoRA (rank=16, alpha=32)</td>
 </tr>
 <tr>
-<td>Heima Decoder</td>
+<td>Interpreter (解释器)</td>
 <td>Llama-3.1-8B-Instruct</td>
 <td>LoRA</td>
 </tr>
@@ -466,9 +506,93 @@ Heima（冻结的 MLLM）基于图像（Vision Input）和问题（Text Query）
 <li><strong>评估基准</strong>：MMStar, MMBench V1.1, MMVet, MathVista, AI2D, HallusionBench</li>
 <li><strong>评估框架</strong>：VLMEvalKit</li>
 </ul>
+<p><strong>训练超参数（附录 Table A1-A3）：</strong></p>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>渐进蒸馏</th>
+<th>Recovering</th>
+<th>解释器</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Epoch</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+</tr>
+<tr>
+<td>Batch Size</td>
+<td>6</td>
+<td>8</td>
+<td>8</td>
+</tr>
+<tr>
+<td>Gradient Accumulation</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+</tr>
+<tr>
+<td>Optimizer</td>
+<td>AdamW</td>
+<td>AdamW</td>
+<td>AdamW</td>
+</tr>
+<tr>
+<td>Weight Decay</td>
+<td>0.01</td>
+<td>0.01</td>
+<td>0.01</td>
+</tr>
+<tr>
+<td>Learning Rate</td>
+<td>1e-4</td>
+<td>1e-5</td>
+<td>5e-4</td>
+</tr>
+<tr>
+<td>LR Schedule</td>
+<td>cosine</td>
+<td>cosine</td>
+<td>cosine</td>
+</tr>
+<tr>
+<td>Warmup Steps</td>
+<td>100</td>
+<td>100</td>
+<td>100</td>
+</tr>
+<tr>
+<td>Clip Grad Norm</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+</tr>
+<tr>
+<td>Activation Checkpointing</td>
+<td>TRUE</td>
+<td>TRUE</td>
+<td>TRUE</td>
+</tr>
+<tr>
+<td>FSDP</td>
+<td>TRUE</td>
+<td>TRUE</td>
+<td>TRUE</td>
+</tr>
+<tr>
+<td>Bfloat16</td>
+<td>TRUE</td>
+<td>TRUE</td>
+<td>TRUE</td>
+</tr>
+</tbody>
+</table>
 <hr />
-<h2 id="4">4. 主要结果</h2>
-<h3 id="41">4.1 推理效率与精度</h3>
+<h3 id="42">4.2 推理效率与精度</h3>
 <table>
 <thead>
 <tr>
@@ -535,7 +659,7 @@ Heima（冻结的 MLLM）基于图像（Vision Input）和问题（Text Query）
 </tr>
 </tbody>
 </table>
-<p><em>表 1：主实验结果。括号内为平均生成 token 数，Avg 列为 6 个基准的平均准确率。Heima 将 token 数降至原始 LLaVA-CoT 的约 6-8%（如 MMStar 上 12.8 vs 181.0）。"w/o prog." 表示一次性蒸馏所有 CoT 阶段（非渐进式），"w/o rec." 表示去掉最后的 recovering stage。</em></p>
+<p><em>表 1：主实验结果。括号内为平均生成 token 数（保留一位小数：MMStar 12.8, MMBench 12.9, MMVet 75.8, MathVista 13.8, AI2D 12.7, HallusionBench 16.9），Avg 列为 6 个基准的平均准确率。Heima 将 token 数降至原始 LLaVA-CoT 的约 6-8%（如 MMStar 上 12.8 vs 181.0）。"w/o prog." 表示一次性蒸馏所有 CoT 阶段（非渐进式），"w/o rec." 表示去掉最后的 recovering stage。</em></p>
 <p><strong>关键发现</strong>：</p>
 <ul>
 <li>Heima 用不到 10% 的 token 保持了 LLaVA-CoT 的绝大部分精度（58.0 vs 61.1）</li>
@@ -543,32 +667,56 @@ Heima（冻结的 MLLM）基于图像（Vision Input）和问题（Text Query）
 <li>渐进式蒸馏提升 1.7 个百分点（58.0 vs 56.3），recovering stage 提升 1.4 个百分点（58.0 vs 56.6）——两者缺一不可</li>
 <li>相比无 CoT 的 Llama3.2-11B 基线，Heima 在全部 6 个基准上均有大幅提升（58.0 vs 52.1）</li>
 </ul>
-<h3 id="42">4.2 跨模型架构泛化</h3>
-<p>在 LLaVA-Next-Vicuna-7B 上的验证：</p>
+<h3 id="43">4.3 跨模型架构泛化</h3>
+<p>在 LLaVA-Next-Vicuna-7B 上的验证（完整结果来自论文附录 Table A6）：</p>
 <table>
 <thead>
 <tr>
 <th>方法</th>
-<th>Avg Acc</th>
+<th>MMStar</th>
+<th>MMBench</th>
+<th>MMVet</th>
+<th>MathVista</th>
+<th>AI2D</th>
+<th>Hallusion</th>
+<th>Avg</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>LLaVA-Next-7B (无 CoT)</td>
+<td>LLaVA-Next-Vicuna-7B</td>
+<td>37.7 (3)</td>
+<td>65.6 (2)</td>
+<td>33.4 (144)</td>
+<td>30.2 (94)</td>
+<td>67.0 (2)</td>
+<td>32.3 (69)</td>
 <td>44.4</td>
 </tr>
 <tr>
-<td>LLaVA-Next-7B (CoT)</td>
+<td>LLaVA-Next-Vicuna-7B (CoT)</td>
+<td>46.5 (176)</td>
+<td>71.5 (155)</td>
+<td>47.5 (231)</td>
+<td>41.8 (191)</td>
+<td>77.3 (166)</td>
+<td>45.1 (150)</td>
 <td>55.0</td>
 </tr>
 <tr>
 <td><strong>Heima (7B)</strong></td>
+<td><strong>44.6 (13)</strong></td>
+<td><strong>73.5 (13)</strong></td>
+<td><strong>43.4 (69)</strong></td>
+<td><strong>40.6 (13)</strong></td>
+<td><strong>77.1 (13)</strong></td>
+<td><strong>43.3 (16)</strong></td>
 <td><strong>53.8</strong></td>
 </tr>
 </tbody>
 </table>
-<p>同样将 token 降至约 6%，保持了 CoT 精度的 97.8%，验证了方法的通用性（不限于 Llama 模型家族）。</p>
-<h3 id="43">4.3 解释器重建质量</h3>
+<p>同样将 token 降至约 6%，保持了 CoT 精度的 97.8%（53.8 vs 55.0），验证了方法的通用性（不限于 Llama 模型家族）。值得注意的是在 MMBench 上 Heima (7B) 甚至超越了 CoT 版本（73.5 vs 71.5）。</p>
+<h3 id="44">4.4 解释器重建质量</h3>
 <p><img alt="图 4：解释器重建评估" src="assets/heima/results_decoder_eval_metrics_gpt4o.png" /></p>
 <p>*图 4：解释器重建质量的定量评估。包含两个子图，在 4300 个测试样本上评估解释器重建的文本与原始 CoT 文本的相似度。</p>
 <p><strong>子图 (a) 自动评估指标（左，四组柱状图）：</strong>
@@ -615,46 +763,90 @@ Heima（冻结的 MLLM）基于图像（Vision Input）和问题（Text Query）
 </table>
 <p><strong>尤其值得注意的是，解释器是纯文本 LLM，不接收图像输入，却能重建出包含视觉细节的内容——这直接证明了思考 token 的隐表示中成功编码了多模态信息。</strong></p>
 <hr />
-<h2 id="5">5. 消融实验</h2>
+<h2 id="_5">五、消融实验 &amp; 关键洞察</h2>
+<p><img alt="图 5：消融实验" src="assets/heima/results_ablation.png" /></p>
+<p><em>图 5：消融实验汇总，包含三个子图。从左到右分别展示：(a) 思考 token 数量消融——不同数量的思考 token（每个 CoT 阶段）在 6 个基准上的零样本准确率，横轴为 #Token（1/2/4/8/16/32），纵轴为各基准准确率，单 token 方案在多数基准上表现最佳；(b) 自适应保留比例消融——按原始 CoT 长度的不同百分比保留思考 token 时的平均准确率，横轴为保留比例 Rate（0.1-0.9），纵轴为 6 个基准的平均准确率 Avg Acc，精度在 55.0-56.2 之间无规律波动；(c) 自适应保留比例下的生成 token 数——同一实验中在 MMStar 上的平均生成 token 数，横轴为保留比例 Rate，纵轴为 #Token，随比例增大 token 数线性增长，在 70% 时超过基线 LLaVA-CoT（181 tokens）。三个子图共同说明：固定 token 数量（单 token）远优于固定比例的方案。数据来自论文附录 Table A7、A8。</em></p>
 <h3 id="51-token">5.1 思考 token 数量</h3>
-<p>每个 CoT 阶段用不同数量的思考 token 进行蒸馏：</p>
+<p>每个 CoT 阶段用不同数量的思考 token 进行蒸馏（完整结果来自论文附录 Table A7）：</p>
 <table>
 <thead>
 <tr>
 <th>#Token</th>
+<th>MMStar</th>
+<th>MMBench</th>
+<th>MMVet</th>
+<th>MathVista</th>
+<th>AI2D</th>
+<th>Hallusion</th>
 <th>Avg Acc</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><strong>1</strong></td>
+<td><strong>49.9</strong></td>
+<td><strong>72.8</strong></td>
+<td><strong>43.3</strong></td>
+<td><strong>43.6</strong></td>
+<td><strong>77.5</strong></td>
+<td><strong>60.6</strong></td>
 <td><strong>58.0</strong></td>
 </tr>
 <tr>
 <td>2</td>
+<td>50.3</td>
+<td>71.4</td>
+<td>41.4</td>
+<td>43.1</td>
+<td>75.6</td>
+<td>57.3</td>
 <td>56.5</td>
 </tr>
 <tr>
 <td>4</td>
+<td>49.9</td>
+<td>71.0</td>
+<td>42.2</td>
+<td>39.3</td>
+<td>75.4</td>
+<td>59.3</td>
 <td>56.2</td>
 </tr>
 <tr>
 <td>8</td>
+<td>51.1</td>
+<td>70.4</td>
+<td>41.0</td>
+<td>40.9</td>
+<td>76.7</td>
+<td>59.9</td>
 <td>56.7</td>
 </tr>
 <tr>
 <td>16</td>
+<td>49.5</td>
+<td>72.0</td>
+<td>40.9</td>
+<td>40.9</td>
+<td>76.2</td>
+<td>61.6</td>
 <td>56.9</td>
 </tr>
 <tr>
 <td>32</td>
+<td>50.2</td>
+<td>71.1</td>
+<td>42.9</td>
+<td>41.6</td>
+<td>75.2</td>
+<td>61.8</td>
 <td>57.1</td>
 </tr>
 </tbody>
 </table>
-<p><strong>结论</strong>：单个思考 token 效果最优。更多 token 不会提升精度，反而可能引入噪声或过拟合。这说明一个 hidden state 的容量已经足够编码单阶段 CoT 的推理信息。</p>
+<p><strong>结论</strong>：单个思考 token 效果最优。更多 token 不会提升精度，反而可能引入噪声或过拟合。这说明一个 hidden state（4096 维）的容量已经足够编码单阶段 CoT 的推理信息。</p>
 <h3 id="52">5.2 自适应保留比例</h3>
-<p>按原始 CoT 长度的固定比例保留思考 token（10%-90%）：</p>
+<p>按原始 CoT 长度的固定比例保留思考 token（10%-90%，完整数据来自论文附录 Table A8）：</p>
 <table>
 <thead>
 <tr>
@@ -761,7 +953,7 @@ Heima（冻结的 MLLM）基于图像（Vision Input）和问题（Text Query）
 </tr>
 </tbody>
 </table>
-<p>精度在 55.0-56.2 之间无规律波动，远低于单 token 方案的 58.0，且 token 数超过 70% 时甚至超过基线模型。<strong>结论</strong>：固定比例的自适应方法不适用于 CoT 压缩，核心矛盾不在 token 数量而在信息密度的编码方式。</p>
+<p>精度在 55.0-56.2 之间无规律波动，远低于单 token 方案的 58.0，且 token 数超过 70% 时生成的 token 数超过基线 LLaVA-CoT 的 181 tokens。<strong>结论</strong>：固定比例的自适应方法不适用于 CoT 压缩，核心矛盾不在 token 数量而在信息密度的编码方式。</p>
 <h3 id="53">5.3 解释器数量</h3>
 <p>用单一 LLM 同时解释三个阶段 vs 三个独立解释器的对比：</p>
 <table>
@@ -835,40 +1027,231 @@ Heima（冻结的 MLLM）基于图像（Vision Input）和问题（Text Query）
 </table>
 <p>三个独立解释器在 Summary 和 Caption 阶段优势显著（BERTScore +5.6 / +10.8），但在 Reasoning 阶段单一解释器反而略优（BLEU 11.3 vs 11.2，BERTScore 67.3 vs 66.6）。<strong>结论</strong>：Summary 和 Caption 阶段内容差异大，需要独立解释器；Reasoning 阶段的文本模式相对固定，单一解释器也能胜任。</p>
 <hr />
-<h2 id="6">6. 代码仓库结构</h2>
+<h2 id="_6">六、代码实现解读</h2>
+<h3 id="61">6.1 代码结构</h3>
 <div class="codehilite"><pre><span></span><code>Heima/
 ├── heima/
-│   ├── configs/          # 训练/评估 YAML 配置
-│   ├── scripts/           # Shell 运行脚本
-│   └── main_python/       # 核心 Python 脚本
-│       ├── 1_*-organize_dataset-*.py   # 数据准备
-│       ├── 2-*-training-pipeline-*.py   # 渐进式蒸馏训练
-│       ├── 4_*-eval-*.py               # 推理与评估
-│       └── 5-*-demo-*.py               # Demo 推理
-├── torchtune_pkg/        # torchtune 训练框架
-└── zero-shot-evaluation/  # VLMEvalKit 评估
+│   ├── configs/                          # 训练/评估 YAML 配置
+│   │   ├── 2_1-llama3_2_vision-*.yaml    # Stage 0 (全部文本 CoT)
+│   │   ├── 2_2-llama3_2_vision-*.yaml    # Stage 1 (Summary → token)
+│   │   ├── 2_3-llama3_2_vision-*.yaml    # Stage 2 (+Caption → token)
+│   │   ├── 2_4-llama3_2_vision-*.yaml    # Stage 3 (+Reasoning → token)
+│   │   ├── 2_5-llama3_2_vision-*.yaml    # Recovering Stage
+│   │   ├── 4_1-llama3_2_vision-*.yaml    # 解释器推理配置
+│   │   └── 5-llama3_2_vision-*.yaml      # Demo 配置
+│   ├── scripts/                          # Shell 运行脚本
+│   │   ├── run-1_1-*.sh                  # 数据准备（固定 token 数）
+│   │   ├── run-1_2-*.sh                  # 解释器数据准备
+│   │   ├── run-1_3-*.sh                  # 数据准备（自适应比例）
+│   │   ├── run-2-train-*.sh              # 渐进式蒸馏训练
+│   │   ├── run-4_1-decode-*.sh           # 推理评估
+│   │   ├── run-5-demo-*.sh               # Demo
+│   │   └── run-4_2-eval-*.sh             # 指标计算
+│   └── main_python/
+│       ├── 1_1-*.py                      # 数据准备：替换 CoT → 思考 token
+│       ├── 1_2-*.py                      # 解释器数据集构建
+│       ├── 1_3-*.py                      # 自适应比例数据准备
+│       ├── 1_4-*.py                      # 序列特殊 token 数据准备
+│       ├── 2-training-pipeline-*.py      # 核心：渐进式蒸馏 + 解释器联合训练
+│       ├── 4_1-eval-decode-*.py          # 推理：生成 + 解释器重建
+│       ├── 4_2-eval-metrics_compute.py   # 指标计算（BLEU/METEOR/ROUGE/BERTScore）
+│       └── 5-demo-decode-*.py            # Demo 推理脚本
+├── torchtune_pkg/                       # torchtune 训练框架封装
+└── zero-shot-evaluation/                # VLMEvalKit 零样本评估
 </code></pre></div>
 
-<hr />
-<h2 id="7">7. 总结与思考</h2>
-<h3 id="_1">核心贡献</h3>
+<h3 id="62">6.2 训练流程架构图</h3>
+<div class="codehilite"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│               Heima 渐进式蒸馏 + 解释器联合训练流程                    │
+│                                                                   │
+│  ┌──────────┐    ┌──────────────────┐    ┌──────────────────┐    │
+│  │ 数据准备  │───&gt;│  Stage 0: 文本CoT │───&gt;│  Stage 1: 替换    │    │
+│  │ (1_1.py)  │    │  全部文本CoT    │    │  Summary → token │    │
+│  └──────────┘    └──────────────────┘    └────────┬─────────┘    │
+│                                                    │              │
+│  ┌──────────────────┐    ┌──────────────────┐      │              │
+│  │ Stage 4: Recover │&lt;───│ Stage 3: 全部替换 │&lt;─────┘              │
+│  │ 纯 token 微调    │    │ 所有阶段→token  │                      │
+│  └────────┬─────────┘    └──────────────────┘                      │
+│           │                                                       │
+│           ▼                                                       │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │               解释器（Interpreter）训练                       │   │
+│  │  ┌─────────────────┐  ┌─────────────────┐  ┌──────────┐ │   │
+│  │  │ Summary Interp  │  │ Caption Interp  │  │ Reasoning│ │   │
+│  │  │ (Llama-3.1-8B)  │  │ (Llama-3.1-8B)  │  │ Interp   │ │   │
+│  │  └─────────────────┘  └─────────────────┘  └──────────┘ │   │
+│  └──────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="63">6.3 推理流程图</h3>
+<div class="codehilite"><pre><span></span><code><span class="err">输入</span><span class="o">:</span><span class="w"> </span><span class="err">图像</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="err">问题</span>
+<span class="w">       </span><span class="err">│</span>
+<span class="w">       </span><span class="err">▼</span>
+<span class="err">┌──────────────────┐</span>
+<span class="err">│</span><span class="w">  </span><span class="n">Heima</span><span class="w">           </span><span class="err">│</span><span class="w">  </span><span class="err">生成</span><span class="o">:</span><span class="w"> </span><span class="o">&lt;</span><span class="n">THINKING_OF_SUMMARY</span><span class="o">&gt;</span>
+<span class="err">│</span><span class="w">  </span><span class="o">(</span><span class="n">MLLM</span><span class="o">,</span><span class="w"> </span><span class="err">冻结</span><span class="o">)</span><span class="w">    </span><span class="err">│</span><span class="w">         </span><span class="o">&lt;</span><span class="n">THINKING_OF_CAPTION</span><span class="o">&gt;</span>
+<span class="err">│</span><span class="w">                  </span><span class="err">│</span><span class="w">         </span><span class="o">&lt;</span><span class="n">THINKING_OF_REASONING</span><span class="o">&gt;</span>
+<span class="err">│</span><span class="w">                  </span><span class="err">│</span><span class="w">         </span><span class="o">&lt;</span><span class="n">CONCLUSION</span><span class="o">&gt;</span><span class="w"> </span><span class="err">答案</span>
+<span class="err">└────────┬─────────┘</span>
+<span class="w">         </span><span class="err">│</span><span class="w"> </span><span class="err">提取每个思考</span><span class="w"> </span><span class="n">token</span><span class="w"> </span><span class="err">的</span><span class="w"> </span><span class="n">last</span><span class="w"> </span><span class="n">hidden</span><span class="w"> </span><span class="n">state</span>
+<span class="w">         </span><span class="err">│</span><span class="w"> </span><span class="o">(</span><span class="mi">4096</span><span class="w"> </span><span class="err">维向量</span><span class="o">)</span>
+<span class="w">         </span><span class="err">▼</span>
+<span class="err">┌─────────────────────────────────────────────┐</span>
+<span class="err">│</span><span class="w">  </span><span class="err">解释器（纯文本</span><span class="w"> </span><span class="n">LLM</span><span class="err">，不接收图像）</span><span class="w">               </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                              </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">┌──────────────┐</span><span class="w">  </span><span class="err">┌──────────┐</span><span class="w">  </span><span class="err">┌────────┐</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="n">Summary</span><span class="w">     </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="n">Caption</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="n">Reason</span><span class="o">.</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">解释器</span><span class="w">      </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="err">解释器</span><span class="w">   </span><span class="err">│</span><span class="w">  </span><span class="err">│解释器</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">重建</span><span class="w"> </span><span class="n">Summary</span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="err">重建</span><span class="w"> </span><span class="n">Cap</span><span class="o">.</span><span class="err">│</span><span class="w">  </span><span class="err">│重建</span><span class="w"> </span><span class="n">Rea</span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">└──────────────┘</span><span class="w">  </span><span class="err">└──────────┘</span><span class="w">  </span><span class="err">└────────┘</span><span class="w"> </span><span class="err">│</span>
+<span class="err">└─────────────────────────────────────────────┘</span>
+</code></pre></div>
+
+<h3 id="64">6.4 公式 → 代码映射</h3>
+<p><strong>数据集替换逻辑（1_1-organize_dataset-*.py）：</strong></p>
+<p>原 CoT 文本格式：<code>&lt;SUMMARY&gt;...文本CoT...&lt;/SUMMARY&gt;&lt;CAPTION&gt;...文本CoT...&lt;/CAPTION&gt;&lt;REASONING&gt;...文本CoT...&lt;/REASONING&gt;&lt;CONCLUSION&gt;答案&lt;/CONCLUSION&gt;</code></p>
+<p>数据集替换操作：</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># 将文本 CoT 替换为特殊 token（论文公式中 D → D_H 的实现）</span>
+<span class="n">thinking_answer</span> <span class="o">=</span> <span class="n">current_answer</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span>
+    <span class="n">current_summary</span><span class="p">,</span> <span class="s2">&quot;&lt;THINKING_OF_SUMMARY&gt;&quot;</span> <span class="o">*</span> <span class="n">num_tokens</span>
+<span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span>
+    <span class="n">current_caption</span><span class="p">,</span> <span class="s2">&quot;&lt;THINKING_OF_CAPTION&gt;&quot;</span> <span class="o">*</span> <span class="n">num_tokens</span>
+<span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span>
+    <span class="n">current_reasoning</span><span class="p">,</span> <span class="s2">&quot;&lt;THINKING_OF_REASONING&gt;&quot;</span> <span class="o">*</span> <span class="n">num_tokens</span>
+<span class="p">)</span>
+</code></pre></div>
+
+<p><strong>蒸馏训练（2-training-pipeline-*.py）：</strong></p>
+<p>核心训练循环：</p>
 <ol>
-<li><strong>首个 MLLM CoT 压缩框架</strong>：将冗长的多阶段 CoT 推理压缩为极少量的思考 token，实现了"隐空间推理"</li>
-<li><strong>信息论保证</strong>：从理论上证明了只要保留非平凡互信息，压缩后的推理仍有效，且信息差距可以通过解释器经验性地评估</li>
-<li><strong>可解释性验证</strong>：通过纯文本 LLM 解释器成功重建多模态推理过程，验证了压缩的有效性和可解释性</li>
+<li>Heima (MLLM) 前向传播，生成 logits + last hidden states</li>
+<li>从 last hidden states 中提取思考 token 位置对应的 hidden state（通过 token ID 掩码定位）</li>
+<li>解释器前向传播：用 Heima 的思考 token hidden state <strong>替换</strong>解释器输入中对应位置的 embedding</li>
+<li>联合优化：Heima 的 next-token prediction loss + 解释器(next-token prediction loss)</li>
 </ol>
-<h3 id="_2">值得关注的点</h3>
-<ul>
-<li>思考 token 的隐表示编码了视觉信息——单个 4096 维的 hidden state 能"存储"足够的视觉细节供纯文本 LLM 重建图像描述，这在图 1 的 demo 中得到了直观验证</li>
-<li>渐进式蒸馏的策略很实用，避免了直接将整个 CoT 替换为未知 token 对模型造成的剧烈分布偏移</li>
-<li>解释器设计巧妙：不输入 token 符号而是输入其 last hidden state，绕过了"单个 token 符号携带信息有限"的问题</li>
-</ul>
-<h3 id="_3">局限与展望</h3>
-<ul>
-<li>多个独立解释器增加了系统复杂度，统一解释器是未来方向</li>
-<li>当前仅在 LLaVA-CoT-100k（三阶段 CoT）上验证，更多样的 CoT 结构有待探索</li>
-<li>论文提到会扩展到更大的模型</li>
-</ul>
+<div class="codehilite"><pre><span></span><code><span class="c1"># 提取思考 token 的 last hidden state（关键操作）</span>
+<span class="n">mask_token_summary</span> <span class="o">=</span> <span class="p">(</span><span class="n">batch</span><span class="p">[</span><span class="s2">&quot;tokens&quot;</span><span class="p">][:,</span> <span class="mi">1</span><span class="p">:]</span> <span class="o">==</span> <span class="n">TOKEN_ID_SUMMARY</span><span class="p">)</span>
+<span class="n">thinking_token_hidden</span> <span class="o">=</span> <span class="n">last_hidden_state</span><span class="p">[</span><span class="n">mask_token_summary</span><span class="p">]</span>
+
+<span class="c1"># 解释器前向：用 Heima 的 hidden state 替换 embedding</span>
+<span class="n">logits</span> <span class="o">=</span> <span class="n">model_decoder</span><span class="p">(</span>
+    <span class="o">**</span><span class="n">batch_decoder</span><span class="p">,</span>
+    <span class="n">thinking_token</span><span class="o">=</span><span class="n">thinking_token_hidden</span><span class="p">,</span>  <span class="c1"># [B, N, 4096]</span>
+    <span class="n">thinking_token_mask</span><span class="o">=</span><span class="n">mask_special_token</span><span class="p">,</span>
+<span class="p">)</span>
+</code></pre></div>
+
+<p><strong>特殊 token ID（在 tokenizer 中的映射）：</strong></p>
+<table>
+<thead>
+<tr>
+<th>特殊 token</th>
+<th>ID</th>
+<th>对应阶段</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>&lt;THINKING_OF_SUMMARY&gt;</code></td>
+<td>128013</td>
+<td>Summary</td>
+</tr>
+<tr>
+<td><code>&lt;THINKING_OF_CAPTION&gt;</code></td>
+<td>128014</td>
+<td>Caption</td>
+</tr>
+<tr>
+<td><code>&lt;THINKING_OF_REASONING&gt;</code></td>
+<td>128015</td>
+<td>Reasoning</td>
+</tr>
+</tbody>
+</table>
+<p><strong>框架依赖：</strong> torchtune（基于 PyTorch FSDP 的分布式训练框架）、LoRA（rank=16, alpha=32）、AdamW optimizer、cosine LR scheduler。</p>
+<hr />
+<h2 id="_7">七、局限性</h2>
+<ol>
+<li><strong>多解释器增加系统复杂度</strong>：论文自身指出的主要局限——每个 CoT 阶段需要一个独立的解释器（3 个解释器），统一解释器是未来方向。消融实验（Table A9）显示单一解释器在 Summary 和 Caption 阶段性能显著下降（BERTScore -5.6 和 -10.8），说明当前设计难以统一。</li>
+<li><strong>仅验证三阶段 CoT</strong>：仅在 LLaVA-CoT-100k 的三阶段格式上验证，对于其他 CoT 结构（如更细粒度的多步骤推理、树状 CoT 等）的适用性未知。</li>
+<li><strong>信息损失不可逆</strong>：由信息论定理可知，压缩必然引入信息差距 <span class="math inline">$I(Y;\mathrm{CoTs}\mid X,\texttt{&lt;CoTs>})$</span>。虽然实验证明差距很小，但理论上的信息损失意味着在某些高精度任务上可能无法完全恢复 CoT 性能（平均 58.0 vs 61.1，差距约 3 个百分点）。</li>
+<li><strong>解释器不能加速推理</strong>：解释器不参与实际推理加速，仅用于事后分析和可解释性验证。如果需要用解释器重建推理过程，仍需额外的 LLM 推理成本。</li>
+<li><strong>固定 CoT 阶段数限制</strong>：当前 Heima 假设所有样本的 CoT 阶段数相同（K_i = 3），对于不同复杂度的任务无法动态调整思考 token 数量。</li>
+</ol>
+<h2 id="_8">八、关键概念速查</h2>
+<table>
+<thead>
+<tr>
+<th>概念</th>
+<th>中文</th>
+<th>解释</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Thinking Token</td>
+<td>思考 token</td>
+<td>特殊的 vocabulary token（如 <code>&lt;THINKING_OF_SUMMARY&gt;</code>），其 last hidden state 编码了整个 CoT 阶段的推理信息</td>
+</tr>
+<tr>
+<td>Progressive Distillation</td>
+<td>渐进式蒸馏</td>
+<td>逐个阶段将文本 CoT 替换为思考 token 的分步训练策略，避免分布剧烈偏移</td>
+</tr>
+<tr>
+<td>Recovering Stage</td>
+<td>恢复阶段</td>
+<td>渐进蒸馏结束后，用全部思考 token 额外微调一步，优化跨阶段 transition</td>
+</tr>
+<tr>
+<td>Interpreter</td>
+<td>解释器</td>
+<td>基于纯文本 LLM（Llama-3.1-8B）的模型，接收思考 token 的 hidden state 重建出文本 CoT</td>
+</tr>
+<tr>
+<td>Hidden State Replacement</td>
+<td>隐状态替换</td>
+<td>解释器的核心操作：用 Heima 生成的 last hidden state 替换解释器输入中对应特殊 token 的 embedding</td>
+</tr>
+<tr>
+<td>Data Processing Inequality</td>
+<td>数据处理不等式</td>
+<td>信息论基本定理，保证 <span class="math inline">$I(Y;\texttt{&lt;CoTs>}\mid X) \le I(Y;\mathrm{CoTs}\mid X)$</span></td>
+</tr>
+<tr>
+<td>Information Gap</td>
+<td>信息差距</td>
+<td><span class="math inline">$I(Y;\mathrm{CoTs}\mid X,\texttt{&lt;CoTs>})$</span>，量化压缩带来的信息损失</td>
+</tr>
+<tr>
+<td><THINKING_OF_SUMMARY></td>
+<td>摘要思考 token ID=128013</td>
+<td>编码问题复述/摘要阶段推理的思考 token</td>
+</tr>
+<tr>
+<td><THINKING_OF_CAPTION></td>
+<td>描述思考 token ID=128014</td>
+<td>编码图像内容描述阶段推理的思考 token</td>
+</tr>
+<tr>
+<td><THINKING_OF_REASONING></td>
+<td>推理思考 token ID=128015</td>
+<td>编码多步逻辑推理阶段推理的思考 token</td>
+</tr>
+<tr>
+<td>LoRA (rank=16, alpha=32)</td>
+<td>低秩适配</td>
+<td>Heima 和解释器使用的参数高效微调方法</td>
+</tr>
+<tr>
+<td>Abstract Projection</td>
+<td>抽象投影</td>
+<td>解释器中的可训练投影层，将思考 token 的 hidden state 映射到 LLM 的 embedding 空间</td>
+</tr>
+</tbody>
+</table>
   </div>
 </main>
 

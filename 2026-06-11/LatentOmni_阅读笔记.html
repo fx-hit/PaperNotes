@@ -7,9 +7,9 @@
 <!-- arxiv: 2605.22012 -->
 <!-- venue: 投稿中 (under review) -->
 <!-- tags: 全模态, 多模态理解, 链式思考 -->
-<!-- words-zh: 5668 -->
-<!-- words-en: 481 -->
-<!-- reading-time: 19 -->
+<!-- words-zh: 6434 -->
+<!-- words-en: 525 -->
+<!-- reading-time: 21 -->
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
@@ -295,9 +295,9 @@ document.addEventListener('DOMContentLoaded', function() {
 </li>
 <li class="toc-h2"><a href="#_1">一、核心问题</a>
 </li>
-<li class="toc-h2"><a href="#_2">二、核心思路</a>
+<li class="toc-h2"><a href="#_2">二、核心思路/方法</a>
 </li>
-<li class="toc-h2"><a href="#_3">三、方法详解</a>
+<li class="toc-h2"><a href="#_3">三、训练目标</a>
 <ul>
 </li>
 <li class="toc-h3"><a href="#31-audio-visual-latent-reasoning">3.1 音视频隐空间推理（Audio-Visual Latent Reasoning）</a>
@@ -317,6 +317,8 @@ document.addEventListener('DOMContentLoaded', function() {
 <li class="toc-h3"><a href="#42">4.2 主要结果</a>
 </li>
 <li class="toc-h3"><a href="#43">4.3 消融实验</a>
+</li>
+<li class="toc-h3"><a href="#44-case-study">4.4 Case Study 定性分析</a>
 </ul></li>
 </li>
 <li class="toc-h2"><a href="#_5">五、关键洞察与技术亮点</a>
@@ -343,7 +345,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <main class="main-wrapper">
   <div class="content-inner" id="main-content">
 <h1 id="latentomni-rethinking-omni-modal-understanding-via-unified-audio-visual-latent-reasoning">LatentOmni: Rethinking Omni-Modal Understanding via Unified Audio-Visual Latent Reasoning</h1>
-<div class="article-stats">5,668 字 · English 481 词 · 约 19 分钟阅读</div>
+<div class="article-stats">6,434 字 · English 525 词 · 约 21 分钟阅读</div>
 
 <blockquote>
 <p>本文基于以下本地材料整理：
@@ -354,7 +356,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <p><strong>论文信息</strong>
 - 作者：Yifan Dai（SJTU &amp; 快手 Kling）、Zhenhua Wu、Bohan Zeng、Daili Hua、Jialing Liu、Bozhou Li、Yuran Wang、Chengzhuo Tong、Hao Liang、Xiaochen Ma、Junbo Niu、Tianyu Guo、Yang Shi、Yue Ding、Yiyan Ji、Bingyin Mei、Yushuo Guan、Yuanxing Zhang、Pengfei Wan、Fangcheng Fu、Wentao Zhang
 - 机构：上海交大 AI 学院、快手 Kling 团队、北京大学、港科大、中科院自动化所、南京大学、中国人民大学、清华大学
-- arXiv ID：2605.22012
+- arXiv：https://arxiv.org/abs/2605.22012
 - 基座模型：Qwen2.5-Omni-7B
 - 代码：未开源</p>
 </blockquote>
@@ -387,7 +389,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </ul>
 <p><strong>这张图支持的核心论点</strong>：文本 CoT 导致的"语言绑定"不是假说——右栏的定量数据直接显示随着任务对跨模态证据的需求增加，纯文本 CoT 对音视频信号的注意力系统性下降。LatentOmni 的隐空间推理通过将音视频证据保留在连续特征中，从根本上抑制了这种注意力转移。*</p>
 <hr />
-<h2 id="_2">二、核心思路</h2>
+<h2 id="_2">二、核心思路/方法</h2>
 <p>LatentOmni 的核心洞察是：<strong>连续隐空间（latent space）比离散文本更适合承载和保留音视频感官信息</strong>。与其把所有中间推理都写成文本，不如让模型在需要回顾音视频证据时，直接在连续隐空间中生成隐式推理状态。</p>
 <p>具体做法：</p>
 <ul>
@@ -414,7 +416,8 @@ document.addEventListener('DOMContentLoaded', function() {
 </ul>
 <p><strong>这张图支持的核心论点</strong>：LatentOmni 不是一个激进的全隐空间推理方案，而是一个平衡文本逻辑和隐空间证据的混合架构——左栏展示了"怎么做"，右栏展示了"如何确保隐状态忠实于感官证据"。*</p>
 <hr />
-<h2 id="_3">三、方法详解</h2>
+<h2 id="_3">三、训练目标</h2>
+<p>为实现联合优化训练，LatentOmni 需要在推理架构、位置编码和数据构造上做特定设计，以下 3.1-3.4 依次展开。</p>
 <h3 id="31-audio-visual-latent-reasoning">3.1 音视频隐空间推理（Audio-Visual Latent Reasoning）</h3>
 <p>LatentOmni 的推理轨迹是一个<strong>文本与隐状态交替的混合序列</strong>：</p>
 <p><div class="math display">$$S = \left[ w_{1:i}, u, z_{1:K}, u', w_{i+1:j}, u, z_{K+1:2K}, u', \dots, a \right]$$</div></p>
@@ -527,11 +530,67 @@ document.addEventListener('DOMContentLoaded', function() {
 </thead>
 <tbody>
 <tr>
+<td><em>GPT-4o</em></td>
+<td style="text-align: center;"><em>56.5</em></td>
+<td style="text-align: center;"><em>42.6</em></td>
+<td style="text-align: center;"><em>—</em></td>
+<td style="text-align: center;"><em>—</em></td>
+</tr>
+<tr>
+<td><em>Gemini-2.0-Flash</em></td>
+<td style="text-align: center;"><em>67.8</em></td>
+<td style="text-align: center;"><em>56.2</em></td>
+<td style="text-align: center;"><em>41.5</em></td>
+<td style="text-align: center;"><em>42.9</em></td>
+</tr>
+<tr>
+<td><em>Gemini-2.5-Pro</em></td>
+<td style="text-align: center;"><em>81.4</em></td>
+<td style="text-align: center;"><em>64.6</em></td>
+<td style="text-align: center;"><em>58.9</em></td>
+<td style="text-align: center;"><em>—</em></td>
+</tr>
+<tr>
 <td>VideoLLaMA2-7B</td>
 <td style="text-align: center;">35.2</td>
 <td style="text-align: center;">25.4</td>
 <td style="text-align: center;">29.2</td>
 <td style="text-align: center;">27.0</td>
+</tr>
+<tr>
+<td>MiniCPM-o-7B</td>
+<td style="text-align: center;">53.1</td>
+<td style="text-align: center;">29.7</td>
+<td style="text-align: center;">29.7</td>
+<td style="text-align: center;">34.8</td>
+</tr>
+<tr>
+<td>VITA-1.5-7B</td>
+<td style="text-align: center;">44.7</td>
+<td style="text-align: center;">36.9</td>
+<td style="text-align: center;">30.5</td>
+<td style="text-align: center;">—</td>
+</tr>
+<tr>
+<td>HumanOmniV2-7B</td>
+<td style="text-align: center;">58.5</td>
+<td style="text-align: center;">47.1</td>
+<td style="text-align: center;">30.5</td>
+<td style="text-align: center;">32.3</td>
+</tr>
+<tr>
+<td>Baichuan-Omni-1.5</td>
+<td style="text-align: center;">50.0</td>
+<td style="text-align: center;">43.3</td>
+<td style="text-align: center;">30.7</td>
+<td style="text-align: center;">32.8</td>
+</tr>
+<tr>
+<td>OmniVinci</td>
+<td style="text-align: center;">66.5</td>
+<td style="text-align: center;">48.2</td>
+<td style="text-align: center;">32.1</td>
+<td style="text-align: center;">—</td>
 </tr>
 <tr>
 <td>Qwen2.5-Omni-7B</td>
@@ -561,13 +620,6 @@ document.addEventListener('DOMContentLoaded', function() {
 <td style="text-align: center;"><strong>35.4</strong></td>
 <td style="text-align: center;"><strong>35.1</strong></td>
 </tr>
-<tr>
-<td><em>Gemini-2.5-Pro</em></td>
-<td style="text-align: center;"><em>81.4</em></td>
-<td style="text-align: center;"><em>64.6</em></td>
-<td style="text-align: center;"><em>58.9</em></td>
-<td style="text-align: center;"><em>—</em></td>
-</tr>
 </tbody>
 </table>
 <p><strong>关键发现</strong>：</p>
@@ -593,6 +645,8 @@ document.addEventListener('DOMContentLoaded', function() {
 <th style="text-align: center;">Sound</th>
 <th style="text-align: center;">Speech</th>
 <th style="text-align: center;">(0,1]min</th>
+<th style="text-align: center;">(1,5]min</th>
+<th style="text-align: center;">(5,10]min</th>
 <th style="text-align: center;">(10,30]min</th>
 <th style="text-align: center;">平均</th>
 </tr>
@@ -604,6 +658,8 @@ document.addEventListener('DOMContentLoaded', function() {
 <td style="text-align: center;">25.3</td>
 <td style="text-align: center;">30.7</td>
 <td style="text-align: center;">41.6</td>
+<td style="text-align: center;">27.4</td>
+<td style="text-align: center;">25.3</td>
 <td style="text-align: center;">26.7</td>
 <td style="text-align: center;">29.3</td>
 </tr>
@@ -613,6 +669,8 @@ document.addEventListener('DOMContentLoaded', function() {
 <td style="text-align: center;">32.0</td>
 <td style="text-align: center;">33.9</td>
 <td style="text-align: center;">39.4</td>
+<td style="text-align: center;">32.7</td>
+<td style="text-align: center;">31.0</td>
 <td style="text-align: center;">30.7</td>
 <td style="text-align: center;">33.2</td>
 </tr>
@@ -622,6 +680,8 @@ document.addEventListener('DOMContentLoaded', function() {
 <td style="text-align: center;">30.2</td>
 <td style="text-align: center;"><strong>36.7</strong></td>
 <td style="text-align: center;"><strong>45.2</strong></td>
+<td style="text-align: center;"><strong>33.2</strong></td>
+<td style="text-align: center;"><strong>33.3</strong></td>
 <td style="text-align: center;"><strong>34.0</strong></td>
 <td style="text-align: center;"><strong>35.4</strong></td>
 </tr>
@@ -759,6 +819,20 @@ document.addEventListener('DOMContentLoaded', function() {
 <td style="text-align: center;">29.3</td>
 <td style="text-align: center;">32.0</td>
 </tr>
+<tr>
+<td>+ Explicit Text CoT</td>
+<td style="text-align: center;">65.6</td>
+<td style="text-align: center;">46.6</td>
+<td style="text-align: center;">33.2</td>
+<td style="text-align: center;">32.1</td>
+</tr>
+<tr>
+<td>+ Vanilla SFT</td>
+<td style="text-align: center;">62.0</td>
+<td style="text-align: center;">47.5</td>
+<td style="text-align: center;">30.5</td>
+<td style="text-align: center;">33.2</td>
+</tr>
 </tbody>
 </table>
 <p><strong>关键发现</strong>：</p>
@@ -773,6 +847,14 @@ document.addEventListener('DOMContentLoaded', function() {
 <li>Token 数从 20→40 逐步提升，40 达到峰值，50 反而下降（噪声引入）</li>
 <li>最优分配比例：32 视觉 + 8 音频——视觉推理需要更大表征带宽，但少量专用音频 token 对跨模态对齐仍然关键</li>
 </ul>
+<h3 id="44-case-study">4.4 Case Study 定性分析</h3>
+<p>论文在附录中提供了三组 LatentOmni 的 Case Study 样例，展示模型在不同音视频推理场景下的隐空间推理与注意力聚焦能力。</p>
+<p><img alt="Case Study：AV Event Alignment" src="assets/latentomni/case1.jpg" /></p>
+<p><em>图 5：LatentOmni 在 AV Event Alignment 任务上的推理示例。左侧是输入视频帧序列（多帧画面展示场景的连续变化），中间是模型生成的推理文本（含 <code>&lt;Unified_Latent&gt;...&lt;latent_embeddings&gt;...&lt;/Unified_Latent&gt;</code> 隐推理段），右侧是对应的注意力热力图叠加在视频帧上（深色=高权重）。图中展示的具体场景包含多个时序对齐的音视频线索（如人物动作与对应声音的同步出现），LatentOmni 的注意力精准集中在事件对齐的关键帧上——深色区域恰好覆盖了声音与视觉动作同步发生的时刻。相比之下，Explicit Text CoT 基线的注意力分布较为弥散，无法有效区分哪些帧包含事件对齐的证据。这个案例直接展示了隐空间推理如何通过保持连续特征来实现精确的跨模态事件对齐。</em></p>
+<p><img alt="Case Study：Inference" src="assets/latentomni/case2.jpg" /></p>
+<p><em>图 6：LatentOmni 在 AV Inference 任务上的推理示例（推断类任务）。输入是一个需要综合视听信息进行推断的场景（如根据视觉中的人物动作和背景中的声音推断事件原因）。图中展示了 LatentOmni 的推理链包含多次文本→隐空间的交替切换——每次切换到隐空间时，注意力热力图精确地重新聚焦到提供关键证据的音视频帧上。关键观察：模型在生成第 1 个隐推理段时聚焦于某一段视觉帧，在第 2 个隐推理段时注意力转移到另一段包含关键音频线索的帧上——这种"分阶段聚焦"行为表明模型能够在不同推理子步骤中按需访问不同的感官证据，这与文本 CoT 倾向于将所有信息压缩到同一段文本中的行为形成鲜明对比。</em></p>
+<p><img alt="Case Study：Reasoning" src="assets/latentomni/case3.jpg" /></p>
+<p><em>图 7：LatentOmni 在 AV Reasoning 任务上的推理示例（复杂推理类任务）。该场景涉及多步逻辑推理（因果链建立、跨模态证据的综合），需要模型在多段音视频片段之间建立联系。图中展示 LatentOmni 在较长的推理链中进行了多次隐空间切换（图中标注了三个 <code>&lt;Unified_Latent&gt;</code> 段），每次切换时注意力热力图都稳定地落在对应的证据帧上，没有出现注意力漂移或退化。这一观察直接支持了论文的核心论点——隐空间推理通过保持连续特征表示，在长推理链中有效抑制了"语言绑定"导致的注意力衰减。三个 case study 覆盖了从对齐→推断→推理的递进难度，系统性地展示了 LatentOmni 在不同跨模态推理复杂度下的行为一致性。</em></p>
 <hr />
 <h2 id="_5">五、关键洞察与技术亮点</h2>
 <h3 id="51">5.1 "文本瓶颈"的诊断与解决</h3>

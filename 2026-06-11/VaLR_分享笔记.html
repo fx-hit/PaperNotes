@@ -7,9 +7,9 @@
 <!-- arxiv: 2602.04476 -->
 <!-- venue: ICML 2026 -->
 <!-- tags: MLLM, 多模态推理, 潜在推理, 表征学习 -->
-<!-- words-zh: 5020 -->
-<!-- words-en: 629 -->
-<!-- reading-time: 17 -->
+<!-- words-zh: 5388 -->
+<!-- words-en: 720 -->
+<!-- reading-time: 19 -->
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
@@ -309,7 +309,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <li class="toc-h3"><a href="#43">4.3 多编码器对齐</a>
 </ul></li>
 </li>
-<li class="toc-h2"><a href="#5">5. 训练流程</a>
+<li class="toc-h2"><a href="#5">5. 训练目标与流程</a>
 <ul>
 </li>
 <li class="toc-h3"><a href="#stage-1-cot-sft">Stage 1：标准 CoT SFT</a>
@@ -335,7 +335,9 @@ document.addEventListener('DOMContentLoaded', function() {
 </li>
 <li class="toc-h2"><a href="#7">7. 这篇论文的核心贡献</a>
 </li>
-<li class="toc-h2"><a href="#8">8. 常见问题</a>
+<li class="toc-h2"><a href="#8">8. 局限性</a>
+</li>
+<li class="toc-h2"><a href="#9">9. 常见问题</a>
 <ul>
 </li>
 <li class="toc-h3"><a href="#q1latent-token">Q1：latent token 是可解释的自然语言吗？</a>
@@ -349,7 +351,9 @@ document.addEventListener('DOMContentLoaded', function() {
 <li class="toc-h3"><a href="#q5valr">Q5：VaLR 的最大局限是什么？</a>
 </ul></li>
 </li>
-<li class="toc-h2"><a href="#9-takeaway">9. 最短版 takeaway</a>
+<li class="toc-h2"><a href="#10">10. 关键概念速查</a>
+</li>
+<li class="toc-h2"><a href="#11-takeaway">11. 最短版 takeaway</a>
 </ul></li>
 </li></ul>
 </nav>
@@ -357,7 +361,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <main class="main-wrapper">
   <div class="content-inner" id="main-content">
 <h1 id="valr">VaLR 论文分享简明笔记</h1>
-<div class="article-stats">5,020 字 · English 629 词 · 约 17 分钟阅读</div>
+<div class="article-stats">5,388 字 · English 720 词 · 约 19 分钟阅读</div>
 
 <blockquote>
 <p>本文基于以下本地材料整理：</p>
@@ -379,7 +383,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <li>然后进入"潜在模式"（latent mode，绿色区域）：模型预测 <code>&lt;latent&gt;</code> 特殊 token 后，开始生成 K 个连续 latent token。每个 latent token 的输入不是普通 token embedding，而是上一个 latent token 的 hidden state h_i（图中弯箭头所示），形成自循环。latent token 不与任何文字对应，是纯连续向量。</li>
 <li>K 步后预测 <code>&lt;/latent&gt;</code>，切换回"语言模式"（language mode，蓝色区域）：生成第一段文本推理步骤 r^(1)（如"Step 1: Identify objects"）。</li>
 <li>再次进入潜在模式（第二个绿色区域），生成新一轮 latent token，再回到语言模式生成 r^(2)，以此类推，直至最终输出 answer。</li>
-<li>底部标注："Per-step visual recall via latent tokens"（每步通过 latent token 回注视觉信息），强调 latte nt token 的作用是为每步推理提供视觉锚点。</li>
+<li>底部标注："Per-step visual recall via latent tokens"（每步通过 latent token 回注视觉信息），强调 latent token 的作用是为每步推理提供视觉锚点。</li>
 </ul>
 <p><strong>子图 (b) REPA 对齐训练（仅训练时使用，推理时不依赖）</strong>：</p>
 <ul>
@@ -542,7 +546,7 @@ H_{t+1} = Transformer(E_{t+1})
 <li><strong>V*</strong>：REPA 约 86% vs Input token 约 82%，高约 4 个百分点。</li>
 <li>三个 benchmark 上 REPA 全面优于输入 token 方式。核心优势：(1) 推理时不需要外部编码器，效率更高；(2) REPA 使每步推理都能动态回注视觉信息，而输入 token 方式仅提供一次性静态信息。</li>
 </ul>
-<h2 id="5">5. 训练流程</h2>
+<h2 id="5">5. 训练目标与流程</h2>
 <p>论文采用两阶段课程学习，逐步赋予 MLLM 潜在推理能力：</p>
 <p><pre class="mermaid">flowchart TD
     A["Qwen2.5-VL-7B&lt;br/>(预训练 MLLM)"] --> B["Stage 1: 标准 CoT SFT&lt;br/>450K 样本"]
@@ -788,6 +792,55 @@ H_{t+1} = Transformer(E_{t+1})
 </ul>
 <p><strong>核心结论</strong>：四个 benchmark 上的趋势高度一致——Ocean-R1 和 LVR 在中等推理长度后开始退化，VaLR 在全部四个 benchmark 上均表现出单调提升。这直接验证了论文的核心主张：没有视觉对齐，更长的推理反而有害（模型在"脑补"）；有了视觉对齐，推理越长越受益。这是 MLLM 领域首次观察到类似 LLM 的 test-time scaling law。</p>
 <h3 id="64">6.4 消融实验</h3>
+<p><strong>REPA 对齐层分析：</strong></p>
+<p>论文还消融了 MLLM 中对齐层的选择。在 Qwen2.5-VL-7B 的 28 层中，选取第 4 层（Front）、第 12 层（Middle）、第 27 层（Last）分别做 REPA 对齐：</p>
+<table>
+<thead>
+<tr>
+<th>对齐层</th>
+<th>BLINK</th>
+<th>MMVP</th>
+<th>MMStar</th>
+<th>V^*</th>
+<th>CVBench</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Qwen2.5-VL-7B (baseline)</td>
+<td>55.7</td>
+<td>56.0</td>
+<td>67.1</td>
+<td>76.4</td>
+<td>74.5</td>
+</tr>
+<tr>
+<td>Front (第 4 层)</td>
+<td>59.2</td>
+<td>55.7</td>
+<td>68.5</td>
+<td>83.8</td>
+<td>78.6</td>
+</tr>
+<tr>
+<td>Middle (第 12 层)</td>
+<td><strong>63.1</strong></td>
+<td><strong>60.3</strong></td>
+<td><strong>70.8</strong></td>
+<td><strong>86.4</strong></td>
+<td><strong>83.1</strong></td>
+</tr>
+<tr>
+<td>Last (第 27 层)</td>
+<td>62.8</td>
+<td>60.0</td>
+<td>70.8</td>
+<td>85.3</td>
+<td>82.5</td>
+</tr>
+</tbody>
+</table>
+<p>结果表明虽然各层对齐均有提升，但中间层（12th）效果最优，说明 MLLM 中间层确实是视觉信息最集中的位置。这一发现与 REPA、YourVLM、Devil's Advocate 等 prior work 的观察一致。</p>
 <p><strong>REPA 表征对齐的有效性：</strong></p>
 <table>
 <thead>
@@ -1031,7 +1084,15 @@ H_{t+1} = Transformer(E_{t+1})
    VaLR 是第一个随着推理链增长性能单调提升的 MLLM 方法——baseline 在长推理中退化，VaLR 持续受益。这为 MLLM 的推理效率研究开辟了新方向。</p>
 </li>
 </ol>
-<h2 id="8">8. 常见问题</h2>
+<h2 id="8">8. 局限性</h2>
+<ol>
+<li><strong>数据依赖</strong>：多视角数据需要 GPT-4o 辅助标注每步推理对应的目标图像，引入了外部依赖和一定的数据质量不确定性。</li>
+<li><strong>固定 K 值</strong>：目前 K=16 是固定长度，不如 LaST-R1 的 adaptive CoT 那样可以根据需要动态调整 latent 长度。</li>
+<li><strong>Benchmark 验证</strong>：主要在 VQA benchmark 上验证，论文定位的 CUA 和 VLA 场景缺少真实环境评估。</li>
+<li><strong>与 RL 推理的关系</strong>：与 R1-style 强化学习推理（如 R1-OneVision）的对比有限——后者在某些 benchmark 上意外退步，原因值得深入。</li>
+<li><strong>语言 CoT 质量保真度</strong>：目前训练使用固定数据集的 CoT 标注，如果 CoT 本身有错误或不完整，REPA 对齐会强化这些错误的视觉关联。</li>
+</ol>
+<h2 id="9">9. 常见问题</h2>
 <h3 id="q1latent-token">Q1：latent token 是可解释的自然语言吗？</h3>
 <p>不是。latent token 是连续向量，不映射到任何文字。它们更像是模型内部的"视觉摘要"——通过 REPA 对齐学到的、关于图像的紧凑表示。这些表示对后续的文本推理提供视觉 grounding，但本身不是人类可读的。</p>
 <h3 id="q2repa">Q2：REPA 对齐只在训练时使用，推理时怎么保证模型还记得视觉信息？</h3>
@@ -1052,13 +1113,59 @@ H_{t+1} = Transformer(E_{t+1})
 </ul>
 <p>VaLR 的独特之处在于：它是<strong>每步推理前都做一次视觉对齐</strong>，而不是仅在开始或结束时对齐一次。</p>
 <h3 id="q5valr">Q5：VaLR 的最大局限是什么？</h3>
-<ol>
-<li><strong>数据依赖</strong>：多视角数据需要 GPT-4o 辅助标注每步推理对应的目标图像，引入了外部依赖和一定的数据质量不确定性。</li>
-<li><strong>固定 K 值</strong>：目前 K=16 是固定长度，不如 LaST-R1 的 adaptive CoT 那样可以根据需要动态调整 latent 长度。</li>
-<li><strong>Benchmark 验证</strong>：主要在 VQA benchmark 上验证，论文定位的 CUA 和 VLA 场景缺少真实环境评估。</li>
-<li><strong>与 RL 推理的关系</strong>：与 R1-style 强化学习推理（如 R1-OneVision）的对比有限——后者在某些 benchmark 上意外退步，原因值得深入。</li>
-</ol>
-<h2 id="9-takeaway">9. 最短版 takeaway</h2>
+<p>详见第 8 节"局限性"。</p>
+<h2 id="10">10. 关键概念速查</h2>
+<table>
+<thead>
+<tr>
+<th>概念</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>VaLR</td>
+<td>Vision-aligned Latent Reasoning，在每步推理前生成视觉对齐的 latent token 作为视觉检查点</td>
+</tr>
+<tr>
+<td>Latent Token</td>
+<td>不对应任何文字的连续向量，通过 self-loop（hidden state → input）在潜在空间中推理</td>
+</tr>
+<tr>
+<td>Latent Mode</td>
+<td>模型使用上一时刻 hidden state 作为下一输入的模式，区别于使用 token embedding 的 Language Mode</td>
+</tr>
+<tr>
+<td>REPA</td>
+<td>Representation Alignment，将 MLLM 中间层特征与外部视觉编码器的 patch-wise 特征做余弦相似度对齐</td>
+</tr>
+<tr>
+<td>视觉信号稀释 (Visual Information Dilution)</td>
+<td>随着自回归推理链增长，图像 token 在整个序列中的相对权重下降，模型逐渐"忘记"视觉信息</td>
+</tr>
+<tr>
+<td>Multi-encoder Alignment</td>
+<td>同时对齐多个视觉编码器（DINOv3, SigLIPv2, π³），利用其互补表征（空间、语义、3D）</td>
+</tr>
+<tr>
+<td>Test-time Scaling</td>
+<td>VaLR 首次在 MLLM 领域展示出类似 LLM 的 test-time scaling law：推理越长性能越高</td>
+</tr>
+<tr>
+<td>VaLR-S</td>
+<td>Single encoder version，使用单个 DINOv3 做 REPA 对齐</td>
+</tr>
+<tr>
+<td>VaLR-M</td>
+<td>Multi-encoder version，同时对齐 DINOv3 + SigLIPv2 + π³，效果最优</td>
+</tr>
+<tr>
+<td>Stage 1 / Stage 2</td>
+<td>两阶段课程学习：Stage 1 学标准 CoT 推理（CE loss），Stage 2 插入 latent token 并施加 REPA loss</td>
+</tr>
+</tbody>
+</table>
+<h2 id="11-takeaway">11. 最短版 takeaway</h2>
 <p>VaLR = <code>CoT reasoning</code> + <code>vision-aligned latent checkpoint per step</code>。</p>
 <p>它的核心洞察是：MLLM 在做长推理时会逐渐"忘记"图像——不是因为推理能力不够，而是因为视觉信号被文本序列稀释了。VaLR 的解决方法是在每个推理步骤前插入一组与视觉编码器特征对齐的 latent token，作为"视觉检查点"。这种方法简单、高效（推理开销 +10%）、通用（适配任何视觉编码器），且首次让 MLLM 展现出类似 LLM 的 test-time scaling 行为。</p>
   </div>

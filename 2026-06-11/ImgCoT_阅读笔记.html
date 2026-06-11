@@ -7,9 +7,9 @@
 <!-- arxiv: 2601.22730 -->
 <!-- venue: ICML 2026 -->
 <!-- tags: 推理, 思维链压缩, LLM, 视觉压缩 -->
-<!-- words-zh: 6815 -->
-<!-- words-en: 546 -->
-<!-- reading-time: 22 -->
+<!-- words-zh: 6959 -->
+<!-- words-en: 556 -->
+<!-- reading-time: 23 -->
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
@@ -341,7 +341,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <main class="main-wrapper">
   <div class="content-inner" id="main-content">
 <h1 id="imgcot-token">ImgCoT：将长思维链压缩为紧凑视觉 Token 以实现大语言模型高效推理</h1>
-<div class="article-stats">6,815 字 · English 546 词 · 约 22 分钟阅读</div>
+<div class="article-stats">6,959 字 · English 556 词 · 约 23 分钟阅读</div>
 
 <blockquote>
 <p><strong>论文信息</strong>
@@ -353,7 +353,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <p>本文基于以下本地材料整理：</p>
 <ul>
 <li>论文 tex 源码：<code>arXiv-2601.22730v1/example_paper.tex</code></li>
-<li>论文图片：<code>arXiv-2601.22730v1/imgs/*.pdf</code></li>
+<li>论文图片：<code>arXiv-2601.22730v1/imgs/motivation.pdf</code>、<code>imgs/method.pdf</code>、<code>imgs/res_comparison.pdf</code>、<code>imgs/trend_n_tokens.pdf</code>、<code>imgs/LImgCoT-data.pdf</code>、<code>imgs/four_lines_broken_axis.pdf</code>、<code>imgs/case_appendix_data_filter.pdf</code>、<code>imgs/case_appendix_data_gen.pdf</code></li>
 <li>本文图片导出目录：<code>assets/imgcot/</code></li>
 </ul>
 </blockquote>
@@ -513,7 +513,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <h3 id="42-rq1">4.2 主实验结果（RQ1）</h3>
 <blockquote>
 <p><strong>观察 1</strong>：ImgCoT 仅用 8 个隐式 token，在多数场景下接近甚至超越 Full-CoT。说明正确抽象推理结构的重要性——Full-CoT 逐 token 生成完整推理链的路径，容易因局部微小错误导致最终答案出错。相比之下，ImgCoT 的隐式 token 压缩了"推理的骨架"，LLM 从骨架推导答案时反而更不容易被文本表面的噪音干扰。</p>
-<p><strong>观察 2</strong>：L-ImgCoT 在所有场景下一致超越 Full-CoT，同时推理消耗降低约 30%。弥补了 ImgCoT 模糊关键推理细节的缺陷，为推理时延不敏感的场景提供了选择。</p>
+<p><strong>观察 2</strong>：L-ImgCoT 在几乎所有场景下达到或超越 Full-CoT，同时推理消耗降低约 30%。弥补了 ImgCoT 模糊关键推理细节的缺陷，为推理时延不敏感的场景提供了选择。</p>
 </blockquote>
 <p>逐模型、逐基线分析主表（Table 1）的关键数据：</p>
 <p><strong>Qwen2.5-0.5B-Instruct（最小模型）</strong>：</p>
@@ -534,7 +534,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <ul>
 <li>Full-CoT 基准更高（MATH 23.8%，GSM8K 60.5%，ProsQA 100%）。</li>
 <li>ImgCoT 在 MATH 上达 24.1%（超过 Full-CoT），GSM8K 上达 56.8%（略低于 Full-CoT 的 60.5%）。</li>
-<li>L-ImgCoT 全部超过 Full-CoT：MATH 24.3%，GSM8K 61.0%，GPQA 45.5%——且 Token 消耗（143.8 / 63.2 / 115.7）远低于 Full-CoT（205.9 / 105.6 / 179.3）。</li>
+<li>L-ImgCoT 在 MATH (24.3%) 和 GSM8K (61.0%) 上超过 Full-CoT，在 GPQA (45.5%) 上与 Full-CoT 持平——且 Token 消耗（143.8 / 63.2 / 115.7）远低于 Full-CoT（205.9 / 105.6 / 179.3）。</li>
 </ul>
 <p><strong>跨模型的稳定趋势</strong>：</p>
 <ul>
@@ -571,7 +571,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <ul>
 <li>在 <span class="math inline">$n=2$</span> 时，视觉压缩约 7.5%、文本压缩约 5.5%，差距约 2pp。</li>
 <li>随着 <span class="math inline">$n$</span> 增加到 8，视觉压缩爬升至约 9.8%，文本压缩爬升至约 9.0%，差距扩大到约 0.8pp。</li>
-<li>在 <span class="math inline">$n=32 \to 64$</span> 区间，两条曲线均出现下降——过大 <span class="math inline">$n$</span> 导致组合空间急剧膨胀，模型在固定数据量下欠拟合（见 4.6 节附录分析）。</li>
+<li>在 <span class="math inline">$n=32 \to 64$</span> 区间，两条曲线均出现下降——过大 <span class="math inline">$n$</span> 导致组合空间急剧膨胀，模型在固定数据量下欠拟合（参见附录 sec:a3 分析）。</li>
 </ul>
 <p><strong>子图 (b) GSM8K（小学数学）：</strong></p>
 <ul>
@@ -594,6 +594,8 @@ document.addEventListener('DOMContentLoaded', function() {
 <li>差距大小与推理的结构化程度正相关——ProsQA（最强结构化）&gt; GPQA &gt; MATH &gt; GSM8K（最弱结构化）。这完美支持了论文的核心论点。</li>
 <li><span class="math inline">$n$</span> 过大时性能反而下降（<span class="math inline">$n \ge 32$</span> 区间尤其明显）——论文将其归因于组合空间爆炸 + 固定数据量下的欠拟合。这是 ImgCoT 当前的一个工程局限性。</li>
 </ol>
+<p><img alt="图5（附录补充）：隐式 token 数量变化时 LLM 推理性能的完整趋势" src="assets/imgcot/four_lines_broken_axis.jpg" /></p>
+<p><em>图 5（附录补充）：当隐式 token 数 <span class="math inline">$n$</span> 从 2 逐步增大到 64 时，Qwen2.5-0.5B-Instruct 的推理性能变化趋势（融合四份基准集的平均趋势）。横轴为隐式 token 数 <span class="math inline">$n$</span>（对数刻度），纵轴为准确率 Acc。可见在 <span class="math inline">$n=8$</span> 附近达到峰值，<span class="math inline">$n\ge 32$</span> 后性能出现明显下降——这与组合空间随 <span class="math inline">$n$</span> 指数级增长而训练数据固定所导致的欠拟合现象一致。论文在推理更大 <span class="math inline">$n$</span> 的模型时发现其 latent token 的输出经常出现乱码，进一步支持了欠拟合假设。</em></p>
 <h3 id="44-rq3">4.4 空间归纳偏置的泛化性优势（RQ3）</h3>
 <p>论文认为推理结构（抽象逻辑模式）比任务特定的词汇表达更具<strong>跨任务通用性</strong>。语言表达随数据集而变化（不同的数据集有不同的措辞习惯、公式写法），但推理的底层逻辑模式是共通的。</p>
 <p><strong>实验设计</strong>：在 MetaMathQA（MATH+GSM 增强数据集，约 395K 样本）上训练 VQ-VAE 和 LLM，在<strong>领域外</strong>基准集上测试泛化性能（Qwen2.5-0.5B-Instruct）。</p>
@@ -626,25 +628,25 @@ document.addEventListener('DOMContentLoaded', function() {
 <td>4.2</td>
 </tr>
 <tr>
-<td><strong>差距（视觉−文本）</strong></td>
-<td><strong>−1.4</strong></td>
-<td><strong>−1.3</strong></td>
-<td><strong>−3.0</strong></td>
-<td><strong>−3.6</strong></td>
-<td><strong>−1.6</strong></td>
+<td><strong>视觉提升（ImgCoT−文本）</strong></td>
+<td><strong>+1.4</strong></td>
+<td><strong>+1.3</strong></td>
+<td><strong>+4.0</strong></td>
+<td><strong>+3.6</strong></td>
+<td><strong>+1.6</strong></td>
 </tr>
 </tbody>
 </table>
 <p><strong>关键解读</strong>：</p>
 <ul>
 <li><strong>域内（GSM）差距最小（1.4pp）</strong>：MetaMathQA 包含 GSM 数据增强版，文本压缩可以通过记忆训练集的语言模式获得不错的域内表现。</li>
-<li><strong>域外差距大幅扩大</strong>：SingleEq 上差距 3.6pp、SVAMP 上差距 3.0pp——文本压缩学到的"表达习惯"无法迁移到新数据集的不同措辞方式。视觉压缩学到的"推理结构"（如方程提取→变换→求解的步骤骨架）可以跨数据集复用。</li>
+<li><strong>域外差距大幅扩大</strong>：SVAMP 上差距 4.0pp、SingleEq 上差距 3.6pp——文本压缩学到的"表达习惯"无法迁移到新数据集的不同措辞方式。视觉压缩学到的"推理结构"（如方程提取→变换→求解的步骤骨架）可以跨数据集复用。</li>
 <li>Gaokao-Math-2023（中国高考数学，中文命题）上差距 1.3pp——中文 vs 英文的语言差异对文本压缩的影响可能更显著，视觉压缩由于不关注语言形式而跨语言泛化更好。</li>
 </ul>
 <p>这组实验是推理结构"跨任务通用性"的直接证明，也是空间归纳偏置相对于语言归纳偏置的一个重要优势：不仅压缩质量更好，泛化能力也更强。</p>
 <h3 id="45-l-imgcot-rq4">4.5 L-ImgCoT 的精细推理保留能力（RQ4）</h3>
-<p><img alt="图5：L-ImgCoT 关键推理步骤保留策略的效果" src="assets/imgcot/LImgCoT-data.jpg" /></p>
-<p><em>图 5：L-ImgCoT 关键推理步骤保留策略的有效性验证。图分为三个主要部分：(a) 数据构建案例展示（训练时）、(b) 模型推理行为展示（推理时）、(c) MATH 难度级别维度的保留比例统计。</em></p>
+<p><img alt="图6：L-ImgCoT 关键推理步骤保留策略的效果" src="assets/imgcot/LImgCoT-data.jpg" /></p>
+<p><em>图 6：L-ImgCoT 关键推理步骤保留策略的有效性验证。图分为三个主要部分：(a) 数据构建案例展示（训练时）、(b) 模型推理行为展示（推理时）、(c) MATH 难度级别维度的保留比例统计。</em></p>
 <p><strong>子图 (a) 训练数据构建（Training Samples）：</strong></p>
 <p>展示了两个训练样本中，哪些推理步骤被保留（保留原文）、哪些被过滤（删除线标记）。</p>
 <ul>

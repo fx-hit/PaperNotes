@@ -7,9 +7,9 @@
 <!-- arxiv: 2509.24251 -->
 <!-- venue: ICLR 2026 -->
 <!-- tags: MLLM, 视觉推理, 强化学习 -->
-<!-- words-zh: 5409 -->
-<!-- words-en: 828 -->
-<!-- reading-time: 20 -->
+<!-- words-zh: 6516 -->
+<!-- words-en: 1144 -->
+<!-- reading-time: 24 -->
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
@@ -346,11 +346,19 @@ document.addEventListener('DOMContentLoaded', function() {
 <li class="toc-h2"><a href="#7">7. 代码实现关键细节</a>
 <ul>
 </li>
-<li class="toc-h3"><a href="#71-forward-monkey-patch">7.1 多种 forward 模式的 Monkey Patch</a>
+<li class="toc-h3"><a href="#71">7.1 架构级数据流图</a>
 </li>
-<li class="toc-h3"><a href="#72">7.2 解码的三条路径</a>
+<li class="toc-h3"><a href="#72-forward-monkey-patch">7.2 多种 forward 模式的 Monkey Patch</a>
 </li>
-<li class="toc-h3"><a href="#73">7.3 数值稳定性</a>
+<li class="toc-h3"><a href="#73">7.3 解码的三条路径</a>
+</li>
+<li class="toc-h3"><a href="#74-o1-roi-token">7.4 O(1) ROI Token 索引映射</a>
+</li>
+<li class="toc-h3"><a href="#75">7.5 公式 → 代码映射</a>
+</li>
+<li class="toc-h3"><a href="#76">7.6 数值稳定性补丁</a>
+</li>
+<li class="toc-h3"><a href="#77-pipeline">7.7 训练脚本与 pipeline</a>
 </ul></li>
 </li>
 <li class="toc-h2"><a href="#8">8. 核心贡献总结</a>
@@ -365,11 +373,25 @@ document.addEventListener('DOMContentLoaded', function() {
 <li class="toc-h3"><a href="#q3-projector">Q3：为什么冻结视觉编码器和 projector？</a>
 </li>
 <li class="toc-h3"><a href="#q4lvr">Q4：LVR 在什么任务上最有效？什么时候可能有害？</a>
-</li>
-<li class="toc-h3"><a href="#q5">Q5：论文最应该关注的局限是什么？</a>
 </ul></li>
 </li>
-<li class="toc-h2"><a href="#10-takeaway">10. Takeaway</a>
+<li class="toc-h2"><a href="#10">10. 局限性</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#101">10.1 可变长度推理不可靠</a>
+</li>
+<li class="toc-h3"><a href="#102-rl-3b">10.2 RL 只在 3B 上验证</a>
+</li>
+<li class="toc-h3"><a href="#103">10.3 多图像场景未覆盖</a>
+</li>
+<li class="toc-h3"><a href="#104-grpo_latent">10.4 GRPO_latent 的工程复杂度</a>
+</li>
+<li class="toc-h3"><a href="#105-sft">10.5 SFT 数据依赖</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#11">11. 关键概念速查</a>
+</li>
+<li class="toc-h2"><a href="#12-takeaway">12. Takeaway</a>
 </ul></li>
 </li></ul>
 </nav>
@@ -377,7 +399,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <main class="main-wrapper">
   <div class="content-inner" id="main-content">
 <h1 id="lvr-latent-visual-reasoning">LVR (Latent Visual Reasoning) — 阅读笔记</h1>
-<div class="article-stats">5,409 字 · English 828 词 · 约 20 分钟阅读</div>
+<div class="article-stats">6,516 字 · English 1,144 词 · 约 24 分钟阅读</div>
 
 <blockquote>
 <p>本文基于以下本地材料整理：</p>
@@ -488,7 +510,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <li><code>answer</code>：基于增强后的上下文（包含 LVR 产生的视觉语义）进行标准文本生成。</li>
 </ul>
 <p><img alt="LVR 训练和推理流程" src="assets/lvr/lvr_main.png" /></p>
-<p><em>图 2：LVR 训练和推理流程，两栏分别展示 SFT 和 RL 阶段，以及推理时的三种解码策略。</em></p>
+<p><em>图 2：LVR 训练和推理流程全景图。该图包含三个主要部分：顶部是标准 MLLM 架构概览（Vision Encoder → Projector → LLM），展示了 visual tokens 和 text tokens 在共享语义空间中的嵌入方式。左侧中部是 SFT 阶段流程：bbox 标注位置对应的 visual tokens 被提取并注入到 <code>&lt;|lvr_start|&gt;</code> 与 <code>&lt;|lvr_end|&gt;</code> 之间的 <code>&lt;|lvr|&gt;</code> 占位位置（图中绿色表示 ground-truth visual embedding），LLM 的 last hidden state 通过 MSE loss 逼近这些 embedding。右侧中部是 RL 阶段（GRPO_latent）流程：模型 rollout 输出后，计算 format reward（检查是否含有 <code>&lt;|lvr_start|&gt;</code> 和 <code>&lt;|lvr_end|&gt;</code>）和 accuracy reward（答案是否正确），在 policy gradient 计算时通过 teacher-forcing forward pass 回放 rollout 时记录的 LVR hidden states 来计算 importance ratio。底部是三种推理解码策略：(1) Fixed Token——设定固定步数预算（图中标注为 4/8/16 steps），耗尽即退出；(2) Latent End Token——训练可学习向量，当 hidden state 与该向量的距离小于阈值时退出；(3) Mode Switching Loss——BCE loss 监督 LM Head 在正确时机预测 <code>&lt;|lvr_end|&gt;</code>。最终箭头汇聚到 "Answer" 输出。</em></p>
 <p><strong>左栏 — SFT 训练（Teacher Forcing）：</strong></p>
 <ul>
 <li>输入：图像 + 问题 + ROI 边界框标注 + 答案。使用 <strong>Visual COT</strong> 数据集（438K QA 对，每对都有问题相关 ROI 的 bbox 标注）。</li>
@@ -937,14 +959,86 @@ document.addEventListener('DOMContentLoaded', function() {
 <li>论文测试了 MSE/L1/cosine 三种距离度量和多种阈值，均无法解决。根本问题：在 3584/4096 维的 continuous space 中，两个向量之间的"距离"的语义含义极度依赖于上下文。同一组距离值，在一个问题中意味着"推理完成"，在另一个问题中可能只是正常的 embedding 波动。</li>
 </ul>
 <h2 id="7">7. 代码实现关键细节</h2>
-<h3 id="71-forward-monkey-patch">7.1 多种 forward 模式的 Monkey Patch</h3>
-<p>LVR 不是修改 Qwen2.5-VL 源码，而是通过 monkey patch 替换 forward 函数。<code>replace_qwen2_5_with_mixed_modality_forward_lvr()</code> 根据参数组合切换不同 forward：</p>
+<h3 id="71">7.1 架构级数据流图</h3>
+<p>LVR 的核心修改集中在前向传播的 <strong>embedding 替换</strong> 位置 —— 不改变 Qwen2.5-VL 的 LLM backbone 结构，仅更改 forward 函数中 <code>inputs_embeds</code> 的构造方式：</p>
+<div class="codehilite"><pre><span></span><code><span class="n">训练模式</span><span class="w"> </span><span class="p">(</span><span class="n">SFT</span><span class="p">)</span><span class="w"> </span><span class="n">数据流</span><span class="err">：</span>
+
+<span class="w">    </span><span class="err">┌──────────────────────────────────────────────────────────────────┐</span>
+<span class="w">    </span><span class="err">│</span><span class="w">  </span><span class="k">Input</span><span class="err">:</span><span class="w"> </span><span class="nc">image</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">question</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">bbox</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">answer</span><span class="w">                         </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">                                                                  </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">  </span><span class="nc">Image</span><span class="w"> </span><span class="err">─→</span><span class="w"> </span><span class="n">Vision</span><span class="w"> </span><span class="n">Encoder</span><span class="w"> </span><span class="err">─→</span><span class="w"> </span><span class="n">image_embeds</span><span class="w"> </span><span class="p">(</span><span class="n">N个visual</span><span class="w"> </span><span class="n">tokens</span><span class="p">)</span><span class="w">      </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">               </span><span class="err">│</span><span class="w">                                                  </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">               </span><span class="err">▼</span><span class="w">                                                  </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">          </span><span class="n">bbox</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">QwenVLBboxTokenMapper</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">ROI</span><span class="w"> </span><span class="n">token</span><span class="w"> </span><span class="n">索引列表</span><span class="w"> </span><span class="n">I</span><span class="w">     </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">               </span><span class="err">│</span><span class="w">         </span><span class="p">(</span><span class="n">O</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="w"> </span><span class="nl">映射</span><span class="p">:</span><span class="w"> </span><span class="n">pixel</span><span class="w"> </span><span class="n">grid</span><span class="w"> </span><span class="err">↔</span><span class="w"> </span><span class="n">token</span><span class="w"> </span><span class="n">grid</span><span class="p">)</span><span class="w">     </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">               </span><span class="err">▼</span><span class="w">                                                  </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">          </span><span class="nl">gather</span><span class="p">:</span><span class="w"> </span><span class="n">v</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">image_embeds</span><span class="o">[</span><span class="n">global_indices(I)</span><span class="o">]</span><span class="w">             </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">               </span><span class="err">│</span><span class="w">     </span><span class="err">←</span><span class="w"> </span><span class="n">ground</span><span class="o">-</span><span class="n">truth</span><span class="w"> </span><span class="n">ROI</span><span class="w"> </span><span class="n">visual</span><span class="w"> </span><span class="n">embedding</span><span class="w">          </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">               </span><span class="err">▼</span><span class="w">                                                  </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">  </span><span class="k">Sequence</span><span class="err">:</span><span class="w"> </span><span class="o">[</span><span class="n">img_tokens</span><span class="o">]</span><span class="w"> </span><span class="o">[</span><span class="n">question</span><span class="o">]</span><span class="w"> </span><span class="o">&lt;</span><span class="n">lvr_start</span><span class="o">&gt;</span><span class="w"> </span><span class="o">&lt;</span><span class="n">lvr</span><span class="o">&gt;</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="o">&lt;</span><span class="n">lvr_end</span><span class="o">&gt;</span><span class="w"> </span><span class="o">[</span><span class="n">answer</span><span class="o">]</span><span class="w">  </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">                                           </span><span class="err">│</span><span class="w">                      </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">                              </span><span class="n">inputs_embeds</span><span class="w"> </span><span class="n">在此位置替换为</span><span class="w"> </span><span class="n">v</span><span class="w">      </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">                                           </span><span class="err">│</span><span class="w">                      </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">                                           </span><span class="err">▼</span><span class="w">                      </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">  </span><span class="n">LLM</span><span class="w"> </span><span class="n">forward</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">loss</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">CE</span><span class="p">(</span><span class="n">answer_logits</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">λ</span><span class="err">·</span><span class="n">MSE</span><span class="p">(</span><span class="n">h</span><span class="p">,</span><span class="w"> </span><span class="n">v</span><span class="p">)</span><span class="w">           </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">                           </span><span class="p">(</span><span class="n">NTP</span><span class="w"> </span><span class="n">loss</span><span class="p">)</span><span class="w">    </span><span class="p">(</span><span class="n">LVR</span><span class="w"> </span><span class="n">loss</span><span class="p">)</span><span class="w">               </span><span class="err">│</span>
+<span class="w">    </span><span class="err">└──────────────────────────────────────────────────────────────────┘</span>
+
+<span class="n">推理模式</span><span class="w"> </span><span class="p">(</span><span class="n">Fixed</span><span class="w"> </span><span class="n">Token</span><span class="p">)</span><span class="w"> </span><span class="n">数据流</span><span class="err">：</span>
+
+<span class="w">    </span><span class="err">┌──────────────────────────────────────────────────────────────────┐</span>
+<span class="w">    </span><span class="err">│</span><span class="w">  </span><span class="k">Input</span><span class="err">:</span><span class="w"> </span><span class="nc">image</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">question</span><span class="w">                                         </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">                                                                  </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">  </span><span class="n">Step</span><span class="w"> </span><span class="mi">1</span><span class="err">:</span><span class="w"> </span><span class="n">prefill</span><span class="w"> </span><span class="o">[</span><span class="n">img_tokens</span><span class="o">]</span><span class="w"> </span><span class="o">[</span><span class="n">question</span><span class="o">]</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">KV</span><span class="w"> </span><span class="n">cache</span><span class="w">              </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">                                                                  </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">  </span><span class="n">Step</span><span class="w"> </span><span class="mi">2</span><span class="err">:</span><span class="w"> </span><span class="n">autoregressive</span><span class="w"> </span><span class="n">decoding</span><span class="w">                                 </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">    </span><span class="err">┌─</span><span class="w"> </span><span class="n">预测</span><span class="w"> </span><span class="n">next_token</span><span class="w"> </span><span class="o">===</span><span class="w"> </span><span class="o">&lt;</span><span class="n">lvr_start</span><span class="o">&gt;</span><span class="vm">?</span><span class="w"> </span><span class="err">──→</span><span class="w"> </span><span class="n">进入</span><span class="w"> </span><span class="n">LVR</span><span class="w"> </span><span class="n">模式</span><span class="w"> </span><span class="err">──┐</span><span class="w">    </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">    </span><span class="err">│</span><span class="w">                                                     </span><span class="err">│</span><span class="w">        </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">    </span><span class="err">│</span><span class="w">  </span><span class="n">LVR</span><span class="w"> </span><span class="nl">模式循环</span><span class="p">:</span><span class="w">                                       </span><span class="err">│</span><span class="w">        </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">    </span><span class="err">│</span><span class="w">    </span><span class="k">while</span><span class="w"> </span><span class="n">lvr_remaining_steps</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="err">:</span><span class="w">                   </span><span class="err">│</span><span class="w">        </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">    </span><span class="err">│</span><span class="w">      </span><span class="n">inputs_embeds</span><span class="o">[</span><span class="n">-1</span><span class="o">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">last_hidden_state</span><span class="o">[</span><span class="n">-1</span><span class="o">]</span><span class="w">      </span><span class="err">│</span><span class="w">        </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">    </span><span class="err">│</span><span class="w">      </span><span class="n">LLM</span><span class="w"> </span><span class="n">forward</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">hidden_state</span><span class="w">                 </span><span class="err">│</span><span class="w">        </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">    </span><span class="err">│</span><span class="w">      </span><span class="n">lvr_remaining_steps</span><span class="w"> </span><span class="o">-=</span><span class="w"> </span><span class="mi">1</span><span class="w">                       </span><span class="err">│</span><span class="w">        </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">    </span><span class="err">│</span><span class="w">    </span><span class="k">end</span><span class="w">                                              </span><span class="err">│</span><span class="w">        </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">    </span><span class="err">│</span><span class="w">                                                     </span><span class="err">│</span><span class="w">        </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">    </span><span class="err">└──</span><span class="w"> </span><span class="n">lvr_remaining_steps</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="err">──→</span><span class="w"> </span><span class="n">退出</span><span class="w"> </span><span class="n">LVR</span><span class="w"> </span><span class="n">模式</span><span class="w"> </span><span class="err">◄─────┘</span><span class="w">        </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">                                                                  </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">  </span><span class="n">Step</span><span class="w"> </span><span class="mi">3</span><span class="err">:</span><span class="w"> </span><span class="n">正常文本解码</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">answer</span><span class="w">                                    </span><span class="err">│</span>
+<span class="w">    </span><span class="err">└──────────────────────────────────────────────────────────────────┘</span>
+
+<span class="n">RL</span><span class="w"> </span><span class="p">(</span><span class="n">GRPO_latent</span><span class="p">)</span><span class="w"> </span><span class="n">训练数据流</span><span class="err">：</span>
+
+<span class="w">    </span><span class="err">┌──────────────────────────────────────────────────────────────────┐</span>
+<span class="w">    </span><span class="err">│</span><span class="w">  </span><span class="n">Rollout</span><span class="w"> </span><span class="nl">阶段</span><span class="p">:</span><span class="w">                                                   </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">    </span><span class="n">π_θ_old</span><span class="w"> </span><span class="n">生成</span><span class="w"> </span><span class="mi">8</span><span class="w"> </span><span class="n">组</span><span class="w"> </span><span class="n">rollout</span><span class="w">                                     </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">      </span><span class="nl">每组记录</span><span class="p">:</span><span class="w"> </span><span class="n">text_output</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">LVR</span><span class="w"> </span><span class="n">hidden</span><span class="w"> </span><span class="n">states</span><span class="w"> </span><span class="n">h_latent</span><span class="w">          </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">                                                                  </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">  </span><span class="nl">奖励计算</span><span class="p">:</span><span class="w">                                                       </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">    </span><span class="nl">format_reward</span><span class="p">:</span><span class="w"> </span><span class="n">输出含</span><span class="w"> </span><span class="o">&lt;</span><span class="n">lvr_start</span><span class="o">&gt;</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="o">&lt;</span><span class="n">lvr_end</span><span class="o">&gt;</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="mi">0</span><span class="w">     </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">    </span><span class="nl">accuracy_reward</span><span class="p">:</span><span class="w"> </span><span class="n">答案匹配</span><span class="w"> </span><span class="n">ground_truth</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="mi">0</span><span class="w">             </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">    </span><span class="n">R_i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">format_reward</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">accuracy_reward</span><span class="w">                          </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">    </span><span class="n">A_i</span><span class="p">,</span><span class="n">t</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">group_normalize</span><span class="p">(</span><span class="n">R_i</span><span class="p">)</span><span class="w">                                   </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">                                                                  </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">  </span><span class="n">Policy</span><span class="w"> </span><span class="n">Gradient</span><span class="w"> </span><span class="nl">计算</span><span class="p">:</span><span class="w">                                           </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">    </span><span class="n">对每组</span><span class="w"> </span><span class="nl">rollout</span><span class="p">:</span><span class="w">                                                </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">      </span><span class="n">teacher</span><span class="o">-</span><span class="n">forcing</span><span class="w"> </span><span class="nl">forward</span><span class="p">:</span><span class="w">                                     </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">        </span><span class="n">patch</span><span class="w"> </span><span class="n">h_latent</span><span class="w"> </span><span class="n">回</span><span class="w"> </span><span class="n">LVR</span><span class="w"> </span><span class="n">位置</span><span class="w">                                 </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">        </span><span class="n">计算</span><span class="w"> </span><span class="n">π_θ</span><span class="p">(</span><span class="n">y_t</span><span class="o">|</span><span class="n">q</span><span class="p">,</span><span class="n">I</span><span class="p">,</span><span class="n">h_latent</span><span class="p">,</span><span class="n">y_</span><span class="o">&lt;</span><span class="n">t</span><span class="p">)</span><span class="w">                           </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">        </span><span class="n">计算</span><span class="w"> </span><span class="n">π_θ_old</span><span class="p">(</span><span class="n">y_t</span><span class="o">|</span><span class="n">q</span><span class="p">,</span><span class="n">I</span><span class="p">,</span><span class="n">h_latent</span><span class="p">,</span><span class="n">y_</span><span class="o">&lt;</span><span class="n">t</span><span class="p">)</span><span class="w">                       </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">        </span><span class="n">r_t</span><span class="p">(</span><span class="n">θ</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">π_θ</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">π_θ_old</span><span class="w">                                     </span><span class="err">│</span>
+<span class="w">    </span><span class="err">│</span><span class="w">      </span><span class="n">loss</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">-</span><span class="nf">min</span><span class="p">(</span><span class="n">r_t</span><span class="err">·</span><span class="n">A_t</span><span class="p">,</span><span class="w"> </span><span class="n">clip</span><span class="p">(</span><span class="n">r_t</span><span class="p">)</span><span class="err">·</span><span class="n">A_t</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">β</span><span class="err">·</span><span class="n">KL</span><span class="w">                  </span><span class="err">│</span>
+<span class="w">    </span><span class="err">└──────────────────────────────────────────────────────────────────┘</span>
+</code></pre></div>
+
+<h3 id="72-forward-monkey-patch">7.2 多种 forward 模式的 Monkey Patch</h3>
+<p>LVR 不修改 Qwen2.5-VL 源码，而是在 <code>replace_qwen2_5_with_mixed_modality_forward_lvr()</code> 中替换 HuggingFace 的 <code>Qwen2_5_VLForConditionalGeneration.forward</code>。共有 7 种 forward 变体，由参数组合决定：</p>
 <table>
 <thead>
 <tr>
 <th>场景</th>
 <th>forward 函数</th>
 <th>触发条件</th>
+<th>核心差异</th>
 </tr>
 </thead>
 <tbody>
@@ -952,50 +1046,187 @@ document.addEventListener('DOMContentLoaded', function() {
 <td>SFT 训练（无 Head）</td>
 <td><code>qwen2_5_mixed_modality_forward_lvr</code></td>
 <td><code>inference_mode=False, lvr_head=False</code></td>
+<td>接受 <code>lvr_tokens</code> 注入 ground-truth visual embedding；计算 MSE(lvr) + CE(ntp)</td>
 </tr>
 <tr>
 <td>SFT 训练（有 Head）</td>
 <td><code>qwen2_5_mixed_modality_forward_lvr_with_head</code></td>
 <td><code>lvr_head=True</code></td>
+<td>同上，外加 LVR Head 投影（MLP/GLU）</td>
 </tr>
 <tr>
 <td>SFT + LatentEndToken</td>
 <td><code>*_with_latentEndToken</code></td>
 <td><code>latent_end_token=True</code></td>
+<td>额外处理 <code>&lt;lvr_latent_end&gt;</code> 位置，注入可学习向量</td>
 </tr>
 <tr>
 <td>SFT + ModeSwitchLoss</td>
 <td><code>*_with_modeSwitchLoss</code></td>
 <td><code>mode_switch_loss=True</code></td>
+<td>额外计算 BCE loss 监督 LM Head 预测 <code>&lt;lvr_end&gt;</code> 时机</td>
 </tr>
 <tr>
 <td>推理（无 Head）</td>
 <td><code>qwen2_5_mixed_modality_forward_lvr_inference</code></td>
 <td><code>inference_mode=True</code></td>
+<td>接受 <code>lvr_mode_switch</code> 和 <code>last_position_hidden_state</code>；无 loss 计算</td>
 </tr>
 <tr>
 <td>推理（有 Head）</td>
 <td><code>*_with_head_inference</code></td>
-<td><code>inference_mode=True, lvr_head=True</code></td>
+<td><code>lvr_head=True</code></td>
+<td>推理时额外对 hidden state 应用 LVR Head 投影</td>
 </tr>
 <tr>
 <td>RL GRPO</td>
 <td><code>qwen2_5_mixed_modality_forward_lvr_grpo</code></td>
 <td><code>rl=True</code></td>
+<td>专用于 GRPO 训练，处理 teacher-forcing 的 hidden state replay</td>
 </tr>
 </tbody>
 </table>
 <p>训练和推理的 forward 逻辑<strong>故意分开</strong>——训练时需要处理 <code>lvr_tokens</code>（ground-truth visual embedding 注入），推理时需要处理 <code>lvr_mode_switch</code>（hidden state 自循环），两者有不同的 attention mask、position embedding 和数据流。</p>
-<h3 id="72">7.2 解码的三条路径</h3>
+<h3 id="73">7.3 解码的三条路径</h3>
 <p><code>QwenWithLVR.generate()</code> 根据 <code>decoding_strategy</code> 参数分派到三种解码函数：</p>
-<div class="codehilite"><pre><span></span><code><span class="nv">decoding_strategy</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s2">&quot;steps&quot;</span><span class="w">  </span>→<span class="w"> </span><span class="nv">_lvr_deocding_by_steps</span><span class="ss">()</span><span class="w">     </span>#<span class="w"> </span><span class="nv">Fixed</span><span class="w"> </span><span class="nv">Token</span>
-<span class="nv">decoding_strategy</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s2">&quot;latent&quot;</span><span class="w"> </span>→<span class="w"> </span><span class="nv">_lvr_deocding_with_latentend</span><span class="ss">()</span><span class="w"> </span>#<span class="w"> </span><span class="nv">Latent</span><span class="w"> </span><span class="k">End</span><span class="w"> </span><span class="nv">Token</span>
-<span class="k">else</span><span class="w">                          </span>→<span class="w"> </span><span class="nv">_lvr_deocding</span><span class="ss">()</span><span class="w">                </span>#<span class="w"> </span><span class="nv">Vanilla</span><span class="w"> </span><span class="ss">(</span><span class="nv">token</span><span class="o">-</span><span class="nv">driven</span><span class="ss">)</span>
+<div class="codehilite"><pre><span></span><code>┌─<span class="w"> </span><span class="nv">decoding_strategy</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s2">&quot;steps&quot;</span><span class="w">  </span>──→<span class="w"> </span><span class="nv">_lvr_deocding_by_steps</span><span class="ss">()</span><span class="w">      </span>#<span class="w"> </span><span class="nv">Fixed</span><span class="w"> </span><span class="nv">Token</span>
+├─<span class="w"> </span><span class="nv">decoding_strategy</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s2">&quot;latent&quot;</span><span class="w"> </span>──→<span class="w"> </span><span class="nv">_lvr_deocding_with_latentend</span><span class="ss">()</span><span class="w">  </span>#<span class="w"> </span><span class="nv">Latent</span><span class="w"> </span><span class="k">End</span><span class="w"> </span><span class="nv">Token</span>
+└─<span class="w"> </span><span class="k">else</span><span class="w">                         </span>──→<span class="w"> </span><span class="nv">_lvr_deocding</span><span class="ss">()</span><span class="w">                 </span>#<span class="w"> </span><span class="nv">Vanilla</span><span class="w"> </span><span class="ss">(</span><span class="nv">token</span><span class="o">-</span><span class="nv">driven</span><span class="ss">)</span>
 </code></pre></div>
 
-<p>Fixed Token 解码的关键是维护一个 <code>lvr_remaining_steps</code> 配额——进入 LVR 时重置为原始预算，每步递减，耗尽时自动退出。这个逻辑完全基于 counter，不依赖任何模型的内部状态判断，因此绝对稳定。</p>
-<h3 id="73">7.3 数值稳定性</h3>
-<p>Qwen2.5-VL 的 3D 卷积在 visual patch embedding 过程中可能产生 NaN（极端分辨率下）。代码通过 <code>monkey_patch_patch_emb.py</code> 把相关计算从 fp16/bf16 切换到 fp32，并注册 NaN 检测 hook。</p>
+<p><strong>Fixed Token 解码的核心逻辑</strong>（<code>_lvr_deocding_by_steps</code>）：</p>
+<div class="codehilite"><pre><span></span><code><span class="mf">1.</span><span class="w"> </span><span class="nl">初始化</span><span class="p">:</span><span class="w"> </span><span class="n">lvr_mode_switch</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">False</span><span class="p">,</span><span class="w"> </span><span class="n">lvr_remaining_steps</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">lvr_steps_orig</span>
+<span class="mf">2.</span><span class="w"> </span><span class="nl">每个解码步</span><span class="p">:</span>
+<span class="w">   </span><span class="n">last_tokens</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">input_ids</span><span class="o">[</span><span class="n">:,-1</span><span class="o">]</span>
+<span class="w">   </span><span class="n">lvr_start_switch</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">last_tokens</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">lvr_start_id</span><span class="p">)</span>
+
+<span class="w">   </span><span class="n">just_entered</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">~</span><span class="n">lvr_mode_switch</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="p">(</span><span class="n">lvr_mode_switch</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="n">lvr_start_switch</span><span class="p">)</span>
+<span class="w">   </span><span class="n">lvr_remaining_steps</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">where</span><span class="p">(</span><span class="n">just_entered</span><span class="p">,</span><span class="w"> </span><span class="n">lvr_steps_orig</span><span class="p">,</span><span class="w"> </span><span class="n">lvr_remaining_steps</span><span class="p">)</span>
+<span class="w">   </span><span class="n">lvr_remaining_steps</span><span class="w"> </span><span class="o">-=</span><span class="w"> </span><span class="n">lvr_mode_switch</span><span class="p">.</span><span class="n">long</span><span class="p">()</span><span class="w">  </span><span class="err">#</span><span class="w"> </span><span class="n">在</span><span class="w"> </span><span class="n">LVR</span><span class="w"> </span><span class="n">模式中才递减</span>
+<span class="w">   </span><span class="n">lvr_mode_switch</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">lvr_mode_switch</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="n">lvr_start_switch</span><span class="p">)</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="p">(</span><span class="n">lvr_remaining_steps</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span>
+<span class="w">                                                            </span><span class="err">↑</span>
+<span class="w">                                           </span><span class="n">关键</span><span class="err">：</span><span class="n">剩余步数</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="n">才保持</span><span class="w"> </span><span class="n">LVR</span><span class="w"> </span><span class="n">模式</span>
+
+
+<span class="mf">3.</span><span class="w"> </span><span class="n">输入</span><span class="w"> </span><span class="n">embedding</span><span class="w"> </span><span class="nl">替换</span><span class="p">:</span>
+<span class="w">   </span><span class="k">if</span><span class="w"> </span><span class="nl">lvr_mode_switch</span><span class="p">:</span>
+<span class="w">       </span><span class="n">inputs_embeds</span><span class="o">[</span><span class="n">lvr_mode_switch, -1, :</span><span class="o">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">last_position_hidden_state</span><span class="o">[</span><span class="n">lvr_mode_switch</span><span class="o">]</span>
+</code></pre></div>
+
+<p>这个逻辑完全基于 counter，不依赖任何模型的内部 state 判断，因此绝对稳定。</p>
+<p><strong>Latent End Token 解码</strong> 用距离计算替代步数递减：</p>
+<div class="codehilite"><pre><span></span><code>lvr_end_switch = distance(last_position_hidden_state, lvr_latent_end_emb) &lt; threshold
+lvr_mode_switch = lvr_mode_switch &amp; ~lvr_end_switch &amp; ~(lvr_step_counter &gt;= max_steps)
+</code></pre></div>
+
+<h3 id="74-o1-roi-token">7.4 O(1) ROI Token 索引映射</h3>
+<p><code>QwenVLBboxTokenMapper</code> 实现了从像素坐标系到 visual token 索引的 O(1) 映射：</p>
+<div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">QwenVLBboxTokenMapper</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">bbox_to_token_indices</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">bbox</span><span class="p">,</span> <span class="n">image_height</span><span class="p">,</span> <span class="n">image_width</span><span class="p">):</span>
+        <span class="c1"># Step 1: 计算 token grid 尺寸</span>
+        <span class="n">grid_h</span> <span class="o">=</span> <span class="n">image_height</span> <span class="o">//</span> <span class="mi">14</span>          <span class="c1"># patch_size=14</span>
+        <span class="n">token_grid_h</span> <span class="o">=</span> <span class="n">grid_h</span> <span class="o">//</span> <span class="mi">2</span>           <span class="c1"># spatial_merge_size=2</span>
+
+        <span class="c1"># Step 2: bbox -&gt; token grid 坐标</span>
+        <span class="n">tx1</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">x1</span> <span class="o">*</span> <span class="n">token_grid_w</span><span class="p">)</span>
+        <span class="n">ty1</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">y1</span> <span class="o">*</span> <span class="n">token_grid_h</span><span class="p">)</span>
+        <span class="n">tx2</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">ceil</span><span class="p">(</span><span class="n">x2</span> <span class="o">*</span> <span class="n">token_grid_w</span><span class="p">),</span> <span class="n">token_grid_w</span><span class="p">)</span>
+
+        <span class="c1"># Step 3: 枚举 grid 生成 token 索引</span>
+        <span class="n">indices</span> <span class="o">=</span> <span class="p">[</span><span class="n">y</span> <span class="o">*</span> <span class="n">token_grid_w</span> <span class="o">+</span> <span class="n">x</span> <span class="k">for</span> <span class="n">y</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">ty1</span><span class="p">,</span><span class="n">ty2</span><span class="p">)</span>
+                                           <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">tx1</span><span class="p">,</span><span class="n">tx2</span><span class="p">)]</span>
+        <span class="k">return</span> <span class="n">indices</span>  <span class="c1"># O(1) — 纯像素坐标换算，无需模型推理</span>
+</code></pre></div>
+
+<p>核心假设：Qwen2.5-VL 的视觉编码器将图像分为 <code>(H/14) * (W/14)</code> 个 patch，每个 <code>2x2</code> patch 被 spatial merge 为一个 visual token。给定 bbox 在原始图像中的坐标，直接计算其在 token grid 上的覆盖范围，无需模型推理。</p>
+<h3 id="75">7.5 公式 → 代码映射</h3>
+<table>
+<thead>
+<tr>
+<th>公式</th>
+<th>代码位置</th>
+<th>实现说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><span class="math inline">$\mathcal{L}_{\text{LVR}} = \frac{1}{T_v}\sum\|\mathbf{h}_t - \mathbf{v}_t\|_2^2$</span></td>
+<td><code>monkey_patch_forward_lvr.py:331-334</code></td>
+<td><code>selected_hidden_states</code> = LLM last hidden state at <code>&lt;lvr_start&gt;</code> positions; <code>selected_lvr_embeds</code> = ROI ground-truth visual embeddings; <code>lvr_loss_fct</code> 默认为 <code>MSELoss()</code></td>
+</tr>
+<tr>
+<td><span class="math inline">$\mathcal{L}_{\text{NTP}} = -\frac{1}{T_y}\sum\log p_\theta(y_t\mid\dots)$</span></td>
+<td><code>monkey_patch_forward_lvr.py:314-325</code></td>
+<td>标准 <code>CrossEntropyLoss()</code>, <code>&lt;lvr&gt;</code> token 位置被 mask 掉 (<code>IGNORE_INDEX</code>) 不参与 CE 计算</td>
+</tr>
+<tr>
+<td><span class="math inline">$\mathcal{L} = \mathcal{L}_{\text{NTP}} + \lambda_{\text{LVR}} \cdot \mathcal{L}_{\text{LVR}}$</span></td>
+<td><code>train_lvr.py</code></td>
+<td><span class="math inline">$\lambda_{\text{LVR}}$</span> 通过 <code>--lvr_loss_weight</code> 参数传入（默认值在训练脚本 <code>finetune_lvr_stage1_7b.sh</code> 中设置）</td>
+</tr>
+<tr>
+<td><span class="math inline">$r_{i,t}(\theta)=\frac{\pi_\theta(y_{i,t}\mid q,I,\widetilde{h}^{\text{latent}}_i,y_{i,&lt;t})}{\pi_{\theta_{\text{old}}}(y_{i,t}\mid q,I,\widetilde{h}^{\text{latent}}_i,y_{i,&lt;t})}$</span></td>
+<td><code>monkey_patch_forward_lvr_rl.py</code></td>
+<td>rollout 时记录 <span class="math inline">$\widetilde{h}^{\text{latent}}$</span>；teacher-forcing forward pass 将 hidden states patch 回 LVR 位置；HuggingFace TRL 的 GRPO trainer 计算 ratio</td>
+</tr>
+<tr>
+<td><span class="math inline">$\text{format\_reward} = \mathbb{1}[\text{含}&lt;\vert\texttt{lvr\_start}\vert>\text{和}&lt;\vert\texttt{lvr\_end}\vert>]$</span></td>
+<td><code>reward_funcs.py:49-56</code></td>
+<td><code>re.match(r"^&lt;\|lvr_start\|&gt;.*?&lt;\|lvr_end\|&gt;\s*&lt;answer&gt;.*?&lt;/answer&gt;$", content)</code></td>
+</tr>
+<tr>
+<td><span class="math inline">$\text{accuracy\_reward} = \mathbb{1}[\text{答案正确}]$</span></td>
+<td><code>reward_funcs.py:6-46</code></td>
+<td>先尝试 <code>math_verify.parse() + verify()</code> 符号匹配；失败则 fallback 到 <code>&lt;answer&gt;</code> tag 的字符串精确匹配</td>
+</tr>
+<tr>
+<td><span class="math inline">$\hat{A}_{i,t} = \tilde{R}_i = \frac{R(y_i) - \text{mean}(R)}{\text{std}(R)}$</span></td>
+<td><code>monkey_patch_forward_lvr_rl.py</code> + TRL</td>
+<td>group 内标准化的 advantage，所有 text token 位置共享同一个 <span class="math inline">$\tilde{R}_i$</span></td>
+</tr>
+<tr>
+<td><span class="math inline">$\text{BCE loss for mode switching}$</span></td>
+<td><code>monkey_patch_forward_lvr.py:1335-1350</code></td>
+<td>找到 <code>&lt;lvr&gt;</code> 序列末尾的 token，监督其 LM Head 输出 <code>lvr_end_id</code> 的概率接近 1，其他 token 接近 0</td>
+</tr>
+<tr>
+<td>hidden state 替换: <span class="math inline">$\text{embed}[t] = \mathbf{h}_{t-1}$</span></td>
+<td><code>monkey_patch_forward_lvr.py:153-155</code></td>
+<td><code>inputs_embeds[lvr_mode_switch, -1, :] = last_position_hidden_state[lvr_mode_switch]</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="76">7.6 数值稳定性补丁</h3>
+<p>Qwen2.5-VL 的 3D 卷积（<code>Qwen2_5_VisionPatchEmbed.forward</code>）在极端分辨率下可能因 fp16/bf16 精度引发 NaN。代码通过 <code>monkey_patch_patch_emb.py</code> 将 patch embed 计算局部切换到 fp32：</p>
+<div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">Qwen2_5_VisionPatchEmbedFp32Forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">hidden_states</span><span class="p">):</span>
+    <span class="n">target_dtype</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">proj</span><span class="o">.</span><span class="n">weight</span><span class="o">.</span><span class="n">dtype</span>
+    <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">autocast</span><span class="p">(</span><span class="n">device_type</span><span class="o">=</span><span class="n">hidden_states</span><span class="o">.</span><span class="n">device</span><span class="o">.</span><span class="n">type</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">):</span>
+        <span class="n">hidden_states</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">proj</span><span class="p">(</span><span class="n">hidden_states</span><span class="p">)</span>
+    <span class="n">hidden_states</span> <span class="o">=</span> <span class="n">hidden_states</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">embed_dim</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">target_dtype</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">hidden_states</span>
+</code></pre></div>
+
+<h3 id="77-pipeline">7.7 训练脚本与 pipeline</h3>
+<div class="codehilite"><pre><span></span><code>LVR 训练分为两个阶段，由不同脚本驱动：
+
+Stage 1 (SFT):  finetune_lvr_stage1_7b.sh  /  finetune_lvr_stage1_3b.sh
+
+    - 数据: Visual COT (438K QA, 含 bbox)
+    - 关键参数: lr=1e-5, lvr_head=False, enable_data_packing=True
+    - 硬件: 4×AMD MI250, ~40h (7B)
+
+Stage 2 (RL):  finetune_lvr_stage2_3b.sh
+
+    - 数据: ViRL (不含 bbox)
+    - 关键参数: lr=1e-5, τ=0.9, β=0.04, 8 rollouts/input
+    - 硬件: 4×AMD MI250, ~20h (3B)
+    - 注意: 7B 的 Stage 2 因资源限制未执行
+
+两阶段共用 QwenWithLVR 模型类，但通过不同 forward 函数切换：
+  Stage 1 → replace_qwen2_5_with_mixed_modality_forward_lvr()
+  Stage 2 → replace_qwen2_5_with_mixed_modality_forward_lvr_rl()
+</code></pre></div>
+
 <h2 id="8">8. 核心贡献总结</h2>
 <ol>
 <li>
@@ -1024,14 +1255,116 @@ document.addEventListener('DOMContentLoaded', function() {
 <h3 id="q4lvr">Q4：LVR 在什么任务上最有效？什么时候可能有害？</h3>
 <p><strong>最有效</strong>：需要精确视觉细节的任务（V*_DA +2.7pp）、需要空间关系推理的任务（V*_RP +5.3pp）、感知鲁棒性测试（MMVP +5.3pp）。这些任务的特点是"答案高度依赖对图像特定区域的精确理解"。</p>
 <p><strong>可能有害</strong>：多图像比较任务（Relative Reflectance 提升有限）、已由基座充分解决的任务（Spatial 87.4→89.5，天花板效应）。此外，如果步数选择不当（如 16 步）可能在部分任务上引入退化。</p>
-<h3 id="q5">Q5：论文最应该关注的局限是什么？</h3>
+<h2 id="10">10. 局限性</h2>
+<h3 id="101">10.1 可变长度推理不可靠</h3>
+<p>Fixed Token 虽然好用但显然不是终极方案。论文在 Latent End Token 和 Mode Switching Loss 上的负结果说明，continuous space 中定义停止条件仍然是一个开放问题：</p>
+<ul>
+<li><strong>Latent End Token</strong>：在 3584/4096 维的 continuous hidden state 空间中，两个向量之间的"距离"的语义含义极度依赖于上下文。同一组距离值，在一个问题中意味着"推理完成"，在另一个问题中可能只是正常的 embedding 波动。V* 从 81.7 暴跌至 39.8。</li>
+<li><strong>Mode Switching Loss</strong>：LM Head 在 LVR 模式下收到的 hidden state（而非正常 token embedding）与其训练分布不匹配，导致 <code>&lt;|lvr_end|&gt;</code> 的概率一直是噪声——模型 LVR 步数完全坍缩到 0。</li>
+<li><strong>Fixed Token 的权衡</strong>：简单问题浪费计算（多跑无效的 hidden state 循环）、复杂问题可能推理深度不够。但它是目前唯一可靠的方案。</li>
+</ul>
+<h3 id="102-rl-3b">10.2 RL 只在 3B 上验证</h3>
+<p>计算资源限制导致 7B 的 RL 效果未知。3B 上的 RL 提升虽稳健但不大（+1-2pp），7B 上的 RL 是否有同样/更强的提升尚未验证。论文明确标注这是计算资源限制而非方法本身不支持。</p>
+<h3 id="103">10.3 多图像场景未覆盖</h3>
+<p>Relative Reflectance 的表现（38.8→42.5，低于 Vision-R1 的 44.8）暴露了单图像训练的限制。LVR 的 SFT 数据和训练机制都是单图像的，无法对跨图像对比建模。扩展到多图像需要重新设计 LVR 的推理目标。</p>
+<h3 id="104-grpo_latent">10.4 GRPO_latent 的工程复杂度</h3>
+<p>训练 GRPO_latent 时需要：</p>
 <ol>
-<li><strong>可变长度推理不可靠</strong>：Fixed Token 虽然好用但显然不是终极方案。论文在 Latent End Token 和 Mode Switching Loss 上的负结果说明，continuous space 中定义停止条件仍然是一个开放问题。</li>
-<li><strong>RL 只在 3B 上验证</strong>：计算资源限制导致 7B 的 RL 效果未知。3B 上的 RL 提升虽稳健但不大（+1-2pp），7B 上的 RL 是否有同样/更强的提升尚未验证。</li>
-<li><strong>多图像场景未覆盖</strong>：Relative Reflectance 的表现暴露了单图像训练的限制。扩展到多图像需要重新设计 LVR 的推理目标。</li>
-<li><strong>GRPO_latent 的工程复杂度</strong>：训练时需要记录每个 rollout 的 hidden states 并在重放时精确 patch，增加了训练代码的复杂度和内存开销。</li>
+<li>记录每个 rollout 的 hidden states（<span class="math inline">$\widetilde{h}^{\text{latent}}$</span>）</li>
+<li>在 teacher-forcing forward pass 中精确 patch 回 LVR 位置</li>
+<li>维护 <span class="math inline">$\pi_\theta$</span> 和 <span class="math inline">$\pi_{\theta_{\text{old}}}$</span> 两套模型参数计算 importance ratio</li>
 </ol>
-<h2 id="10-takeaway">10. Takeaway</h2>
+<p>这增加了训练代码的复杂度和内存开销（需同时保留 rollout hidden states + 两套模型参数）。</p>
+<h3 id="105-sft">10.5 SFT 数据依赖</h3>
+<p>LVR 的 SFT 阶段依赖 Visual COT 数据集的 bbox 标注来提供 ground-truth ROI visual embedding。这意味着：</p>
+<ul>
+<li>训练数据需要额外的 bbox 标注成本</li>
+<li>bbox 的质量直接影响 LVR 学习到的 visual reasoning 能力</li>
+<li>如果 ROI 标注不准确，MSE loss 会引导 hidden state 逼近错误的视觉语义</li>
+</ul>
+<h2 id="11">11. 关键概念速查</h2>
+<table>
+<thead>
+<tr>
+<th>概念</th>
+<th>英文名称</th>
+<th>定义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>潜在视觉推理</td>
+<td>Latent Visual Reasoning (LVR)</td>
+<td>在 MLLM 的 visual embedding 空间中，用 LLM 的 last hidden state 自循环逼近 ROI 视觉语义的推理范式</td>
+</tr>
+<tr>
+<td>潜在思维</td>
+<td>Latent Visual Thoughts</td>
+<td>LVR 模式下 LLM 产生的 hidden state 序列，编码了与问题相关的视觉语义信息</td>
+</tr>
+<tr>
+<td>GRPO 潜在版</td>
+<td>GRPO_latent</td>
+<td>针对 latent reasoning 改造的 GRPO 算法——rollout 时记录 LVR hidden states，teacher-forcing 时 patch 回模型计算 importance ratio</td>
+</tr>
+<tr>
+<td>固定步数解码</td>
+<td>Fixed Token Decoding</td>
+<td>设定固定 LVR 步数 k（4/8/16），用完即退出。论文默认策略</td>
+</tr>
+<tr>
+<td>潜在结束 Token</td>
+<td>Latent End Token</td>
+<td>可学习的隐藏向量，当 LVR hidden state 与其距离小于阈值时退出。实验证明不可靠</td>
+</tr>
+<tr>
+<td>模式切换损失</td>
+<td>Mode Switching Loss</td>
+<td>BCE loss 监督 LM Head 预测 <code>&lt;|lvr_end|&gt;</code> 的时机。完全失败</td>
+</tr>
+<tr>
+<td>Visual COT 数据集</td>
+<td>Visual COT</td>
+<td>438K QA 对的 VQA 数据集，每对都含问题相关 ROI 的 bbox 标注，用于 LVR SFT 训练</td>
+</tr>
+<tr>
+<td>ViRL 数据集</td>
+<td>ViRL</td>
+<td>不含 bbox 标注的视觉推理 QA 数据集，用于 LVR RL（GRPO_latent）训练</td>
+</tr>
+<tr>
+<td>交叉模态干扰</td>
+<td>Cross-modal Interference</td>
+<td>文本空间 CoT 生成大量文本 token 时，LLM 的 attention 从视觉 token 偏移到文本 token，导致"视觉遗忘"</td>
+</tr>
+<tr>
+<td>O(1) ROI 提取</td>
+<td>O(1) ROI Token Selection</td>
+<td>给定 bbox，<span class="math inline">$QwenVLBboxTokenMapper$</span> 通过 token grid 坐标映射在 O(1) 时间内定位 ROI 的 visual token 索引</td>
+</tr>
+<tr>
+<td>数据打包</td>
+<td>Adaptive Multimodal Data Packing</td>
+<td>InternVL 的自适应打包策略——多个短实例拼成一条长序列，长实例单独处理，解决 LVR 训练中长度极度不均的问题</td>
+</tr>
+<tr>
+<td>数值稳定性补丁</td>
+<td>fp32 Patch Embed Monkey Patch</td>
+<td>将 Qwen2.5-VL 的 3D 卷积 patch embed 运算切换到 fp32 避免极端分辨率下的 NaN</td>
+</tr>
+<tr>
+<td>监督微调阶段</td>
+<td>SFT Stage</td>
+<td>用 Visual COT 数据集 + MSE (LVR Loss) + CE (NTP Loss) 联合训练，让 LLM 学会在 hidden state 空间重建 ROI 视觉语义</td>
+</tr>
+<tr>
+<td>强化学习阶段</td>
+<td>RL Stage (GRPO_latent)</td>
+<td>用 ViRL 数据集 + 格式奖励 + 准确性奖励，让 LVR 过程自我进化，不约束中间输出</td>
+</tr>
+</tbody>
+</table>
+<h2 id="12-takeaway">12. Takeaway</h2>
 <p>LVR = <code>latent visual reasoning in embedding space</code> + <code>SFT with ROI reconstruction</code> + <code>GRPO_latent with hidden-state replay</code>。</p>
 <p>核心洞察：MLLM 的 Vision-Projector-LLM 架构已经创造了一个视觉和文本共享的语义空间，<strong>直接在这个空间中对视觉语义进行推理，比把视觉转成文字或调用外部工具都更自然、更高效</strong>。LVR 的成功在于它识别到了这个被忽视的设计空间，并用最少的改动（仅改变解码方式、添加 loss）实现了一个可训练的新范式。</p>
 <hr />
