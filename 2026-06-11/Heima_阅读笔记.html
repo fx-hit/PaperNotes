@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Heima：通过隐藏思考实现高效推理</title>
+<!-- arxiv: 2501.19201 -->
+<!-- venue: ICML 2026 -->
+<!-- tags: MLLM, CoT, 推理效率, 信息论, 知识蒸馏 -->
+<!-- words-zh: 1289 -->
+<!-- words-en: 232 -->
+<!-- reading-time: 5 -->
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #ffffff;
+    --text: #1a1a2e;
+    --text-secondary: #555;
+    --border: #e1e4e8;
+    --link: #0969da;
+    --table-stripe: #f6f8fa;
+    --heading: #0d1117;
+    --blockquote-border: #0969da;
+    --blockquote-bg: #f0f6ff;
+    --inline-code: #d73a49;
+    --inline-code-bg: #f6f8fa;
+    --sidebar-width: 260px;
+    --toc-active: #0969da;
+    --content-max-width: 1350px;
+    --media-max-width: 1000px;
+    --content-padding: 48px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "Inter", "Noto Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 16px;
+    line-height: 1.75;
+    color: var(--text);
+    background: var(--bg);
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    width: var(--sidebar-width);
+    overflow-y: auto;
+    padding: 28px 20px 40px;
+    background: #fafbfc;
+    border-right: 1px solid var(--border);
+    z-index: 10;
+    scrollbar-width: thin;
+  }
+  .sidebar-title {
+    font-size: 13px; font-weight: 700; color: var(--text-secondary);
+    margin-bottom: 16px; letter-spacing: 0.06em; text-transform: uppercase;
+  }
+  .toc-list { list-style: none; padding: 0; margin: 0; }
+  .toc-list ul { list-style: none; padding-left: 14px; }
+  .toc-list li { margin: 1px 0; }
+  .toc-list a {
+    display: block; padding: 4px 12px; font-size: 13.5px; line-height: 1.45;
+    color: var(--text-secondary); text-decoration: none; border-radius: 4px;
+    border-left: 2px solid transparent; transition: all 0.15s;
+  }
+  .toc-list a:hover { color: var(--link); background: #e8f0fe; }
+  .toc-list a.active {
+    color: var(--toc-active); font-weight: 600;
+    border-left-color: var(--toc-active); background: #e8f0fe;
+  }
+  .toc-h1 a { font-weight: 600; color: var(--heading); font-size: 14px; }
+  .toc-h3 a { padding-left: 24px; font-size: 13px; }
+  .toc-h4 a { padding-left: 36px; font-size: 12.5px; }
+  .toc-empty { color: var(--text-secondary); font-size: 13px; font-style: italic; }
+
+  .main-wrapper {
+    margin-left: var(--sidebar-width);
+    min-height: 100vh;
+    display: flex; justify-content: center;
+  }
+  .content-inner {
+    width: 100%;
+    max-width: var(--content-max-width);
+    padding: 40px var(--content-padding) 80px;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    color: var(--heading); font-weight: 700; line-height: 1.3;
+    margin-top: 2em; margin-bottom: 0.6em; scroll-margin-top: 24px;
+  }
+  h1 { font-size: 2em; border-bottom: 2px solid var(--border); padding-bottom: 0.3em; margin-top: 0; }
+  h2 { font-size: 1.5em; border-bottom: 1px solid var(--border); padding-bottom: 0.25em; }
+  h3 { font-size: 1.25em; }
+  h4 { font-size: 1.1em; }
+  p { margin-bottom: 1em; }
+  a { color: var(--link); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  strong { font-weight: 600; }
+
+  blockquote {
+    border-left: 4px solid var(--blockquote-border);
+    background: var(--blockquote-bg);
+    padding: 12px 20px; margin: 1em 0;
+    border-radius: 0 6px 6px 0; color: var(--text-secondary);
+  }
+  blockquote p:last-child { margin-bottom: 0; }
+
+  code {
+    font-family: "JetBrains Mono", "SF Mono", "Fira Code", monospace;
+    font-size: 0.875em; background: var(--inline-code-bg);
+    padding: 2px 6px; border-radius: 4px; color: var(--inline-code);
+  }
+  pre {
+    background: #f6f8fa; color: #24292f;
+    border: 1px solid var(--border);
+    border-radius: 8px; padding: 16px 20px; overflow-x: auto;
+    margin: 1em 0; font-size: 14px; line-height: 1.55;
+  }
+  pre code { background: none; padding: 0; border-radius: 0; color: inherit; font-size: inherit; }
+
+  .codehilite { background: #f6f8fa; border: 1px solid var(--border); border-radius: 8px; padding: 16px 20px; overflow-x: auto; margin: 1em 0; }
+  .codehilite pre { background: none; padding: 0; margin: 0; border-radius: 0; }
+  .codehilite .hll { background-color: #fff8c5; }
+  .codehilite .c  { color: #6e7781; font-style: italic; }
+  .codehilite .k  { color: #cf222e; }
+  .codehilite .o  { color: #0550ae; }
+  .codehilite .s  { color: #0a3069; }
+  .codehilite .n  { color: #24292f; }
+  .codehilite .p  { color: #24292f; }
+  .codehilite .mi { color: #0550ae; }
+  .codehilite .nf { color: #8250df; }
+  .codehilite .nb { color: #953800; }
+  .codehilite .nc { color: #953800; }
+  .codehilite .bp { color: #953800; }
+
+  table { width: 100%; border-collapse: collapse; margin: 1em 0; font-size: 0.925em; }
+  th, td { border: 1px solid var(--border); padding: 10px 14px; text-align: left; }
+  th { background: var(--table-stripe); font-weight: 600; color: var(--heading); }
+  tr:nth-child(even) td { background: var(--table-stripe); }
+
+  .math.display { display: block; overflow-x: auto; padding: 12px 0; margin: 1em 0; }
+  ul, ol { padding-left: 1.5em; margin-bottom: 1em; }
+  li { margin-bottom: 0.3em; }
+  hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+  img { max-width: min(100%, var(--media-max-width)); height: auto; border-radius: 6px; margin: 0 auto; display: block; }
+  #main-content img { cursor: zoom-in; }
+  p:has(img) { text-align: center; max-width: var(--media-max-width); margin: 0.6em auto 0; }
+  table:has(img) { width: min(100%, var(--media-max-width)) !important; margin-left: auto; margin-right: auto; }
+  p:has(img) + p { text-align: center; font-size: 0.9em; color: var(--text-secondary); margin-top: 0.15em; margin-bottom: 0.6em; }
+  .mermaid { text-align: center; margin: 1.5em 0; background: #fafbfc; border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+  .article-stats {
+    font-size: 0.85rem; color: var(--text-secondary);
+    padding: 10px 18px; margin-bottom: 28px;
+    background: #f8f9fa; border: 1px solid var(--border); border-radius: 8px;
+  }
+  body.image-lightbox-open { overflow: hidden; }
+  .image-lightbox {
+    position: fixed; inset: 0; z-index: 1000;
+    display: none;
+    background: rgba(9, 12, 20, 0.88);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+  }
+  .image-lightbox.is-open { display: block; }
+
+  /* Stage uses flexbox to center the image; safe alignment prevents
+     clipping when zoomed-in content overflows — it falls back to
+     start so scrollbars reach every pixel. */
+  .image-lightbox__stage {
+    width: 100%; height: 100%;
+    overflow: auto;
+    display: flex;
+    align-items: safe center;
+    justify-content: safe center;
+    padding: 24px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.18) transparent;
+  }
+
+  .image-lightbox__image {
+    max-width: none; max-height: none;
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 20px 70px rgba(0, 0, 0, 0.5);
+    cursor: zoom-in;
+    flex-shrink: 0;
+    transition: box-shadow 0.3s;
+  }
+
+  /* Close button — top-right glass circle */
+  .image-lightbox__close {
+    position: absolute; top: 20px; right: 20px; z-index: 1010;
+    width: 40px; height: 40px;
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.25);
+    color: rgba(255,255,255,0.85);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    transition: background 0.2s, border-color 0.2s, transform 0.2s, color 0.2s;
+  }
+  .image-lightbox__close:hover {
+    background: rgba(255,255,255,0.15);
+    border-color: rgba(255,255,255,0.3);
+    color: #fff;
+    transform: scale(1.08);
+  }
+
+  /* Zoom toolbar — bottom-center glass pill */
+  .image-lightbox__toolbar {
+    position: absolute; bottom: 28px; left: 50%; transform: translateX(-50%); z-index: 1010;
+    display: flex; align-items: center; gap: 4px;
+    padding: 6px;
+    background: rgba(30, 30, 45, 0.75);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 32px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.35);
+  }
+
+  .image-lightbox__btn {
+    width: 36px; height: 36px;
+    border: none; border-radius: 50%;
+    background: transparent;
+    color: rgba(255,255,255,0.82);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.2s, color 0.2s;
+  }
+  .image-lightbox__btn:hover {
+    background: rgba(255,255,255,0.13);
+    color: #fff;
+  }
+
+  .image-lightbox__zoom-val {
+    min-width: 52px; text-align: center;
+    color: rgba(255,255,255,0.82);
+    font: 600 12.5px/32px "Inter", -apple-system, sans-serif;
+    cursor: pointer; user-select: none;
+    border-radius: 20px; padding: 0 6px;
+    transition: background 0.2s, color 0.2s;
+    letter-spacing: -0.01em;
+  }
+  .image-lightbox__zoom-val:hover {
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+  }
+
+  .image-lightbox__caption {
+    position: absolute; left: 28px; right: 28px; bottom: 96px; z-index: 1005;
+    color: rgba(255,255,255,0.72); text-align: center;
+    font-size: 13px; line-height: 1.45;
+    pointer-events: none;
+  }
+
+  @media (max-width: 1024px) {
+    .sidebar { position: static; width: 100%; height: auto; max-height: 35vh; border-right: none; border-bottom: 1px solid var(--border); }
+    .main-wrapper { margin-left: 0; display: block; }
+    .content-inner { max-width: none; padding: 24px 20px 60px; }
+    .image-lightbox__stage { padding: 12px; }
+    .image-lightbox__close { top: 12px; right: 12px; width: 36px; height: 36px; }
+    .image-lightbox__toolbar { bottom: 18px; padding: 5px; gap: 2px; }
+    .image-lightbox__btn { width: 32px; height: 32px; }
+    .image-lightbox__caption { bottom: 78px; left: 18px; right: 18px; }
+  }
+</style>
+
+<script>
+MathJax = {
+  tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']], processEscapes: true, tags: 'none' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] }
+};
+</script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  mermaid.initialize({ startOnLoad: true, theme: 'neutral', securityLevel: 'loose' });
+});
+</script>
+
+</head>
+<body>
+
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-title">目录</div>
+  <ul class="toc-list">
+<li class="toc-h1"><a href="#heima">Heima：通过隐藏思考实现高效推理</a>
+<ul>
+</li>
+<li class="toc-h2"><a href="#1">1. 动机与问题</a>
+</li>
+<li class="toc-h2"><a href="#2">2. 方法概览</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#21-token">2.1 思考 Token 与渐进式蒸馏</a>
+</li>
+<li class="toc-h3"><a href="#22">2.2 信息论分析</a>
+</li>
+<li class="toc-h3"><a href="#23-interpreter">2.3 解释器（Interpreter）设计</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#3">3. 实验配置</a>
+</li>
+<li class="toc-h2"><a href="#4">4. 主要结果</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#41">4.1 推理效率与精度</a>
+</li>
+<li class="toc-h3"><a href="#42">4.2 跨模型架构泛化</a>
+</li>
+<li class="toc-h3"><a href="#43">4.3 解释器重建质量</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#5">5. 消融实验</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#51-token">5.1 思考 token 数量</a>
+</li>
+<li class="toc-h3"><a href="#52">5.2 自适应保留比例</a>
+</li>
+<li class="toc-h3"><a href="#53">5.3 解释器数量</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#6">6. 代码仓库结构</a>
+</li>
+<li class="toc-h2"><a href="#7">7. 总结与思考</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#_1">核心贡献</a>
+</li>
+<li class="toc-h3"><a href="#_2">值得关注的点</a>
+</li>
+<li class="toc-h3"><a href="#_3">局限与展望</a>
+</ul></li>
+</ul></li>
+</li></ul>
+</nav>
+
+<main class="main-wrapper">
+  <div class="content-inner" id="main-content">
+<h1 id="heima">Heima：通过隐藏思考实现高效推理</h1>
+<div class="article-stats">1,289 字 · English 232 词 · 约 5 分钟阅读</div>
+
+<blockquote>
+<p><strong>论文</strong>: Efficient Reasoning with Hidden Thinking<br />
+<strong>作者</strong>: Xuan Shen, Yizhou Wang, Yufa Zhou, Xiangxi Shi, Pu Zhao, Yanzhi Wang, Jiuxiang Gu<br />
+<strong>机构</strong>: Zhejiang University / Adobe / Duke / Oregon State / Northeastern<br />
+<strong>代码</strong>: <a href="https://github.com/shawnricecake/Heima">shawnricecake/Heima</a></p>
+</blockquote>
+<hr />
+<h2 id="1">1. 动机与问题</h2>
+<p>Chain-of-Thought（CoT）推理已成为提升多模态大语言模型（MLLM）复杂问题求解能力的关键技术。然而，CoT 推理需要生成大量中间文本（对复杂问题可达数百 tokens），导致高昂的推理成本。</p>
+<p><strong>核心问题</strong>：CoT 的冗长文本包含大量冗余信息，能否将推理过程压缩到隐空间，以极少的"思考 token"替代冗长的文本 CoT，从而大幅提升推理效率？</p>
+<hr />
+<h2 id="2">2. 方法概览</h2>
+<p>Heima（hidden llama 的谐音）提出了一套完整的 CoT 压缩框架，包含三个核心组件：</p>
+<p><img alt="Heima 整体流程" src="assets/heima/introduction_whole_pipeline.pdf" /></p>
+<h3 id="21-token">2.1 思考 Token 与渐进式蒸馏</h3>
+<p><strong>思考 Token（Thinking Token）</strong>：为每个 CoT 阶段（Summary、Caption、Reasoning）定义一个特殊的 vocabulary token（如 <code>&lt;Thinking_of_Summary&gt;</code>），将整个阶段的文本推理压缩到单个 token 的隐状态中。</p>
+<p><strong>渐进式蒸馏（Progressive Distillation）</strong>：不是一次性将所有 CoT 阶段替换为思考 token，而是逐阶段渐进替换：</p>
+<ul>
+<li><strong>Stage 0</strong>：全部使用文本 CoT（标准 LLaVA-CoT 训练）</li>
+<li><strong>Stage 1</strong>：仅将 Summary 替换为 <code>&lt;CoT&gt;_1</code>，其余保持文本</li>
+<li><strong>Stage 2</strong>：将 Summary + Caption 替换为 <code>&lt;CoT&gt;_1</code>, <code>&lt;CoT&gt;_2</code></li>
+<li><strong>Stage 3</strong>：全部三个阶段都替换为思考 token</li>
+<li><strong>Recovering Stage</strong>：最终用纯思考 token 额外微调一步，优化跨阶段 transition</li>
+</ul>
+<p>训练数据集 <span class="math inline">$D_H$</span> 将原始 CoT 文本替换为思考 token：</p>
+<p><div class="math display">$$D_H := \bigl\{ (X, \texttt{&lt;CoTs>}, Y) \bigr\}$$</div></p>
+<p>蒸馏目标为标准 next-token prediction：</p>
+<p><div class="math display">$$\mathcal{L}(\theta) = -\mathbb{E}_{(X, Y, \texttt{&lt;CoTs>}) \sim D_H} \log P_\theta(\texttt{&lt;CoTs>}, Y \mid X)$$</div></p>
+<h3 id="22">2.2 信息论分析</h3>
+<p>论文从信息论角度证明了压缩的合理性。定义 <span class="math inline">$X$</span> 为输入，<span class="math inline">$\mathrm{CoTs}$</span> 为原始文本推理，<span class="math inline">$\texttt{&lt;CoTs>}$</span> 为思考 token，<span class="math inline">$Y$</span> 为输出答案。</p>
+<p><strong>核心定理</strong>：由于 <span class="math inline">$\texttt{&lt;CoTs>}=f(X,\mathrm{CoTs})$</span>，由数据处理不等式有：</p>
+<p><div class="math display">$$0 &lt; I(Y;\texttt{&lt;CoTs>}\mid X) \le I(Y;\mathrm{CoTs}\mid X)$$</div></p>
+<p>等价于：</p>
+<p><div class="math display">$$H(Y\mid X,\mathrm{CoTs}) \le H(Y\mid X,\texttt{&lt;CoTs>}) \le H(Y\mid X)$$</div></p>
+<p><strong>关键结论</strong>：</p>
+<ul>
+<li>思考 token 永远不可能比原始 CoT 包含更多关于 <span class="math inline">$Y$</span> 的信息</li>
+<li>但只要 <span class="math inline">$I(Y;\texttt{&lt;CoTs>}\mid X) > 0$</span>，就保留了非平凡的推理信息</li>
+<li>信息损失量 <span class="math inline">$I(Y;\mathrm{CoTs}\mid X,\texttt{&lt;CoTs>})$</span> 量化了压缩带来的信息差距</li>
+</ul>
+<h3 id="23-interpreter">2.3 解释器（Interpreter）设计</h3>
+<p>为了量化信息差距，论文设计了基于纯 LLM 的解释器，将思考 token 的隐状态重构回文本 CoT。</p>
+<p><img alt="解释器训练流程" src="assets/heima/method_adaptive_decoding_train-1_column.pdf" /></p>
+<p><strong>训练方式</strong>：</p>
+<ol>
+<li>使用冻结的 Heima 生成思考 token</li>
+<li>提取思考 token 的 last hidden state <span class="math inline">$H_{\texttt{&lt;CoT>}_{(k)}}$</span></li>
+<li>在解释器中，用 <span class="math inline">$H_{\texttt{&lt;CoT>}_{(k)}}$</span> <strong>替换</strong> token embedding，而非直接输入 token 符号</li>
+<li>使用解释性 prompt 引导重构：<em>"According to question: <span class="math inline">$X_q$</span>, can you explain the thinking progress <span class="math inline">$\texttt{&lt;CoT>}_{(k)}$</span>?"</em></li>
+</ol>
+<p><strong>关键设计</strong>：解释器为纯文本 LLM，不接收图像输入。这意味着思考 token 的隐表示中<strong>必须编码了视觉信息</strong>，解释器才能重构出包含视觉细节的推理过程。</p>
+<hr />
+<h2 id="3">3. 实验配置</h2>
+<table>
+<thead>
+<tr>
+<th>组件</th>
+<th>模型</th>
+<th>训练框架</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Heima Encoder</td>
+<td>Llama-3.2-11B-Vision-Instruct</td>
+<td>LoRA (rank=16, alpha=32)</td>
+</tr>
+<tr>
+<td>Heima Decoder</td>
+<td>Llama-3.1-8B-Instruct</td>
+<td>LoRA</td>
+</tr>
+<tr>
+<td>辅助验证</td>
+<td>LLaVA-Next-Vicuna-7B</td>
+<td>LoRA</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>训练数据</strong>：LLaVA-CoT-100k（100k 图像-QA 对，含 Summary/Caption/Reasoning 三阶段 CoT）</li>
+<li><strong>训练硬件</strong>：8× H100 GPU</li>
+<li><strong>评估基准</strong>：MMStar, MMBench V1.1, MMVet, MathVista, AI2D, HallusionBench</li>
+<li><strong>评估框架</strong>：VLMEvalKit</li>
+</ul>
+<hr />
+<h2 id="4">4. 主要结果</h2>
+<h3 id="41">4.1 推理效率与精度</h3>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th>MMStar</th>
+<th>MMBench</th>
+<th>MMVet</th>
+<th>MathVista</th>
+<th>AI2D</th>
+<th>Hallusion</th>
+<th>Avg</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Llama3.2-11B</td>
+<td>48.1 (140)</td>
+<td>58.2 (65)</td>
+<td>50.2 (106)</td>
+<td>50.3 (240)</td>
+<td>68.5 (75)</td>
+<td>37.2 (91)</td>
+<td>52.1</td>
+</tr>
+<tr>
+<td>LLaVA-CoT</td>
+<td>54.0 (181)</td>
+<td>70.7 (155)</td>
+<td>49.8 (227)</td>
+<td>50.9 (216)</td>
+<td>77.6 (179)</td>
+<td>63.8 (178)</td>
+<td>61.1</td>
+</tr>
+<tr>
+<td>Heima (w/o prog.)</td>
+<td>49.7 (13)</td>
+<td>72.5 (13)</td>
+<td>39.0 (72)</td>
+<td>39.3 (14)</td>
+<td>75.9 (13)</td>
+<td>61.3 (16)</td>
+<td>56.3</td>
+</tr>
+<tr>
+<td>Heima (w/o rec.)</td>
+<td>49.8 (13)</td>
+<td>71.6 (13)</td>
+<td>42.8 (80)</td>
+<td>39.8 (14)</td>
+<td>77.3 (13)</td>
+<td>58.5 (18)</td>
+<td>56.6</td>
+</tr>
+<tr>
+<td><strong>Heima</strong></td>
+<td><strong>49.9 (13)</strong></td>
+<td><strong>72.8 (13)</strong></td>
+<td><strong>43.3 (76)</strong></td>
+<td><strong>43.6 (14)</strong></td>
+<td><strong>77.5 (13)</strong></td>
+<td><strong>60.6 (17)</strong></td>
+<td><strong>58.0</strong></td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>括号内为平均生成 token 数。Heima 将 token 数降至原始 LLaVA-CoT 的约 <strong>6-8%</strong>。</p>
+</blockquote>
+<p><strong>关键发现</strong>：</p>
+<ul>
+<li>Heima 用不到 10% 的 token 保持了 LLaVA-CoT 的绝大部分精度（58.0 vs 61.1）</li>
+<li>在 MMBench 上甚至<strong>超越</strong>了 LLaVA-CoT（72.8 vs 70.7），说明压缩过程可能去除了噪声</li>
+<li>渐进式蒸馏提升 1.7 个百分点，recovering stage 提升 1.4 个百分点——两者缺一不可</li>
+<li>相比无 CoT 的 Llama3.2-11B 基线，Heima 在全部 6 个基准上均有大幅提升</li>
+</ul>
+<h3 id="42">4.2 跨模型架构泛化</h3>
+<p>在 LLaVA-Next-Vicuna-7B 上的验证（Table A2）：</p>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th>Avg Acc</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>LLaVA-Next-7B (无 CoT)</td>
+<td>44.4</td>
+</tr>
+<tr>
+<td>LLaVA-Next-7B (CoT)</td>
+<td>55.0</td>
+</tr>
+<tr>
+<td><strong>Heima (7B)</strong></td>
+<td><strong>53.8</strong></td>
+</tr>
+</tbody>
+</table>
+<p>同样将 token 降至 6%，保持了 CoT 精度的 97.8%，验证了方法的通用性。</p>
+<h3 id="43">4.3 解释器重建质量</h3>
+<p><img alt="解释器评估" src="assets/heima/results_decoder_eval_metrics_gpt4o.pdf" /></p>
+<table>
+<thead>
+<tr>
+<th>Stage</th>
+<th>BLEU</th>
+<th>METEOR</th>
+<th>ROUGE-L</th>
+<th>BERTScore</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Summary</td>
+<td>15.9</td>
+<td>40.1</td>
+<td>41.6</td>
+<td>73.4</td>
+</tr>
+<tr>
+<td>Caption</td>
+<td>12.8</td>
+<td>35.5</td>
+<td>37.9</td>
+<td>71.4</td>
+</tr>
+<tr>
+<td>Reasoning</td>
+<td>11.2</td>
+<td>32.7</td>
+<td>32.7</td>
+<td>66.6</td>
+</tr>
+</tbody>
+</table>
+<p>GPT-4o 5-point 相似度评估确认所有三个阶段的推理过程均被有效重建。<strong>尤其值得注意的是，解释器是纯文本 LLM，不接收图像输入，却能重建出包含视觉细节的内容，证明思考 token 中成功编码了多模态信息。</strong></p>
+<hr />
+<h2 id="5">5. 消融实验</h2>
+<h3 id="51-token">5.1 思考 token 数量</h3>
+<p>每个 CoT 阶段用不同数量的思考 token 进行蒸馏：</p>
+<table>
+<thead>
+<tr>
+<th>#Token</th>
+<th>Avg Acc</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>1</strong></td>
+<td><strong>58.0</strong></td>
+</tr>
+<tr>
+<td>2</td>
+<td>56.5</td>
+</tr>
+<tr>
+<td>4</td>
+<td>56.2</td>
+</tr>
+<tr>
+<td>8</td>
+<td>56.7</td>
+</tr>
+<tr>
+<td>16</td>
+<td>56.9</td>
+</tr>
+<tr>
+<td>32</td>
+<td>57.1</td>
+</tr>
+</tbody>
+</table>
+<p><strong>结论</strong>：单个思考 token 效果最优。更多 token 并不会提升精度，反而可能引入噪声。</p>
+<h3 id="52">5.2 自适应保留比例</h3>
+<p>按原始 CoT 长度的固定比例保留思考 token（10%-90%），结果精度无规律波动，且 token 数超过 70% 时甚至超过基线模型的 token 数，证明自适应方法不适用于 CoT 压缩。</p>
+<h3 id="53">5.3 解释器数量</h3>
+<p>消融实验表明，用单一 LLM 同时解释三个阶段，summary 和 caption 重建质量大幅下降，但 reasoning 阶段尚可。<strong>结论</strong>：三个独立解释器是必要的。</p>
+<hr />
+<h2 id="6">6. 代码仓库结构</h2>
+<div class="codehilite"><pre><span></span><code>Heima/
+├── heima/
+│   ├── configs/          # 训练/评估 YAML 配置
+│   ├── scripts/           # Shell 运行脚本
+│   └── main_python/       # 核心 Python 脚本
+│       ├── 1_*-organize_dataset-*.py   # 数据准备
+│       ├── 2-*-training-pipeline-*.py   # 渐进式蒸馏训练
+│       ├── 4_*-eval-*.py               # 推理与评估
+│       └── 5-*-demo-*.py               # Demo 推理
+├── torchtune_pkg/        # torchtune 训练框架
+└── zero-shot-evaluation/  # VLMEvalKit 评估
+</code></pre></div>
+
+<hr />
+<h2 id="7">7. 总结与思考</h2>
+<h3 id="_1">核心贡献</h3>
+<ol>
+<li><strong>首个 MLLM CoT 压缩框架</strong>：将冗长的多阶段 CoT 推理压缩为极少量的思考 token，实现了"隐空间推理"</li>
+<li><strong>信息论保证</strong>：从理论上证明了只要保留非平凡互信息，压缩后的推理仍有效</li>
+<li><strong>可解释性验证</strong>：通过纯文本 LLM 解释器成功重建多模态推理过程，验证了压缩的有效性和可解释性</li>
+</ol>
+<h3 id="_2">值得关注的点</h3>
+<ul>
+<li>思考 token 的隐表示编码了视觉信息这一发现非常有趣——单个 4096 维的 hidden state 竟然能"存储"足够的视觉细节供纯文本 LLM 重建图像描述</li>
+<li>渐进式蒸馏的策略很实用，避免了直接将整个 CoT 替换为未知 token 对模型造成的剧烈分布偏移</li>
+<li>解释器设计巧妙：不输入 token 符号而是输入其 last hidden state，绕过了"单个 token 携带信息有限"的问题</li>
+</ul>
+<h3 id="_3">局限与展望</h3>
+<ul>
+<li>多个独立解释器增加了系统复杂度，统一解释器是未来方向</li>
+<li>当前仅在 LLaVA-CoT-100k（三阶段 CoT）上验证，更多样的 CoT 结构有待探索</li>
+<li>论文提到会扩展到更大的模型</li>
+</ul>
+  </div>
+</main>
+
+
+<script>
+(function() {
+  const sidebar = document.getElementById('sidebar');
+  const links = sidebar.querySelectorAll('a');
+  const headings = document.querySelectorAll('h1[id], h2[id], h3[id], h4[id]');
+  if (headings.length === 0) return;
+
+  const linkMap = new Map();
+  links.forEach(function(a) {
+    const href = a.getAttribute('href');
+    if (href && href.startsWith('#')) linkMap.set(href.slice(1), a);
+  });
+
+  function onScroll() {
+    let currentId = null;
+    const scrollTop = window.scrollY + 80;
+    headings.forEach(function(h) { if (h.offsetTop <= scrollTop) currentId = h.id; });
+    links.forEach(function(a) { a.classList.remove('active'); });
+    if (currentId && linkMap.has(currentId)) {
+      const el = linkMap.get(currentId);
+      el.classList.add('active');
+      const sr = sidebar.getBoundingClientRect();
+      const er = el.getBoundingClientRect();
+      if (er.bottom > sr.bottom || er.top < sr.top) {
+        el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+    }
+  }
+
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+})();
+</script>
+
+
+<script>
+(function() {
+  const content = document.getElementById('main-content');
+  if (!content) return;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'image-lightbox';
+  overlay.setAttribute('role', 'dialog');
+  overlay.setAttribute('aria-modal', 'true');
+
+  overlay.innerHTML = `
+    <button type="button" class="image-lightbox__close" data-action="close" aria-label="关闭">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M5 5l10 10M15 5L5 15"/>
+      </svg>
+    </button>
+    <div class="image-lightbox__stage">
+      <img class="image-lightbox__image" alt="">
+    </div>
+    <div class="image-lightbox__toolbar" aria-label="图片缩放控制">
+      <button type="button" class="image-lightbox__btn" data-action="zoom-out" aria-label="缩小" title="缩小">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d="M3 9h12"/>
+        </svg>
+      </button>
+      <span class="image-lightbox__zoom-val" data-action="zoom-reset" title="点击重置缩放" role="button" tabindex="0">100%</span>
+      <button type="button" class="image-lightbox__btn" data-action="zoom-in" aria-label="放大" title="放大">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d="M3 9h12M9 3v12"/>
+        </svg>
+      </button>
+    </div>
+    <div class="image-lightbox__caption"></div>
+  `;
+  document.body.appendChild(overlay);
+
+  const stage = overlay.querySelector('.image-lightbox__stage');
+  const image = overlay.querySelector('.image-lightbox__image');
+  const zoomLabel = overlay.querySelector('.image-lightbox__zoom-val');
+  const caption = overlay.querySelector('.image-lightbox__caption');
+
+  const minZoom = 0.25;
+  const maxZoom = 5;
+  const step = 0.25;
+  let zoom = 1;
+  let fitWidth = 1;
+
+  function clamp(value) {
+    return Math.min(maxZoom, Math.max(minZoom, value));
+  }
+
+  function centerImage(animate) {
+    requestAnimationFrame(function() {
+      var left = Math.max(0, (stage.scrollWidth - stage.clientWidth) / 2);
+      var top = Math.max(0, (stage.scrollHeight - stage.clientHeight) / 2);
+      stage.scrollTo({ left: left, top: top, behavior: animate ? 'smooth' : 'auto' });
+    });
+  }
+
+  function applyZoom(animate) {
+    image.style.width = Math.max(1, Math.round(fitWidth * zoom)) + 'px';
+    zoomLabel.textContent = Math.round(zoom * 100) + '%';
+    centerImage(animate);
+  }
+
+  function setZoom(value, animate) {
+    zoom = clamp(value);
+    applyZoom(animate);
+  }
+
+  function computeFitSize() {
+    var w = image.naturalWidth || 1;
+    var h = image.naturalHeight || 1;
+    var maxW = Math.max(1, stage.clientWidth - 48);
+    var maxH = Math.max(1, stage.clientHeight - 48);
+    var fitScale = Math.min(1, maxW / w, maxH / h);
+    fitWidth = Math.max(1, w * fitScale);
+    applyZoom(false);
+  }
+
+  function openImage(source) {
+    image.onload = computeFitSize;
+    image.alt = source.alt || '';
+    caption.textContent = source.alt || '';
+    image.src = source.currentSrc || source.src;
+    zoom = 1;
+    overlay.classList.add('is-open');
+    document.body.classList.add('image-lightbox-open');
+    if (image.complete) computeFitSize();
+  }
+
+  function closeImage() {
+    overlay.classList.remove('is-open');
+    document.body.classList.remove('image-lightbox-open');
+    image.onload = null;
+    image.style.removeProperty('width');
+    image.removeAttribute('src');
+  }
+
+  overlay.addEventListener('click', function(event) {
+    var action = event.target.closest('[data-action]');
+    if (action) {
+      var type = action.getAttribute('data-action');
+      if (type === 'zoom-in') setZoom(zoom + step, true);
+      if (type === 'zoom-out') setZoom(zoom - step, true);
+      if (type === 'zoom-reset') setZoom(1, true);
+      if (type === 'close') closeImage();
+      return;
+    }
+    if (event.target === overlay || event.target === stage) closeImage();
+  });
+
+  overlay.addEventListener('wheel', function(event) {
+    if (!overlay.classList.contains('is-open')) return;
+    if (!event.ctrlKey && !event.metaKey) return;
+    event.preventDefault();
+    setZoom(zoom + (event.deltaY < 0 ? step : -step), true);
+  }, { passive: false });
+
+  document.addEventListener('keydown', function(event) {
+    if (!overlay.classList.contains('is-open')) return;
+    if (event.key === 'Escape') closeImage();
+    if (event.key === '+' || event.key === '=') setZoom(zoom + step, true);
+    if (event.key === '-' || event.key === '_') setZoom(zoom - step, true);
+    if (event.key === '0') setZoom(1, true);
+  });
+
+  window.addEventListener('resize', function() {
+    if (overlay.classList.contains('is-open')) computeFitSize();
+  });
+
+  content.querySelectorAll('img').forEach(function(img) {
+    if (img.closest('a')) return;
+    img.setAttribute('tabindex', '0');
+    img.setAttribute('title', img.getAttribute('title') || '点击放大查看');
+    img.addEventListener('click', function() { openImage(img); });
+    img.addEventListener('keydown', function(event) {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        openImage(img);
+      }
+    });
+  });
+})();
+</script>
+
+</body>
+</html>
