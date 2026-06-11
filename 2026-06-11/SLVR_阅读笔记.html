@@ -1,0 +1,1032 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SLVR: Semantic-Enriched Latent Visual Reasoning</title>
+<!-- arxiv: 2605.19342 -->
+<!-- venue: ICML 2026 -->
+<!-- tags: VLA, 视觉推理, 强化学习 -->
+<!-- words-zh: 2179 -->
+<!-- words-en: 397 -->
+<!-- reading-time: 8 -->
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #ffffff;
+    --text: #1a1a2e;
+    --text-secondary: #555;
+    --border: #e1e4e8;
+    --link: #0969da;
+    --table-stripe: #f6f8fa;
+    --heading: #0d1117;
+    --blockquote-border: #0969da;
+    --blockquote-bg: #f0f6ff;
+    --inline-code: #d73a49;
+    --inline-code-bg: #f6f8fa;
+    --sidebar-width: 260px;
+    --toc-active: #0969da;
+    --content-max-width: 1350px;
+    --media-max-width: 1000px;
+    --content-padding: 48px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "Inter", "Noto Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 16px;
+    line-height: 1.75;
+    color: var(--text);
+    background: var(--bg);
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    width: var(--sidebar-width);
+    overflow-y: auto;
+    padding: 28px 20px 40px;
+    background: #fafbfc;
+    border-right: 1px solid var(--border);
+    z-index: 10;
+    scrollbar-width: thin;
+  }
+  .sidebar-title {
+    font-size: 13px; font-weight: 700; color: var(--text-secondary);
+    margin-bottom: 16px; letter-spacing: 0.06em; text-transform: uppercase;
+  }
+  .toc-list { list-style: none; padding: 0; margin: 0; }
+  .toc-list ul { list-style: none; padding-left: 14px; }
+  .toc-list li { margin: 1px 0; }
+  .toc-list a {
+    display: block; padding: 4px 12px; font-size: 13.5px; line-height: 1.45;
+    color: var(--text-secondary); text-decoration: none; border-radius: 4px;
+    border-left: 2px solid transparent; transition: all 0.15s;
+  }
+  .toc-list a:hover { color: var(--link); background: #e8f0fe; }
+  .toc-list a.active {
+    color: var(--toc-active); font-weight: 600;
+    border-left-color: var(--toc-active); background: #e8f0fe;
+  }
+  .toc-h1 a { font-weight: 600; color: var(--heading); font-size: 14px; }
+  .toc-h3 a { padding-left: 24px; font-size: 13px; }
+  .toc-h4 a { padding-left: 36px; font-size: 12.5px; }
+  .toc-empty { color: var(--text-secondary); font-size: 13px; font-style: italic; }
+
+  .main-wrapper {
+    margin-left: var(--sidebar-width);
+    min-height: 100vh;
+    display: flex; justify-content: center;
+  }
+  .content-inner {
+    width: 100%;
+    max-width: var(--content-max-width);
+    padding: 40px var(--content-padding) 80px;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    color: var(--heading); font-weight: 700; line-height: 1.3;
+    margin-top: 2em; margin-bottom: 0.6em; scroll-margin-top: 24px;
+  }
+  h1 { font-size: 2em; border-bottom: 2px solid var(--border); padding-bottom: 0.3em; margin-top: 0; }
+  h2 { font-size: 1.5em; border-bottom: 1px solid var(--border); padding-bottom: 0.25em; }
+  h3 { font-size: 1.25em; }
+  h4 { font-size: 1.1em; }
+  p { margin-bottom: 1em; }
+  a { color: var(--link); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  strong { font-weight: 600; }
+
+  blockquote {
+    border-left: 4px solid var(--blockquote-border);
+    background: var(--blockquote-bg);
+    padding: 12px 20px; margin: 1em 0;
+    border-radius: 0 6px 6px 0; color: var(--text-secondary);
+  }
+  blockquote p:last-child { margin-bottom: 0; }
+
+  code {
+    font-family: "JetBrains Mono", "SF Mono", "Fira Code", monospace;
+    font-size: 0.875em; background: var(--inline-code-bg);
+    padding: 2px 6px; border-radius: 4px; color: var(--inline-code);
+  }
+  pre {
+    background: #f6f8fa; color: #24292f;
+    border: 1px solid var(--border);
+    border-radius: 8px; padding: 16px 20px; overflow-x: auto;
+    margin: 1em 0; font-size: 14px; line-height: 1.55;
+  }
+  pre code { background: none; padding: 0; border-radius: 0; color: inherit; font-size: inherit; }
+
+  .codehilite { background: #f6f8fa; border: 1px solid var(--border); border-radius: 8px; padding: 16px 20px; overflow-x: auto; margin: 1em 0; }
+  .codehilite pre { background: none; padding: 0; margin: 0; border-radius: 0; }
+  .codehilite .hll { background-color: #fff8c5; }
+  .codehilite .c  { color: #6e7781; font-style: italic; }
+  .codehilite .k  { color: #cf222e; }
+  .codehilite .o  { color: #0550ae; }
+  .codehilite .s  { color: #0a3069; }
+  .codehilite .n  { color: #24292f; }
+  .codehilite .p  { color: #24292f; }
+  .codehilite .mi { color: #0550ae; }
+  .codehilite .nf { color: #8250df; }
+  .codehilite .nb { color: #953800; }
+  .codehilite .nc { color: #953800; }
+  .codehilite .bp { color: #953800; }
+
+  table { width: 100%; border-collapse: collapse; margin: 1em 0; font-size: 0.925em; }
+  th, td { border: 1px solid var(--border); padding: 10px 14px; text-align: left; }
+  th { background: var(--table-stripe); font-weight: 600; color: var(--heading); }
+  tr:nth-child(even) td { background: var(--table-stripe); }
+
+  .math.display { display: block; overflow-x: auto; padding: 12px 0; margin: 1em 0; }
+  ul, ol { padding-left: 1.5em; margin-bottom: 1em; }
+  li { margin-bottom: 0.3em; }
+  hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+  img { max-width: min(100%, var(--media-max-width)); height: auto; border-radius: 6px; margin: 0 auto; display: block; }
+  #main-content img { cursor: zoom-in; }
+  p:has(img) { text-align: center; max-width: var(--media-max-width); margin: 0.6em auto 0; }
+  table:has(img) { width: min(100%, var(--media-max-width)) !important; margin-left: auto; margin-right: auto; }
+  p:has(img) + p { text-align: center; font-size: 0.9em; color: var(--text-secondary); margin-top: 0.15em; margin-bottom: 0.6em; }
+  .mermaid { text-align: center; margin: 1.5em 0; background: #fafbfc; border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+  .article-stats {
+    font-size: 0.85rem; color: var(--text-secondary);
+    padding: 10px 18px; margin-bottom: 28px;
+    background: #f8f9fa; border: 1px solid var(--border); border-radius: 8px;
+  }
+  body.image-lightbox-open { overflow: hidden; }
+  .image-lightbox {
+    position: fixed; inset: 0; z-index: 1000;
+    display: none;
+    background: rgba(9, 12, 20, 0.88);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+  }
+  .image-lightbox.is-open { display: block; }
+
+  /* Stage uses flexbox to center the image; safe alignment prevents
+     clipping when zoomed-in content overflows — it falls back to
+     start so scrollbars reach every pixel. */
+  .image-lightbox__stage {
+    width: 100%; height: 100%;
+    overflow: auto;
+    display: flex;
+    align-items: safe center;
+    justify-content: safe center;
+    padding: 24px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.18) transparent;
+  }
+
+  .image-lightbox__image {
+    max-width: none; max-height: none;
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 20px 70px rgba(0, 0, 0, 0.5);
+    cursor: zoom-in;
+    flex-shrink: 0;
+    transition: box-shadow 0.3s;
+  }
+
+  /* Close button — top-right glass circle */
+  .image-lightbox__close {
+    position: absolute; top: 20px; right: 20px; z-index: 1010;
+    width: 40px; height: 40px;
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.25);
+    color: rgba(255,255,255,0.85);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    transition: background 0.2s, border-color 0.2s, transform 0.2s, color 0.2s;
+  }
+  .image-lightbox__close:hover {
+    background: rgba(255,255,255,0.15);
+    border-color: rgba(255,255,255,0.3);
+    color: #fff;
+    transform: scale(1.08);
+  }
+
+  /* Zoom toolbar — bottom-center glass pill */
+  .image-lightbox__toolbar {
+    position: absolute; bottom: 28px; left: 50%; transform: translateX(-50%); z-index: 1010;
+    display: flex; align-items: center; gap: 4px;
+    padding: 6px;
+    background: rgba(30, 30, 45, 0.75);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 32px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.35);
+  }
+
+  .image-lightbox__btn {
+    width: 36px; height: 36px;
+    border: none; border-radius: 50%;
+    background: transparent;
+    color: rgba(255,255,255,0.82);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.2s, color 0.2s;
+  }
+  .image-lightbox__btn:hover {
+    background: rgba(255,255,255,0.13);
+    color: #fff;
+  }
+
+  .image-lightbox__zoom-val {
+    min-width: 52px; text-align: center;
+    color: rgba(255,255,255,0.82);
+    font: 600 12.5px/32px "Inter", -apple-system, sans-serif;
+    cursor: pointer; user-select: none;
+    border-radius: 20px; padding: 0 6px;
+    transition: background 0.2s, color 0.2s;
+    letter-spacing: -0.01em;
+  }
+  .image-lightbox__zoom-val:hover {
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+  }
+
+  .image-lightbox__caption {
+    position: absolute; left: 28px; right: 28px; bottom: 96px; z-index: 1005;
+    color: rgba(255,255,255,0.72); text-align: center;
+    font-size: 13px; line-height: 1.45;
+    pointer-events: none;
+  }
+
+  @media (max-width: 1024px) {
+    .sidebar { position: static; width: 100%; height: auto; max-height: 35vh; border-right: none; border-bottom: 1px solid var(--border); }
+    .main-wrapper { margin-left: 0; display: block; }
+    .content-inner { max-width: none; padding: 24px 20px 60px; }
+    .image-lightbox__stage { padding: 12px; }
+    .image-lightbox__close { top: 12px; right: 12px; width: 36px; height: 36px; }
+    .image-lightbox__toolbar { bottom: 18px; padding: 5px; gap: 2px; }
+    .image-lightbox__btn { width: 32px; height: 32px; }
+    .image-lightbox__caption { bottom: 78px; left: 18px; right: 18px; }
+  }
+</style>
+
+<script>
+MathJax = {
+  tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']], processEscapes: true, tags: 'none' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] }
+};
+</script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  mermaid.initialize({ startOnLoad: true, theme: 'neutral', securityLevel: 'loose' });
+});
+</script>
+
+</head>
+<body>
+
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-title">目录</div>
+  <ul class="toc-list">
+<li class="toc-h1"><a href="#slvr-semantic-enriched-latent-visual-reasoning">SLVR: Semantic-Enriched Latent Visual Reasoning</a>
+<ul>
+</li>
+<li class="toc-h2"><a href="#_1">一、核心问题</a>
+</li>
+<li class="toc-h2"><a href="#_2">二、核心思路 / 方法</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#21-stage-1-latent-structured-latent-learning">2.1 Stage 1：结构化 Latent 学习（Structured Latent Learning）</a>
+</li>
+<li class="toc-h3"><a href="#22-stage-2m-grpo">2.2 Stage 2：多查询分组相对策略优化（M-GRPO）</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_3">三、数据集构建</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#31-slv-set">3.1 SLV-Set</a>
+</li>
+<li class="toc-h3"><a href="#32-sv-qa">3.2 SV-QA 评估基准</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_4">四、代码架构</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#41">4.1 项目结构</a>
+</li>
+<li class="toc-h3"><a href="#42">4.2 关键技术细节</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_5">五、实验结果</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#51-vqa">5.1 标准 VQA 基准</a>
+</li>
+<li class="toc-h3"><a href="#52-sv-qa">5.2 SV-QA 基准（核心实验）</a>
+</li>
+<li class="toc-h3"><a href="#53-visualpuzzles">5.3 VisualPuzzles 推理能力评估</a>
+</li>
+<li class="toc-h3"><a href="#54">5.4 消融实验</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_6">六、关键洞察与讨论</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#61-latent-latent">6.1 为什么需要语义 latent 而不只是视觉 latent？</a>
+</li>
+<li class="toc-h3"><a href="#62-m-grpo-motivation">6.2 M-GRPO 的 motivation</a>
+</li>
+<li class="toc-h3"><a href="#63-deepeyes">6.3 与 DeepEyes 等"看图思考"方法的关系</a>
+</li>
+<li class="toc-h3"><a href="#64">6.4 局限性</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_7">七、总结</a>
+</ul></li>
+</li></ul>
+</nav>
+
+<main class="main-wrapper">
+  <div class="content-inner" id="main-content">
+<h1 id="slvr-semantic-enriched-latent-visual-reasoning">SLVR: Semantic-Enriched Latent Visual Reasoning</h1>
+<div class="article-stats">2,179 字 · English 397 词 · 约 8 分钟阅读</div>
+
+<blockquote>
+<p><strong>论文信息</strong>
+- 作者：Tianrun Xu, Yue Sun, Qixun Wang, Jingyi Lu, Yuan Wang, Tianren Zhang, Longteng Guo, Fengyun Rao, Jing LYU, Feng Chen†, Jing Liu†
+- 通讯作者：Feng Chen (chenfeng@mail.tsinghua.edu.cn), Jing Liu (jliu@nlpr.ia.ac.cn)
+- 单位：清华大学自动化系 &amp; 电子系、中关村人工智能学院、中国农业大学、北京大学、北京理工大学、中科院自动化所、腾讯微信视觉
+- 发表：ICML 2026
+- arXiv ID：2605.19342
+- 代码：https://github.com/tinnel123666888/slvr
+- 数据集：SLV-Set（<a href="https://huggingface.co/datasets/tinnel123/slv-set">tinnel123/slv-set</a>）、SV-QA（<a href="https://huggingface.co/datasets/tinnel123/sv-qa">tinnel123/sv-qa</a>）</p>
+</blockquote>
+<hr />
+<h2 id="_1">一、核心问题</h2>
+<p>现有的多模态潜在空间推理（latent visual reasoning）方法，如 LVR（Latent Visual Reasoning），试图用紧凑的潜在表征替代显式的"看图思考"（thinking with images）过程。但这些方法存在两个根本性问题：</p>
+<ol>
+<li><strong>语义贫乏</strong>：LVR 仅依赖视觉特征重建作为监督信号（MSE alignment to vision encoder features），学到的 latent 主要编码外观级（appearance-level）信息，缺乏对物体属性、状态、关系等细粒度语义的显式建模。</li>
+<li><strong>单一查询视角</strong>：现有方法的 latent 训练由单一任务驱动，没有统一的机制让同一个 rich latent 支持同一区域上的多种推理粒度。当同一区域被从不同语义角度提问时，单查询训练的 latent 无法稳定支持所有回答。</li>
+</ol>
+<p><img alt="图1：三种视觉推理范式对比" src="assets/slvr/figure1_n.png" /></p>
+<p><em>图1：三种视觉推理范式对比。(a) 显式推理或裁剪证据；(b) 仅视觉监督的 latent 推理；(c) SLVR：视觉 + 语义双重监督，跨问题对比对齐。</em></p>
+<hr />
+<h2 id="_2">二、核心思路 / 方法</h2>
+<p>SLVR 提出一个<strong>两阶段学习框架</strong>，核心思想：先让 latent 编码丰富的属性级语义，再通过多查询优化对齐 latent 与多样的推理目标。</p>
+<h3 id="21-stage-1-latent-structured-latent-learning">2.1 Stage 1：结构化 Latent 学习（Structured Latent Learning）</h3>
+<p><img alt="图2：SLVR 框架概览（Stage 1 &amp; Stage 2）" src="assets/slvr/figure2.png" /></p>
+<p><em>图2：SLVR 框架概览。(a) Stage 1 结构化 latent 学习；(b) Stage 2 M-GRPO 多查询优化。</em></p>
+<p><strong>输入与 Token 构造：</strong></p>
+<p>给定图像 <span class="math inline">$I$</span> 和问题 <span class="math inline">$q$</span>，通过 vision encoder 编码后，用 bounding box 指定的 ROI token 序列被包裹在 <code>&lt;|vision_start|&gt;</code> 和 <code>&lt;|vision_end|&gt;</code> 之间，形成<strong>区域视觉 latent</strong> <span class="math inline">$\mathcal{H}_{vis} = \{\mathbf{h}^{lat}_t\}_{t=1}^{T_v}$</span>。</p>
+<p>在 <code>&lt;|vision_end|&gt;</code> 之后插入特殊 token <code>&lt;sem&gt;</code>，其隐藏状态作为<strong>语义 latent</strong> <span class="math inline">$\mathbf{z}_{sem}$</span>，用于聚合区域级语义信息。</p>
+<p><strong>三个监督信号：</strong></p>
+<table>
+<thead>
+<tr>
+<th>损失</th>
+<th>目标</th>
+<th>公式</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><span class="math inline">$\mathcal{L}_{vis}$</span></td>
+<td>区域视觉 latent 对齐 vision encoder 特征</td>
+<td><span class="math inline">$\sum_{t=1}^{T_v} \| \mathbf{h}^{lat}_t - \mathbf{v}^{enc}_t \|_2^2$</span></td>
+</tr>
+<tr>
+<td><span class="math inline">$\mathcal{L}_{sem}$</span></td>
+<td>语义 latent 对齐属性语义嵌入</td>
+<td><span class="math inline">$\text{MSE}(W\mathbf{z}_{sem}, \mathbf{e})$</span>，其中 <span class="math inline">$\mathbf{e} \in \mathbb{R}^{4096}$</span> 是 Qwen3 embedding 编码的属性描述</td>
+</tr>
+<tr>
+<td><span class="math inline">$\mathcal{L}_{ans}$</span></td>
+<td>答案监督（标准 LM loss）</td>
+<td>自回归交叉熵</td>
+</tr>
+</tbody>
+</table>
+<p>总目标：<span class="math inline">$\mathcal{L}_{stage1} = \mathcal{L}_{vis} + \mathcal{L}_{sem}$</span></p>
+<p><strong>关键设计（代码印证）：</strong></p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># 特殊 token 定义（src/constants.py）</span>
+<span class="n">VISION_START_TOKEN</span> <span class="o">=</span> <span class="s2">&quot;&lt;|vision_start|&gt;&quot;</span>
+<span class="n">VISION_END_TOKEN</span> <span class="o">=</span> <span class="s2">&quot;&lt;|vision_end|&gt;&quot;</span>
+<span class="n">SEM_TOKEN</span> <span class="o">=</span> <span class="s2">&quot;&lt;|sem|&gt;&quot;</span>
+<span class="n">SEM_END_TOKEN</span> <span class="o">=</span> <span class="s2">&quot;&lt;/sem&gt;&quot;</span>
+
+<span class="c1"># 语义投影头（src/model/slvr_heads.py）</span>
+<span class="k">class</span> <span class="nc">SLVRTextHead</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+    <span class="c1"># 将 hidden_size → 4096 维语义嵌入空间</span>
+    <span class="c1"># 结构：LayerNorm → Linear → GELU → Linear</span>
+</code></pre></div>
+
+<h3 id="22-stage-2m-grpo">2.2 Stage 2：多查询分组相对策略优化（M-GRPO）</h3>
+<p>Stage 2 的核心是 <strong>M-GRPO</strong>（Multi-query Group Relative Policy Optimization），继承自 DeepSeek-R1 的 GRPO 框架，但针对多查询场景做了扩展。</p>
+<p><strong>核心思想：</strong> 对同一区域 <span class="math inline">$r$</span> 的两个语义不同的问题 <span class="math inline">$q_1, q_2$</span>，模型分别产生 latent 对 <span class="math inline">$(H_{vis}^{(i)}, z_{sem}^{(i)})$</span>，M-GRPO 通过三项奖励联合优化——</p>
+<table>
+<thead>
+<tr>
+<th>奖励项</th>
+<th>作用</th>
+<th>公式</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><span class="math inline">$\mathcal{R}_{ans}^{(i)}$</span></td>
+<td>答案正确性（LLM judge 评估）</td>
+<td><span class="math inline">$\mathbb{I}(\hat{y}_i = y_i)$</span></td>
+</tr>
+<tr>
+<td><span class="math inline">$\mathcal{R}_{cons}$</span></td>
+<td><strong>跨查询 latent 一致性</strong>（同时约束视觉和语义 latent）</td>
+<td><span class="math inline">$-\sum_{i \neq j} \left( \lambda_{sem}\|z_{sem}^{(i)} - z_{sem}^{(j)}\|_2 + \lambda_{vis}\frac{1}{T_v}\sum_t \|h_t^{(i)} - h_t^{(j)}\|_2 \right)$</span></td>
+</tr>
+<tr>
+<td><span class="math inline">$\mathcal{R}_{stab}^{(i)}$</span></td>
+<td><strong>稳定性正则化</strong>（防止偏离 Stage 1 分布）</td>
+<td><span class="math inline">$-\max(0, \|z_{sem}^{(i)} - \bar{z}_{sem}\|_2 - \tau_{sem}) - \max(0, \frac{1}{T_v}\sum_t \|h_t^{(i)} - \bar{h}_t\|_2 - \tau_{vis})$</span></td>
+</tr>
+</tbody>
+</table>
+<p><strong>GRPO 更新公式：</strong></p>
+<p><div class="math display">$$\mathcal{J}_{\text{M-GRPO}}(\theta) = \mathbb{E}_{(I,r), (q_1,q_2), o \sim \pi_{\theta_{old}}} \left[ \frac{1}{2}\sum_{i=1}^{2} \frac{1}{G}\sum_{g=1}^{G} \frac{1}{|O_{i,g}|}\sum_t \min(\rho_{i,g,t} \hat{A}_{i,g,t}, \text{clip}(\rho_{i,g,t}, 1-\epsilon, 1+\epsilon) \hat{A}_{i,g,t}) - \beta D_{KL}(\pi_\theta \| \pi_{\theta_{old}}) \right]$$</div></p>
+<p><strong>代码印证（src/params.py）：</strong></p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># M-GRPO 关键超参数</span>
+<span class="n">lambda_sem</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.01</span>    <span class="c1"># 语义 latent 一致性权重</span>
+<span class="n">lambda_vis</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.01</span>    <span class="c1"># 视觉 latent 一致性权重</span>
+<span class="n">tau_sem</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span>        <span class="c1"># 语义 latent 稳定容忍度</span>
+<span class="n">tau_vis</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span>        <span class="c1"># 视觉 latent 稳定容忍度</span>
+<span class="n">lambda_consistency</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.05</span>   <span class="c1"># 整体一致性奖励</span>
+<span class="n">lambda_stability</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.05</span>     <span class="c1"># 整体稳定性奖励</span>
+</code></pre></div>
+
+<p><strong>Judge 机制（src/train/mgrpo_reward_funcs.py）：</strong></p>
+<ul>
+<li>使用 Qwen3-Max 作为 LLM judge，通过 vLLM 推理服务</li>
+<li>后台线程定期从 broker 刷新 IP 池，ThreadPoolExecutor 并发调用</li>
+<li>支持 judge 不可用时自动回退到字符串匹配</li>
+<li>正确答案性判断：语义等价性比较（支持字母选项 / 文本答案 / 数字匹配）</li>
+</ul>
+<hr />
+<h2 id="_3">三、数据集构建</h2>
+<h3 id="31-slv-set">3.1 SLV-Set</h3>
+<p>基于 Visual-CoT（ViSCoT）数据集构建，包含两个互补组件：</p>
+<table>
+<thead>
+<tr>
+<th>组件</th>
+<th>规模</th>
+<th>内容</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>属性级语义数据集</td>
+<td>~400K 区域描述</td>
+<td>Qwen3-VL-235B 生成的结构化区域语义档案（实体、颜色、形状、材质、动作、交互、空间关系、文字内容）</td>
+<td>Stage 1 语义监督</td>
+</tr>
+<tr>
+<td>多查询数据集</td>
+<td>~800K QA 对</td>
+<td>每个区域关联 2-4 个从不同语义角度提问的 QA 对</td>
+<td>Stage 2 M-GRPO 训练</td>
+</tr>
+</tbody>
+</table>
+<p><img alt="图3：数据集构建示意" src="assets/slvr/dataset_region_multiq.png" /></p>
+<p><em>图3：数据集构建流程。(a) 区域语义档案构建（属性级标注）；(b) 多查询问题生成。</em></p>
+<p><strong>质量验证：</strong> 人工后验检查全部 SLV-Set，发现 29,457 条错误标注（错误率 7.29%）。主要错误类型：颜色错配（19.94%）、动作/姿态错误（14.55%）、空间关系错误（13.28%）、幻觉属性（11.80%）。</p>
+<p>每个样本格式：<span class="math inline">$(q, i, b, \mathcal{A}, \mathbf{e})$</span> — 问题、图像、边界框、属性集、4096 维语义嵌入。</p>
+<h3 id="32-sv-qa">3.2 SV-QA 评估基准</h3>
+<p>基于 V<em>、HRBench-4K、HRBench-8K 构建，每个区域从原始问题 <span class="math inline">$q_1$</span> 和生成的 <span class="math inline">$q_2$</span> 两个语义维度提问。</em><em>591 对样本</em>*，经人工审查修正（19 题与原始题过度重叠、8 题含幻觉内容）。</p>
+<hr />
+<h2 id="_4">四、代码架构</h2>
+<h3 id="41">4.1 项目结构</h3>
+<div class="codehilite"><pre><span></span><code><span class="n">slvr</span><span class="o">/</span>
+<span class="err">├──</span><span class="w"> </span><span class="n">src</span><span class="o">/</span>
+<span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">model</span><span class="o">/</span>
+<span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">qwen_slvr_model</span><span class="o">.</span><span class="n">py</span><span class="w">      </span><span class="c1"># QwenWithSLVR 模型定义（含特殊 token embedding）</span>
+<span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">qwen_slvr_model_ori</span><span class="o">.</span><span class="n">py</span><span class="w">  </span><span class="c1"># 原始版本</span>
+<span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">   </span><span class="err">└──</span><span class="w"> </span><span class="n">slvr_heads</span><span class="o">.</span><span class="n">py</span><span class="w">           </span><span class="c1"># SLVRHead（视觉）/ SLVRTextHead（语义）/ SLVRHeadGLU</span>
+<span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">train</span><span class="o">/</span>
+<span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">train_sft</span><span class="o">.</span><span class="n">py</span><span class="w">            </span><span class="c1"># Stage 1 SFT 训练入口</span>
+<span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">train_mgrpo</span><span class="o">.</span><span class="n">py</span><span class="w">          </span><span class="c1"># Stage 2 M-GRPO 训练入口</span>
+<span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">train_grpo</span><span class="o">.</span><span class="n">py</span><span class="w">           </span><span class="c1"># 标准 GRPO 训练入口（消融用）</span>
+<span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">mgrpo_reward_funcs</span><span class="o">.</span><span class="n">py</span><span class="w">   </span><span class="c1"># M-GRPO 奖励函数（accuracy + format）</span>
+<span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">monkey_patch_forward_slvr</span><span class="o">.</span><span class="n">py</span><span class="w">       </span><span class="c1"># 训练前向 monkey-patch（核心）</span>
+<span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">monkey_patch_forward_slvr_rl</span><span class="o">.</span><span class="n">py</span><span class="w">    </span><span class="c1"># RL 专用 monkey-patch</span>
+<span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">   </span><span class="err">└──</span><span class="w"> </span><span class="n">preflight_mgrpo_infer</span><span class="o">.</span><span class="n">py</span><span class="w">           </span><span class="c1"># M-GRPO 推理预检</span>
+<span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">dataset</span><span class="o">/</span><span class="w">                    </span><span class="c1"># 数据集加载（SFT / M-GRPO）</span>
+<span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">trainer</span><span class="o">/</span>
+<span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">   </span><span class="err">└──</span><span class="w"> </span><span class="n">mgrpo_trainer</span><span class="o">.</span><span class="n">py</span><span class="w">       </span><span class="c1"># M-GRPO Trainer（含 consistency/stability 奖励计算）</span>
+<span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">slvr_utils</span><span class="o">.</span><span class="n">py</span><span class="w">              </span><span class="c1"># Bbox → Token 索引映射（QwenVLBboxTokenMapper）</span>
+<span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">params</span><span class="o">.</span><span class="n">py</span><span class="w">                   </span><span class="c1"># 训练参数定义（含 M-GRPO 超参数）</span>
+<span class="err">│</span><span class="w">   </span><span class="err">└──</span><span class="w"> </span><span class="n">constants</span><span class="o">.</span><span class="n">py</span><span class="w">                </span><span class="c1"># 特殊 token 定义</span>
+<span class="err">├──</span><span class="w"> </span><span class="n">scripts</span><span class="o">/</span>
+<span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">finetune_slvr_stage1_7b_viscot</span><span class="o">.</span><span class="n">sh</span><span class="w">    </span><span class="c1"># Stage 1 训练脚本</span>
+<span class="err">│</span><span class="w">   </span><span class="err">└──</span><span class="w"> </span><span class="n">finetune_slvr_stage2_7b_mgrpo_viscot</span><span class="o">.</span><span class="n">sh</span><span class="w">  </span><span class="c1"># Stage 2 训练脚本</span>
+<span class="err">├──</span><span class="w"> </span><span class="n">inf_batch_dir_old</span><span class="o">.</span><span class="n">py</span><span class="w">            </span><span class="c1"># 批量推理脚本</span>
+<span class="err">├──</span><span class="w"> </span><span class="n">environment</span><span class="o">.</span><span class="n">yaml</span><span class="w">                </span><span class="c1"># Conda 环境</span>
+<span class="err">└──</span><span class="w"> </span><span class="n">requirements</span><span class="o">.</span><span class="n">txt</span>
+</code></pre></div>
+
+<h3 id="42">4.2 关键技术细节</h3>
+<p><strong>Bounding Box → Token 索引映射（<code>QwenVLBboxTokenMapper</code>）：</strong></p>
+<ul>
+<li>基于 Qwen 2.5 VL 的 vision tower 参数：patch_size=14, spatial_merge_size=2</li>
+<li>动态计算每张图像的 token grid，支持 xyxy / xywh 两种 bbox 格式</li>
+<li>自动归一化 bbox 坐标，提供双向转换（bbox → indices / indices → bbox）</li>
+<li>注意：bbox 标注时维度可能与 Qwen 图像预处理后的实际维度不一致（resize），代码注释提醒使用者<strong>假设 bbox 是归一化的</strong></li>
+</ul>
+<p><strong>前向传播 Monkey-Patch（<code>monkey_patch_forward_slvr.py</code>，~121K，代码库最大文件）：</strong></p>
+<ul>
+<li>替换 Qwen2.5-VL 的 <code>Qwen2_5_VLForConditionalGeneration</code> 前向传播</li>
+<li>支持 3 种模式：<code>inference_mode=False, rl=False</code>（Stage 1 SFT）、<code>inference_mode=False, rl=True</code>（Stage 2 M-GRPO）、<code>inference_mode=True</code>（推理）</li>
+<li>在 hidden states 中提取 <code>&lt;|vision_start|&gt;</code> 到 <code>&lt;|vision_end|&gt;</code> 之间的视觉 latent，以及 <code>&lt;sem&gt;</code> 位置的语义 latent</li>
+</ul>
+<p><strong>M-GRPO Trainer（<code>mgrpo_trainer.py</code>）：</strong></p>
+<ul>
+<li>继承自 TRL 的 GRPOTrainer</li>
+<li>每个 sample 包含两个问题（q1, q2）的 completion</li>
+<li><code>mgrpo_reward_funcs.py</code> 中 accuracy_reward 返回 q1 和 q2 答案正确性的加权组合（默认 q1 权重 0.7, q2 权重 0.3）</li>
+<li>format_reward 检查输出格式：<code>&lt;|vision_start|&gt;[visual latents]&lt;|vision_end|&gt;&lt;sem&gt;[semantic latent]&lt;/sem&gt;&lt;answer&gt;...&lt;/answer&gt;</code></li>
+<li>一致性奖励和稳定性奖励在 trainer 内部从 hidden states 计算（使用 L2 距离）</li>
+</ul>
+<p><strong>推理（<code>inf_batch_dir_old.py</code>）：</strong></p>
+<ul>
+<li>配置类 <code>Config</code>：MODEL_PATH, INPUT_DIR, OUTPUT_DIR, STEPS（latent reasoning 步数，默认 8）</li>
+<li><code>DECODING_STRATEGY = "latent"</code> 启用 SLVR 式推理</li>
+<li>自动检测可用 GPU，OOM 时自动回退</li>
+</ul>
+<hr />
+<h2 id="_5">五、实验结果</h2>
+<h3 id="51-vqa">5.1 标准 VQA 基准</h3>
+<table>
+<thead>
+<tr>
+<th>模型</th>
+<th>推理范式</th>
+<th>OKVQA</th>
+<th>GQA</th>
+<th>VizWiz</th>
+<th>ChartQA</th>
+<th>TextVQA</th>
+<th>AI2D</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Qwen2.5-VL-7B</td>
+<td>纯文本</td>
+<td>58.9</td>
+<td>53.2</td>
+<td>54.1</td>
+<td>74.4</td>
+<td>79.1</td>
+<td>69.5</td>
+</tr>
+<tr>
+<td>LVR</td>
+<td>视觉 latent</td>
+<td>50.6</td>
+<td><strong>57.4</strong></td>
+<td>33.1</td>
+<td>64.4</td>
+<td>75.1</td>
+<td><strong>77.3</strong></td>
+</tr>
+<tr>
+<td><strong>SLVR-7B</strong></td>
+<td>视觉 + 语义 latent</td>
+<td><strong>61.8</strong></td>
+<td>55.6</td>
+<td><strong>57.8</strong></td>
+<td><strong>77.2</strong></td>
+<td><strong>79.3</strong></td>
+<td>76.0</td>
+</tr>
+<tr>
+<td><em>Gain over LVR</em></td>
+<td></td>
+<td><em>+11.2</em></td>
+<td><em>-1.8</em></td>
+<td><em>+24.7</em></td>
+<td><em>+12.8</em></td>
+<td><em>+4.2</em></td>
+<td><em>-1.3</em></td>
+</tr>
+</tbody>
+</table>
+<p><strong>关键发现：</strong> SLVR 在 OKVQA（+11.2）、VizWiz（+24.7）、ChartQA（+12.8）上对 LVR 提升显著，说明语义 latent 在这些需要细粒度语义理解的场景中作用突出。</p>
+<h3 id="52-sv-qa">5.2 SV-QA 基准（核心实验）</h3>
+<table>
+<thead>
+<tr>
+<th>设置</th>
+<th>V* Q1</th>
+<th>V* Q2</th>
+<th>V* Both</th>
+<th>HRBench-4K Both</th>
+<th>HRBench-8K Both</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Qwen2.5-VL</td>
+<td>76.4</td>
+<td>55.5</td>
+<td>44.0</td>
+<td>45.8</td>
+<td>37.5</td>
+</tr>
+<tr>
+<td>DeepEyes（显式裁剪）</td>
+<td><strong>83.3</strong></td>
+<td>79.1</td>
+<td><strong>70.2</strong></td>
+<td>60.6</td>
+<td>49.0</td>
+</tr>
+<tr>
+<td>LVR</td>
+<td>81.7</td>
+<td>77.5</td>
+<td>65.4</td>
+<td>57.9</td>
+<td>46.6</td>
+</tr>
+<tr>
+<td><strong>SLVR-7B</strong></td>
+<td>82.2</td>
+<td><strong>80.1</strong></td>
+<td>69.1</td>
+<td><strong>61.1</strong></td>
+<td><strong>50.6</strong></td>
+</tr>
+<tr>
+<td><em>Gain over LVR</em></td>
+<td><em>+0.5</em></td>
+<td><em>+2.6</em></td>
+<td><em>+3.7</em></td>
+<td><em>+3.2</em></td>
+<td><em>+4.0</em></td>
+</tr>
+</tbody>
+</table>
+<p><strong>关键发现：</strong></p>
+<ul>
+<li>SLVR 在 Both Correct（两个问题都答对）指标上全面超越 LVR（+3.2 ~ +4.0），证明语义 latent 能同时编码多种语义维度</li>
+<li>与其他 method 对比：纯文本方法（Qwen2.5-VL）在 Q2 上性能暴跌（Q1 76.4 → Q2 55.5），说明文本推理无法稳定支持语义变化</li>
+<li>DeepEyes 在 V<em> Q1 上最高（83.3），但这是通过</em><em>推理时显式图像裁剪</em>*实现的，计算开销巨大；SLVR 完全通过 latent 推理实现 competitive 的 Q1 性能</li>
+</ul>
+<h3 id="53-visualpuzzles">5.3 VisualPuzzles 推理能力评估</h3>
+<table>
+<thead>
+<tr>
+<th>模型</th>
+<th>Algorithmic</th>
+<th>Analogical</th>
+<th>Deductive</th>
+<th>Inductive</th>
+<th>Spatial</th>
+<th>Overall</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Qwen2.5-VL</td>
+<td>35.9</td>
+<td>26.1</td>
+<td>35.5</td>
+<td><strong>28.7</strong></td>
+<td>21.3</td>
+<td>29.2</td>
+</tr>
+<tr>
+<td>LVR</td>
+<td>31.3</td>
+<td>25.6</td>
+<td>40.5</td>
+<td>24.4</td>
+<td>26.2</td>
+<td>29.4</td>
+</tr>
+<tr>
+<td><strong>SLVR</strong></td>
+<td><strong>37.4</strong></td>
+<td><strong>28.0</strong></td>
+<td><strong>45.5</strong></td>
+<td>26.3</td>
+<td><strong>33.6</strong></td>
+<td><strong>34.2</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>关键发现：</strong> SLVR 在 Deductive（+5.0）和 Spatial（+7.4）推理类别上大幅超越 LVR，证明属性级语义监督帮助模型捕获了结构化关系和空间线索，这些是纯视觉监督 latent 所遗漏的。</p>
+<h3 id="54">5.4 消融实验</h3>
+<table>
+<thead>
+<tr>
+<th>设置</th>
+<th>组件</th>
+<th>V* Both</th>
+<th>HRBench-4K Both</th>
+<th>HRBench-8K Both</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>文本基线</strong></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>SFT (single-Q)</td>
+<td>—</td>
+<td>51.8</td>
+<td>52.8</td>
+<td>43.5</td>
+</tr>
+<tr>
+<td>SFT (multi-Q)</td>
+<td>+多查询数据</td>
+<td>57.1</td>
+<td>50.1</td>
+<td>41.1</td>
+</tr>
+<tr>
+<td>SFT + GRPO (multi-Q)</td>
+<td>+强化学习</td>
+<td>58.6</td>
+<td>55.5</td>
+<td>47.8</td>
+</tr>
+<tr>
+<td><strong>Latent 推理</strong></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>LVR</td>
+<td>基线</td>
+<td>65.4</td>
+<td>57.9</td>
+<td>46.6</td>
+</tr>
+<tr>
+<td>+ Stage 1</td>
+<td>+语义 latent 监督</td>
+<td>67.5</td>
+<td>59.6</td>
+<td>46.9</td>
+</tr>
+<tr>
+<td>+ GRPO (Single-Q)</td>
+<td>+单查询 GRPO</td>
+<td>62.8</td>
+<td>57.6</td>
+<td>49.3</td>
+</tr>
+<tr>
+<td>+ Multi-Q</td>
+<td>+多查询 GRPO（无 M-GRPO）</td>
+<td>68.1</td>
+<td>60.3</td>
+<td>49.9</td>
+</tr>
+<tr>
+<td><strong>SLVR-7B (Full)</strong></td>
+<td>+M-GRPO 显式一致性约束</td>
+<td><strong>69.1</strong></td>
+<td><strong>61.1</strong></td>
+<td><strong>50.6</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>核心消融结论：</strong></p>
+<ol>
+<li><strong>文本 vs. Latent</strong>：即使是数据量相同的最强文本基线（SFT + GRPO multi-Q），Both Correct 也全面落后 latent 推理方法（V* 58.6 vs. 69.1），说明文本链式思维在"同一区域多角度提问"场景中难以维持稳定 grounding。</li>
+<li><strong>Stage 1 语义监督</strong>：加入语义 latent 后，V* Both 从 65.4 提升到 67.5，验证属性级语义信息有助于 joint correctness。</li>
+<li><strong>多查询 vs. 单查询 GRPO</strong>：Multi-Q（多查询数据 + 标准 GRPO）比 Single-Q GRPO 提升了 Both Correct，说明更多样的训练信号本身有益。</li>
+<li><strong>M-GRPO 一致性约束是关键</strong>：M-GRPO（显式 latent 一致性约束）在 Multi-Q 基础上进一步提升，证明显式对齐同一区域上的 cross-query latent 对语义一致性至关重要。</li>
+</ol>
+<hr />
+<h2 id="_6">六、关键洞察与讨论</h2>
+<h3 id="61-latent-latent">6.1 为什么需要语义 latent 而不只是视觉 latent？</h3>
+<p>LVR 的视觉 latent 通过直接对齐 vision encoder 特征来保留视觉信息，但 vision encoder 的 patch 特征本身不显式编码"这是红色"、"这个人在跑"等属性语义——这些语义分散在深层特征中，缺乏显式的结构化引导。SLVR 引入一个额外的 <code>&lt;sem&gt;</code> token 作为<strong>语义聚合点</strong>，直接以结构化属性文本的嵌入作为监督，迫使模型将分散的视觉语义压缩到该 token 的 hidden state 中。</p>
+<h3 id="62-m-grpo-motivation">6.2 M-GRPO 的 motivation</h3>
+<p>Stage 1 虽然给单个 latent 编码了语义信息，但没有保证<strong>在不同问题的扰动下该语义能稳定激活</strong>。M-GRPO 的 latent consistency reward 直接对"两个不同问题产生不同 latent"这种 drift 进行惩罚，保证同一区域的核心语义表征不受问题表述方式的影响，而只保留 task-specific 的微小差异。</p>
+<h3 id="63-deepeyes">6.3 与 DeepEyes 等"看图思考"方法的关系</h3>
+<p>DeepEyes 通过推理时反复裁剪区域图像来获取高分辨率视觉证据，准确率高但计算开销大。SLVR 通过 latent 学习一次性地将区域信息压缩为 compact 表征，推理时无需显式图像操作。两者不是互斥的——理想情况下，semantic-enriched latent 可以作为 DeepEyes 等方法的"内化"版本，减少裁剪迭代次数。</p>
+<h3 id="64">6.4 局限性</h3>
+<ul>
+<li>语义监督依赖 Qwen3-VL-235B 生成属性标注，存在 7.29% 的错误率（颜色错配、动作/姿态错误等），语义 latent 的上限受制于属性标注质量</li>
+<li>语义 latent 通过 L2 对齐 Qwen3 embedding 来学习，没有显式验证学到的 latent 是否保留了可解释的语义维度</li>
+<li>实验在 Qwen2.5-VL-7B 上进行，更大规模模型的 scaling behavior 未知</li>
+<li>M-GRPO 的两问题联合优化目前限制在 q1 + q2 组内，扩展到 3+ 问题可能需要新的 group 构建策略</li>
+</ul>
+<hr />
+<h2 id="_7">七、总结</h2>
+<p>SLVR 通过两阶段训练为 latent visual reasoning 引入<strong>细粒度属性级语义监督</strong>和<strong>多查询一致性对齐</strong>：</p>
+<ul>
+<li><strong>Stage 1</strong>：在 LVR 的视觉 latent 重建基础上，新增 <code>&lt;sem&gt;</code> 语义 latent 和属性语义对齐损失，使 latent 编码结构化语义</li>
+<li><strong>Stage 2</strong>：设计 M-GRPO，同时优化同一区域两个语义不同问题的答案正确性、latent 一致性和分布稳定性</li>
+<li>配套构建 SLV-Set（~400K 属性 + 800K QA 对）和 SV-QA（591 对多角度问题）数据集</li>
+<li>在 SV-QA 的 Both Correct 指标上全面超越 LVR（+3.2 ~ +4.0），在 VisualPuzzles 的 Deductive 推理上超越 LVR 5 个百分点</li>
+</ul>
+  </div>
+</main>
+
+
+<script>
+(function() {
+  const sidebar = document.getElementById('sidebar');
+  const links = sidebar.querySelectorAll('a');
+  const headings = document.querySelectorAll('h1[id], h2[id], h3[id], h4[id]');
+  if (headings.length === 0) return;
+
+  const linkMap = new Map();
+  links.forEach(function(a) {
+    const href = a.getAttribute('href');
+    if (href && href.startsWith('#')) linkMap.set(href.slice(1), a);
+  });
+
+  function onScroll() {
+    let currentId = null;
+    const scrollTop = window.scrollY + 80;
+    headings.forEach(function(h) { if (h.offsetTop <= scrollTop) currentId = h.id; });
+    links.forEach(function(a) { a.classList.remove('active'); });
+    if (currentId && linkMap.has(currentId)) {
+      const el = linkMap.get(currentId);
+      el.classList.add('active');
+      const sr = sidebar.getBoundingClientRect();
+      const er = el.getBoundingClientRect();
+      if (er.bottom > sr.bottom || er.top < sr.top) {
+        el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+    }
+  }
+
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+})();
+</script>
+
+
+<script>
+(function() {
+  const content = document.getElementById('main-content');
+  if (!content) return;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'image-lightbox';
+  overlay.setAttribute('role', 'dialog');
+  overlay.setAttribute('aria-modal', 'true');
+
+  overlay.innerHTML = `
+    <button type="button" class="image-lightbox__close" data-action="close" aria-label="关闭">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M5 5l10 10M15 5L5 15"/>
+      </svg>
+    </button>
+    <div class="image-lightbox__stage">
+      <img class="image-lightbox__image" alt="">
+    </div>
+    <div class="image-lightbox__toolbar" aria-label="图片缩放控制">
+      <button type="button" class="image-lightbox__btn" data-action="zoom-out" aria-label="缩小" title="缩小">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d="M3 9h12"/>
+        </svg>
+      </button>
+      <span class="image-lightbox__zoom-val" data-action="zoom-reset" title="点击重置缩放" role="button" tabindex="0">100%</span>
+      <button type="button" class="image-lightbox__btn" data-action="zoom-in" aria-label="放大" title="放大">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d="M3 9h12M9 3v12"/>
+        </svg>
+      </button>
+    </div>
+    <div class="image-lightbox__caption"></div>
+  `;
+  document.body.appendChild(overlay);
+
+  const stage = overlay.querySelector('.image-lightbox__stage');
+  const image = overlay.querySelector('.image-lightbox__image');
+  const zoomLabel = overlay.querySelector('.image-lightbox__zoom-val');
+  const caption = overlay.querySelector('.image-lightbox__caption');
+
+  const minZoom = 0.25;
+  const maxZoom = 5;
+  const step = 0.25;
+  let zoom = 1;
+  let fitWidth = 1;
+
+  function clamp(value) {
+    return Math.min(maxZoom, Math.max(minZoom, value));
+  }
+
+  function centerImage(animate) {
+    requestAnimationFrame(function() {
+      var left = Math.max(0, (stage.scrollWidth - stage.clientWidth) / 2);
+      var top = Math.max(0, (stage.scrollHeight - stage.clientHeight) / 2);
+      stage.scrollTo({ left: left, top: top, behavior: animate ? 'smooth' : 'auto' });
+    });
+  }
+
+  function applyZoom(animate) {
+    image.style.width = Math.max(1, Math.round(fitWidth * zoom)) + 'px';
+    zoomLabel.textContent = Math.round(zoom * 100) + '%';
+    centerImage(animate);
+  }
+
+  function setZoom(value, animate) {
+    zoom = clamp(value);
+    applyZoom(animate);
+  }
+
+  function computeFitSize() {
+    var w = image.naturalWidth || 1;
+    var h = image.naturalHeight || 1;
+    var maxW = Math.max(1, stage.clientWidth - 48);
+    var maxH = Math.max(1, stage.clientHeight - 48);
+    var fitScale = Math.min(1, maxW / w, maxH / h);
+    fitWidth = Math.max(1, w * fitScale);
+    applyZoom(false);
+  }
+
+  function openImage(source) {
+    image.onload = computeFitSize;
+    image.alt = source.alt || '';
+    caption.textContent = source.alt || '';
+    image.src = source.currentSrc || source.src;
+    zoom = 1;
+    overlay.classList.add('is-open');
+    document.body.classList.add('image-lightbox-open');
+    if (image.complete) computeFitSize();
+  }
+
+  function closeImage() {
+    overlay.classList.remove('is-open');
+    document.body.classList.remove('image-lightbox-open');
+    image.onload = null;
+    image.style.removeProperty('width');
+    image.removeAttribute('src');
+  }
+
+  overlay.addEventListener('click', function(event) {
+    var action = event.target.closest('[data-action]');
+    if (action) {
+      var type = action.getAttribute('data-action');
+      if (type === 'zoom-in') setZoom(zoom + step, true);
+      if (type === 'zoom-out') setZoom(zoom - step, true);
+      if (type === 'zoom-reset') setZoom(1, true);
+      if (type === 'close') closeImage();
+      return;
+    }
+    if (event.target === overlay || event.target === stage) closeImage();
+  });
+
+  overlay.addEventListener('wheel', function(event) {
+    if (!overlay.classList.contains('is-open')) return;
+    if (!event.ctrlKey && !event.metaKey) return;
+    event.preventDefault();
+    setZoom(zoom + (event.deltaY < 0 ? step : -step), true);
+  }, { passive: false });
+
+  document.addEventListener('keydown', function(event) {
+    if (!overlay.classList.contains('is-open')) return;
+    if (event.key === 'Escape') closeImage();
+    if (event.key === '+' || event.key === '=') setZoom(zoom + step, true);
+    if (event.key === '-' || event.key === '_') setZoom(zoom - step, true);
+    if (event.key === '0') setZoom(1, true);
+  });
+
+  window.addEventListener('resize', function() {
+    if (overlay.classList.contains('is-open')) computeFitSize();
+  });
+
+  content.querySelectorAll('img').forEach(function(img) {
+    if (img.closest('a')) return;
+    img.setAttribute('tabindex', '0');
+    img.setAttribute('title', img.getAttribute('title') || '点击放大查看');
+    img.addEventListener('click', function() { openImage(img); });
+    img.addEventListener('keydown', function(event) {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        openImage(img);
+      }
+    });
+  });
+})();
+</script>
+
+</body>
+</html>
