@@ -9,6 +9,13 @@
 > **机构**: Zhejiang University / Adobe / Duke / Oregon State / Northeastern
 > **代码**: [shawnricecake/Heima](https://github.com/shawnricecake/Heima)
 
+> 本文基于以下本地材料整理：
+>
+> - 论文 tex 源码：`arXiv-2501.19201v2/main.tex`、`sections/*.tex`
+> - 论文图片：`arXiv-2501.19201v2/figures/*.pdf`
+> - 官方代码：`Heima/`
+> - 本文图片导出目录：`assets/heima/`
+
 ---
 
 ## 1. 动机与问题
