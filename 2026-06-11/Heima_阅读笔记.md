@@ -32,7 +32,15 @@ Heima（hidden llama 的谐音）提出了一套完整的 CoT 压缩框架：用
 
 ![图 1：Heima 整体流程](assets/heima/introduction_whole_pipeline.png)
 
-*图 1：Heima 框架总览。**上部**：Heima（MLLM）基于图像和问题用思考 token（`<Thinking_of_Summary>`、`<Thinking_of_Caption>`、`<Thinking_of_Reasoning>`）做隐空间推理，生成最终结论。**下部**：思考 token 的 last hidden state 喂给三个独立的 Heima 解释器（纯 LLM），分别重建 Summary、Caption 和 Reasoning 的文本推理过程。值得注意的是，解释器不接收图像输入，却能重建出视觉细节——Caption 解释器输出"a sleek, modern sports car with a black exterior"并识别出 logo 特征为"a cross with a circle"，Reasoning 解释器据此推断出品牌为 BMW。这验证了思考 token 中编码了视觉信息。*
+*图 1：Heima 框架总览，用一个具体 Demo（识别图中汽车品牌）串联全流程。图片分为上下两栏。*
+
+**上栏 (a) Heima 隐空间推理（MLLM）：**
+输入为一张黑色 BMW M3 的图片和问题"Which automotive brand does this car belong to, and what visual cues or badges indicate that?"。Heima 不生成冗长的文本 CoT，而是用三个思考 token——`<Thinking_of_Summary>`、`<Thinking_of_Caption>`、`<Thinking_of_Reasoning>`——在隐空间中完成推理，最终输出结论"The image shows a black BMW M3 driving down a road"。每个思考 token 只占 1 个 token 位置，但它的 last hidden state 编码了对应推理阶段所需的全部信息（包括视觉特征）。Heima 的答案基于隐推理直接生成，跳过了传统 CoT 中数百个 token 的文本展开过程。
+
+**下栏 (b) Heima 解释器重建推理（纯 LLM）：**
+三个独立的纯文本解释器（基于 Llama-3.1-8B-Instruct）分别接收对应思考 token 的 last hidden state。关键设计：解释器**不看图像**，只接收思考 token 的隐表示 + 问题文本 + 解释性 prompt。Summary 解释器重建出"我将通过检查 logo、配色和设计元素来识别汽车品牌"；Caption 解释器重建出"图像显示一辆 sleek 的黑色现代跑车，侧面有一个十字加圆圈的独特 logo"；Reasoning 解释器重建出"前格栅上的徽章是 BMW，这是 BMW 品牌的常见标志，确认了品牌身份"。
+
+这一 Demo 直接验证了 Heima 的核心主张：思考 token 的隐空间表示不仅保留了语言推理信息，还编码了细粒度的视觉特征（如 BMW logo 的十字+圆圈形状），供纯文本 LLM 在不看原图的情况下重建。*
 
 ### 2.1 思考 Token 与渐进式蒸馏
 
@@ -48,7 +56,22 @@ Heima（hidden llama 的谐音）提出了一套完整的 CoT 压缩框架：用
 
 ![图 2：渐进式蒸馏过程](assets/heima/method_progressive_encoding-1_column.png)
 
-*图 2：渐进式蒸馏的四个阶段。每一行展示该阶段使用的训练数据格式：**Stage 0**——全部文本 CoT（Summary + Caption + Reasoning）；**Stage 1**——Summary 替换为 `<Thinking_of_Summary>` 思考 token；**Stage 2**——Summary 和 Caption 都替换为对应思考 token；**Stage 3**——全部三个阶段替换为思考 token。相同颜色的格子表示同一类内容（蓝色 = Summary 阶段）。这种渐进策略避免了直接全部替换造成的剧烈分布偏移。*
+*图 2：渐进式蒸馏（Progressive Distillation）的四个训练阶段。每行展示一个阶段使用的训练数据格式，从左到右的三个色块分别对应 Summary（蓝色）、Caption（黄色）、Reasoning（绿色）三个阶段，相同颜色 = 同一类推理内容。最后一列为答案（灰色）。
+
+**Stage 0（无思考 token）：**
+全部三个阶段都使用完整文本 CoT + 最终答案。这是标准的 LLaVA-CoT SFT 格式，模型学习"看图和问题 → 生成三段文本推理 → 给出答案"。此阶段的训练数据即为原始 LLaVA-CoT-100k，不做任何修改。
+
+**Stage 1：**
+Summary 阶段的文本 CoT 被替换为一个 `<Thinking_of_Summary>` 思考 token。Caption 和 Reasoning 仍保持文本 CoT。模型在此阶段学习将"问题复述/摘要"的推理内容压缩到单个 token 中，同时仍依赖 Caption 和 Reasoning 的文本信号来维持答案质量。这是最关键的一步——如果一步到位把所有 CoT 都替换掉，模型会因分布剧烈偏移而崩溃。
+
+**Stage 2：**
+Summary 和 Caption 两个阶段都替换为思考 token（`<Thinking_of_Summary>` + `<Thinking_of_Caption>`）。只有 Reasoning 阶段保留文本 CoT。模型在此阶段学习将视觉描述（Caption）也编码到隐空间，训练难度进一步增加。
+
+**Stage 3：**
+全部三个阶段都替换为思考 token + 答案。这是最终的 Heima 推理格式。模型仅凭三个思考 token 的隐状态完成全部推理并输出答案，完全不再依赖文本 CoT。
+
+**Recovering Stage（图中未单独展示）：**
+在 Stage 3 之后额外执行一步纯思考 token 的蒸馏（学习率从 1e-4 降至 1e-5），优化跨阶段的 transition 和 token 间的交互，确保整个隐推理链的信息流动是连贯的。消融实验表明去掉这一步会使平均准确率从 58.0 降至 56.6。*
 
 训练数据集 $D_H$ 将原始 CoT 文本替换为思考 token：
 
@@ -81,7 +104,19 @@ $$H(Y\mid X,\mathrm{CoTs}) \le H(Y\mid X,\texttt{<CoTs>}) \le H(Y\mid X)$$
 
 ![图 3：解释器训练流程](assets/heima/method_adaptive_decoding_train-1_column.png)
 
-*图 3：解释器（Interpreter）的训练过程。关键设计是：不直接把思考 token 的文本符号 `<CoT>_(s)` 喂给解释器，而是从冻结的 Heima 中提取该 token 的 last hidden state $H_{\texttt{<CoT>}_{(s)}}$，用它替换掉解释器 embedding 层对应位置的向量。解释器的输入是"解释性 prompt + 问题文本 + 隐状态替换"，输出是重建的文本 CoT。这样做的原因是：单个 token 符号本身无法携带足够信息，真正的推理内容编码在隐状态中。*
+*图 3：解释器（Interpreter）训练流程，展示如何将思考 token 的隐状态解码为文本 CoT。图片包含左右两个 panel。
+
+**左栏 (a) Heima 推理——隐状态生成（冻结，不训练）：**
+Heima（冻结的 MLLM）基于图像（Vision Input）和问题（Text Query）执行推理。它生成一串 token 序列：先输出三个阶段的思考 token（每个阶段 1 个特殊 token），再输出答案。对于第 s 个思考 token `<CoT>_(s)`，Heima 在其 Transformer 最后一层产生一个 last hidden state $H_{\texttt{<CoT>}_{(s)}} \in \mathbb{R}^{d}$（$d$ 为 hidden dimension，Llama-3.2-11B 中为 4096）。这个向量就是"压缩后的推理"——单个 token 的文本符号本身不携带信息，所有推理内容都编码在这个 4096 维向量中。
+
+**右栏 (b) 解释器训练——隐状态替换 + 文本重建（可训练）：**
+解释器是一个基于纯 LLM（Llama-3.1-8B-Instruct）的 LoRA 可训练模型。训练时：① Heima 生成思考 token 并提取 `H_Caught`（即 $H_{\texttt{<CoT>}_{(s)}}$）；② 在解释器的输入序列中，思考 token 的 **embedding 向量被 $H_{\texttt{<CoT>}_{(s)}}$ 替换**——这是核心操作，发生在 word embedding 层之后、Transformer 第一层之前；③ 解释器接收的完整输入为"解释性 prompt（According to the question, can you explain the thinking progress?）+ 纯文本问题 + 被替换的隐状态"；④ 解释器用标准 next-token prediction 自回归地生成重建的文本 CoT。
+
+**为何不直接输入 token 符号？**
+如果只输入 `<CoT>_(s)` 这个特殊 token 的文本符号（不带隐状态），解释器看到的只是一个固定的 token ID，没有任何与具体输入图像/问题相关的内容信息。Heima 的推理信息存储在思考 token 的 **hidden state** 中（隐状态随输入不同而变化），而非其 token identity（token 符号在所有样本中是固定的）。用 $H_{\texttt{<CoT>}_{(s)}}$ 替换 embedding 等于把 Heima 内部的"思考内容"直接传递给解释器。
+
+**训练细节：**
+解释器用 LoRA（rank=16，alpha=32）微调，学习率 5e-4，batch size=8，1 个 epoch。Heima 全程冻结。三个 CoT 阶段各训练一个独立的解释器（共 3 个），评估在 4300 个测试样本上进行。*
 
 **训练方式**：
 1. 使用冻结的 Heima 生成思考 token
@@ -144,7 +179,20 @@ $$H(Y\mid X,\mathrm{CoTs}) \le H(Y\mid X,\texttt{<CoTs>}) \le H(Y\mid X)$$
 
 ![图 4：解释器重建评估](assets/heima/results_decoder_eval_metrics_gpt4o.png)
 
-*图 4：解释器重建质量评估。**左图**：BLEU-4、METEOR、ROUGE-L、BERTScore 四个自动指标的结果，Summary 阶段重建质量最高（BERTScore 73.4），Reasoning 阶段难度最大（BERTScore 66.6），Caption 居中（71.4）。**右图**：GPT-4o 用 5 分制（1-5 分）评估重建文本与原始 CoT 的语义相似度，三个阶段均获得较高的平均分，确认推理内容被有效重建。推理阶段分数相对较低是因为该阶段涉及更复杂的多步逻辑链。*
+*图 4：解释器重建质量的定量评估。包含两个子图，在 4300 个测试样本上评估解释器重建的文本与原始 CoT 文本的相似度。
+
+**子图 (a) 自动评估指标（左，四组柱状图）：**
+展示 BLEU-4、METEOR、ROUGE-L、BERTScore 四个指标的结果，每组有三根柱子分别对应 Summary（蓝色）、Caption（黄色）、Reasoning（绿色）。横轴为评估指标，纵轴为分数。结果呈现一致的阶梯状：Summary > Caption > Reasoning。具体数据——BLEU：15.9 / 12.8 / 11.2；METEOR：40.1 / 35.5 / 32.7；ROUGE-L：41.6 / 37.9 / 32.7；BERTScore：73.4 / 71.4 / 66.6。
+
+Summary 阶段重建质量最高（BERTScore 73.4），因为 Summary 本质是对问题的复述——"识别汽车品牌需要检查 logo 和设计元素"——这更多依赖文本理解，不需要太多视觉信息。Caption 居中（71.4），因为它需要从隐状态中提取图像的视觉描述，有一定难度。Reasoning 最低（66.6），因为 Reasoning 涉及多步逻辑推理链（"logo 是十字加圆圈 → 这是 BMW 的特征 → 确认品牌为 BMW"），任何一个环节出错都会影响最终匹配。但 BERTScore 66.6 仍属于"语义高度相关"区间，说明压缩保留了推理的核心逻辑。
+
+**子图 (b) GPT-4o 语义相似度评估（右）：**
+使用 GPT-4o 作为评判器，对三个阶段的 4300 个重建-原始文本对进行 1-5 分打分——1 分表示完全无关（不同主题、无内容重叠），5 分表示几乎完全一致（仅有措辞差异）。评分时 GPT-4o 同时参考原始图像和问题作为上下文。横轴为三个阶段，纵轴为平均相似度分数（越高越好）。
+
+三个阶段的 GPT-4o 相似度分数均较高，与左侧自动指标的趋势一致（Summary > Caption > Reasoning）。GPT-4o 的评判比 BLEU/METEOR 等 n-gram 指标更能捕捉语义等价（例如"identify the brand by logo"和"check visual cues for brand recognition"在 BLEU 中匹配度低，但 GPT-4o 能识别其语义一致性）。这证实了解释器的重建不仅在词面层面对齐，在语义层面也与原始 CoT 高度一致。
+
+**综合解读：**
+左右两图共同验证了 Theorem 1 的信息论结论——压缩引入的信息差距 $I(Y;\mathrm{CoTs}\mid X,\texttt{<CoTs>})$ 在实践中很小：解释器不需要图像就能从思考 token 的隐状态中重建出语义正确的推理过程，说明思考 token 成功保留了 CoT 中的非平凡互信息。*
 
 | Stage | BLEU | METEOR | ROUGE-L | BERTScore |
 |-------|------|--------|---------|-----------|
