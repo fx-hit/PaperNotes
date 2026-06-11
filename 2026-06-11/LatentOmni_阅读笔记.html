@@ -7,9 +7,9 @@
 <!-- arxiv: 2605.22012 -->
 <!-- venue: 投稿中 (under review) -->
 <!-- tags: 全模态, 多模态理解, 链式思考 -->
-<!-- words-zh: 3364 -->
-<!-- words-en: 326 -->
-<!-- reading-time: 11 -->
+<!-- words-zh: 5668 -->
+<!-- words-en: 481 -->
+<!-- reading-time: 19 -->
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
@@ -343,9 +343,14 @@ document.addEventListener('DOMContentLoaded', function() {
 <main class="main-wrapper">
   <div class="content-inner" id="main-content">
 <h1 id="latentomni-rethinking-omni-modal-understanding-via-unified-audio-visual-latent-reasoning">LatentOmni: Rethinking Omni-Modal Understanding via Unified Audio-Visual Latent Reasoning</h1>
-<div class="article-stats">3,364 字 · English 326 词 · 约 11 分钟阅读</div>
+<div class="article-stats">5,668 字 · English 481 词 · 约 19 分钟阅读</div>
 
 <blockquote>
+<p>本文基于以下本地材料整理：
+- 论文 tex 源码：<code>arXiv-2605.22012v1/latentomni.tex</code>
+- 论文章节文件：<code>arXiv-2605.22012v1/sections/</code>
+- 论文图片：<code>arXiv-2605.22012v1/fig/</code>
+- 本文图片导出目录：<code>assets/latentomni/</code></p>
 <p><strong>论文信息</strong>
 - 作者：Yifan Dai（SJTU &amp; 快手 Kling）、Zhenhua Wu、Bohan Zeng、Daili Hua、Jialing Liu、Bozhou Li、Yuran Wang、Chengzhuo Tong、Hao Liang、Xiaochen Ma、Junbo Niu、Tianyu Guo、Yang Shi、Yue Ding、Yiyan Ji、Bingyin Mei、Yushuo Guan、Yuanxing Zhang、Pengfei Wan、Fangcheng Fu、Wentao Zhang
 - 机构：上海交大 AI 学院、快手 Kling 团队、北京大学、港科大、中科院自动化所、南京大学、中国人民大学、清华大学
@@ -364,7 +369,23 @@ document.addEventListener('DOMContentLoaded', function() {
 <p>直接表现：随着推理链加长，纯文本 CoT 对原始音视频信号的注意力持续下降，模型回答更多依赖语言统计规律而非真实的感官证据。</p>
 </blockquote>
 <p><img alt="图1：LatentOmni 与 Explicit Text CoT 基线的对比" src="assets/latentomni/fig1_new.jpg" /></p>
-<p><em>图1：LatentOmni 与 Explicit Text CoT 基线的定性+定量对比。</em><em>左侧</em><em>：针对同一个音视频推理问题，基线模型错误地关注了不相关的视觉区域（低注意力），而 LatentOmni 准确锁定了关键的跨模态线索（热力图深色区域），给出了正确答案。</em><em>右侧</em><em>：在 Daily-Omni 基准的不同任务类型上，LatentOmni 始终保持显著更高的音视频 token 注意力占比（AV Token Attention Ratio），尤其在需要精细对齐的 AV Alignment 任务上优势最为明显，验证了隐空间推理有效防止了"语言绑定"现象。</em></p>
+<p><em>图 1：LatentOmni 与 Explicit Text CoT 基线的对比，分左右两栏，分别从定性和定量角度证明隐空间推理如何防止"语言绑定"现象。</em></p>
+<p><strong>左栏 — 定性对比（Qualitative Comparison）：</strong></p>
+<p>上图展示了一个具体的音视频推理示例。画面分为上排（Explicit Text CoT 基线）和下排（LatentOmni），每排包含三部分：输入的视频帧序列（顶部连续画面）、模型输出的推理过程（中间的文本/隐状态序列）、以及叠加在视频帧上的注意力热力图（深色=高注意力，浅色=低注意力）。</p>
+<ul>
+<li>上排 Explicit Text CoT：模型生成了纯文本推理链（绿色高亮框标注的文本段落），但视频帧上的热力图显示注意力散乱分布——模型没有聚焦在回答问题所需的关键音视频帧上，而是均匀地扫视所有帧。这导致模型虽然读了"文本描述"，却没有真正"看到"关键视觉证据。最终给出错误答案（✗ 标记）。</li>
+<li>下排 LatentOmni：推理过程中插入了 <code>&lt;Unified_Latent&gt;...latent embeddings...&lt;/Unified_Latent&gt;</code> 段（绿色高亮标注），这是模型切换到隐空间、直接在连续特征中检索音视频证据的阶段。注意热力图的变化——深色高注意力区域精确落在了与问题相关的音视频帧上，不相关帧几乎无注意力权重。模型通过隐状态"回看"了正确的感官证据，最终给出正确答案（✓ 标记）。</li>
+</ul>
+<p><strong>为什么这个定性对比重要</strong>：它不是简单地展示"一个对了、一个错了"，而是通过热力图揭示了<strong>错误和正确的机制差异</strong>——Explicit Text CoT 的失败不是模型能力不够，而是文本媒介导致注意力从原始感官信号撤离（Language-Bound）；LatentOmni 的隐空间推理则让注意力重新锚定在音视频证据上。</p>
+<p><strong>右栏 — 定量对比（Quantitative Comparison）：</strong></p>
+<p>横轴为 Daily-Omni 基准上的任务类型（按音视频依赖程度分组），纵轴为 AV Token Attention Ratio——即模型总注意力中分配给原始音视频输入 token 的比例，而非分配给文本 token 的比例。红色柱为 LatentOmni，蓝色柱为 Explicit Text CoT。</p>
+<p>关键趋势按任务类型从左到右：</p>
+<ul>
+<li>左侧简单任务（AV Perception）：两者差距较小（~5pp），基线仍保留了部分音视频注意力。</li>
+<li>中间推理任务（AV Inference）：差距扩大（~8-10pp），纯文本 CoT 将更多注意力转移到了文本推理链上。</li>
+<li>右侧对齐任务（AV Alignment）：差距最大（~15pp），这是最需要精细跨模态时序对齐的任务类型——纯文本 CoT 几乎完全放弃了音视频注意力（AV Token Attention Ratio 接近最低点），而 LatentOmni 仍保持了最高水平的音视频注意力。</li>
+</ul>
+<p><strong>这张图支持的核心论点</strong>：文本 CoT 导致的"语言绑定"不是假说——右栏的定量数据直接显示随着任务对跨模态证据的需求增加，纯文本 CoT 对音视频信号的注意力系统性下降。LatentOmni 的隐空间推理通过将音视频证据保留在连续特征中，从根本上抑制了这种注意力转移。*</p>
 <hr />
 <h2 id="_2">二、核心思路</h2>
 <p>LatentOmni 的核心洞察是：<strong>连续隐空间（latent space）比离散文本更适合承载和保留音视频感官信息</strong>。与其把所有中间推理都写成文本，不如让模型在需要回顾音视频证据时，直接在连续隐空间中生成隐式推理状态。</p>
@@ -375,7 +396,23 @@ document.addEventListener('DOMContentLoaded', function() {
 <li>通过 <strong>特征级监督</strong> 和 <strong>时序对齐的位置编码</strong> 确保隐状态忠实于原始感官信号。</li>
 </ul>
 <p><img alt="图2：LatentOmni 整体架构" src="assets/latentomni/model_overview_2.jpg" /></p>
-<p><em>图2：LatentOmni 整体框架。</em><em>左侧</em><em>为推理流程：模型在文本生成和隐空间推理之间交替——当遇到 <code>&lt;Unified_Latent&gt;</code> 触发 token 时，从离散词汇空间切换到连续隐空间，自回归生成 K 个隐状态（K_v 个视觉 + K_a 个音频），然后恢复到文本生成。</em><em>右侧</em><em>为训练目标：联合优化三个损失——文本预测损失（<span class="math inline">$\mathcal{L}_{\text{text}}$</span>）保持语言能力、隐空间对齐损失（<span class="math inline">$\mathcal{L}_{\text{latent}}$</span>）将隐状态锚定到感官特征、时序同步损失（<span class="math inline">$\mathcal{L}_{\text{sync}}$</span>）对齐跨模态时序。</em></p>
+<p><em>图 2：LatentOmni 整体框架，分左（推理流程）右（训练目标）两栏，完整展示从音视频输入到答案输出的推理与优化路径。</em></p>
+<p><strong>左栏 — 推理流程（Reasoning Process）：</strong></p>
+<p>从底部到顶部展示了完整的推理数据流：</p>
+<ul>
+<li>底部输入层：音频编码器（Audio Encoder）将原始音频编码为 <span class="math inline">$H^a$</span>，视觉编码器（Visual Encoder）将视频帧编码为 <span class="math inline">$H^v$</span>，文本 query 映射为 <span class="math inline">$H^q$</span>。三者共同送入 LLM backbone。</li>
+<li>中间推理层（核心创新）：Backbone 自回归生成一个交替序列。黑色方块代表文本 token（如 logical reasoning steps），彩色方块代表隐状态 <span class="math inline">$z_{1:K}$</span>。当需要回顾音视频证据时，模型输出 <code>&lt;Unified_Latent&gt;</code> 触发 token（紫色菱形），后续 K 步在连续空间 <span class="math inline">$\mathbb{R}^d$</span> 中生成隐状态（前 <span class="math inline">$K_v$</span> 个视觉、后 <span class="math inline">$K_a$</span> 个音频，用不同颜色区分），然后由 <code>&lt;/Unified_Latent&gt;</code> 停止 token（红色菱形）切回文本生成。图中标注了 OSPE（Omni-Sync Position Embedding）的作用位置——它向隐状态注入基于共享物理时间戳的旋转位置编码，确保尽管视觉和音频隐状态在序列中依次生成，但同一时刻的视听特征在注意力空间中保持对齐。</li>
+<li>顶部分输出层：最终答案 <span class="math inline">$a$</span> 综合了文本推理和隐状态的跨模态证据。</li>
+</ul>
+<p><strong>右栏 — 训练目标（Training Objectives）：</strong></p>
+<p>展示了三个损失函数和受控注意力流（Controlled Attention Flow）：</p>
+<ul>
+<li><span class="math inline">$\mathcal{L}_{\text{text}}$</span>（Text Prediction Loss）：标准 next-token 交叉熵，仅在离散 token（文本推理步骤、触发/停止 token、答案）上计算。图中箭头标注了文本 token 的预测路径——每个文本 token 基于其前的所有文本和隐状态上下文进行预测。</li>
+<li><span class="math inline">$\mathcal{L}_{\text{latent}}$</span>（Latent Alignment Loss）：每个生成的隐状态 <span class="math inline">$z_k$</span> 与对应的锚点特征 <span class="math inline">$a_k$</span>（从标注的音视频片段中用 L2-norm 加权池化提取）计算 MSE。图中箭头标注了隐状态必须"对齐"到的目标锚点——这是防止 Language-Bound 的核心机制。</li>
+<li><span class="math inline">$\mathcal{L}_{\text{sync}}$</span>（Temporal Sync Loss）：对称 InfoNCE 对比损失，拉近同一时刻 <span class="math inline">$t$</span> 的视觉特征 <span class="math inline">$h_t^v$</span> 和音频特征 <span class="math inline">$h_t^a$</span>，推开不同时刻对。图中标注了对比学习的正负样本对关系。</li>
+<li>受控注意力流：图中用方向性箭头标注了训练时允许的注意力路径——文本 token 可关注隐状态、隐状态可关注原始音视频输入、最终答案可关注所有前文——确保信息在文本和隐空间之间双向流动。</li>
+</ul>
+<p><strong>这张图支持的核心论点</strong>：LatentOmni 不是一个激进的全隐空间推理方案，而是一个平衡文本逻辑和隐空间证据的混合架构——左栏展示了"怎么做"，右栏展示了"如何确保隐状态忠实于感官证据"。*</p>
 <hr />
 <h2 id="_3">三、方法详解</h2>
 <h3 id="31-audio-visual-latent-reasoning">3.1 音视频隐空间推理（Audio-Visual Latent Reasoning）</h3>
@@ -403,7 +440,29 @@ document.addEventListener('DOMContentLoaded', function() {
 <h3 id="33-latentomni-instruct-35k">3.3 数据集构建：LatentOmni-Instruct-35K</h3>
 <p>训练隐空间推理需要一种特殊监督信号：<strong>标注了每一步应该参考哪个音视频片段</strong>的推理轨迹。现有数据集（通常是粗粒度的 QA 对）缺少这种片段级对齐。因此作者设计了三阶段数据合成 pipeline：</p>
 <p><img alt="图3：数据构建流水线" src="assets/latentomni/data.jpg" /></p>
-<p><em>图3：LatentOmni-Instruct-35K 数据构建三阶段流水线。</em><em>阶段 1</em><em>：从两个时间对齐的高质量音视频 caption 数据集（ASID-1M 和 AVoCaDO）出发，用 Qwen3-235B 将跨模态 caption 转化为符合严格跨模态依赖要求的 AVQA 对，再用 GLM-4.7 对每对 QA 进行三维度评分（难度、逻辑严谨性、模态依赖度，各 1-5 分），总分低于 13 分或类别不平衡超过 3× 的样本被丢弃。</em><em>阶段 2</em><em>：按时间戳切分原始音视频流，用 Qwen3-30B-Captioner 分别生成视觉和音频的片段级描述，再由 GLM-4.7 过滤幻觉、修复镜头碎片化、重新对齐时序。</em><em>阶段 3</em><em>：将 AVQA 对与片段级 caption 组合，由 GLM-4.7 生成包含显式片段引用标记的推理轨迹，Gemini-2.5-Flash 审核修正引用错误和冗余分支，最终替换标记为实际音视频片段，得到 35K 样本。</em></p>
+<p><em>图 3：LatentOmni-Instruct-35K 数据构建三阶段流水线，展示从原始音视频 caption 到最终 35K 条 interleaved 推理轨迹的完整数据流。</em></p>
+<p>图中以流程框图形式组织，按数据流动方向分为三个核心阶段：</p>
+<p><strong>阶段 1 — AVQA 数据合成与过滤（AVQA Data Synthesis &amp; Filtering）：</strong></p>
+<p>数据流的起点是两个时间对齐的高质量音视频 caption 数据集——ASID-1M（一百万条结构化细粒度音视频指令标注）和 AVoCaDO（107K 条时序对齐的音视频 caption，专门标注视听事件的时间编排）。流程如下：</p>
+<ol>
+<li>Qwen3-235B-A22B 将 caption 转化为初步 QA 对，生成过程被严格约束：问题必须同时依赖音频和视觉信息才能回答、覆盖多种推理类型、答案严格限定在 caption 内容内。</li>
+<li>GLM-4.7 对每对 QA 打分（难度、逻辑严谨性、模态依赖度，各 1-5 分）和分类（10 种推理类型）。</li>
+<li>过滤规则：总分 &lt; 13 分 → 丢弃；相邻类别间比例 &gt; 3× → 降采样约束。图中用漏斗图标标注了过滤节点。</li>
+</ol>
+<p><strong>阶段 2 — 片段级 Caption 合成（Segment-Level Caption Synthesis）：</strong></p>
+<p>按时间戳切分原始音视频流为片段。采用分离策略（因为直接生成联合描述容易遗漏某一模态的信息）：</p>
+<ol>
+<li>Qwen3-30B-A3B-Captioner 为每个片段分别生成纯视觉描述（场景、人物、动作、物体、镜头运动）和纯音频描述（音乐、环境音、语音内容）。</li>
+<li>GLM-4.7 以原始时间对齐 caption 为参照，完成三件事：过滤高幻觉片段、修复镜头切分导致的不完整描述、重新对齐视听时序。</li>
+</ol>
+<p><strong>阶段 3 — 音视频交替推理轨迹合成（AV-Interleaved Reasoning Trajectory Synthesis）：</strong></p>
+<p>将前两阶段的输出（AVQA 对 + 片段级 caption）组合：</p>
+<ol>
+<li>GLM-4.7 生成推理链，在需要引用特定片段的位置插入 <code>{[Segment n]}</code> 标记。关键 prompt 设计：禁止模型提及"caption"、"text"、"description"等词——模型被要求以"正在观看和聆听"的第一人称视角写推理文本。</li>
+<li>Gemini-2.5-Flash 审核修正：纠正引用错误、剪除冗余分支、排除逻辑悖论或严重幻觉。</li>
+<li>最终将 <code>{[Segment n]}</code> 标记替换为对应的实际音视频片段内容，得到 35K 条 interleaved 推理轨迹。</li>
+</ol>
+<p><strong>这张图支持的核心论点</strong>：LatentOmni-Instruct-35K 不是简单的 QA 对扩展，而是通过三次过滤（评分→幻觉检查→逻辑审核）和强制跨模态依赖约束，构建了高质量的音视频推理监督信号。每一阶段的模型选择和 prompt 设计都有明确的工程考量。*</p>
 <p><strong>数据特点</strong>：</p>
 <ul>
 <li>每条轨迹要求至少引用 1 个、最多 3 个音视频片段</li>
@@ -614,7 +673,31 @@ document.addEventListener('DOMContentLoaded', function() {
 <p>即使去掉音频，LatentOmni 的隐推理设计在纯视觉任务上也显著优于专门的视觉隐推理方法，说明其架构通用性。</p>
 <h3 id="43">4.3 消融实验</h3>
 <p><img alt="图4：消融实验" src="assets/latentomni/ablation_benchmark_bars-2.jpg" /></p>
-<p><em>图4：LatentOmni 隐空间配置消融实验。</em><em>左侧两组</em><em>：在 Daily-Omni、WorldSense、OmniVideoBench 三个基准上测试隐 token 总数（20/30/40/50）和音视频分配比例（32V+8A vs 其他组合）的影响——40 token（32V+8A）在所有基准上最优，少于 40 限制表征容量，多于 40 引入噪声。</em><em>右侧</em><em>：测试超参数 <span class="math inline">$\lambda_1$</span>（<span class="math inline">$\mathcal{L}_{\text{latent}}$</span> 权重）和 <span class="math inline">$\lambda_2$</span>（<span class="math inline">$\mathcal{L}_{\text{sync}}$</span> 权重）的敏感度——<span class="math inline">$\lambda_1$</span> 过低导致"语言绑定"回退，<span class="math inline">$\lambda_2$</span> 过高限制语义灵活性，最终选择 <span class="math inline">$\lambda_1=0.005, \lambda_2=1.0$</span> 的均衡配置。</em></p>
+<p><em>图 4：隐 token 配置消融实验，在 Daily-Omni、WorldSense、OmniVideoBench 三个基准上评测。图包含三组子图，分别回答"要用多少个隐 token""音视频怎么分配""训练超参数怎么调"三个架构决策问题。</em></p>
+<p><strong>子图 (a) — 隐 Token 总数消融（Latent Token Count Ablation）：</strong></p>
+<p>固定音视频分配比例不变，横轴为隐 token 总数（20 / 30 / 40 / 50），纵轴为各基准上的准确率。柱状图按基准分组（Daily-Omni、WorldSense、OmniVideoBench），每个总数配置下有三根柱形。</p>
+<p>关键数据与趋势：</p>
+<ul>
+<li>20 → 30 → 40：所有基准上准确率持续攀升。40 token 时达到峰值——Daily-Omni 约 67.4、WorldSense 约 48.9、OmniVideoBench 约 35.4。</li>
+<li>40 → 50：所有基准上准确率下降。论文分析为"表征噪声"——当隐 token 数超出有效表征需求时，多余的 token 中未被 <span class="math inline">$\mathcal{L}_{\text{latent}}$</span> 充分约束的维度开始自由漂移，干扰后续文本推理。50 token 的 Daily-Omni 约降至 65.3，WorldSense 约降至 47.8。</li>
+<li>20 token 时性能最弱：表征容量成为瓶颈——一个隐 token 需要同时编码视觉空间关系、音频时序信息和跨模态关联，信息压缩过于激进。</li>
+</ul>
+<p><strong>为什么 Peak at 40 重要</strong>：这不是随便选的——如果 80 或 100 token 更好，说明隐空间推理还有大量未利用容量；Peak at 40 说明当前训练设置已经充分利用了隐空间的有效表征能力，进一步增加 token 只会带来噪声。</p>
+<p><strong>子图 (b) — 音视频隐 Token 分配比例消融（AV Latent Allocation Ratio）：</strong></p>
+<p>固定总数为最优的 40 个 token，横轴为不同的视觉/音频分配比例（24V+16A / 28V+12A / 32V+8A / 36V+4A），纵轴为准确率。柱状图按基准分组。</p>
+<p>关键数据与趋势：</p>
+<ul>
+<li>32V+8A（视觉占 80%）在所有三个基准上最优。这反映了视觉信息的固有复杂度——空间场景、多物体关系、动作序列等需要比音频更大的表征带宽。</li>
+<li>36V+4A（视觉占 90%）：性能已开始下降，说明 4 个音频 token 不足以提供有效的跨模态对齐锚点。<strong>这个负结果本身是重要发现</strong>——它证明了音频 token 的价值不在于编码所有音频细节，而在于为视觉推理提供时序和语义参照。</li>
+<li>24V+16A（视觉占 60%）：性能显著低于最优，说明过度分配音频 token 挤占了视觉的表征空间，而多出来的音频 token 并未带来等价的信息增益。</li>
+</ul>
+<p><strong>子图 (c) — 损失权重 <span class="math inline">$\lambda_1$</span> 和 <span class="math inline">$\lambda_2$</span> 敏感度分析（Hyperparameter Sensitivity）：</strong></p>
+<p>固定其他设置，分别改变 <span class="math inline">$\lambda_1$</span>（<span class="math inline">$\mathcal{L}_{\text{latent}}$</span> 的权重）和 <span class="math inline">$\lambda_2$</span>（<span class="math inline">$\mathcal{L}_{\text{sync}}$</span> 的权重），在 Daily-Omni 上观察准确率变化。</p>
+<ul>
+<li><span class="math inline">$\lambda_1$</span> 曲线：从 0.001 → 0.005 → 0.01。0.001 时准确率明显偏低——<span class="math inline">$\mathcal{L}_{\text{latent}}$</span> 信号太弱，隐状态逐渐被语言先验主导，回到"语言绑定"状态。0.005 时达到峰值。0.01 时略微下降——过强的隐空间约束开始干扰语言推理的灵活性。论文最终选择 <span class="math inline">$\lambda_1=0.005$</span>。</li>
+<li><span class="math inline">$\lambda_2$</span> 曲线：<span class="math inline">$\lambda_2=1.0$</span> 达到最优。过低（0.5）时跨模态时序对齐不充分，在长视频任务上有负面影响。过高（2.0）时过强的同步约束限制了文本推理的语义抽象能力——模型过于拘泥于逐帧对齐，丧失了跨时间推理的自由度。</li>
+</ul>
+<p><strong>为什么要看这张图</strong>：这三组子图共同回答了 LatentOmni 的三个架构决策——40 token / 32V+8A / <span class="math inline">$\lambda_1=0.005,\lambda_2=1.0$</span>——不是随手选的，而是通过系统消融找到的均衡点。特别是子图 (b) 中 36V+4A 的下降和子图 (c) 中 <span class="math inline">$\lambda_1$</span> 过低/<span class="math inline">$\lambda_2$</span> 过高的两侧下降，展示了"不够"和"过分"之间的窄带最优区间。*</p>
 <p><strong>组件消融</strong>：</p>
 <table>
 <thead>
