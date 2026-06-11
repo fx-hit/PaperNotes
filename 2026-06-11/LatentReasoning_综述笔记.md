@@ -1,6 +1,6 @@
 <!-- arxiv: N/A -->
 <!-- venue: PaperNotes 综述 2026 -->
-<!-- tags: 多模态理解, 视觉推理, 链式思考, 音视频推理 -->
+<!-- tags: 综述, 多模态理解, 视觉推理, 链式思考, 音视频推理 -->
 
 # Latent Reasoning for Multimodal Models: A Survey Note
 
