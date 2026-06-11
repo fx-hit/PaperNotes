@@ -7,9 +7,9 @@
 <!-- arxiv: 2501.19201 -->
 <!-- venue: ICML 2026 -->
 <!-- tags: MLLM, CoT, 推理效率, 信息论, 知识蒸馏 -->
-<!-- words-zh: 1289 -->
-<!-- words-en: 232 -->
-<!-- reading-time: 5 -->
+<!-- words-zh: 1936 -->
+<!-- words-en: 338 -->
+<!-- reading-time: 7 -->
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
@@ -345,12 +345,12 @@ document.addEventListener('DOMContentLoaded', function() {
 <main class="main-wrapper">
   <div class="content-inner" id="main-content">
 <h1 id="heima">Heima：通过隐藏思考实现高效推理</h1>
-<div class="article-stats">1,289 字 · English 232 词 · 约 5 分钟阅读</div>
+<div class="article-stats">1,936 字 · English 338 词 · 约 7 分钟阅读</div>
 
 <blockquote>
-<p><strong>论文</strong>: Efficient Reasoning with Hidden Thinking<br />
-<strong>作者</strong>: Xuan Shen, Yizhou Wang, Yufa Zhou, Xiangxi Shi, Pu Zhao, Yanzhi Wang, Jiuxiang Gu<br />
-<strong>机构</strong>: Zhejiang University / Adobe / Duke / Oregon State / Northeastern<br />
+<p><strong>论文</strong>: Efficient Reasoning with Hidden Thinking
+<strong>作者</strong>: Xuan Shen, Yizhou Wang, Yufa Zhou, Xiangxi Shi, Pu Zhao, Yanzhi Wang, Jiuxiang Gu
+<strong>机构</strong>: Zhejiang University / Adobe / Duke / Oregon State / Northeastern
 <strong>代码</strong>: <a href="https://github.com/shawnricecake/Heima">shawnricecake/Heima</a></p>
 </blockquote>
 <hr />
@@ -359,8 +359,9 @@ document.addEventListener('DOMContentLoaded', function() {
 <p><strong>核心问题</strong>：CoT 的冗长文本包含大量冗余信息，能否将推理过程压缩到隐空间，以极少的"思考 token"替代冗长的文本 CoT，从而大幅提升推理效率？</p>
 <hr />
 <h2 id="2">2. 方法概览</h2>
-<p>Heima（hidden llama 的谐音）提出了一套完整的 CoT 压缩框架，包含三个核心组件：</p>
-<p><img alt="Heima 整体流程" src="assets/heima/introduction_whole_pipeline.pdf" /></p>
+<p>Heima（hidden llama 的谐音）提出了一套完整的 CoT 压缩框架：用 MLLM 将多阶段 CoT 推理压缩为极少量的思考 token，再用纯文本 LLM 作为解释器重建推理过程。</p>
+<p><img alt="图 1：Heima 整体流程" src="assets/heima/introduction_whole_pipeline.png" /></p>
+<p><em>图 1：Heima 框架总览。</em><em>上部</em><em>：Heima（MLLM）基于图像和问题用思考 token（<code>&lt;Thinking_of_Summary&gt;</code>、<code>&lt;Thinking_of_Caption&gt;</code>、<code>&lt;Thinking_of_Reasoning&gt;</code>）做隐空间推理，生成最终结论。</em><em>下部</em><em>：思考 token 的 last hidden state 喂给三个独立的 Heima 解释器（纯 LLM），分别重建 Summary、Caption 和 Reasoning 的文本推理过程。值得注意的是，解释器不接收图像输入，却能重建出视觉细节——Caption 解释器输出"a sleek, modern sports car with a black exterior"并识别出 logo 特征为"a cross with a circle"，Reasoning 解释器据此推断出品牌为 BMW。这验证了思考 token 中编码了视觉信息。</em></p>
 <h3 id="21-token">2.1 思考 Token 与渐进式蒸馏</h3>
 <p><strong>思考 Token（Thinking Token）</strong>：为每个 CoT 阶段（Summary、Caption、Reasoning）定义一个特殊的 vocabulary token（如 <code>&lt;Thinking_of_Summary&gt;</code>），将整个阶段的文本推理压缩到单个 token 的隐状态中。</p>
 <p><strong>渐进式蒸馏（Progressive Distillation）</strong>：不是一次性将所有 CoT 阶段替换为思考 token，而是逐阶段渐进替换：</p>
@@ -371,6 +372,8 @@ document.addEventListener('DOMContentLoaded', function() {
 <li><strong>Stage 3</strong>：全部三个阶段都替换为思考 token</li>
 <li><strong>Recovering Stage</strong>：最终用纯思考 token 额外微调一步，优化跨阶段 transition</li>
 </ul>
+<p><img alt="图 2：渐进式蒸馏过程" src="assets/heima/method_progressive_encoding-1_column.png" /></p>
+<p><em>图 2：渐进式蒸馏的四个阶段。每一行展示该阶段使用的训练数据格式：</em><em>Stage 0</em><em>——全部文本 CoT（Summary + Caption + Reasoning）；</em><em>Stage 1</em><em>——Summary 替换为 <code>&lt;Thinking_of_Summary&gt;</code> 思考 token；</em><em>Stage 2</em><em>——Summary 和 Caption 都替换为对应思考 token；</em><em>Stage 3</em><em>——全部三个阶段替换为思考 token。相同颜色的格子表示同一类内容（蓝色 = Summary 阶段）。这种渐进策略避免了直接全部替换造成的剧烈分布偏移。</em></p>
 <p>训练数据集 <span class="math inline">$D_H$</span> 将原始 CoT 文本替换为思考 token：</p>
 <p><div class="math display">$$D_H := \bigl\{ (X, \texttt{&lt;CoTs>}, Y) \bigr\}$$</div></p>
 <p>蒸馏目标为标准 next-token prediction：</p>
@@ -385,11 +388,12 @@ document.addEventListener('DOMContentLoaded', function() {
 <ul>
 <li>思考 token 永远不可能比原始 CoT 包含更多关于 <span class="math inline">$Y$</span> 的信息</li>
 <li>但只要 <span class="math inline">$I(Y;\texttt{&lt;CoTs>}\mid X) > 0$</span>，就保留了非平凡的推理信息</li>
-<li>信息损失量 <span class="math inline">$I(Y;\mathrm{CoTs}\mid X,\texttt{&lt;CoTs>})$</span> 量化了压缩带来的信息差距</li>
+<li>信息损失量 <span class="math inline">$I(Y;\mathrm{CoTs}\mid X,\texttt{&lt;CoTs>})$</span> 量化了压缩带来的信息差距——解释器就是用来经验性地评估这个差距的大小</li>
 </ul>
 <h3 id="23-interpreter">2.3 解释器（Interpreter）设计</h3>
 <p>为了量化信息差距，论文设计了基于纯 LLM 的解释器，将思考 token 的隐状态重构回文本 CoT。</p>
-<p><img alt="解释器训练流程" src="assets/heima/method_adaptive_decoding_train-1_column.pdf" /></p>
+<p><img alt="图 3：解释器训练流程" src="assets/heima/method_adaptive_decoding_train-1_column.png" /></p>
+<p><em>图 3：解释器（Interpreter）的训练过程。关键设计是：不直接把思考 token 的文本符号 <code>&lt;CoT&gt;_(s)</code> 喂给解释器，而是从冻结的 Heima 中提取该 token 的 last hidden state <span class="math inline">$H_{\texttt{&lt;CoT>}_{(s)}}$</span>，用它替换掉解释器 embedding 层对应位置的向量。解释器的输入是"解释性 prompt + 问题文本 + 隐状态替换"，输出是重建的文本 CoT。这样做的原因是：单个 token 符号本身无法携带足够信息，真正的推理内容编码在隐状态中。</em></p>
 <p><strong>训练方式</strong>：</p>
 <ol>
 <li>使用冻结的 Heima 生成思考 token</li>
@@ -501,18 +505,16 @@ document.addEventListener('DOMContentLoaded', function() {
 </tr>
 </tbody>
 </table>
-<blockquote>
-<p>括号内为平均生成 token 数。Heima 将 token 数降至原始 LLaVA-CoT 的约 <strong>6-8%</strong>。</p>
-</blockquote>
+<p><em>表 1：主实验结果。括号内为平均生成 token 数，Avg 列为 6 个基准的平均准确率。Heima 将 token 数降至原始 LLaVA-CoT 的约 6-8%（如 MMStar 上 12.8 vs 181.0）。"w/o prog." 表示一次性蒸馏所有 CoT 阶段（非渐进式），"w/o rec." 表示去掉最后的 recovering stage。</em></p>
 <p><strong>关键发现</strong>：</p>
 <ul>
 <li>Heima 用不到 10% 的 token 保持了 LLaVA-CoT 的绝大部分精度（58.0 vs 61.1）</li>
 <li>在 MMBench 上甚至<strong>超越</strong>了 LLaVA-CoT（72.8 vs 70.7），说明压缩过程可能去除了噪声</li>
-<li>渐进式蒸馏提升 1.7 个百分点，recovering stage 提升 1.4 个百分点——两者缺一不可</li>
-<li>相比无 CoT 的 Llama3.2-11B 基线，Heima 在全部 6 个基准上均有大幅提升</li>
+<li>渐进式蒸馏提升 1.7 个百分点（58.0 vs 56.3），recovering stage 提升 1.4 个百分点（58.0 vs 56.6）——两者缺一不可</li>
+<li>相比无 CoT 的 Llama3.2-11B 基线，Heima 在全部 6 个基准上均有大幅提升（58.0 vs 52.1）</li>
 </ul>
 <h3 id="42">4.2 跨模型架构泛化</h3>
-<p>在 LLaVA-Next-Vicuna-7B 上的验证（Table A2）：</p>
+<p>在 LLaVA-Next-Vicuna-7B 上的验证：</p>
 <table>
 <thead>
 <tr>
@@ -535,9 +537,10 @@ document.addEventListener('DOMContentLoaded', function() {
 </tr>
 </tbody>
 </table>
-<p>同样将 token 降至 6%，保持了 CoT 精度的 97.8%，验证了方法的通用性。</p>
+<p>同样将 token 降至约 6%，保持了 CoT 精度的 97.8%，验证了方法的通用性（不限于 Llama 模型家族）。</p>
 <h3 id="43">4.3 解释器重建质量</h3>
-<p><img alt="解释器评估" src="assets/heima/results_decoder_eval_metrics_gpt4o.pdf" /></p>
+<p><img alt="图 4：解释器重建评估" src="assets/heima/results_decoder_eval_metrics_gpt4o.png" /></p>
+<p><em>图 4：解释器重建质量评估。</em><em>左图</em><em>：BLEU-4、METEOR、ROUGE-L、BERTScore 四个自动指标的结果，Summary 阶段重建质量最高（BERTScore 73.4），Reasoning 阶段难度最大（BERTScore 66.6），Caption 居中（71.4）。</em><em>右图</em><em>：GPT-4o 用 5 分制（1-5 分）评估重建文本与原始 CoT 的语义相似度，三个阶段均获得较高的平均分，确认推理内容被有效重建。推理阶段分数相对较低是因为该阶段涉及更复杂的多步逻辑链。</em></p>
 <table>
 <thead>
 <tr>
@@ -572,7 +575,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </tr>
 </tbody>
 </table>
-<p>GPT-4o 5-point 相似度评估确认所有三个阶段的推理过程均被有效重建。<strong>尤其值得注意的是，解释器是纯文本 LLM，不接收图像输入，却能重建出包含视觉细节的内容，证明思考 token 中成功编码了多模态信息。</strong></p>
+<p><strong>尤其值得注意的是，解释器是纯文本 LLM，不接收图像输入，却能重建出包含视觉细节的内容——这直接证明了思考 token 的隐表示中成功编码了多模态信息。</strong></p>
 <hr />
 <h2 id="5">5. 消融实验</h2>
 <h3 id="51-token">5.1 思考 token 数量</h3>
@@ -611,11 +614,188 @@ document.addEventListener('DOMContentLoaded', function() {
 </tr>
 </tbody>
 </table>
-<p><strong>结论</strong>：单个思考 token 效果最优。更多 token 并不会提升精度，反而可能引入噪声。</p>
+<p><strong>结论</strong>：单个思考 token 效果最优。更多 token 不会提升精度，反而可能引入噪声或过拟合。这说明一个 hidden state 的容量已经足够编码单阶段 CoT 的推理信息。</p>
 <h3 id="52">5.2 自适应保留比例</h3>
-<p>按原始 CoT 长度的固定比例保留思考 token（10%-90%），结果精度无规律波动，且 token 数超过 70% 时甚至超过基线模型的 token 数，证明自适应方法不适用于 CoT 压缩。</p>
+<p>按原始 CoT 长度的固定比例保留思考 token（10%-90%）：</p>
+<table>
+<thead>
+<tr>
+<th>Ratio</th>
+<th>MMStar</th>
+<th>MMBench</th>
+<th>MMVet</th>
+<th>MathVista</th>
+<th>AI2D</th>
+<th>Hallusion</th>
+<th>Avg</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0.1</td>
+<td>49.1</td>
+<td>69.7</td>
+<td>37.2</td>
+<td>41.3</td>
+<td>75.9</td>
+<td>59.1</td>
+<td>55.4</td>
+</tr>
+<tr>
+<td>0.2</td>
+<td>49.7</td>
+<td>71.5</td>
+<td>39.4</td>
+<td>41.2</td>
+<td>75.3</td>
+<td>60.0</td>
+<td>56.2</td>
+</tr>
+<tr>
+<td>0.3</td>
+<td>48.1</td>
+<td>71.9</td>
+<td>40.6</td>
+<td>39.9</td>
+<td>75.3</td>
+<td>59.4</td>
+<td>55.8</td>
+</tr>
+<tr>
+<td>0.4</td>
+<td>47.9</td>
+<td>70.3</td>
+<td>38.6</td>
+<td>39.2</td>
+<td>76.3</td>
+<td>59.7</td>
+<td>55.3</td>
+</tr>
+<tr>
+<td>0.5</td>
+<td>47.2</td>
+<td>70.1</td>
+<td>40.5</td>
+<td>39.5</td>
+<td>75.2</td>
+<td>57.6</td>
+<td>55.0</td>
+</tr>
+<tr>
+<td>0.6</td>
+<td>48.4</td>
+<td>70.9</td>
+<td>42.0</td>
+<td>38.8</td>
+<td>76.6</td>
+<td>60.5</td>
+<td>56.2</td>
+</tr>
+<tr>
+<td>0.7</td>
+<td>48.7</td>
+<td>69.8</td>
+<td>41.1</td>
+<td>39.0</td>
+<td>75.4</td>
+<td>59.7</td>
+<td>55.6</td>
+</tr>
+<tr>
+<td>0.8</td>
+<td>49.9</td>
+<td>69.3</td>
+<td>40.9</td>
+<td>37.2</td>
+<td>75.3</td>
+<td>59.4</td>
+<td>55.3</td>
+</tr>
+<tr>
+<td>0.9</td>
+<td>49.2</td>
+<td>70.5</td>
+<td>40.1</td>
+<td>38.4</td>
+<td>75.7</td>
+<td>60.1</td>
+<td>55.7</td>
+</tr>
+</tbody>
+</table>
+<p>精度在 55.0-56.2 之间无规律波动，远低于单 token 方案的 58.0，且 token 数超过 70% 时甚至超过基线模型。<strong>结论</strong>：固定比例的自适应方法不适用于 CoT 压缩，核心矛盾不在 token 数量而在信息密度的编码方式。</p>
 <h3 id="53">5.3 解释器数量</h3>
-<p>消融实验表明，用单一 LLM 同时解释三个阶段，summary 和 caption 重建质量大幅下降，但 reasoning 阶段尚可。<strong>结论</strong>：三个独立解释器是必要的。</p>
+<p>用单一 LLM 同时解释三个阶段 vs 三个独立解释器的对比：</p>
+<table>
+<thead>
+<tr>
+<th>指标</th>
+<th>#解释器</th>
+<th>Summary</th>
+<th>Caption</th>
+<th>Reasoning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>BLEU</td>
+<td>1</td>
+<td>9.5</td>
+<td>6.8</td>
+<td><strong>11.3</strong></td>
+</tr>
+<tr>
+<td></td>
+<td>3</td>
+<td><strong>15.9</strong></td>
+<td><strong>12.8</strong></td>
+<td>11.2</td>
+</tr>
+<tr>
+<td>METEOR</td>
+<td>1</td>
+<td>32.7</td>
+<td>25.4</td>
+<td>32.5</td>
+</tr>
+<tr>
+<td></td>
+<td>3</td>
+<td><strong>40.1</strong></td>
+<td><strong>35.5</strong></td>
+<td><strong>32.7</strong></td>
+</tr>
+<tr>
+<td>ROUGE-L</td>
+<td>1</td>
+<td>36.8</td>
+<td>29.7</td>
+<td>31.9</td>
+</tr>
+<tr>
+<td></td>
+<td>3</td>
+<td><strong>41.6</strong></td>
+<td><strong>37.9</strong></td>
+<td><strong>32.7</strong></td>
+</tr>
+<tr>
+<td>BERTScore</td>
+<td>1</td>
+<td>67.8</td>
+<td>60.6</td>
+<td><strong>67.3</strong></td>
+</tr>
+<tr>
+<td></td>
+<td>3</td>
+<td><strong>73.4</strong></td>
+<td><strong>71.4</strong></td>
+<td>66.6</td>
+</tr>
+</tbody>
+</table>
+<p>三个独立解释器在 Summary 和 Caption 阶段优势显著（BERTScore +5.6 / +10.8），但在 Reasoning 阶段单一解释器反而略优（BLEU 11.3 vs 11.2，BERTScore 67.3 vs 66.6）。<strong>结论</strong>：Summary 和 Caption 阶段内容差异大，需要独立解释器；Reasoning 阶段的文本模式相对固定，单一解释器也能胜任。</p>
 <hr />
 <h2 id="6">6. 代码仓库结构</h2>
 <div class="codehilite"><pre><span></span><code>Heima/
@@ -636,14 +816,14 @@ document.addEventListener('DOMContentLoaded', function() {
 <h3 id="_1">核心贡献</h3>
 <ol>
 <li><strong>首个 MLLM CoT 压缩框架</strong>：将冗长的多阶段 CoT 推理压缩为极少量的思考 token，实现了"隐空间推理"</li>
-<li><strong>信息论保证</strong>：从理论上证明了只要保留非平凡互信息，压缩后的推理仍有效</li>
+<li><strong>信息论保证</strong>：从理论上证明了只要保留非平凡互信息，压缩后的推理仍有效，且信息差距可以通过解释器经验性地评估</li>
 <li><strong>可解释性验证</strong>：通过纯文本 LLM 解释器成功重建多模态推理过程，验证了压缩的有效性和可解释性</li>
 </ol>
 <h3 id="_2">值得关注的点</h3>
 <ul>
-<li>思考 token 的隐表示编码了视觉信息这一发现非常有趣——单个 4096 维的 hidden state 竟然能"存储"足够的视觉细节供纯文本 LLM 重建图像描述</li>
+<li>思考 token 的隐表示编码了视觉信息——单个 4096 维的 hidden state 能"存储"足够的视觉细节供纯文本 LLM 重建图像描述，这在图 1 的 demo 中得到了直观验证</li>
 <li>渐进式蒸馏的策略很实用，避免了直接将整个 CoT 替换为未知 token 对模型造成的剧烈分布偏移</li>
-<li>解释器设计巧妙：不输入 token 符号而是输入其 last hidden state，绕过了"单个 token 携带信息有限"的问题</li>
+<li>解释器设计巧妙：不输入 token 符号而是输入其 last hidden state，绕过了"单个 token 符号携带信息有限"的问题</li>
 </ul>
 <h3 id="_3">局限与展望</h3>
 <ul>
