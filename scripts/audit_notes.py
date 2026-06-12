@@ -11,7 +11,9 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
+NOTES_ROOT = ROOT / "notes"
 DATE_RE = re.compile(r"20\d\d-\d\d-\d\d")
+MONTH_RE = re.compile(r"20\d\d-\d\d")
 META_RE = re.compile(r"<!--\s*(arxiv|venue|tags)\s*:\s*(.*?)\s*-->", re.S)
 MD_IMG_RE = re.compile(r"!\[[^\]]*\]\(([^)]+)\)")
 HTML_IMG_RE = re.compile(r"<img\s+[^>]*src=[\"']([^\"']+)[\"']", re.I)
@@ -92,11 +94,29 @@ def local_image_refs(path: Path, text: str) -> list[str]:
     ]
 
 
+def note_paths(suffix: str) -> list[Path]:
+    return sorted(NOTES_ROOT.glob(f"20??-??/20??-??-??/*{suffix}"))
+
+
+def is_note_tree_path(path: Path) -> bool:
+    return (
+        len(path.parts) > 3
+        and path.parts[0] == "notes"
+        and MONTH_RE.fullmatch(path.parts[1]) is not None
+        and DATE_RE.fullmatch(path.parts[2]) is not None
+    )
+
+
 def audit_notes(errors: list[str], warnings: list[str]) -> None:
-    md_by_stem = {path.with_suffix(""): path for path in ROOT.glob("20??-??-??/*.md")}
-    html_by_stem = {path.with_suffix(""): path for path in ROOT.glob("20??-??-??/*.html")}
+    md_by_stem = {path.with_suffix(""): path for path in note_paths(".md")}
+    html_by_stem = {path.with_suffix(""): path for path in note_paths(".html")}
 
     for stem, path in sorted(md_by_stem.items()):
+        month = path.parent.parent.name
+        date = path.parent.name
+        if not date.startswith(f"{month}-"):
+            errors.append(f"{rel(path)} is under {month}/ but date directory is {date}")
+
         html = html_by_stem.get(stem)
         if html is None:
             errors.append(f"{rel(path)} has no matching HTML file")
@@ -140,7 +160,7 @@ def audit_notes(errors: list[str], warnings: list[str]) -> None:
 
 
 def audit_assets(warnings: list[str]) -> None:
-    for path in ROOT.glob("20??-??-??/assets/**/*"):
+    for path in NOTES_ROOT.glob("20??-??/20??-??-??/assets/**/*"):
         if not path.is_file():
             continue
         size = path.stat().st_size
@@ -180,8 +200,8 @@ def audit_git(warnings: list[str]) -> None:
         path = Path(line)
         if not path.parts:
             continue
-        if DATE_RE.fullmatch(path.parts[0]) and len(path.parts) > 1:
-            warnings.append(f"untracked date-dir file is not ignored: {line}")
+        if is_note_tree_path(path):
+            warnings.append(f"untracked note-tree file is not ignored: {line}")
 
 
 def main() -> int:

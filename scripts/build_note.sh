@@ -6,7 +6,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 if [[ "$#" -lt 1 ]]; then
-    echo "Usage: $0 20YY-MM-DD/Name_阅读笔记.md [more.md ...]" >&2
+    echo "Usage: $0 notes/20YY-MM/20YY-MM-DD/Name_阅读笔记.md [more.md ...]" >&2
     exit 2
 fi
 

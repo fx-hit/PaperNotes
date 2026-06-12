@@ -34,6 +34,7 @@ from pathlib import Path
 
 MODE = sys.argv[1]
 ROOT = Path.cwd()
+NOTES_ROOT = ROOT / "notes"
 TAG_PAGE_MIN_COUNT = 1
 
 TAG_ALIASES = {
@@ -110,10 +111,17 @@ def normalize_tags(tags: list[str]) -> tuple[str, ...]:
     return tuple(normalized)
 
 
+def note_html_paths() -> list[Path]:
+    return sorted(
+        NOTES_ROOT.glob("20??-??/20??-??-??/*.html"),
+        key=lambda p: (p.parent.name, p.name.casefold()),
+    )
+
+
 def load_notes() -> list[Note]:
     notes: list[Note] = []
     errors: list[str] = []
-    for path in sorted(ROOT.glob("20??-??-??/*.html"), key=lambda p: (p.parent.name, p.name)):
+    for path in note_html_paths():
         rel_path = path.relative_to(ROOT).as_posix()
         text = path.read_text(encoding="utf-8", errors="ignore")
         tags = normalize_tags([tag.strip() for tag in extract_comment(text, "tags").split(",") if tag.strip()])

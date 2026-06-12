@@ -205,20 +205,26 @@ def split_metadata_comments(text):
     return metadata, '\n'.join(body_lines)
 
 
+def is_published_note_path(path):
+    parts = path.parts
+    return (
+        len(parts) >= 4
+        and parts[-4] == 'notes'
+        and re.fullmatch(r'20\d\d-\d\d', parts[-3]) is not None
+        and re.fullmatch(r'20\d\d-\d\d-\d\d', parts[-2]) is not None
+    )
+
+
 def requires_site_metadata(md_path):
-    """Top-level notes under dated directories are published to the site."""
+    """Top-level notes under notes/YYYY-MM/YYYY-MM-DD are published to the site."""
     path = Path(md_path)
     if path.suffix != '.md':
         return False
-    if len(path.parts) == 2 and re.fullmatch(r'20\d\d-\d\d-\d\d', path.parts[0]):
+    if is_published_note_path(path):
         return True
 
     full_path = path if path.is_absolute() else (Path.cwd() / path)
-    parent = full_path.parent
-    return (
-        re.fullmatch(r'20\d\d-\d\d-\d\d', parent.name) is not None
-        and (parent.parent / 'generate_index.sh').exists()
-    )
+    return is_published_note_path(full_path)
 
 
 def validate_metadata(md_path, metadata):

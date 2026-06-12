@@ -15,7 +15,7 @@ python3 .claude/skills/md2html/scripts/convert.py <file1.md> [file2.md ...]
 
 - 不传参数则转换当前目录所有 `.md` 文件
 - 输出 HTML 文件与源 `.md` 同目录
-- 位于 `20YY-MM-DD/` 顶层的站点笔记必须在 Markdown 顶部包含 `arxiv`、`venue`、`tags` 三行元数据注释；缺失时转换会失败
+- 位于 `notes/20YY-MM/20YY-MM-DD/` 顶层的站点笔记必须在 Markdown 顶部包含 `arxiv`、`venue`、`tags` 三行元数据注释；缺失时转换会失败
 
 ```html
 <!-- arxiv: 2602.15922 -->

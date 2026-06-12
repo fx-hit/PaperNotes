@@ -5,17 +5,19 @@
 ## 目录结构
 
 ```
-YYYY-MM-DD/           # 按日期组织
-├── *.md              # 图文笔记
-├── *.html            # 独立 HTML 页面
-└── assets/           # 插图
+notes/
+└── YYYY-MM/          # 按月份分组
+    └── YYYY-MM-DD/   # 按阅读日期组织
+        ├── *.md      # 图文笔记
+        ├── *.html    # 独立 HTML 页面
+        └── assets/   # 插图
 ```
 
 ## 使用
 
 ```bash
 # 转换单篇笔记、更新入口页并审计
-./scripts/build_note.sh 2026-05-21/DreamZero_阅读笔记.md
+./scripts/build_note.sh notes/2026-05/2026-05-21/DreamZero_阅读笔记.md
 
 # 仅重新生成首页和标签页
 ./generate_index.sh --site
@@ -35,7 +37,7 @@ python3 scripts/audit_notes.py --check-site
 ## 常用提示词示例
 
 ```
-1. /paper2notes 阅读 2026-05-25/diwa 代码和 2026-05-25/arXiv-2508.03645v1 论文，
+1. /paper2notes 阅读 notes/2026-05/2026-05-25/diwa 代码和 notes/2026-05/2026-05-25/arXiv-2508.03645v1 论文，
 并参考 AGENTS.md 规范撰写笔记。
 
 2. 图注不够详细，要按照 paper2notes skill的要求撰写
