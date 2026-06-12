@@ -504,14 +504,14 @@ document.addEventListener('DOMContentLoaded', function() {
 </tbody>
 </table>
 <p>可以把这 7 篇放成一条方法演化链：</p>
-<p><pre class="mermaid">flowchart LR
-  A["Text CoT\n可解释但长、会稀释视觉"] --> B["Hidden / compressed CoT\nHeima, ImgCoT"]
-  A --> C["Visual latent reasoning\nLVR"]
-  C --> D["Semantic and RL alignment\nSLVR"]
-  C --> E["Per-step visual recall\nVaLR"]
-  C --> F["Audio-visual latent reasoning\nLatentOmni"]
-  C --> G["Causal audit\nCapImagine"]
-  G --> H["Text-space imagination\n显式、可干预、可审计"]</pre></p>
+<pre class="mermaid">flowchart LR
+  A["Text CoT&lt;br/>可解释但长&lt;br/>会稀释视觉"] --> B["Hidden / compressed CoT&lt;br/>Heima, ImgCoT"]
+  A --> C["Visual latent reasoning&lt;br/>LVR"]
+  C --> D["Semantic and RL alignment&lt;br/>SLVR"]
+  C --> E["Per-step visual recall&lt;br/>VaLR"]
+  C --> F["Audio-visual latent reasoning&lt;br/>LatentOmni"]
+  C --> G["Causal audit&lt;br/>CapImagine"]
+  G --> H["Text-space imagination&lt;br/>显式、可干预、可审计"]</pre>
 <p>这张图表达的是：LVR 不是终点，而是一个分岔点。后续论文要么增强 latent 的监督信号，要么压缩文本 CoT，要么直接质疑 latent 的因果地位。</p>
 <hr />
 <h2 id="cot">三、为什么大家都想逃离纯文本 CoT</h2>
@@ -538,7 +538,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <h3 id="41-lvr-hidden-state-roi">4.1 LVR：用 hidden state 重建 ROI 视觉语义</h3>
 <p>LVR 的核心想法是：当模型需要对图像中某个区域推理时，不必调用外部工具裁剪图像，也不必生成一大段文字描述，而是让 LLM 进入 LVR mode，用最后一层 hidden state 近似重建 query-relevant visual tokens。</p>
 <p>形式上可以理解为：</p>
-<p><div class="math display">$$h^{\text{LVR}}_{1:K} \approx v^{\text{ROI}}_{1:K}$$</div></p>
+<div class="math display">$$h^{\text{LVR}}_{1:K} \approx v^{\text{ROI}}_{1:K}$$</div>
 <p>其中 <span class="math inline">$h^{\text{LVR}}$</span> 是 LLM 自回归产生的 latent hidden states，<span class="math inline">$v^{\text{ROI}}$</span> 是视觉编码器和 projector 输出的 ROI token。训练时用 MSE 对齐；推理时模型生成固定步数 latent，然后回到文本模式输出答案。</p>
 <p><img alt="LVR 训练和推理流程" src="assets/lvr/lvr_main.png" /></p>
 <p><em>图4：LVR 训练和推理流程。SFT 阶段用 bounding box 找到与问题相关的视觉 token，并监督 LLM hidden state 重建这些 token；RL 阶段用 adapted GRPO 继续优化文本生成；推理时模型遇到特殊 token 后进入 LVR mode，把上一位置 hidden state 作为下一位置输入 embedding，生成一段 latent visual thoughts。图中最关键的是训练-推理的角色切换：训练时 latent 有明确视觉目标，推理时 latent 必须自己维持语义。</em></p>
@@ -560,14 +560,14 @@ document.addEventListener('DOMContentLoaded', function() {
 <p><img alt="SLVR 方法框架" src="assets/slvr/figure2.png" /></p>
 <p><em>图5：SLVR 的两阶段框架。Stage 1 同时训练 visual latent、semantic latent 和答案生成；Stage 2 对同一区域的两个问题联合优化，使 latent 在不同问题扰动下保持稳定。相比 LVR，SLVR 不是只让 latent "像视觉特征"，而是让它同时 "懂属性语义" 和 "对同一区域跨问题一致"。</em></p>
 <p>SLVR 的意义在于把 latent reasoning 从"连续空间技巧"推进到"结构化表征学习"：</p>
-<p><div class="math display">$$\mathcal{L}_{stage1}
+<div class="math display">$$\mathcal{L}_{stage1}
 = \mathcal{L}_{vis}
 + \mathcal{L}_{sem}
-+ \mathcal{L}_{ans}$$</div></p>
-<p><div class="math display">$$\mathcal{R}
++ \mathcal{L}_{ans}$$</div>
+<div class="math display">$$\mathcal{R}
 = \lambda_{ans}\mathcal{R}_{ans}
 + \lambda_{cons}\mathcal{R}_{cons}
-+ \lambda_{stab}\mathcal{R}_{stab}$$</div></p>
++ \lambda_{stab}\mathcal{R}_{stab}$$</div>
 <p>这也回应了 CapImagine 式质疑的一部分：如果 latent 会跨实例坍缩，那就增加属性级语义监督；如果 latent 会随问题表述漂移，那就增加 multi-query consistency。</p>
 <p>不过 SLVR 仍然不是完全的因果证明。它展示了性能、消融和代码实现上的有效性，但不像 CapImagine 那样直接问：把 latent 换掉后输出是否崩掉？</p>
 <h3 id="43-valr-cot">4.3 VaLR：每一步 CoT 前做视觉回注</h3>
@@ -583,9 +583,9 @@ document.addEventListener('DOMContentLoaded', function() {
 </code></pre></div>
 
 <p>每一段 latent tokens 通过 REPA loss 对齐外部视觉编码器特征：</p>
-<p><div class="math display">$$\mathcal{L}
+<div class="math display">$$\mathcal{L}
 = \mathcal{L}_{CE}
-+ \lambda \mathcal{L}_{REPA}$$</div></p>
++ \lambda \mathcal{L}_{REPA}$$</div>
 <p><img alt="VaLR 框架" src="assets/valr/figure_1.jpg" /></p>
 <p><em>图6：VaLR 框架。左侧展示 latent mode 与 language mode 的交替生成，右侧展示 REPA 对齐训练。外部视觉编码器只在训练时提供 patch-wise 特征监督，推理时不再调用。VaLR 的关键不是把视觉特征直接塞进输入，而是让 MLLM 内部 latent states 学会在每个推理步骤前重新激活视觉 grounding。</em></p>
 <p>VaLR 最重要的实验现象是 <strong>test-time scaling</strong>：在多个 benchmark 上，VaLR 随推理长度增加性能单调提升，而 Ocean-R1 / LVR 等 baseline 在长推理后退化。这说明它不是简单压缩 CoT，而是在延长推理时持续保持视觉 grounding。</p>
@@ -637,15 +637,15 @@ Recovering: pure thinking tokens fine-tuning
 <p><img alt="ImgCoT 方法流程" src="assets/imgcot/method.jpg" /></p>
 <p><em>图10：ImgCoT 整体训练流程。先训练视觉编码器重建可视化文本，再训练 LLM 基于 visual latent tokens 推理。这个流程把长文本 CoT 的压缩目标从"重建自然语言"改成"重建视觉化结构"，从而减少语言表层形式对 latent 的干扰。</em></p>
 <p>Loose ImgCoT 是对纯视觉压缩的补充：对于高不确定、领域特定的关键推理步骤，仍保留少量文本 token；对通用步骤则交给 latent 压缩。这实际上形成了一个混合策略：</p>
-<p><div class="math display">$$\text{Reasoning} =
+<div class="math display">$$\text{Reasoning} =
 \text{Visual latent for global structure}
-+ \text{Text tokens for critical local details}$$</div></p>
++ \text{Text tokens for critical local details}$$</div>
 <p>这和 LatentOmni / VaLR 的混合思想一致：纯文本和纯 latent 都不是最优，关键是让不同信息类型走适合自己的通道。</p>
 <hr />
 <h2 id="capimagine">六、第三类范式：CapImagine 的因果审计与文本想象</h2>
 <p>CapImagine 是这批论文中最重要的"刹车"。它提醒我们：latent reasoning 的 benchmark 提升可能来自训练数据、prompt、额外监督、soft prompt 效应，而不一定来自 latent token 真正承担推理。</p>
 <p>CapImagine 用因果中介分析检查两条边：</p>
-<p><div class="math display">$$X \rightarrow Z \rightarrow Y$$</div></p>
+<div class="math display">$$X \rightarrow Z \rightarrow Y$$</div>
 <p>其中 <span class="math inline">$X$</span> 是输入图像和问题，<span class="math inline">$Z$</span> 是 latent token，<span class="math inline">$Y$</span> 是答案。真正的 latent reasoning 至少应满足：</p>
 <ol>
 <li>改变输入 <span class="math inline">$X$</span> 会改变 latent <span class="math inline">$Z$</span>；</li>

@@ -123,6 +123,8 @@ def restore_special_blocks(html_text, placeholders):
         else:
             r = f'<span class="math inline">${safe}$</span>'
         html_text = html_text.replace(key, r)
+    html_text = re.sub(r'<p>\s*(<pre class="mermaid">.*?</pre>)\s*</p>', r'\1', html_text, flags=re.DOTALL)
+    html_text = re.sub(r'<p>\s*(<div class="math display">.*?</div>)\s*</p>', r'\1', html_text, flags=re.DOTALL)
     return html_text
 
 

@@ -75,13 +75,13 @@
 
 ```mermaid
 flowchart LR
-  A["Text CoT\n可解释但长、会稀释视觉"] --> B["Hidden / compressed CoT\nHeima, ImgCoT"]
-  A --> C["Visual latent reasoning\nLVR"]
-  C --> D["Semantic and RL alignment\nSLVR"]
-  C --> E["Per-step visual recall\nVaLR"]
-  C --> F["Audio-visual latent reasoning\nLatentOmni"]
-  C --> G["Causal audit\nCapImagine"]
-  G --> H["Text-space imagination\n显式、可干预、可审计"]
+  A["Text CoT<br/>可解释但长<br/>会稀释视觉"] --> B["Hidden / compressed CoT<br/>Heima, ImgCoT"]
+  A --> C["Visual latent reasoning<br/>LVR"]
+  C --> D["Semantic and RL alignment<br/>SLVR"]
+  C --> E["Per-step visual recall<br/>VaLR"]
+  C --> F["Audio-visual latent reasoning<br/>LatentOmni"]
+  C --> G["Causal audit<br/>CapImagine"]
+  G --> H["Text-space imagination<br/>显式、可干预、可审计"]
 ```
 
 这张图表达的是：LVR 不是终点，而是一个分岔点。后续论文要么增强 latent 的监督信号，要么压缩文本 CoT，要么直接质疑 latent 的因果地位。
