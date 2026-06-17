@@ -83,22 +83,31 @@
 
 $$\pi_\theta\colon\big(\{o_{t-H+1}, \ldots, o_t\},\, \{s_{t-H+1}, \ldots, s_t\},\, \{a_{t-H}, \ldots, a_{t-1}\},\, \ell\big)\mapsto\hat a_t$$
 
-其中 $\hat{a}_t \in \mathbb{R}^{C \times d_a}$ 为长度 $C=8$ 的动作 chunk，$d_a=7$（end-effector delta-pose）。
+其中 $\hat{a}_t \in \mathbb{R}^{C \times d_a}$ 为长度 $C=8$ 的动作 chunk，$d_a=7$（7 自由度 end-effector delta-pose：3 平移 + 3 旋转 + 1 夹爪）。这里明确用了 action chunk 而非单步动作，是为了让策略开环执行 8 步后再重新观测，减少推理频率需求（配合 145Hz 的推理速度，8 步 chunk 实际执行控制频率约 18Hz）。
 
 **GFM 分割**：
 
 $$E_{\leq L_s} = f^{(L_s)} \circ \cdots \circ f^{(1)}, \qquad D_{>L_s} = f^{(M)} \circ \cdots \circ f^{(L_s+1)}$$
 
-$L_s$ 的选取需满足：足够深以提取丰富特征，但浅于 DPT head 用到的最早层 $m_1$，保证预测的 future tokens 能被 DPT 解码。
+将 $M$ 层的 GFM 在第 $L_s$ 层切开，浅层 $E_{\leq L_s}$ 做观测编码，深层 $D_{>L_s}$ 做解码。$L_s$ 的选取有两个约束：（1）$L_s$ 要足够深——浅层特征语义不足，在 $L_s=0$ 时直接崩溃（Orig 5.4%，Plus 1.8%）；（2）$L_s < m_1$，即浅于 DPT 深度解码头使用的最早特征层，保证 Predictor 预测的未来 latent 仍能被 DPT head 正确解码为深度图。实验确认 $L_s=12$ 最优，恰好是 DA3-Giant 中 frame-wise attention 切换为 global attention 的边界——此处特征既有足够几何语义，又留下足够多深层供解码。
 
-**Causal Future Predictor 输入**：
+**Causal Future Predictor 的输入构造**：
 
 $$\mathbf{p}_{t'} = \psi_s(s_{t'}), \quad \mathbf{q}_{t'} = \psi_a(a_{t'-1}), \quad \mathbf{U}_{t'}=[\mathbf{p}_{t'};\mathbf{q}_{t'};\mathbf{Z}_{t'}^{(L_s)}]$$
-$$\mathbf{X} = [\mathbf{L}_\ell; \mathbf{U}_{t-H+1}; \ldots; \mathbf{U}_t]$$
+$$\mathbf{X} = [\mathbf{L}_\ell;\; \mathbf{U}_{t-H+1};\; \ldots;\; \mathbf{U}_t]$$
+
+逐项解读：
+- $\psi_s, \psi_a$ 是轻量投影层（linear），把本体感觉 $s_{t'} \in \mathbb{R}^{7}$ 和前一动作 $a_{t'-1} \in \mathbb{R}^{7}$ 映射到与 GFM latent 同维度的 token，使它们可以直接拼接到几何 token 序列中。
+- $\mathbf{Z}_{t'}^{(L_s)} \in \mathbb{R}^{V(1+P) \times d}$ 是当前时步 $t'$ 在分割层的几何 latent，包含 $V$ 个视角各自的相机 token（$\mathbf{c}_v$）和 $P$ 个 patch token。
+- $\mathbf{U}_{t'}$ 是将本体感觉、动作历史、几何 latent 三路拼接后的 per-timestep block，维度为 $(2 + V(1+P)) \times d$。
+- $\mathbf{X}$ 是完整序列输入：语言 token $\mathbf{L}_\ell$ 打头，后跟 $H$ 个时步的 block。后训练时 $H=1$，输入仅含当前时步——这与消融实验结论吻合（更长历史反而引入虚假相关性，$H=1$ 最优）。
+- 整个 $\mathbf{X}$ 通过 block-causal 自注意力，各时步 block 只能注意自身和更早的 block（因果约束），但语言 $\mathbf{L}_\ell$ 对所有时步可见（全局广播）。
 
 **Feature Propagation**：
 
 $$\tilde{\mathbf{Z}}_{t'+1}^{(M)} = D_{>L_s}\!\Big(\Big[\big[\tilde{\mathbf{Z}}_{1,t'+1}^{(L_s)};\, \tilde{\mathbf{a}}_{1,t'}\big], \ldots, \big[\tilde{\mathbf{Z}}_{V,t'+1}^{(L_s)};\, \tilde{\mathbf{a}}_{V,t'}\big]\Big]\Big)$$
+
+Predictor 输出预测的未来几何 latent $\tilde{\mathbf{Z}}_{t'+1}^{(L_s)}$ 和动作 token $\tilde{\mathbf{a}}_{t'} \in \mathbb{R}^d$。动作 token 被复制 $V$ 份，拼接到每个视角的几何 token 序列末尾，再一起经过 GFM 深层 $D_{>L_s}$。这一设计的意义是：**动作 token 在 GFM 深层的 global attention 中能与全部几何 patch token 交互**，让几何解码和动作精化共享同一套计算，而不是用两个独立头分别处理。同时，深层的因果 mask 延伸到这里，防止跨时步的信息泄漏。最终从 $\tilde{\mathbf{Z}}_{t'+1}^{(M)}$ 中取出各视角对应的动作 token slot，经 Action Head（轻量 MLP）聚合输出动作 chunk $\hat{a}_{t'}$；DPT Head 从多个中间层 $\tilde{\mathbf{Z}}_{t'+1}^{(m^*)}$ 解码出像素级未来深度图。
 
 ---
 
