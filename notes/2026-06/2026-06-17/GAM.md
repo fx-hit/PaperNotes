@@ -1,6 +1,6 @@
 <!-- arxiv: 2606.17046 -->
 <!-- venue: CoRL 2026（投稿，under review） -->
-<!-- tags: VLA, 世界模型, 3D重建, 泛化, 强化学习 -->
+<!-- tags: VLA, WAM, 世界模型, 3D重建, 泛化 -->
 
 # Geometric Action Model for Robot Policy Learning
 
