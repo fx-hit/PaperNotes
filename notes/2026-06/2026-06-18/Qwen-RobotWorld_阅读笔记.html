@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Qwen-RobotWorld Technical Report: Unifying Embodied World Modeling through Language-Conditioned Video Generation</title>
+<!-- arxiv: 2606.17030 -->
+<!-- venue: Qwen Technical Report 2026 -->
+<!-- tags: WAM, 世界模型, 视频生成, 自动驾驶 -->
+<!-- words-zh: 3330 -->
+<!-- words-en: 604 -->
+<!-- reading-time: 13 -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap"></noscript>
+<style>
+  :root {
+    --bg: #ffffff;
+    --text: #1a1a2e;
+    --text-secondary: #555;
+    --border: #e1e4e8;
+    --link: #0969da;
+    --table-stripe: #f6f8fa;
+    --heading: #0d1117;
+    --blockquote-border: #0969da;
+    --blockquote-bg: #f0f6ff;
+    --inline-code: #d73a49;
+    --inline-code-bg: #f6f8fa;
+    --sidebar-width: 260px;
+    --toc-active: #0969da;
+    --content-max-width: 1350px;
+    --media-max-width: 1000px;
+    --content-padding: 48px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "Inter", "Noto Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 16px;
+    line-height: 1.75;
+    color: var(--text);
+    background: var(--bg);
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    width: var(--sidebar-width);
+    overflow-y: auto;
+    padding: 28px 20px 40px;
+    background: #fafbfc;
+    border-right: 1px solid var(--border);
+    z-index: 10;
+    scrollbar-width: thin;
+  }
+  .sidebar-title {
+    font-size: 13px; font-weight: 700; color: var(--text-secondary);
+    margin-bottom: 16px; letter-spacing: 0.06em; text-transform: uppercase;
+  }
+  .toc-list { list-style: none; padding: 0; margin: 0; }
+  .toc-list ul { list-style: none; padding-left: 14px; }
+  .toc-list li { margin: 1px 0; }
+  .toc-list a {
+    display: block; padding: 4px 12px; font-size: 13.5px; line-height: 1.45;
+    color: var(--text-secondary); text-decoration: none; border-radius: 4px;
+    border-left: 2px solid transparent; transition: all 0.15s;
+  }
+  .toc-list a:hover { color: var(--link); background: #e8f0fe; }
+  .toc-list a.active {
+    color: var(--toc-active); font-weight: 600;
+    border-left-color: var(--toc-active); background: #e8f0fe;
+  }
+  .toc-h1 a { font-weight: 600; color: var(--heading); font-size: 14px; }
+  .toc-h3 a { padding-left: 24px; font-size: 13px; }
+  .toc-h4 a { padding-left: 36px; font-size: 12.5px; }
+  .toc-empty { color: var(--text-secondary); font-size: 13px; font-style: italic; }
+
+  .main-wrapper {
+    margin-left: var(--sidebar-width);
+    min-height: 100vh;
+    display: flex; justify-content: center;
+  }
+  .content-inner {
+    width: 100%;
+    max-width: var(--content-max-width);
+    padding: 40px var(--content-padding) 80px;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    color: var(--heading); font-weight: 700; line-height: 1.3;
+    margin-top: 2em; margin-bottom: 0.6em; scroll-margin-top: 24px;
+  }
+  h1 { font-size: 2em; border-bottom: 2px solid var(--border); padding-bottom: 0.3em; margin-top: 0; }
+  h2 { font-size: 1.5em; border-bottom: 1px solid var(--border); padding-bottom: 0.25em; }
+  h3 { font-size: 1.25em; }
+  h4 { font-size: 1.1em; }
+  p { margin-bottom: 1em; }
+  a { color: var(--link); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  strong { font-weight: 600; }
+
+  blockquote {
+    border-left: 4px solid var(--blockquote-border);
+    background: var(--blockquote-bg);
+    padding: 12px 20px; margin: 1em 0;
+    border-radius: 0 6px 6px 0; color: var(--text-secondary);
+  }
+  blockquote p:last-child { margin-bottom: 0; }
+
+  code {
+    font-family: "JetBrains Mono", "SF Mono", "Fira Code", monospace;
+    font-size: 0.875em; background: var(--inline-code-bg);
+    padding: 2px 6px; border-radius: 4px; color: var(--inline-code);
+  }
+  pre {
+    background: #f6f8fa; color: #24292f;
+    border: 1px solid var(--border);
+    border-radius: 8px; padding: 16px 20px; overflow-x: auto;
+    margin: 1em 0; font-size: 14px; line-height: 1.55;
+  }
+  pre code { background: none; padding: 0; border-radius: 0; color: inherit; font-size: inherit; }
+
+  .codehilite { background: #f6f8fa; border: 1px solid var(--border); border-radius: 8px; padding: 16px 20px; overflow-x: auto; margin: 1em 0; }
+  .codehilite pre { background: none; padding: 0; margin: 0; border-radius: 0; }
+  .codehilite .hll { background-color: #fff8c5; }
+  .codehilite .c  { color: #6e7781; font-style: italic; }
+  .codehilite .k  { color: #cf222e; }
+  .codehilite .o  { color: #0550ae; }
+  .codehilite .s  { color: #0a3069; }
+  .codehilite .n  { color: #24292f; }
+  .codehilite .p  { color: #24292f; }
+  .codehilite .mi { color: #0550ae; }
+  .codehilite .nf { color: #8250df; }
+  .codehilite .nb { color: #953800; }
+  .codehilite .nc { color: #953800; }
+  .codehilite .bp { color: #953800; }
+
+  table { width: 100%; border-collapse: collapse; margin: 1em 0; font-size: 0.925em; }
+  th, td { border: 1px solid var(--border); padding: 10px 14px; text-align: left; }
+  th { background: var(--table-stripe); font-weight: 600; color: var(--heading); }
+  tr:nth-child(even) td { background: var(--table-stripe); }
+
+  .math.display { display: block; overflow-x: auto; padding: 12px 0; margin: 1em 0; }
+  ul, ol { padding-left: 1.5em; margin-bottom: 1em; }
+  li { margin-bottom: 0.3em; }
+  hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+  img { max-width: min(100%, var(--media-max-width)); height: auto; border-radius: 6px; margin: 0 auto; display: block; }
+  #main-content img { cursor: zoom-in; }
+  p:has(img) { text-align: center; max-width: var(--media-max-width); margin: 0.6em auto 0; }
+  table:has(img) { width: min(100%, var(--media-max-width)) !important; margin-left: auto; margin-right: auto; }
+  p:has(img) + p { text-align: center; font-size: 0.9em; color: var(--text-secondary); margin-top: 0.15em; margin-bottom: 0.6em; }
+  .mermaid { text-align: center; margin: 1.5em 0; background: #fafbfc; border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+  .article-stats {
+    font-size: 0.85rem; color: var(--text-secondary);
+    padding: 10px 18px; margin-bottom: 28px;
+    background: #f8f9fa; border: 1px solid var(--border); border-radius: 8px;
+  }
+  body.image-lightbox-open { overflow: hidden; }
+  .image-lightbox {
+    position: fixed; inset: 0; z-index: 1000;
+    display: none;
+    background: rgba(9, 12, 20, 0.88);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+  }
+  .image-lightbox.is-open { display: block; }
+
+  /* Stage uses flexbox to center the image; safe alignment prevents
+     clipping when zoomed-in content overflows — it falls back to
+     start so scrollbars reach every pixel. */
+  .image-lightbox__stage {
+    width: 100%; height: 100%;
+    overflow: auto;
+    display: flex;
+    align-items: safe center;
+    justify-content: safe center;
+    padding: 24px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.18) transparent;
+  }
+
+  .image-lightbox__image {
+    max-width: none; max-height: none;
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 20px 70px rgba(0, 0, 0, 0.5);
+    cursor: zoom-in;
+    flex-shrink: 0;
+    transition: box-shadow 0.3s;
+  }
+
+  /* Close button — top-right glass circle */
+  .image-lightbox__close {
+    position: absolute; top: 20px; right: 20px; z-index: 1010;
+    width: 40px; height: 40px;
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.25);
+    color: rgba(255,255,255,0.85);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    transition: background 0.2s, border-color 0.2s, transform 0.2s, color 0.2s;
+  }
+  .image-lightbox__close:hover {
+    background: rgba(255,255,255,0.15);
+    border-color: rgba(255,255,255,0.3);
+    color: #fff;
+    transform: scale(1.08);
+  }
+
+  /* Zoom toolbar — bottom-center glass pill */
+  .image-lightbox__toolbar {
+    position: absolute; bottom: 28px; left: 50%; transform: translateX(-50%); z-index: 1010;
+    display: flex; align-items: center; gap: 4px;
+    padding: 6px;
+    background: rgba(30, 30, 45, 0.75);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 32px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.35);
+  }
+
+  .image-lightbox__btn {
+    width: 36px; height: 36px;
+    border: none; border-radius: 50%;
+    background: transparent;
+    color: rgba(255,255,255,0.82);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.2s, color 0.2s;
+  }
+  .image-lightbox__btn:hover {
+    background: rgba(255,255,255,0.13);
+    color: #fff;
+  }
+
+  .image-lightbox__zoom-val {
+    min-width: 52px; text-align: center;
+    color: rgba(255,255,255,0.82);
+    font: 600 12.5px/32px "Inter", -apple-system, sans-serif;
+    cursor: pointer; user-select: none;
+    border-radius: 20px; padding: 0 6px;
+    transition: background 0.2s, color 0.2s;
+    letter-spacing: -0.01em;
+  }
+  .image-lightbox__zoom-val:hover {
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+  }
+
+  .image-lightbox__caption {
+    position: absolute; left: 28px; right: 28px; bottom: 96px; z-index: 1005;
+    color: rgba(255,255,255,0.72); text-align: center;
+    font-size: 13px; line-height: 1.45;
+    pointer-events: none;
+  }
+
+  @media (max-width: 1024px) {
+    .sidebar { position: static; width: 100%; height: auto; max-height: 35vh; border-right: none; border-bottom: 1px solid var(--border); }
+    .main-wrapper { margin-left: 0; display: block; }
+    .content-inner { max-width: none; padding: 24px 20px 60px; }
+    .image-lightbox__stage { padding: 12px; }
+    .image-lightbox__close { top: 12px; right: 12px; width: 36px; height: 36px; }
+    .image-lightbox__toolbar { bottom: 18px; padding: 5px; gap: 2px; }
+    .image-lightbox__btn { width: 32px; height: 32px; }
+    .image-lightbox__caption { bottom: 78px; left: 18px; right: 18px; }
+  }
+</style>
+
+<script>
+MathJax = {
+  tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']], processEscapes: true, tags: 'none' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] }
+};
+</script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js" defer></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  mermaid.initialize({ startOnLoad: true, theme: 'neutral', securityLevel: 'loose' });
+});
+</script>
+
+</head>
+<body>
+
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-title">目录</div>
+  <ul class="toc-list">
+<li class="toc-h1"><a href="#qwen-robotworld-technical-report-unifying-embodied-world-modeling-through-language-conditioned-video-generation">Qwen-RobotWorld Technical Report: Unifying Embodied World Modeling through Language-Conditioned Video Generation</a>
+<ul>
+</li>
+<li class="toc-h2"><a href="#_1">一、核心问题</a>
+</li>
+<li class="toc-h2"><a href="#_2">二、核心思路与方法</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#21">2.1 世界模型作为语言条件视频生成器</a>
+</li>
+<li class="toc-h3"><a href="#22-qwen25-vl-wan-vae-20b-mmdit">2.2 模型结构：Qwen2.5-VL + Wan-VAE + 20B MMDiT</a>
+</li>
+<li class="toc-h3"><a href="#23-scene2robot">2.3 Scene2Robot：人到机器人迁移的三段条件机制</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_3">三、数据与训练</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#31-ewk-86m-video-text-pairs">3.1 EWK 数据集：8.6M video-text pairs</a>
+</li>
+<li class="toc-h3"><a href="#32">3.2 五层标注和数据处理流水线</a>
+</li>
+<li class="toc-h3"><a href="#33">3.3 训练策略</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_4">四、实验与结果</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#41-benchmark">4.1 四个世界模型 benchmark</a>
+</li>
+<li class="toc-h3"><a href="#42-grounding">4.2 语言 grounding 与操作泛化</a>
+</li>
+<li class="toc-h3"><a href="#43-robotwin-ifhuman-to-robot">4.3 RoboTwin-IF、Human-to-Robot 和移动场景</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_5">五、关键洞察与技术亮点</a>
+</li>
+<li class="toc-h2"><a href="#_6">六、系统实现 / 工程接口 / 部署</a>
+</li>
+<li class="toc-h2"><a href="#_7">七、局限性</a>
+</li>
+<li class="toc-h2"><a href="#_8">八、关键概念速查</a>
+</ul></li>
+</li></ul>
+</nav>
+
+<main class="main-wrapper">
+  <div class="content-inner" id="main-content">
+<h1 id="qwen-robotworld-technical-report-unifying-embodied-world-modeling-through-language-conditioned-video-generation">Qwen-RobotWorld Technical Report: Unifying Embodied World Modeling through Language-Conditioned Video Generation</h1>
+<div class="article-stats">3,330 字 · English 604 词 · 约 13 分钟阅读</div>
+
+<blockquote>
+<p><strong>论文信息</strong>
+- 作者：Qwen Team
+- 发布：Qwen Technical Report 2026
+- arXiv ID：2606.17030
+- 代码：论文未提供相邻官方代码仓库；本文主要基于 TeX 源码、图表和技术报告中的系统描述整理。</p>
+<p>本文基于以下本地材料整理：</p>
+<ul>
+<li>论文 TeX 源码：<code>arXiv-2606.17030v3/</code>（主文件：<code>colm2024_conference.tex</code>，章节目录：<code>content/*.tex</code>）</li>
+<li>论文插图：<code>arXiv-2606.17030v3/content/*.pdf</code>、<code>*.png</code></li>
+<li>官方代码：未在本地笔记目录中提供</li>
+<li>本文图片导出目录：<code>assets/qwen-robotworld/</code></li>
+</ul>
+</blockquote>
+<hr />
+<h2 id="_1">一、核心问题</h2>
+<p>Qwen-RobotWorld 解决的是 embodied intelligence 中的世界模型问题：<strong>给定当前视觉状态和语言描述的动作，模型能否预测未来视觉轨迹，并且这种预测能跨机器人操作、自动驾驶、室内导航、人到机器人迁移等场景统一工作？</strong></p>
+<p>它不是传统只面向某个机器人控制器的 dynamics model，而是把世界模型重新定义为 language-conditioned video generation：</p>
+<div class="codehilite"><pre><span></span><code>current visual observation + language action
+        -&gt; future visual trajectory
+</code></pre></div>
+
+<p>这种设定有三个直接应用方向：</p>
+<table>
+<thead>
+<tr>
+<th>应用方向</th>
+<th>世界模型提供什么</th>
+<th>现实用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Synthetic data generation</td>
+<td>根据语言动作生成未来视频</td>
+<td>扩充策略训练数据，覆盖稀有任务和新具身</td>
+</tr>
+<tr>
+<td>Virtual policy evaluation</td>
+<td>在执行前预测不同动作的后果</td>
+<td>做离线评估或安全过滤</td>
+</tr>
+<tr>
+<td>Planning signal</td>
+<td>给 planner 提供视觉化 rollout</td>
+<td>辅助语言/动作规划，而不是只靠符号推理</td>
+</tr>
+</tbody>
+</table>
+<p>论文的核心挑战在于统一性：不同机器人动作形式、自动驾驶 maneuver、室内导航指令和人类手部演示看起来差异很大。Qwen-RobotWorld 的答案是把动作统一成自然语言，并用冻结 Qwen2.5-VL 编码复杂语言动作，再用大规模视频扩散模型预测未来。</p>
+<p><img alt="图1：Qwen-RobotWorld 总览" src="assets/qwen-robotworld/teaser_newnew.jpg" /></p>
+<p><em>图 1：Qwen-RobotWorld 的摘要 teaser。左侧展示 EWK 数据集的 multi-embodiment、multi-task、multi-scenario、multi-view 覆盖；中间展示语言动作条件视频世界模型；右侧用雷达图和 benchmark 摘要展示 WorldModelBench、DreamGen、EWMBench、PBench 等评测表现。</em></p>
+<ul>
+<li><strong>左侧数据覆盖</strong>：图中把 manipulation、driving、navigation、human-to-robot transfer 和 general video 放在同一数据宇宙里，说明模型目标不是单一机器人手臂，而是面向广义 embodied scenes。</li>
+<li><strong>中间模型路径</strong>：语言动作由 Qwen2.5-VL 编码，视觉状态由 VAE 编码成 latent，二者进入 double-stream MMDiT。这个设计把“动作理解”和“视频生成”解耦：语言理解由强 MLLM 负责，视觉转移由扩散骨干负责。</li>
+<li><strong>右侧结果</strong>：Qwen-RobotWorld 在 EWMBench 和 DreamGen Bench 排名第一，在 WorldModelBench 开源第一、总体第三，在 PBench 超过所有开源模型。雷达图的作用是强调它不是只在单个具身 benchmark 上调优。</li>
+</ul>
+<hr />
+<h2 id="_2">二、核心思路与方法</h2>
+<h3 id="21">2.1 世界模型作为语言条件视频生成器</h3>
+<p>论文把 embodied world modeling 写成视觉状态转移：输入当前视觉状态 <span class="math inline">$s_t$</span> 和语言动作 <span class="math inline">$a_t$</span>，预测未来状态 <span class="math inline">$s_{t+1:t+H}$</span>。这里的 <span class="math inline">$a_t$</span> 可以是“pick up the cup”“turn left at the intersection”“walk through the door”，也可以是更细的机器人动作描述。</p>
+<p>选择自然语言作为动作接口有两个好处：</p>
+<ol>
+<li><strong>统一不同具身动作空间</strong>：机器人关节命令、自动驾驶轨迹和室内导航路径都可以转写成语言动作。</li>
+<li><strong>复用 MLLM 的语义与物理知识</strong>：复杂指令、对象关系、动作结果可以通过 Qwen2.5-VL 的 hidden states 表达。</li>
+</ol>
+<h3 id="22-qwen25-vl-wan-vae-20b-mmdit">2.2 模型结构：Qwen2.5-VL + Wan-VAE + 20B MMDiT</h3>
+<p><img alt="图2：主模型结构" src="assets/qwen-robotworld/world_model3.jpg" /></p>
+<p><em>图 2：Qwen-RobotWorld 的主模型结构。左侧冻结 Qwen2.5-VL 对语言动作编码；下方 VAE encoder 把 observation 和 prediction video 编码为 latent；中间 60 层 double-stream MMDiT 在 understanding stream 与 generation stream 之间做 joint attention；右上 unpatchify 后通过 VAE decoder 还原视频。</em></p>
+<ul>
+<li><strong>输入拆解</strong>：语言动作进入冻结 Qwen2.5-VL，得到最后层 hidden states；视频帧进入 Wan-VAE，得到 latent tokens。两条信息流不是简单拼接，而是分别进入 MMDiT 的 understanding stream 和 generation stream。</li>
+<li><strong>MMDiT 规模</strong>：转移模型参数量约 20B，包含 60 个 double-stream blocks、24 个 attention heads、head dim 128、hidden size 3072、patch size 2x2，最多支持 48,360 个 video tokens。MLLM 约 7B，VAE 127M。</li>
+<li><strong>位置编码</strong>：视频使用 3D RoPE 编码时间、高、宽，维度非对称分配为 <code>[16, 56, 56]</code>。空间维度比时间维度更多，符合 embodied video 中空间几何和物体关系比单纯时间顺序更复杂的特点。</li>
+<li><strong>为什么重要</strong>：图中双流结构避免了“语言动作只是一个弱文本 prompt”的问题。动作语义在每层 joint attention 中反复调制视觉生成，适合需要精细 language grounding 的操作和导航场景。</li>
+</ul>
+<h3 id="23-scene2robot">2.3 Scene2Robot：人到机器人迁移的三段条件机制</h3>
+<p><img alt="图3：Scene2Robot 条件生成" src="assets/qwen-robotworld/scene2robot_model.jpg" /></p>
+<p><em>图 3：Scene2Robot 模型结构。输入被组织为 scene condition、robot reference、generation 三段：前两段作为条件，generation 段是要生成的机器人执行视频。</em></p>
+<ul>
+<li><strong>三段式输入</strong>：scene condition 段提供真实场景和任务环境，robot reference 段提供目标机器人外观和形态，generation 段需要生成 photorealistic robot execution。前两段 timestep 设为 0，并从 loss 中排除，只对 generation 段训练。</li>
+<li><strong>信息融合方式</strong>：三段 token 在 MMDiT joint attention 中交互，因此模型既能看到人类/场景动作意图，也能看到目标机器人的形态约束。</li>
+<li><strong>应用意义</strong>：这为 human-to-robot transfer 提供视频级世界模型接口。它不直接输出控制命令，而是生成机器人在目标场景中执行任务的未来视觉轨迹，可用于数据合成、策略评估或 planner 视觉想象。</li>
+</ul>
+<hr />
+<h2 id="_3">三、数据与训练</h2>
+<h3 id="31-ewk-86m-video-text-pairs">3.1 EWK 数据集：8.6M video-text pairs</h3>
+<p>Qwen-RobotWorld 构建了 EWK 数据集，约 8.6M video-text pairs、200M+ observation frames，包含 20+ embodiments 和 500+ action categories。整体上约 70% embodied data，30% general video/image data。</p>
+<p><img alt="图4：EWK 数据集结构" src="assets/qwen-robotworld/figure_dataset_visual.jpg" /></p>
+<p><em>图 4：EWK 训练语料总览。上方是 general world data，中间是 structured embodied data mixture，按 Multi-Embodiment、Multi-Task、Multi-Scenario、Multi-View 四个轴组织，底部强调这些数据共同支持 action understanding 与 future state generation。</em></p>
+<ul>
+<li><strong>上方 general world data</strong>：通用视频和图像数据提供视觉质量、物体外观、场景动态和一般物理先验。论文在 SFT 阶段仍持续混入 general data，避免具身专精损害通用视频能力。</li>
+<li><strong>中间 embodied mixture</strong>：manipulation 数据约 4.3M 单视角 samples，另有约 1.6M 多视角同步 samples；自动驾驶 raw pool 包括 Waymo E2E、NVIDIA PhysicalAI-AD、Bench2Drive、Sekai，总计 1,744,405 clips / 2,405h；室内导航来自 VLNVerse，6,064 successful episodes、134 scenes、49.8km、5.8h。</li>
+<li><strong>多视角意义</strong>：约 1.6M embodied samples 包含 2 到 4 个同步相机视角，这对世界模型很关键，因为同一动作必须在主视角、腕部视角或多车载相机中保持几何一致。</li>
+<li><strong>口径注意</strong>：论文中 raw pool、过滤后训练 mixture 和最终采样比例有不同口径，写结果时应区分“原始收集规模”和“训练采样比例”。</li>
+</ul>
+<h3 id="32">3.2 五层标注和数据处理流水线</h3>
+<p><img alt="图5：统一数据处理流水线" src="assets/qwen-robotworld/figure_data_pipeline.jpg" /></p>
+<p><em>图 5：数据处理 pipeline。流程从 raw data sources 开始，经过 video quality filtering、video preprocess、video caption、caption quality filtering，最终形成可训练的 video-text pairs。caption 部分包含五层标注：task goal、action detail、physical feedback、comprehensive caption、concise caption。</em></p>
+<ul>
+<li><strong>五层 caption</strong>：task goal 描述任务目标，action detail 描述细粒度动作和视角设置，physical feedback 描述接触、运动结果等物理反馈，comprehensive caption 长 50 到 100 words，concise caption 长 15 到 30 words。训练时 comprehensive 和 concise 各 50% 采样。</li>
+<li><strong>质量闭环</strong>：图中不仅有自动 caption，还包含 auto judge、人评、scenario/task/embodiment-specific retries。也就是说，语言动作不是一次生成就结束，而是按任务和场景类型反复修正。</li>
+<li><strong>为什么重要</strong>：自然语言是 Qwen-RobotWorld 的统一动作接口，因此 caption 质量直接决定动作条件是否可学习。若 caption 只描述画面而不描述动作后果，模型会退化成普通视频生成器。</li>
+</ul>
+<h3 id="33">3.3 训练策略</h3>
+<p>训练采用 flow matching。预训练阶段使用 200M+ real-world observation samples，联合 T2I、T2V、TI2V 任务；T2I 被用作视觉质量和物体形态 anchor，以减少视频生成中的物体变形和身份漂移。SFT 阶段做 embodied specialization，同时持续混入 general world data。正文摘要给出的 SFT 混合比例为 70% embodied / 30% general；embodied 内 manipulation 约 90%，multi-view concatenation 与 navigation/driving 各约 5%。</p>
+<hr />
+<h2 id="_4">四、实验与结果</h2>
+<h3 id="41-benchmark">4.1 四个世界模型 benchmark</h3>
+<table>
+<thead>
+<tr>
+<th>Benchmark</th>
+<th>Qwen-RobotWorld 结果</th>
+<th>关键结论</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>EWMBench</td>
+<td>Overall 4.60</td>
+<td>第 1；比第二名 LVP 4.05 高 0.55</td>
+</tr>
+<tr>
+<td>DreamGen Bench</td>
+<td>Total 4.952</td>
+<td>第 1；GR1-Object IF 0.878 最强</td>
+</tr>
+<tr>
+<td>PBench</td>
+<td>Overall 0.804</td>
+<td>超过所有开源模型；Domain 0.857，Motion 0.990</td>
+</tr>
+<tr>
+<td>WorldModelBench</td>
+<td>Total 8.99</td>
+<td>开源第 1、总体第 3；四个物理类别满分，Penetration 0.94</td>
+</tr>
+</tbody>
+</table>
+<p>更细的数字如下：</p>
+<ul>
+<li><strong>EWMBench</strong>：SceneC 0.9142，HSD 0.5660，Dyn 0.3429，nDTW 0.6708，Diversity 0.0114，BLEU 0.2079，CLIP 0.8834，Logics 1.0000，Overall 4.60。</li>
+<li><strong>DreamGen Bench</strong>：GR1-Env PA/IF = 0.828/0.793，GR1-Object 0.840/0.878，GR1-Behavior 0.781/0.832，Total 4.952。注意 GR1-Behavior IF 0.832 低于 LVP 0.889 和 GigaWorld 0.884。</li>
+<li><strong>PBench</strong>：Quality 0.751，Domain 0.857，Overall 0.804；Overall 仍低于 Veo3 0.827、Kling26 0.821、Sora2 0.805，说明它在闭源通用视频模型前仍有视觉质量差距。</li>
+<li><strong>WorldModelBench</strong>：Instruction 2.33，Common Sense Overall 1.72，Physics Overall 4.94，Total 8.99。Newton、Mass、Fluid、Gravity 为 1.00，Penetration 为 0.94，因此不应笼统写所有物理项满分。</li>
+</ul>
+<h3 id="42-grounding">4.2 语言 grounding 与操作泛化</h3>
+<p><img alt="图6：细粒度语言指令跟随" src="assets/qwen-robotworld/fig_instruction_following.jpg" /></p>
+<p><em>图 6：语言 grounding 定性图。上半部分是 contrastive instruction following：相同初始帧只改变关键词，测试 target object、destination、action type；下半部分是 complex instruction following，展示多步任务和抽象目标推理。</em></p>
+<ul>
+<li><strong>contrastive 部分</strong>：图中多组样例保持初始画面接近，只改变诸如目标物、放置位置或动作类型的关键词。如果生成视频跟随了错误目标，说明世界模型只是学到视觉惯性而没有理解 action language。</li>
+<li><strong>complex 部分</strong>：复杂指令要求模型把抽象目标转成动作序列，例如先定位目标，再执行移动或操作。图中连续帧展示了动作从起始状态到结果状态的变化。</li>
+<li><strong>论文论点连接</strong>：这些定性结果补充了自动 benchmark，因为它们直接展示冻结 Qwen2.5-VL action encoder 对细粒度语言差异的利用方式。</li>
+</ul>
+<p><img alt="图7：机器人操作泛化 gallery" src="assets/qwen-robotworld/fig_manipulation_gallery.jpg" /></p>
+<p><em>图 7：操作泛化可视化。图中分为 cross-embodiment、cross-task/cross-environment 和 multi-view consistency 三部分，展示 single-arm、dual-arm、humanoid、dexterous hand，以及 fruit pick-and-place、cloth folding、handover 等任务。</em></p>
+<ul>
+<li><strong>cross-embodiment</strong>：同一类指令可生成不同机器人形态的未来视频，包括单臂、双臂、人形或灵巧手。重点不是控制成功率，而是世界模型能否保持动作语义和具身外观一致。</li>
+<li><strong>cross-task/cross-environment</strong>：不同厨房、桌面、布料或人机交互场景下，模型需要同时预测物体运动、接触变化和机器人末端位置。</li>
+<li><strong>multi-view consistency</strong>：同一动作在主视角、腕部左/右视角中应同步演化。多视角一致性是世界模型能否用于策略评估和数据生成的关键，如果不同视角预测互相矛盾，合成数据就很难用于训练。</li>
+</ul>
+<h3 id="43-robotwin-ifhuman-to-robot">4.3 RoboTwin-IF、Human-to-Robot 和移动场景</h3>
+<p><img alt="图8：RoboTwin-IF zero-shot 对比" src="assets/qwen-robotworld/lamv_zero_shot_comparison.jpg" /></p>
+<p><em>图 8：RoboTwin-IF zero-shot 定性对比。相同 initial frame、prompt 和相机布局下，对比 Qwen-RobotWorld、LVP、Cosmos2.5-14B 的语言-动作对齐和多视角一致性。</em></p>
+<ul>
+<li><strong>图像结构</strong>：每组样例包含多个均匀采样帧，通常同时展示多个 camera views。这样可以观察模型是否在整个执行过程中保持目标一致，而不是只生成第一帧附近的合理画面。</li>
+<li><strong>对比重点</strong>：Qwen-RobotWorld 被用来展示更稳定的动作完成和视角一致性；LVP/Cosmos 的问题通常表现为目标物错位、动作停滞、视角之间状态不一致。</li>
+<li><strong>注意事项</strong>：源码中没有 RoboTwin-IF 的量化表，因此这张图只能作为 qualitative zero-shot evidence，不能写成有具体分数领先。</li>
+</ul>
+<p><img alt="图9：Human-to-Robot transfer" src="assets/qwen-robotworld/human2robot_transfer.jpg" /></p>
+<p><em>图 9：人到机器人迁移可视化。每行对比 human demonstration 和 synthesized robot execution，每个视频采样 5 帧，覆盖 8 种目标 embodiment。</em></p>
+<ul>
+<li><strong>场景含义</strong>：模型需要把人手演示中的任务意图迁移到机器人执行视频中，同时适配机器人外观、关节限制和末端轨迹。</li>
+<li><strong>视觉挑战</strong>：如果只做图像替换，机器人可能与物体接触关系错误；如果只做轨迹 retarget，生成画面可能不真实。Scene2Robot 的三段条件机制正是为了解决“场景意图”和“机器人形态”两类条件同时存在的问题。</li>
+<li><strong>应用边界</strong>：这仍是视频生成结果，不等于真实机器人闭环执行成功率。它更适合作为数据合成和 planning imagination 的中间表示。</li>
+</ul>
+<p><img alt="图10：自动驾驶和室内导航生成" src="assets/qwen-robotworld/mobility_generation_new.jpg" /></p>
+<p><em>图 10：移动场景生成。左侧展示 Bench2Drive、NVIDIA PhysicalAI-AD、Sekai、Waymo 等自动驾驶样例；右侧展示 VLNVerse 语言引导室内导航，每个 episode 展示 5 个均匀采样帧。</em></p>
+<ul>
+<li><strong>自动驾驶部分</strong>：多车载视角和道路场景要求模型保持 lane geometry、车辆运动和交通环境一致。语言动作可能是 turn、go straight、follow route 等 maneuver。</li>
+<li><strong>室内导航部分</strong>：第一人称视角下，模型需要根据语言指令预测穿过房间、转弯或靠近目标区域后的未来画面。它测试的是空间连续性和目标方向感。</li>
+<li><strong>统一性意义</strong>：这张图展示 Qwen-RobotWorld 不只服务桌面 manipulation。它把 driving 和 navigation 也纳入 language-conditioned future state generation，使同一架构覆盖更宽的 embodied world modeling。</li>
+</ul>
+<hr />
+<h2 id="_5">五、关键洞察与技术亮点</h2>
+<ol>
+<li><strong>自然语言动作接口降低了跨具身动作对齐成本。</strong> 论文没有试图为所有机器人、车辆和导航任务设计统一连续动作空间，而是把动作先映射成语言，再交给 Qwen2.5-VL 编码。</li>
+<li><strong>世界模型不是纯视频美学任务。</strong> PBench 中 Aesthetic 0.455、Imaging 0.649 说明视觉质量不是绝对 SOTA；但 Domain 0.857、Motion 0.990 和 WorldModelBench 物理项显示它更偏具身物理和动作一致性。</li>
+<li><strong>多视角数据是 embodied video 的关键。</strong> 单视角生成可以看起来合理，但多视角一致性才决定它能否作为机器人数据或 policy evaluator。</li>
+<li><strong>论文没有系统消融表。</strong> Qwen2.5-VL action encoder、T2I co-training、multi-view concatenation、general+expert curriculum 的贡献主要来自设计论证和定性结果，不能写成逐项 ablation 已严格证明。</li>
+</ol>
+<hr />
+<h2 id="_6">六、系统实现 / 工程接口 / 部署</h2>
+<p>Qwen-RobotWorld 的工程接口可以理解为一个视频 rollout service：</p>
+<div class="codehilite"><pre><span></span><code>Input:
+  observation frames or scene video
+  language action / instruction
+  optional robot reference or multi-view context
+
+World model:
+  frozen Qwen2.5-VL action encoder
+  Wan-VAE video latent encoder/decoder
+  20B double-stream MMDiT transition model
+
+Output:
+  future video trajectory
+</code></pre></div>
+
+<p>它本身不输出机器人控制量，因此在机器人系统中通常需要与 planner 或 policy 结合：planner 提出候选语言动作，world model 生成未来视觉结果，外层系统再选择更安全或更接近目标的动作。对于数据合成，则可把生成视频进一步转成监督样本或用作 policy augmentation。</p>
+<hr />
+<h2 id="_7">七、局限性</h2>
+<ul>
+<li>没有独立系统消融表，难以量化每个设计组件的边际贡献。</li>
+<li>PBench 视觉质量指标不是绝对领先，Aesthetic 和 Imaging 偏低，闭源通用视频模型在 overall 上仍更强。</li>
+<li>DreamGen 的 GR1-Behavior IF 低于 LVP 和 GigaWorld，说明长程行为泛化仍有短板。</li>
+<li>WorldModelBench 物理项中 Penetration 是 0.94，不是所有物理类别满分。</li>
+<li>RoboTwin-IF 只有定性图，没有量化表。</li>
+<li>DreamGen IF、PBench Domain 等自动评测依赖 VLM judge，可能带有 evaluator bias。</li>
+<li>论文展示的是世界模型能力，没有直接给出闭环策略训练收益或真实机器人成功率表。</li>
+</ul>
+<hr />
+<h2 id="_8">八、关键概念速查</h2>
+<table>
+<thead>
+<tr>
+<th>概念</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Embodied world model</td>
+<td>给定当前视觉状态和动作条件，预测未来视觉状态的模型</td>
+</tr>
+<tr>
+<td>Language-conditioned video generation</td>
+<td>用自然语言动作作为条件生成未来视频</td>
+</tr>
+<tr>
+<td>EWK</td>
+<td>Qwen-RobotWorld 构建的 8.6M video-text pairs 数据集</td>
+</tr>
+<tr>
+<td>MMDiT</td>
+<td>双流 diffusion transformer，分别处理语言理解流和视频生成流</td>
+</tr>
+<tr>
+<td>Scene2Robot</td>
+<td>用 scene condition、robot reference、generation 三段条件做人到机器人视频迁移</td>
+</tr>
+<tr>
+<td>Multi-view consistency</td>
+<td>同一动作在多个同步视角下保持几何和状态一致</td>
+</tr>
+<tr>
+<td>EWMBench / DreamGen / PBench / WorldModelBench</td>
+<td>论文主要使用的四类世界模型评测</td>
+</tr>
+</tbody>
+</table>
+  </div>
+</main>
+
+
+<script>
+(function() {
+  const sidebar = document.getElementById('sidebar');
+  const links = sidebar.querySelectorAll('a');
+  const headings = document.querySelectorAll('h1[id], h2[id], h3[id], h4[id]');
+  if (headings.length === 0) return;
+
+  const linkMap = new Map();
+  links.forEach(function(a) {
+    const href = a.getAttribute('href');
+    if (href && href.startsWith('#')) linkMap.set(href.slice(1), a);
+  });
+
+  function onScroll() {
+    let currentId = null;
+    const scrollTop = window.scrollY + 80;
+    headings.forEach(function(h) { if (h.offsetTop <= scrollTop) currentId = h.id; });
+    links.forEach(function(a) { a.classList.remove('active'); });
+    if (currentId && linkMap.has(currentId)) {
+      const el = linkMap.get(currentId);
+      el.classList.add('active');
+      if (getComputedStyle(sidebar).position === 'fixed') {
+        const sr = sidebar.getBoundingClientRect();
+        const er = el.getBoundingClientRect();
+        if (er.bottom > sr.bottom || er.top < sr.top) {
+          el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }
+      }
+    }
+  }
+
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+})();
+</script>
+
+
+<script>
+(function() {
+  const content = document.getElementById('main-content');
+  if (!content) return;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'image-lightbox';
+  overlay.setAttribute('role', 'dialog');
+  overlay.setAttribute('aria-modal', 'true');
+
+  overlay.innerHTML = `
+    <button type="button" class="image-lightbox__close" data-action="close" aria-label="关闭">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M5 5l10 10M15 5L5 15"/>
+      </svg>
+    </button>
+    <div class="image-lightbox__stage">
+      <img class="image-lightbox__image" alt="">
+    </div>
+    <div class="image-lightbox__toolbar" aria-label="图片缩放控制">
+      <button type="button" class="image-lightbox__btn" data-action="zoom-out" aria-label="缩小" title="缩小">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d="M3 9h12"/>
+        </svg>
+      </button>
+      <span class="image-lightbox__zoom-val" data-action="zoom-reset" title="点击重置缩放" role="button" tabindex="0">100%</span>
+      <button type="button" class="image-lightbox__btn" data-action="zoom-in" aria-label="放大" title="放大">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d="M3 9h12M9 3v12"/>
+        </svg>
+      </button>
+    </div>
+    <div class="image-lightbox__caption"></div>
+  `;
+  document.body.appendChild(overlay);
+
+  const stage = overlay.querySelector('.image-lightbox__stage');
+  const image = overlay.querySelector('.image-lightbox__image');
+  const zoomLabel = overlay.querySelector('.image-lightbox__zoom-val');
+  const caption = overlay.querySelector('.image-lightbox__caption');
+
+  const minZoom = 0.25;
+  const maxZoom = 5;
+  const step = 0.25;
+  let zoom = 1;
+  let fitWidth = 1;
+
+  function clamp(value) {
+    return Math.min(maxZoom, Math.max(minZoom, value));
+  }
+
+  function centerImage(animate) {
+    requestAnimationFrame(function() {
+      var left = Math.max(0, (stage.scrollWidth - stage.clientWidth) / 2);
+      var top = Math.max(0, (stage.scrollHeight - stage.clientHeight) / 2);
+      stage.scrollTo({ left: left, top: top, behavior: animate ? 'smooth' : 'auto' });
+    });
+  }
+
+  function applyZoom(animate) {
+    image.style.width = Math.max(1, Math.round(fitWidth * zoom)) + 'px';
+    zoomLabel.textContent = Math.round(zoom * 100) + '%';
+    centerImage(animate);
+  }
+
+  function setZoom(value, animate) {
+    zoom = clamp(value);
+    applyZoom(animate);
+  }
+
+  function computeFitSize() {
+    var w = image.naturalWidth || 1;
+    var h = image.naturalHeight || 1;
+    var maxW = Math.max(1, stage.clientWidth - 48);
+    var maxH = Math.max(1, stage.clientHeight - 48);
+    var fitScale = Math.min(1, maxW / w, maxH / h);
+    fitWidth = Math.max(1, w * fitScale);
+    applyZoom(false);
+  }
+
+  function openImage(source) {
+    image.onload = computeFitSize;
+    image.alt = source.alt || '';
+    caption.textContent = source.alt || '';
+    image.src = source.currentSrc || source.src;
+    zoom = 1;
+    overlay.classList.add('is-open');
+    document.body.classList.add('image-lightbox-open');
+    if (image.complete) computeFitSize();
+  }
+
+  function closeImage() {
+    overlay.classList.remove('is-open');
+    document.body.classList.remove('image-lightbox-open');
+    image.onload = null;
+    image.style.removeProperty('width');
+    image.removeAttribute('src');
+  }
+
+  overlay.addEventListener('click', function(event) {
+    var action = event.target.closest('[data-action]');
+    if (action) {
+      var type = action.getAttribute('data-action');
+      if (type === 'zoom-in') setZoom(zoom + step, true);
+      if (type === 'zoom-out') setZoom(zoom - step, true);
+      if (type === 'zoom-reset') setZoom(1, true);
+      if (type === 'close') closeImage();
+      return;
+    }
+    if (event.target === overlay || event.target === stage) closeImage();
+  });
+
+  overlay.addEventListener('wheel', function(event) {
+    if (!overlay.classList.contains('is-open')) return;
+    if (!event.ctrlKey && !event.metaKey) return;
+    event.preventDefault();
+    setZoom(zoom + (event.deltaY < 0 ? step : -step), true);
+  }, { passive: false });
+
+  document.addEventListener('keydown', function(event) {
+    if (!overlay.classList.contains('is-open')) return;
+    if (event.key === 'Escape') closeImage();
+    if (event.key === '+' || event.key === '=') setZoom(zoom + step, true);
+    if (event.key === '-' || event.key === '_') setZoom(zoom - step, true);
+    if (event.key === '0') setZoom(1, true);
+  });
+
+  window.addEventListener('resize', function() {
+    if (overlay.classList.contains('is-open')) computeFitSize();
+  });
+
+  content.querySelectorAll('img').forEach(function(img) {
+    if (img.closest('a')) return;
+    img.setAttribute('tabindex', '0');
+    img.setAttribute('title', img.getAttribute('title') || '点击放大查看');
+    img.addEventListener('click', function() { openImage(img); });
+    img.addEventListener('keydown', function(event) {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        openImage(img);
+      }
+    });
+  });
+})();
+</script>
+
+</body>
+</html>

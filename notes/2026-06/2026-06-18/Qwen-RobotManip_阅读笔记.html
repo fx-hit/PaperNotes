@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Qwen-RobotManip Technical Report: Alignment Unlocks Scale for Robotic Manipulation Foundation Models</title>
+<!-- arxiv: 2606.17846 -->
+<!-- venue: Qwen Technical Report 2026 -->
+<!-- tags: VLA, 泛化 -->
+<!-- words-zh: 4316 -->
+<!-- words-en: 964 -->
+<!-- reading-time: 17 -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap"></noscript>
+<style>
+  :root {
+    --bg: #ffffff;
+    --text: #1a1a2e;
+    --text-secondary: #555;
+    --border: #e1e4e8;
+    --link: #0969da;
+    --table-stripe: #f6f8fa;
+    --heading: #0d1117;
+    --blockquote-border: #0969da;
+    --blockquote-bg: #f0f6ff;
+    --inline-code: #d73a49;
+    --inline-code-bg: #f6f8fa;
+    --sidebar-width: 260px;
+    --toc-active: #0969da;
+    --content-max-width: 1350px;
+    --media-max-width: 1000px;
+    --content-padding: 48px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "Inter", "Noto Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 16px;
+    line-height: 1.75;
+    color: var(--text);
+    background: var(--bg);
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    width: var(--sidebar-width);
+    overflow-y: auto;
+    padding: 28px 20px 40px;
+    background: #fafbfc;
+    border-right: 1px solid var(--border);
+    z-index: 10;
+    scrollbar-width: thin;
+  }
+  .sidebar-title {
+    font-size: 13px; font-weight: 700; color: var(--text-secondary);
+    margin-bottom: 16px; letter-spacing: 0.06em; text-transform: uppercase;
+  }
+  .toc-list { list-style: none; padding: 0; margin: 0; }
+  .toc-list ul { list-style: none; padding-left: 14px; }
+  .toc-list li { margin: 1px 0; }
+  .toc-list a {
+    display: block; padding: 4px 12px; font-size: 13.5px; line-height: 1.45;
+    color: var(--text-secondary); text-decoration: none; border-radius: 4px;
+    border-left: 2px solid transparent; transition: all 0.15s;
+  }
+  .toc-list a:hover { color: var(--link); background: #e8f0fe; }
+  .toc-list a.active {
+    color: var(--toc-active); font-weight: 600;
+    border-left-color: var(--toc-active); background: #e8f0fe;
+  }
+  .toc-h1 a { font-weight: 600; color: var(--heading); font-size: 14px; }
+  .toc-h3 a { padding-left: 24px; font-size: 13px; }
+  .toc-h4 a { padding-left: 36px; font-size: 12.5px; }
+  .toc-empty { color: var(--text-secondary); font-size: 13px; font-style: italic; }
+
+  .main-wrapper {
+    margin-left: var(--sidebar-width);
+    min-height: 100vh;
+    display: flex; justify-content: center;
+  }
+  .content-inner {
+    width: 100%;
+    max-width: var(--content-max-width);
+    padding: 40px var(--content-padding) 80px;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    color: var(--heading); font-weight: 700; line-height: 1.3;
+    margin-top: 2em; margin-bottom: 0.6em; scroll-margin-top: 24px;
+  }
+  h1 { font-size: 2em; border-bottom: 2px solid var(--border); padding-bottom: 0.3em; margin-top: 0; }
+  h2 { font-size: 1.5em; border-bottom: 1px solid var(--border); padding-bottom: 0.25em; }
+  h3 { font-size: 1.25em; }
+  h4 { font-size: 1.1em; }
+  p { margin-bottom: 1em; }
+  a { color: var(--link); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  strong { font-weight: 600; }
+
+  blockquote {
+    border-left: 4px solid var(--blockquote-border);
+    background: var(--blockquote-bg);
+    padding: 12px 20px; margin: 1em 0;
+    border-radius: 0 6px 6px 0; color: var(--text-secondary);
+  }
+  blockquote p:last-child { margin-bottom: 0; }
+
+  code {
+    font-family: "JetBrains Mono", "SF Mono", "Fira Code", monospace;
+    font-size: 0.875em; background: var(--inline-code-bg);
+    padding: 2px 6px; border-radius: 4px; color: var(--inline-code);
+  }
+  pre {
+    background: #f6f8fa; color: #24292f;
+    border: 1px solid var(--border);
+    border-radius: 8px; padding: 16px 20px; overflow-x: auto;
+    margin: 1em 0; font-size: 14px; line-height: 1.55;
+  }
+  pre code { background: none; padding: 0; border-radius: 0; color: inherit; font-size: inherit; }
+
+  .codehilite { background: #f6f8fa; border: 1px solid var(--border); border-radius: 8px; padding: 16px 20px; overflow-x: auto; margin: 1em 0; }
+  .codehilite pre { background: none; padding: 0; margin: 0; border-radius: 0; }
+  .codehilite .hll { background-color: #fff8c5; }
+  .codehilite .c  { color: #6e7781; font-style: italic; }
+  .codehilite .k  { color: #cf222e; }
+  .codehilite .o  { color: #0550ae; }
+  .codehilite .s  { color: #0a3069; }
+  .codehilite .n  { color: #24292f; }
+  .codehilite .p  { color: #24292f; }
+  .codehilite .mi { color: #0550ae; }
+  .codehilite .nf { color: #8250df; }
+  .codehilite .nb { color: #953800; }
+  .codehilite .nc { color: #953800; }
+  .codehilite .bp { color: #953800; }
+
+  table { width: 100%; border-collapse: collapse; margin: 1em 0; font-size: 0.925em; }
+  th, td { border: 1px solid var(--border); padding: 10px 14px; text-align: left; }
+  th { background: var(--table-stripe); font-weight: 600; color: var(--heading); }
+  tr:nth-child(even) td { background: var(--table-stripe); }
+
+  .math.display { display: block; overflow-x: auto; padding: 12px 0; margin: 1em 0; }
+  ul, ol { padding-left: 1.5em; margin-bottom: 1em; }
+  li { margin-bottom: 0.3em; }
+  hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+  img { max-width: min(100%, var(--media-max-width)); height: auto; border-radius: 6px; margin: 0 auto; display: block; }
+  #main-content img { cursor: zoom-in; }
+  p:has(img) { text-align: center; max-width: var(--media-max-width); margin: 0.6em auto 0; }
+  table:has(img) { width: min(100%, var(--media-max-width)) !important; margin-left: auto; margin-right: auto; }
+  p:has(img) + p { text-align: center; font-size: 0.9em; color: var(--text-secondary); margin-top: 0.15em; margin-bottom: 0.6em; }
+  .mermaid { text-align: center; margin: 1.5em 0; background: #fafbfc; border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+  .article-stats {
+    font-size: 0.85rem; color: var(--text-secondary);
+    padding: 10px 18px; margin-bottom: 28px;
+    background: #f8f9fa; border: 1px solid var(--border); border-radius: 8px;
+  }
+  body.image-lightbox-open { overflow: hidden; }
+  .image-lightbox {
+    position: fixed; inset: 0; z-index: 1000;
+    display: none;
+    background: rgba(9, 12, 20, 0.88);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+  }
+  .image-lightbox.is-open { display: block; }
+
+  /* Stage uses flexbox to center the image; safe alignment prevents
+     clipping when zoomed-in content overflows — it falls back to
+     start so scrollbars reach every pixel. */
+  .image-lightbox__stage {
+    width: 100%; height: 100%;
+    overflow: auto;
+    display: flex;
+    align-items: safe center;
+    justify-content: safe center;
+    padding: 24px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.18) transparent;
+  }
+
+  .image-lightbox__image {
+    max-width: none; max-height: none;
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 20px 70px rgba(0, 0, 0, 0.5);
+    cursor: zoom-in;
+    flex-shrink: 0;
+    transition: box-shadow 0.3s;
+  }
+
+  /* Close button — top-right glass circle */
+  .image-lightbox__close {
+    position: absolute; top: 20px; right: 20px; z-index: 1010;
+    width: 40px; height: 40px;
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.25);
+    color: rgba(255,255,255,0.85);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    transition: background 0.2s, border-color 0.2s, transform 0.2s, color 0.2s;
+  }
+  .image-lightbox__close:hover {
+    background: rgba(255,255,255,0.15);
+    border-color: rgba(255,255,255,0.3);
+    color: #fff;
+    transform: scale(1.08);
+  }
+
+  /* Zoom toolbar — bottom-center glass pill */
+  .image-lightbox__toolbar {
+    position: absolute; bottom: 28px; left: 50%; transform: translateX(-50%); z-index: 1010;
+    display: flex; align-items: center; gap: 4px;
+    padding: 6px;
+    background: rgba(30, 30, 45, 0.75);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 32px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.35);
+  }
+
+  .image-lightbox__btn {
+    width: 36px; height: 36px;
+    border: none; border-radius: 50%;
+    background: transparent;
+    color: rgba(255,255,255,0.82);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.2s, color 0.2s;
+  }
+  .image-lightbox__btn:hover {
+    background: rgba(255,255,255,0.13);
+    color: #fff;
+  }
+
+  .image-lightbox__zoom-val {
+    min-width: 52px; text-align: center;
+    color: rgba(255,255,255,0.82);
+    font: 600 12.5px/32px "Inter", -apple-system, sans-serif;
+    cursor: pointer; user-select: none;
+    border-radius: 20px; padding: 0 6px;
+    transition: background 0.2s, color 0.2s;
+    letter-spacing: -0.01em;
+  }
+  .image-lightbox__zoom-val:hover {
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+  }
+
+  .image-lightbox__caption {
+    position: absolute; left: 28px; right: 28px; bottom: 96px; z-index: 1005;
+    color: rgba(255,255,255,0.72); text-align: center;
+    font-size: 13px; line-height: 1.45;
+    pointer-events: none;
+  }
+
+  @media (max-width: 1024px) {
+    .sidebar { position: static; width: 100%; height: auto; max-height: 35vh; border-right: none; border-bottom: 1px solid var(--border); }
+    .main-wrapper { margin-left: 0; display: block; }
+    .content-inner { max-width: none; padding: 24px 20px 60px; }
+    .image-lightbox__stage { padding: 12px; }
+    .image-lightbox__close { top: 12px; right: 12px; width: 36px; height: 36px; }
+    .image-lightbox__toolbar { bottom: 18px; padding: 5px; gap: 2px; }
+    .image-lightbox__btn { width: 32px; height: 32px; }
+    .image-lightbox__caption { bottom: 78px; left: 18px; right: 18px; }
+  }
+</style>
+
+<script>
+MathJax = {
+  tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']], processEscapes: true, tags: 'none' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] }
+};
+</script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js" defer></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  mermaid.initialize({ startOnLoad: true, theme: 'neutral', securityLevel: 'loose' });
+});
+</script>
+
+</head>
+<body>
+
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-title">目录</div>
+  <ul class="toc-list">
+<li class="toc-h1"><a href="#qwen-robotmanip-technical-report-alignment-unlocks-scale-for-robotic-manipulation-foundation-models">Qwen-RobotManip Technical Report: Alignment Unlocks Scale for Robotic Manipulation Foundation Models</a>
+<ul>
+</li>
+<li class="toc-h2"><a href="#_1">一、核心问题</a>
+</li>
+<li class="toc-h2"><a href="#_2">二、核心思路与方法</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#21-vlm-dit">2.1 总体架构：VLM 做理解，DiT 做动作生成</a>
+</li>
+<li class="toc-h3"><a href="#22-80">2.2 80 维统一状态/动作空间</a>
+</li>
+<li class="toc-h3"><a href="#23-camera-frame-delta-eef">2.3 Camera-frame delta EEF：让视觉相似的动作数值也相似</a>
+</li>
+<li class="toc-h3"><a href="#24-in-context-policy-adaptation">2.4 In-context policy adaptation</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_3">三、数据与训练</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#31-h2r">3.1 机器人数据、第一视角视频和 H2R 合成</a>
+</li>
+<li class="toc-h3"><a href="#32-scale">3.2 数据清洗：不能让 scale 放大噪声</a>
+</li>
+<li class="toc-h3"><a href="#33-vla-vlm-co-training">3.3 双流训练：VLA 与 VLM co-training</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_4">四、实验与结果</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#41-iid-benchmark">4.1 标准 IID benchmark 不是充分证据</a>
+</li>
+<li class="toc-h3"><a href="#42-ood">4.2 OOD 泛化、指令跟随与跨具身</a>
+</li>
+<li class="toc-h3"><a href="#43-robochallenge">4.3 真实机器人和 RoboChallenge</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_5">五、关键图表解读</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#51-zero-shoteef-joint">5.1 跨具身 zero-shot：EEF 表示比 joint 表示更关键</a>
+</li>
+<li class="toc-h3"><a href="#52-scaling">5.2 Scaling：只有对齐后的动作空间才吃得到数据规模</a>
+</li>
+<li class="toc-h3"><a href="#53-mixed-post-trainingvl-unifiedeef">5.3 Mixed post-training：VL 数据和 UnifiedEEF 需要配合</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_6">六、系统实现 / 工程接口 / 部署</a>
+</li>
+<li class="toc-h2"><a href="#_7">七、局限性</a>
+</li>
+<li class="toc-h2"><a href="#_8">八、关键概念速查</a>
+</ul></li>
+</li></ul>
+</nav>
+
+<main class="main-wrapper">
+  <div class="content-inner" id="main-content">
+<h1 id="qwen-robotmanip-technical-report-alignment-unlocks-scale-for-robotic-manipulation-foundation-models">Qwen-RobotManip Technical Report: Alignment Unlocks Scale for Robotic Manipulation Foundation Models</h1>
+<div class="article-stats">4,316 字 · English 964 词 · 约 17 分钟阅读</div>
+
+<blockquote>
+<p><strong>论文信息</strong>
+- 作者：Qwen Team
+- 发布：Qwen Technical Report 2026
+- arXiv ID：2606.17846
+- 代码：论文未提供相邻官方代码仓库；本文主要基于 TeX 源码、图表和技术报告中的系统描述整理。</p>
+<p>本文基于以下本地材料整理：</p>
+<ul>
+<li>论文 TeX 源码：<code>arXiv-2606.17846v2/</code>（主文件：<code>colm2024_conference.tex</code>，章节目录：<code>chapter/*.tex</code>）</li>
+<li>论文插图：<code>arXiv-2606.17846v2/figures/*.pdf</code></li>
+<li>官方代码：未在本地笔记目录中提供</li>
+<li>本文图片导出目录：<code>assets/qwen-robotmanip/</code></li>
+</ul>
+</blockquote>
+<hr />
+<h2 id="_1">一、核心问题</h2>
+<p>这篇技术报告讨论的问题可以概括为：<strong>机器人操作 VLA 模型想从“小数据 imitation policy”扩展到“跨任务、跨场景、跨具身 foundation model”，真正缺的不是单纯扩大参数量，而是让不同数据源在状态、动作、相机、语言和具身语义上可对齐。</strong></p>
+<p>已有通用 VLA 模型通常会遇到三类瓶颈：</p>
+<table>
+<thead>
+<tr>
+<th>瓶颈</th>
+<th>具体表现</th>
+<th>Qwen-RobotManip 的切入点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>数据异构</td>
+<td>不同机器人、相机、坐标系、动作接口无法直接混训</td>
+<td>统一 80 维 canonical state/action，并把 EEF action 放到 camera frame</td>
+</tr>
+<tr>
+<td>泛化评测弱</td>
+<td>LIBERO、RoboTwin 等 IID benchmark 上 scratch 模型也能很高</td>
+<td>强调 LIBERO-Plus、RoboTwin-Clean2Rand、RoboTwin-IF、RoboTwin-XE、RoboCasa365 等 OOD setting</td>
+</tr>
+<tr>
+<td>数据规模不足</td>
+<td>机器人遥操作数据昂贵，跨具身覆盖有限</td>
+<td>将 1,933h 第一视角人类手部视频合成为 15 种机器人形态，得到 24,808h H2R demonstrations</td>
+</tr>
+</tbody>
+</table>
+<p>论文最重要的判断是：<strong>scale 必须建立在 alignment 之上</strong>。如果机器人数据没有统一动作语义，扩展数据量只会把互相矛盾的控制信号混在一起；如果人类视频没有动作和视觉双重对齐，直接混入也只能增加视觉多样性，无法稳定提升操作策略。</p>
+<p><img alt="图1：Qwen-RobotManip 总览图" src="assets/qwen-robotmanip/myteaser_V6.jpg" /></p>
+<p><em>图 1：Qwen-RobotManip 的整体路线图。画面左侧是数据扩展：开源机器人数据、第一视角人类操作视频和 Human-to-Robot 合成数据共同构成大规模 manipulation corpus；中间是 Qwen-VL backbone 加 flow-matching action head 的 VLA 模型；右侧是跨 benchmark、跨真实机器人和 RoboChallenge 的评测摘要。</em></p>
+<ul>
+<li><strong>数据层</strong>：图中把 robot data、human manipulation video、Human-to-Robot synthesis 放在同一条扩展路径上，强调这不是简单收集更多 demonstration，而是先做动作/视觉对齐，再把 human hand trajectories 转成 robot trajectories。</li>
+<li><strong>模型层</strong>：Qwen-VL 负责图像、语言和上下文理解，DiT action expert 负责连续动作生成。这个分工让通用 VLM 能力通过 hidden states 注入 action denoising，而不是把动作当作普通文本 token 生成。</li>
+<li><strong>评测层</strong>：右侧结果不是只展示标准仿真任务，而是覆盖 OOD、instruction following、cross-embodiment、real-world 和 challenge tasks。它对应论文反复强调的观点：foundation policy 应该用迁移和鲁棒性衡量，而不是只看 IID 成功率。</li>
+</ul>
+<hr />
+<h2 id="_2">二、核心思路与方法</h2>
+<h3 id="21-vlm-dit">2.1 总体架构：VLM 做理解，DiT 做动作生成</h3>
+<p>Qwen-RobotManip 基于 Qwen-VL/Qwen3.5 视觉语言骨干，输入包括多视角图像、语言指令、结构化 embodiment prompt、当前 state，以及可选的 episode 内历史 context。动作头是一个 flow-matching Diffusion Transformer：10 个 transformer blocks，hidden dim 768，12 heads，用 4-step Euler integration 生成 action chunk；context 版本在消融中通常需要 10 step 才稳定。</p>
+<div class="codehilite"><pre><span></span><code>multi-view images + instruction + embodiment prompt + state/history
+        │
+        ▼
+Qwen-VL backbone
+        │  last-layer hidden states
+        ▼
+Flow-Matching DiT Action Expert
+        │  alternating cross-attention
+        ▼
+80D canonical action chunk
+</code></pre></div>
+
+<p><img alt="图2：模型结构与三类 alignment 设计" src="assets/qwen-robotmanip/method-0616.jpg" /></p>
+<p><em>图 2：Qwen-RobotManip 的模型与动作表示总览。图中上方是 Qwen-VL backbone，下方是 DiT action expert；左侧强调 multi-view observation、structured embodiment prompt 和 history context；右侧展示 80 维统一状态/动作空间以及 camera-frame delta EEF action。</em></p>
+<ul>
+<li><strong>结构拆解</strong>：Qwen-VL 先把多视角图像、语言和上下文编码成 token 表示，DiT action expert 再在去噪过程中通过 cross-attention 读取这些表示。论文采用 alternating cross-attention：偶数层更偏视觉 token，奇数层更偏语言 token，使动作生成既能关注几何状态，也能保留任务语义。</li>
+<li><strong>动作表示</strong>：80 维 canonical vector 由两个 29 维 arm block 加 22 个预留维度组成。每个 arm block 包括 7 维 joint positions、9 维 EEF pose、1 维 gripper state 和 12 维 dexterous hand joints。不同机器人只填充自己有意义的维度，其余 zero-pad，并用 binary mask 屏蔽无效 loss。</li>
+<li><strong>关键对齐点</strong>：EEF action 不使用世界坐标或机器人 base frame，而使用 camera-frame delta pose。这样图像中相似的“向左夹取”“靠近目标”等运动，在数值动作空间里也更接近，有利于跨相机、跨机器人、跨数据源共享。</li>
+<li><strong>为什么这张图重要</strong>：它解释了论文标题中 alignment 的具体含义。alignment 不是一个单独模块，而是贯穿状态/动作语义、相机坐标、prompt 结构和历史上下文注入的系统设计。</li>
+</ul>
+<h3 id="22-80">2.2 80 维统一状态/动作空间</h3>
+<p>传统做法常把不同机器人的动作字段直接拼接，或者为每个机器人设计单独 action head。Qwen-RobotManip 的做法是先定义一个统一语义空间：</p>
+<table>
+<thead>
+<tr>
+<th>组成</th>
+<th style="text-align: right;">维度</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>左臂 block</td>
+<td style="text-align: right;">29</td>
+<td>joint、EEF pose、gripper、dexterous hand joints</td>
+</tr>
+<tr>
+<td>右臂 block</td>
+<td style="text-align: right;">29</td>
+<td>与左臂同构</td>
+</tr>
+<tr>
+<td>预留维度</td>
+<td style="text-align: right;">22</td>
+<td>为移动底盘、未来传感器或扩展控制量留接口</td>
+</tr>
+<tr>
+<td>总计</td>
+<td style="text-align: right;">80</td>
+<td>所有机器人都投影到这个 canonical space</td>
+</tr>
+</tbody>
+</table>
+<p>这个设计的直觉是：不同机器人虽然几何不同，但许多操作语义是共享的。例如双臂抓取、夹爪闭合、末端朝目标移动，都可以在同一个语义 slot 中表达。zero-padding 加 mask 保证没有的自由度不参与监督，避免模型把空维度当成动作规律。</p>
+<h3 id="23-camera-frame-delta-eef">2.3 Camera-frame delta EEF：让视觉相似的动作数值也相似</h3>
+<p>论文把 EEF action 表示成相机坐标系下的 delta pose，而不是常见的 robot-base frame 或局部 EEF frame。其动机是机器人学习中的数据对齐问题：同一个“从图像左侧移到目标上方”的动作，在不同机器人 base 坐标系里可能数值方向完全不同；但从相机视角看，它们具有相似的视觉几何。</p>
+<div class="codehilite"><pre><span></span><code>传统：robot base frame action
+  同一视觉动作 -&gt; 不同机器人坐标值差异大
+
+Qwen-RobotManip：camera-frame delta EEF
+  同一视觉动作 -&gt; 更接近的数值 delta
+</code></pre></div>
+
+<p>论文还在 DiT 中加入 camera positional encoding，并把 camera type、EEF type、auxiliary flag 作为条件。auxiliary flag 用于处理没有相机标定的数据：有标定时使用 camera-frame delta，没有标定时退回 robot-base relative mode。这一点很实际，因为大规模开源机器人数据并不总是提供完整相机外参。</p>
+<h3 id="24-in-context-policy-adaptation">2.4 In-context policy adaptation</h3>
+<p>Qwen-RobotManip 还引入 episode 内历史上下文：过去的 observation、state、action chunk 会作为 context tokens 注入 VLM。它的作用不是语言模型意义上的长时记忆，而是让 policy 从少量历史交互中隐式识别当前机器人/环境的运动学风格。</p>
+<p>训练时采用 stochastic context sampling，随机抽取 episode 内历史片段，避免模型简单复制最近动作。消融显示 context 对 robot perturbation、RoboTwin-Clean2Rand Hard 等设置帮助明显，但也带来推理稳定性要求：4 denoise steps 时 context 模型会 jitter，10 steps 后才稳定，20 steps 相比 10 steps 收益不大。</p>
+<hr />
+<h2 id="_3">三、数据与训练</h2>
+<h3 id="31-h2r">3.1 机器人数据、第一视角视频和 H2R 合成</h3>
+<p>Qwen-RobotManip 的 manipulation corpus 约 38,100 小时，核心由三部分构成：</p>
+<table>
+<thead>
+<tr>
+<th>数据类型</th>
+<th style="text-align: right;">规模</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Robot single-arm</td>
+<td style="text-align: right;">3,808h</td>
+<td>覆盖单臂抓取、放置、工具使用等基础操作</td>
+</tr>
+<tr>
+<td>Robot dual-arm</td>
+<td style="text-align: right;">6,744h</td>
+<td>提供双臂协同、长程组合任务和 bimanual manipulation</td>
+</tr>
+<tr>
+<td>Robot mobile &amp; humanoid</td>
+<td style="text-align: right;">868h</td>
+<td>扩展移动机器人和人形平台经验</td>
+</tr>
+<tr>
+<td>Human hands</td>
+<td style="text-align: right;">1,933h</td>
+<td>提供第一视角人类操作视觉和动作意图</td>
+</tr>
+<tr>
+<td>Human-to-Robot</td>
+<td style="text-align: right;">24,808h</td>
+<td>将人类视频合成为 15 种双臂机器人演示</td>
+</tr>
+</tbody>
+</table>
+<p>机器人数据来自 9 个开源数据源，包括 OXE、AgiBotWorld-Beta、RoboMIND/RoboMIND2.0、Galaxea Open-World、RoboCOIN、DROID、RH20T、RDT-1B 和 InternData-A1。人类数据来自 EgoDex、VITRA、EgoVerse。</p>
+<p><img alt="图3：Human-to-Robot 数据合成流水线" src="assets/qwen-robotmanip/h2r_pipeline.jpg" /></p>
+<p><em>图 3：Human-to-Robot pipeline。上半部分展示从人手轨迹到机器人轨迹的 action alignment，下半部分展示视觉对齐和 15 种机器人形态的批量渲染。</em></p>
+<ul>
+<li><strong>动作对齐</strong>：系统从 MANO hand keypoints 构造虚拟手指，把 thumb 与 index/middle 的加权虚拟指尖映射到 gripper center、orientation 和 width。position/width 用 Savitzky-Golay 平滑，orientation 用 Gaussian-weighted SLERP 平滑，减少人手轨迹抖动对机器人 IK 的影响。</li>
+<li><strong>视觉对齐</strong>：图中依次包含 SAM3 手臂分割、ProPainter 人手 inpainting、MuJoCo IK 渲染机器人、Depth Anything v3 遮挡合成。它不是只把机器人贴到图上，而是尝试处理手臂遮挡、深度关系和目标接触区域。</li>
+<li><strong>规模扩展</strong>：1,933h 第一视角人类视频被渲染成 Panda、UR5e、ARX-L5、xArm7、Sawyer、Kinova Gen3、IIWA、Jaco、FR3、UR10e、ViperX、WidowX、Piper、YAM、AgileX ALOHA 等 15 种双臂 morphology，最终得到 24,808h H2R demonstrations。</li>
+<li><strong>为什么这张图重要</strong>：它解释了 Qwen-RobotManip 的数据规模不是靠私有大规模 teleoperation，而是靠“人类视频动作重定向 + 视觉合成”扩展开源数据。后续消融显示 H2R 相比只加 raw ego video 更能提升 camera/viewpoint 泛化。</li>
+</ul>
+<h3 id="32-scale">3.2 数据清洗：不能让 scale 放大噪声</h3>
+<p>大规模机器人数据最危险的问题是 state/action 与视频不一致。论文使用五阶段 state-action signal filtering：sudden change detection、state-action trend alignment、extreme value filtering、joint-EEF FK consistency、base frame and EEF orientation alignment。一个典型例子是 RoboMIND UR-type 数据中有 81% episode 存在 state-action misalignment，被过滤掉。</p>
+<p><img alt="图4：数据预处理和质量过滤" src="assets/qwen-robotmanip/data_preprocess.jpg" /></p>
+<p><em>图 4：数据清洗流程图。左侧是五阶段 state-action signal filtering，右侧是跨模态质量检查，包括 instruction consistency、video-state consistency 和 video quality filtering。</em></p>
+<ul>
+<li><strong>state-action 过滤</strong>：图中曲线和阈值示意展示了从突变、趋势错位、极值、FK 不一致到 base/EEF orientation 不一致的逐层筛查。它解决的是机器人数据中最常见的“看起来像一条 demo，实际动作标签不可信”的问题。</li>
+<li><strong>video-state consistency</strong>：论文使用 URDF 渲染机器人投影，再与 fine-tuned SAM3 分割出的真实 robot mask 做重叠比较。如果视频中的机械臂位置和状态重建不一致，这条样本会被降权或剔除。</li>
+<li><strong>跨模态检查</strong>：instruction consistency 和 video quality filtering 保证语言指令、视觉内容、动作轨迹三者一致。对于 VLA 模型，语言错配会直接训练出错误 grounding，因此这一环节和动作清洗同等重要。</li>
+<li><strong>与方法主张的关系</strong>：这张图支持论文“alignment unlocks scale”的另一面：scale 不只是数量，还是把错误坐标、错误指令和错误视频关系过滤掉后的有效规模。</li>
+</ul>
+<h3 id="33-vla-vlm-co-training">3.3 双流训练：VLA 与 VLM co-training</h3>
+<p>预训练阶段包含两个 stream：VLA robot stream 和 VLM vision-language stream，比例为 9:1。VLA 使用 masked flow matching loss，VLM 使用 next-token prediction loss，总 loss 为：</p>
+<div class="math display">$$L = L_{FM} + \lambda L_{VLM}, \quad \lambda=0.1$$</div>
+<p>动作扩散训练中，同一个 action chunk 重复采样 8 次 noise 和 timestep（<code>K_repeat=8</code>），提高 flow matching 对不同噪声水平的覆盖。SFT 阶段只优化 flow matching，不再使用 VLM next-token loss；mixed post-training 可混入 VL 数据和相近分布的预训练 VLA 数据，缓解 VLA-to-VA degradation。</p>
+<hr />
+<h2 id="_4">四、实验与结果</h2>
+<h3 id="41-iid-benchmark">4.1 标准 IID benchmark 不是充分证据</h3>
+<p>论文先用 LIBERO / RoboTwin-Easy / RoboTwin-Hard 说明一个容易被忽视的问题：标准 benchmark 可能无法区分 foundation policy 和强 scratch policy。</p>
+<table>
+<thead>
+<tr>
+<th>模型</th>
+<th style="text-align: right;">LIBERO</th>
+<th style="text-align: right;">RoboTwin-Easy</th>
+<th style="text-align: right;">RoboTwin-Hard</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>pi0</td>
+<td style="text-align: right;">94.4</td>
+<td style="text-align: right;">65.9</td>
+<td style="text-align: right;">58.4</td>
+</tr>
+<tr>
+<td>pi0.5</td>
+<td style="text-align: right;">97.6</td>
+<td style="text-align: right;">82.7</td>
+<td style="text-align: right;">76.8</td>
+</tr>
+<tr>
+<td>StarVLA</td>
+<td style="text-align: right;">98.0</td>
+<td style="text-align: right;">85.7</td>
+<td style="text-align: right;">87.3</td>
+</tr>
+<tr>
+<td>Abot-M0</td>
+<td style="text-align: right;">98.6</td>
+<td style="text-align: right;">86.1</td>
+<td style="text-align: right;">85.1</td>
+</tr>
+<tr>
+<td>Being-H0.7</td>
+<td style="text-align: right;">99.2</td>
+<td style="text-align: right;">90.2</td>
+<td style="text-align: right;">89.6</td>
+</tr>
+<tr>
+<td>Qwen-RobotManip-scratch</td>
+<td style="text-align: right;">98.2</td>
+<td style="text-align: right;">88.7</td>
+<td style="text-align: right;">88.4</td>
+</tr>
+<tr>
+<td>Qwen-RobotManip</td>
+<td style="text-align: right;">99.1</td>
+<td style="text-align: right;">93.4</td>
+<td style="text-align: right;">92.5</td>
+</tr>
+<tr>
+<td>Qwen-RobotManip-Context</td>
+<td style="text-align: right;">99.2</td>
+<td style="text-align: right;">93.7</td>
+<td style="text-align: right;">94.0</td>
+</tr>
+</tbody>
+</table>
+<p>scratch 模型在这些任务上也很高，因此论文后续重点转向 OOD、instruction following 和 cross-embodiment。</p>
+<p><img alt="图5：IID benchmark 诊断" src="assets/qwen-robotmanip/iid_diagnostic.jpg" /></p>
+<p><em>图 5：IID benchmark 诊断。左侧展示 LIBERO / RoboTwin 标准设置下 scratch 模型也能接近 pretrained model；右侧展示 LIBERO-Plus / RoboTwin-Clean2Rand 等 OOD setting 才能拉开差距。</em></p>
+<ul>
+<li><strong>左侧信息</strong>：标准任务的场景、物体和动作分布相对固定，模型只要有足够 imitation 容量就能学到高成功率。Qwen-RobotManip 虽然仍领先，但领先幅度不足以说明 foundation capability。</li>
+<li><strong>右侧信息</strong>：当相机、背景、布局、物体 clutter 或 robot embodiment 被扰动后，scratch 模型下降明显，预训练模型和 context 版本优势扩大。</li>
+<li><strong>评测启示</strong>：论文不是回避 IID 高分，而是把它作为反例说明：如果 benchmark 不改变任务分布，就很难判断大规模预训练是否真正带来泛化。</li>
+</ul>
+<h3 id="42-ood">4.2 OOD 泛化、指令跟随与跨具身</h3>
+<table>
+<thead>
+<tr>
+<th>评测</th>
+<th>关键结果</th>
+<th>结论</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>LIBERO-Plus</td>
+<td>Ours 89.0，Ours-Context 91.4，pi0.5 84.4</td>
+<td>context 对 Robot perturbation 从 75.5 提升到 83.9</td>
+</tr>
+<tr>
+<td>RoboTwin-Clean2Rand Hard</td>
+<td>Ours joint 62.6，Ours-Context joint 69.4，pi0.5 47.9</td>
+<td>clutter 和随机外观下预训练收益明显</td>
+</tr>
+<tr>
+<td>RoboCasa365</td>
+<td>Ours Total 35.9，RLDX-1 33.2，pi0.5 16.9</td>
+<td>Composite-Unseen 14.9 接近 RLDX-1 的 3 倍</td>
+</tr>
+<tr>
+<td>EBench</td>
+<td>Ours SR / Score = 45.6 / 60，pi0.5 = 27.1 / 41</td>
+<td>背景、指令、物体、混合扰动下更稳</td>
+</tr>
+<tr>
+<td>RoboTwin-IF</td>
+<td>Ours Avg 72.2，pi0.5 Avg 49.6</td>
+<td>对 verb、target、relative place 的语言区分更强</td>
+</tr>
+<tr>
+<td>RoboTwin-XE</td>
+<td>Ours eef Total 23.9，pi0.5 eef 7.5</td>
+<td>camera-frame EEF 带来 3.2x zero-shot transfer</td>
+</tr>
+</tbody>
+</table>
+<p><img alt="图6：OOD 泛化总结" src="assets/qwen-robotmanip/ood_summary.jpg" /></p>
+<p><em>图 6：OOD 结果总结。图中按 task/scene generalization、instruction following、zero-shot cross-embodiment 三条轴比较 Qwen-RobotManip 与 prior SOTA。</em></p>
+<ul>
+<li><strong>左侧 task/scene generalization</strong>：LIBERO-Plus、RoboTwin-Clean2Rand、RoboCasa365 都不是简单重复训练分布，而是改变相机、布局、背景、任务组合或物体状态。Qwen-RobotManip 的优势集中出现在这些分布偏移设置中。</li>
+<li><strong>中间 instruction following</strong>：RoboTwin-IF 不是只看能否抓到东西，而是用动词、目标物和相对位置区分指令。Ours 在 Pick-Diverse、Place-Relative、Mic-Drawer、Operate-Tabletop 等任务上比 pi0.5 高 27 到 37 点，说明语言 grounding 不只是模板匹配。</li>
+<li><strong>右侧 cross-embodiment</strong>：RoboTwin-XE 中 ARX-X5、UR5-WSG、Franka Panda 都是 unseen embodiments。Ours eef 的平均成功率 23.9 仍不高，但已经是 pi0.5 eef 7.5 的 3.2 倍，说明 camera-frame delta EEF 确实改善了零样本迁移。</li>
+<li><strong>需要保留的边界</strong>：Franka 上 Ours eef 只有 5.9，说明跨具身迁移还远未解决；论文的贡献是明显提升，而不是宣称已经通用。</li>
+</ul>
+<p><img alt="图7：EBench 分维度结果" src="assets/qwen-robotmanip/ebench.jpg" /></p>
+<p><em>图 7：EBench 的 operating mode、horizon、precision 与扰动维度拆解。图中柱状图比较多个 VLA baseline 与 Qwen-RobotManip，包含 tabletop、simple pick-and-place、long-horizon 等设置。</em></p>
+<ul>
+<li><strong>任务类型拆解</strong>：Ours 在 Table Top 上达到 50.0 / 70，而 pi0.5 为 12.9 / 32；在 Simple PnP 上 Ours 56.5 / 60，X-VLA 50.0 / 54；Long Horizon 上 Ours 29.9 / 55，pi0.5 18.1 / 39。长程任务仍难，但优势没有只局限在短程抓放。</li>
+<li><strong>扰动维度</strong>：pi0.5 从 Background 34.6 掉到 Mix 23.3；Ours 在 44.5 到 46.8 区间基本不掉，Mix 46.8 甚至高于单独 Background 45.3。这说明模型并非只适配某一种扰动，而是对组合扰动也保持稳定。</li>
+<li><strong>论文论点连接</strong>：EBench 支持“大规模预训练 + 对齐表示”提升 OOD 鲁棒性，而不是只提升标准任务成功率。</li>
+</ul>
+<h3 id="43-robochallenge">4.3 真实机器人和 RoboChallenge</h3>
+<p>真实 CobotMagic ALOHA ID 设置中，Ours 平均成功率 88.6%，pi0.5 为 42.9%，StarVLA 为 20.0%。OOD 设置中，Ours 87.5%，pi0.5 37.5%，StarVLA 0.0%。ARX ALOHA few-shot 任务中，Ours 在 4/5 任务领先，但 Insert Screw 仍只有 10.0%，所有模型 full insertion 都是 0/10。</p>
+<p>RoboChallenge Table30-v1 Generalist Track 中，Ours 成功率/过程分为 45 / 59.83，DM0_generalist 为 37 / 48.43，pi0.5_generalist 为 17.67 / 31.27。相对 DM0 的成功率提升约 20%。但 UR5 子集上 DM0 58.3 / 66.2，高于 Ours 51.7 / 60.9，需要避免写成每个机器人都第一。</p>
+<p><img alt="图8：RoboChallenge 和真实案例" src="assets/qwen-robotmanip/challenge_rc.jpg" /></p>
+<p><em>图 8：RoboChallenge 六个长程挑战任务和真实机器人案例摘要。图中包含 Network Cable、Fries into Plate、Sandwich、Paper Cups、Electronic Products、Dishcloth 等任务，每个任务给出多帧执行过程和成功率对比。</em></p>
+<ul>
+<li><strong>任务结构</strong>：这些任务不是单步 pick-and-place，而是包含双臂协调、包装打开、物体整理、分类、重复尝试等长程操作。图中每行的连续帧展示从初始状态到完成状态的过程，而不是单张成功截图。</li>
+<li><strong>关键数字</strong>：六个挑战长程任务中，prior SOTA generalist 平均约 5%，Qwen-RobotManip 达到 36.7%。这比标准 benchmark 更能体现复杂任务迁移能力。</li>
+<li><strong>失败与成功对照</strong>：case study 中 DM0 或 pi0.5 常在初始协调、物体卡住、掉落后恢复等环节失败；Qwen-RobotManip 能在某些任务中重试并恢复，例如 ARX5 sort electronic products 中两次掉落后第三次成功。</li>
+<li><strong>边界条件</strong>：真实实验数量仍有限，更多是部署能力和 qualitative robustness 证据，不应把它解读为所有开放环境下的统计性胜利。</li>
+</ul>
+<hr />
+<h2 id="_5">五、关键图表解读</h2>
+<h3 id="51-zero-shoteef-joint">5.1 跨具身 zero-shot：EEF 表示比 joint 表示更关键</h3>
+<p><img alt="图9：RoboTwin-XE zero-shot 跨具身设置" src="assets/qwen-robotmanip/fig_cross_embodiment.jpg" /></p>
+<p><em>图 9：RoboTwin-XE 评测场景，展示 ARX-X5、UR5-WSG 和 Franka Panda 三种 unseen embodiments。图中红/绿/蓝标记用于区分任务目标、末端执行器或关键物体位置。</em></p>
+<ul>
+<li><strong>图像结构</strong>：三列分别对应三种未见机器人。每个场景都保留 tabletop manipulation 的基本任务语义，但机械臂外观、夹爪形态和运动学约束不同。</li>
+<li><strong>结果含义</strong>：pi0.5 joint 在 ARX-X5 / UR5-WSG / Franka 上为 24.6 / 2.2 / 0.9，总分 9.2；pi0.5 eef 总分 7.5。Ours joint 总分 14.5，Ours eef 总分 23.9，其中 UR5 上 Ours eef 22.8 是 Ours joint 4.1 的 5.6 倍。</li>
+<li><strong>为什么重要</strong>：跨具身不是简单换一张机器人图片。模型必须把视觉目标和新机器人末端运动对应起来。camera-frame EEF 把动作表达和相机观察绑定，使“图像中的接近/离开/夹取”更容易跨机器人复用。</li>
+</ul>
+<h3 id="52-scaling">5.2 Scaling：只有对齐后的动作空间才吃得到数据规模</h3>
+<p><img alt="图10：动作空间对 scaling curve 的影响" src="assets/qwen-robotmanip/scaling_curves.jpg" /></p>
+<p><em>图 10：不同 state/action representation 的数据 scaling curves。曲线比较 w/o UnifiedSpace、w/o UnifiedEEF 和完整 Ours 在 EEF/Joint action prediction 上随数据规模变化的 MSE。</em></p>
+<ul>
+<li><strong>坐标含义</strong>：横轴是训练数据规模或训练阶段，纵轴是 action prediction MSE。论文关注的不是单点 MSE，而是数据规模扩大时曲线是否稳定下降。</li>
+<li><strong>主要趋势</strong>：w/o UnifiedSpace 的 EEF MSE 曲线更高且不稳定，说明直接拼接不同机器人原始动作字段会让模型看到互相不对齐的监督信号。加入 UnifiedSpace 后曲线更接近 log-linear scaling，进一步加入 UnifiedEEF 后下游成功率更好。</li>
+<li><strong>论文论点连接</strong>：这张图是标题中 “Alignment Unlocks Scale” 最直接的证据。没有统一语义空间时，更多数据不一定带来更清晰的学习信号；对齐之后，scale 才更像可预测地转化为性能。</li>
+</ul>
+<h3 id="53-mixed-post-trainingvl-unifiedeef">5.3 Mixed post-training：VL 数据和 UnifiedEEF 需要配合</h3>
+<p><img alt="图11：mixed post-training 消融" src="assets/qwen-robotmanip/mixposttrain.jpg" /></p>
+<p><em>图 11：RoboTwin-IF 上不同 post-training 数据组合随训练步数的表现。曲线比较只做 domain SFT、加入 10% VL data、再加入 auxiliary VLA pretraining data 等设置。</em></p>
+<ul>
+<li><strong>横纵轴含义</strong>：横轴是 post-training steps（10k 到 90k），纵轴是 RoboTwin-IF success rate。RoboTwin-IF 是指令跟随测试，因此能观察模型是否因为 domain SFT 而丢失语言区分能力。</li>
+<li><strong>主要现象</strong>：只用 RoboTwin-Clean 做 domain SFT 时，训练步数增加会出现过拟合和 IF 表现下降；加入 10% VL data 可以缓解不稳定；再加入 auxiliary VLA pretraining data 后，RoboTwin-IF 随训练继续提升。</li>
+<li><strong>进一步条件</strong>：另一张 <code>mixedposttrain.jpg</code> 显示 UnifiedEEF 是 mixed post-training 的必要条件。去掉 UnifiedEEF baseline 从 71.6% 降到 35.0%；没有 UnifiedEEF 再混合数据会 collapse 到 0.0%；完整 UnifiedEEF + mixed pretraining 可到 75.8%。</li>
+<li><strong>结论</strong>：语言能力、动作对齐和后训练数据配比是耦合的。不能只把 VL 数据当作额外正则项，如果底层动作空间没有对齐，混合训练甚至可能崩溃。</li>
+</ul>
+<hr />
+<h2 id="_6">六、系统实现 / 工程接口 / 部署</h2>
+<p>虽然本地没有官方代码仓库，论文仍给出了足够明确的系统接口。</p>
+<div class="codehilite"><pre><span></span><code>Observation stream:
+  multi-view RGB + camera calibration + current robot state
+
+Prompt stream:
+  embodiment name + instruction + speed + fps + camera view direction
+
+Context stream (optional):
+  past observation/state/action chunks sampled from same episode
+
+Action stream:
+  80D canonical action chunk -&gt; robot-specific control adapter
+</code></pre></div>
+
+<p>部署时，真实机器人通过 WiFi 把 observation 发送到远程服务器，服务器运行 VLA 推理并返回 action chunk。系统使用 Real-Time Chunking：机器人执行当前 chunk 的同时，服务器异步生成下一个 chunk，以隐藏网络和云端推理延迟。</p>
+<p>这种接口的工程含义是：Qwen-RobotManip 并不要求每台机器人都重训一个单独模型，而是要求每台机器人能提供三个适配层：状态/动作到 80 维 canonical space 的映射、相机标定或 fallback action frame、embodiment prompt 字段。真正困难的工程部分从“改模型结构”转移到“保证数据和控制接口对齐”。</p>
+<hr />
+<h2 id="_7">七、局限性</h2>
+<ul>
+<li>Human-to-Robot 合成依赖 retargeting、inpainting 和 depth-guided compositing，合成伪影或错误 IK 会限制数据质量上限。</li>
+<li>OOD 仿真评测更强，但仍不能完全替代大规模真实世界部署。</li>
+<li>camera-frame EEF 依赖相机内外参；没有标定时需要退回 robot-base relative mode，跨具身收益会下降。</li>
+<li>context 模型在 episode 开始时缺少历史，只能 zero padding，真实部署中可能有启动迟疑；论文因此同时发布 context-free 和 context 版本。</li>
+<li>精密接触任务仍明显困难：ALOHA yellow-disc-insertion 只有 2/5；ARX Insert Screw full insertion 所有模型都是 0/10。</li>
+<li>zero-shot 跨具身还远未解决：RoboTwin-XE Franka 上 Ours eef 只有 5.9%。</li>
+<li>RoboChallenge 中不是每个机器人都领先，UR5 子集 DM0_generalist 高于 Ours。</li>
+<li>部分表格区分 Ours、Ours-Context、joint、eef，引用数字时必须明确配置。</li>
+</ul>
+<hr />
+<h2 id="_8">八、关键概念速查</h2>
+<table>
+<thead>
+<tr>
+<th>概念</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>UnifiedSpace</td>
+<td>把不同机器人状态/动作映射到统一 80 维语义空间</td>
+</tr>
+<tr>
+<td>UnifiedEEF</td>
+<td>使用 camera-frame delta EEF action，让视觉相似动作在数值空间也更接近</td>
+</tr>
+<tr>
+<td>In-context policy adaptation</td>
+<td>用 episode 内历史 observation/state/action 作为隐式机器人和环境适配信号</td>
+</tr>
+<tr>
+<td>Human-to-Robot synthesis</td>
+<td>从第一视角人类操作视频重定向到机器人轨迹并渲染成 robot demonstrations</td>
+</tr>
+<tr>
+<td>VLA/VLM co-training</td>
+<td>9:1 混合 robot stream 和 vision-language stream，保留语言和视觉理解能力</td>
+</tr>
+<tr>
+<td>Mixed post-training</td>
+<td>后训练时混入 VL 数据和辅助 VLA 预训练数据，缓解 IF 和 VLA-to-VA 退化</td>
+</tr>
+<tr>
+<td>RoboTwin-IF</td>
+<td>测试模型能否区分动词、目标物和相对位置的指令跟随 benchmark</td>
+</tr>
+<tr>
+<td>RoboTwin-XE</td>
+<td>测试 zero-shot cross-embodiment transfer 的 benchmark</td>
+</tr>
+</tbody>
+</table>
+  </div>
+</main>
+
+
+<script>
+(function() {
+  const sidebar = document.getElementById('sidebar');
+  const links = sidebar.querySelectorAll('a');
+  const headings = document.querySelectorAll('h1[id], h2[id], h3[id], h4[id]');
+  if (headings.length === 0) return;
+
+  const linkMap = new Map();
+  links.forEach(function(a) {
+    const href = a.getAttribute('href');
+    if (href && href.startsWith('#')) linkMap.set(href.slice(1), a);
+  });
+
+  function onScroll() {
+    let currentId = null;
+    const scrollTop = window.scrollY + 80;
+    headings.forEach(function(h) { if (h.offsetTop <= scrollTop) currentId = h.id; });
+    links.forEach(function(a) { a.classList.remove('active'); });
+    if (currentId && linkMap.has(currentId)) {
+      const el = linkMap.get(currentId);
+      el.classList.add('active');
+      if (getComputedStyle(sidebar).position === 'fixed') {
+        const sr = sidebar.getBoundingClientRect();
+        const er = el.getBoundingClientRect();
+        if (er.bottom > sr.bottom || er.top < sr.top) {
+          el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }
+      }
+    }
+  }
+
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+})();
+</script>
+
+
+<script>
+(function() {
+  const content = document.getElementById('main-content');
+  if (!content) return;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'image-lightbox';
+  overlay.setAttribute('role', 'dialog');
+  overlay.setAttribute('aria-modal', 'true');
+
+  overlay.innerHTML = `
+    <button type="button" class="image-lightbox__close" data-action="close" aria-label="关闭">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M5 5l10 10M15 5L5 15"/>
+      </svg>
+    </button>
+    <div class="image-lightbox__stage">
+      <img class="image-lightbox__image" alt="">
+    </div>
+    <div class="image-lightbox__toolbar" aria-label="图片缩放控制">
+      <button type="button" class="image-lightbox__btn" data-action="zoom-out" aria-label="缩小" title="缩小">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d="M3 9h12"/>
+        </svg>
+      </button>
+      <span class="image-lightbox__zoom-val" data-action="zoom-reset" title="点击重置缩放" role="button" tabindex="0">100%</span>
+      <button type="button" class="image-lightbox__btn" data-action="zoom-in" aria-label="放大" title="放大">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d="M3 9h12M9 3v12"/>
+        </svg>
+      </button>
+    </div>
+    <div class="image-lightbox__caption"></div>
+  `;
+  document.body.appendChild(overlay);
+
+  const stage = overlay.querySelector('.image-lightbox__stage');
+  const image = overlay.querySelector('.image-lightbox__image');
+  const zoomLabel = overlay.querySelector('.image-lightbox__zoom-val');
+  const caption = overlay.querySelector('.image-lightbox__caption');
+
+  const minZoom = 0.25;
+  const maxZoom = 5;
+  const step = 0.25;
+  let zoom = 1;
+  let fitWidth = 1;
+
+  function clamp(value) {
+    return Math.min(maxZoom, Math.max(minZoom, value));
+  }
+
+  function centerImage(animate) {
+    requestAnimationFrame(function() {
+      var left = Math.max(0, (stage.scrollWidth - stage.clientWidth) / 2);
+      var top = Math.max(0, (stage.scrollHeight - stage.clientHeight) / 2);
+      stage.scrollTo({ left: left, top: top, behavior: animate ? 'smooth' : 'auto' });
+    });
+  }
+
+  function applyZoom(animate) {
+    image.style.width = Math.max(1, Math.round(fitWidth * zoom)) + 'px';
+    zoomLabel.textContent = Math.round(zoom * 100) + '%';
+    centerImage(animate);
+  }
+
+  function setZoom(value, animate) {
+    zoom = clamp(value);
+    applyZoom(animate);
+  }
+
+  function computeFitSize() {
+    var w = image.naturalWidth || 1;
+    var h = image.naturalHeight || 1;
+    var maxW = Math.max(1, stage.clientWidth - 48);
+    var maxH = Math.max(1, stage.clientHeight - 48);
+    var fitScale = Math.min(1, maxW / w, maxH / h);
+    fitWidth = Math.max(1, w * fitScale);
+    applyZoom(false);
+  }
+
+  function openImage(source) {
+    image.onload = computeFitSize;
+    image.alt = source.alt || '';
+    caption.textContent = source.alt || '';
+    image.src = source.currentSrc || source.src;
+    zoom = 1;
+    overlay.classList.add('is-open');
+    document.body.classList.add('image-lightbox-open');
+    if (image.complete) computeFitSize();
+  }
+
+  function closeImage() {
+    overlay.classList.remove('is-open');
+    document.body.classList.remove('image-lightbox-open');
+    image.onload = null;
+    image.style.removeProperty('width');
+    image.removeAttribute('src');
+  }
+
+  overlay.addEventListener('click', function(event) {
+    var action = event.target.closest('[data-action]');
+    if (action) {
+      var type = action.getAttribute('data-action');
+      if (type === 'zoom-in') setZoom(zoom + step, true);
+      if (type === 'zoom-out') setZoom(zoom - step, true);
+      if (type === 'zoom-reset') setZoom(1, true);
+      if (type === 'close') closeImage();
+      return;
+    }
+    if (event.target === overlay || event.target === stage) closeImage();
+  });
+
+  overlay.addEventListener('wheel', function(event) {
+    if (!overlay.classList.contains('is-open')) return;
+    if (!event.ctrlKey && !event.metaKey) return;
+    event.preventDefault();
+    setZoom(zoom + (event.deltaY < 0 ? step : -step), true);
+  }, { passive: false });
+
+  document.addEventListener('keydown', function(event) {
+    if (!overlay.classList.contains('is-open')) return;
+    if (event.key === 'Escape') closeImage();
+    if (event.key === '+' || event.key === '=') setZoom(zoom + step, true);
+    if (event.key === '-' || event.key === '_') setZoom(zoom - step, true);
+    if (event.key === '0') setZoom(1, true);
+  });
+
+  window.addEventListener('resize', function() {
+    if (overlay.classList.contains('is-open')) computeFitSize();
+  });
+
+  content.querySelectorAll('img').forEach(function(img) {
+    if (img.closest('a')) return;
+    img.setAttribute('tabindex', '0');
+    img.setAttribute('title', img.getAttribute('title') || '点击放大查看');
+    img.addEventListener('click', function() { openImage(img); });
+    img.addEventListener('keydown', function(event) {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        openImage(img);
+      }
+    });
+  });
+})();
+</script>
+
+</body>
+</html>

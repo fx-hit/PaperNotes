@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Qwen-RobotNav Technical Report: A Scalable Navigation Model Designed for an Agentic Navigation System</title>
+<!-- arxiv: 2606.18112 -->
+<!-- venue: Qwen Technical Report 2026 -->
+<!-- tags: 导航, VLA, 自动驾驶, 多模态理解 -->
+<!-- words-zh: 3179 -->
+<!-- words-en: 740 -->
+<!-- reading-time: 13 -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap"></noscript>
+<style>
+  :root {
+    --bg: #ffffff;
+    --text: #1a1a2e;
+    --text-secondary: #555;
+    --border: #e1e4e8;
+    --link: #0969da;
+    --table-stripe: #f6f8fa;
+    --heading: #0d1117;
+    --blockquote-border: #0969da;
+    --blockquote-bg: #f0f6ff;
+    --inline-code: #d73a49;
+    --inline-code-bg: #f6f8fa;
+    --sidebar-width: 260px;
+    --toc-active: #0969da;
+    --content-max-width: 1350px;
+    --media-max-width: 1000px;
+    --content-padding: 48px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "Inter", "Noto Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 16px;
+    line-height: 1.75;
+    color: var(--text);
+    background: var(--bg);
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    width: var(--sidebar-width);
+    overflow-y: auto;
+    padding: 28px 20px 40px;
+    background: #fafbfc;
+    border-right: 1px solid var(--border);
+    z-index: 10;
+    scrollbar-width: thin;
+  }
+  .sidebar-title {
+    font-size: 13px; font-weight: 700; color: var(--text-secondary);
+    margin-bottom: 16px; letter-spacing: 0.06em; text-transform: uppercase;
+  }
+  .toc-list { list-style: none; padding: 0; margin: 0; }
+  .toc-list ul { list-style: none; padding-left: 14px; }
+  .toc-list li { margin: 1px 0; }
+  .toc-list a {
+    display: block; padding: 4px 12px; font-size: 13.5px; line-height: 1.45;
+    color: var(--text-secondary); text-decoration: none; border-radius: 4px;
+    border-left: 2px solid transparent; transition: all 0.15s;
+  }
+  .toc-list a:hover { color: var(--link); background: #e8f0fe; }
+  .toc-list a.active {
+    color: var(--toc-active); font-weight: 600;
+    border-left-color: var(--toc-active); background: #e8f0fe;
+  }
+  .toc-h1 a { font-weight: 600; color: var(--heading); font-size: 14px; }
+  .toc-h3 a { padding-left: 24px; font-size: 13px; }
+  .toc-h4 a { padding-left: 36px; font-size: 12.5px; }
+  .toc-empty { color: var(--text-secondary); font-size: 13px; font-style: italic; }
+
+  .main-wrapper {
+    margin-left: var(--sidebar-width);
+    min-height: 100vh;
+    display: flex; justify-content: center;
+  }
+  .content-inner {
+    width: 100%;
+    max-width: var(--content-max-width);
+    padding: 40px var(--content-padding) 80px;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    color: var(--heading); font-weight: 700; line-height: 1.3;
+    margin-top: 2em; margin-bottom: 0.6em; scroll-margin-top: 24px;
+  }
+  h1 { font-size: 2em; border-bottom: 2px solid var(--border); padding-bottom: 0.3em; margin-top: 0; }
+  h2 { font-size: 1.5em; border-bottom: 1px solid var(--border); padding-bottom: 0.25em; }
+  h3 { font-size: 1.25em; }
+  h4 { font-size: 1.1em; }
+  p { margin-bottom: 1em; }
+  a { color: var(--link); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  strong { font-weight: 600; }
+
+  blockquote {
+    border-left: 4px solid var(--blockquote-border);
+    background: var(--blockquote-bg);
+    padding: 12px 20px; margin: 1em 0;
+    border-radius: 0 6px 6px 0; color: var(--text-secondary);
+  }
+  blockquote p:last-child { margin-bottom: 0; }
+
+  code {
+    font-family: "JetBrains Mono", "SF Mono", "Fira Code", monospace;
+    font-size: 0.875em; background: var(--inline-code-bg);
+    padding: 2px 6px; border-radius: 4px; color: var(--inline-code);
+  }
+  pre {
+    background: #f6f8fa; color: #24292f;
+    border: 1px solid var(--border);
+    border-radius: 8px; padding: 16px 20px; overflow-x: auto;
+    margin: 1em 0; font-size: 14px; line-height: 1.55;
+  }
+  pre code { background: none; padding: 0; border-radius: 0; color: inherit; font-size: inherit; }
+
+  .codehilite { background: #f6f8fa; border: 1px solid var(--border); border-radius: 8px; padding: 16px 20px; overflow-x: auto; margin: 1em 0; }
+  .codehilite pre { background: none; padding: 0; margin: 0; border-radius: 0; }
+  .codehilite .hll { background-color: #fff8c5; }
+  .codehilite .c  { color: #6e7781; font-style: italic; }
+  .codehilite .k  { color: #cf222e; }
+  .codehilite .o  { color: #0550ae; }
+  .codehilite .s  { color: #0a3069; }
+  .codehilite .n  { color: #24292f; }
+  .codehilite .p  { color: #24292f; }
+  .codehilite .mi { color: #0550ae; }
+  .codehilite .nf { color: #8250df; }
+  .codehilite .nb { color: #953800; }
+  .codehilite .nc { color: #953800; }
+  .codehilite .bp { color: #953800; }
+
+  table { width: 100%; border-collapse: collapse; margin: 1em 0; font-size: 0.925em; }
+  th, td { border: 1px solid var(--border); padding: 10px 14px; text-align: left; }
+  th { background: var(--table-stripe); font-weight: 600; color: var(--heading); }
+  tr:nth-child(even) td { background: var(--table-stripe); }
+
+  .math.display { display: block; overflow-x: auto; padding: 12px 0; margin: 1em 0; }
+  ul, ol { padding-left: 1.5em; margin-bottom: 1em; }
+  li { margin-bottom: 0.3em; }
+  hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+  img { max-width: min(100%, var(--media-max-width)); height: auto; border-radius: 6px; margin: 0 auto; display: block; }
+  #main-content img { cursor: zoom-in; }
+  p:has(img) { text-align: center; max-width: var(--media-max-width); margin: 0.6em auto 0; }
+  table:has(img) { width: min(100%, var(--media-max-width)) !important; margin-left: auto; margin-right: auto; }
+  p:has(img) + p { text-align: center; font-size: 0.9em; color: var(--text-secondary); margin-top: 0.15em; margin-bottom: 0.6em; }
+  .mermaid { text-align: center; margin: 1.5em 0; background: #fafbfc; border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+  .article-stats {
+    font-size: 0.85rem; color: var(--text-secondary);
+    padding: 10px 18px; margin-bottom: 28px;
+    background: #f8f9fa; border: 1px solid var(--border); border-radius: 8px;
+  }
+  body.image-lightbox-open { overflow: hidden; }
+  .image-lightbox {
+    position: fixed; inset: 0; z-index: 1000;
+    display: none;
+    background: rgba(9, 12, 20, 0.88);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+  }
+  .image-lightbox.is-open { display: block; }
+
+  /* Stage uses flexbox to center the image; safe alignment prevents
+     clipping when zoomed-in content overflows — it falls back to
+     start so scrollbars reach every pixel. */
+  .image-lightbox__stage {
+    width: 100%; height: 100%;
+    overflow: auto;
+    display: flex;
+    align-items: safe center;
+    justify-content: safe center;
+    padding: 24px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.18) transparent;
+  }
+
+  .image-lightbox__image {
+    max-width: none; max-height: none;
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 20px 70px rgba(0, 0, 0, 0.5);
+    cursor: zoom-in;
+    flex-shrink: 0;
+    transition: box-shadow 0.3s;
+  }
+
+  /* Close button — top-right glass circle */
+  .image-lightbox__close {
+    position: absolute; top: 20px; right: 20px; z-index: 1010;
+    width: 40px; height: 40px;
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.25);
+    color: rgba(255,255,255,0.85);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    transition: background 0.2s, border-color 0.2s, transform 0.2s, color 0.2s;
+  }
+  .image-lightbox__close:hover {
+    background: rgba(255,255,255,0.15);
+    border-color: rgba(255,255,255,0.3);
+    color: #fff;
+    transform: scale(1.08);
+  }
+
+  /* Zoom toolbar — bottom-center glass pill */
+  .image-lightbox__toolbar {
+    position: absolute; bottom: 28px; left: 50%; transform: translateX(-50%); z-index: 1010;
+    display: flex; align-items: center; gap: 4px;
+    padding: 6px;
+    background: rgba(30, 30, 45, 0.75);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 32px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.35);
+  }
+
+  .image-lightbox__btn {
+    width: 36px; height: 36px;
+    border: none; border-radius: 50%;
+    background: transparent;
+    color: rgba(255,255,255,0.82);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.2s, color 0.2s;
+  }
+  .image-lightbox__btn:hover {
+    background: rgba(255,255,255,0.13);
+    color: #fff;
+  }
+
+  .image-lightbox__zoom-val {
+    min-width: 52px; text-align: center;
+    color: rgba(255,255,255,0.82);
+    font: 600 12.5px/32px "Inter", -apple-system, sans-serif;
+    cursor: pointer; user-select: none;
+    border-radius: 20px; padding: 0 6px;
+    transition: background 0.2s, color 0.2s;
+    letter-spacing: -0.01em;
+  }
+  .image-lightbox__zoom-val:hover {
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+  }
+
+  .image-lightbox__caption {
+    position: absolute; left: 28px; right: 28px; bottom: 96px; z-index: 1005;
+    color: rgba(255,255,255,0.72); text-align: center;
+    font-size: 13px; line-height: 1.45;
+    pointer-events: none;
+  }
+
+  @media (max-width: 1024px) {
+    .sidebar { position: static; width: 100%; height: auto; max-height: 35vh; border-right: none; border-bottom: 1px solid var(--border); }
+    .main-wrapper { margin-left: 0; display: block; }
+    .content-inner { max-width: none; padding: 24px 20px 60px; }
+    .image-lightbox__stage { padding: 12px; }
+    .image-lightbox__close { top: 12px; right: 12px; width: 36px; height: 36px; }
+    .image-lightbox__toolbar { bottom: 18px; padding: 5px; gap: 2px; }
+    .image-lightbox__btn { width: 32px; height: 32px; }
+    .image-lightbox__caption { bottom: 78px; left: 18px; right: 18px; }
+  }
+</style>
+
+<script>
+MathJax = {
+  tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']], processEscapes: true, tags: 'none' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] }
+};
+</script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js" defer></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  mermaid.initialize({ startOnLoad: true, theme: 'neutral', securityLevel: 'loose' });
+});
+</script>
+
+</head>
+<body>
+
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-title">目录</div>
+  <ul class="toc-list">
+<li class="toc-h1"><a href="#qwen-robotnav-technical-report-a-scalable-navigation-model-designed-for-an-agentic-navigation-system">Qwen-RobotNav Technical Report: A Scalable Navigation Model Designed for an Agentic Navigation System</a>
+<ul>
+</li>
+<li class="toc-h2"><a href="#_1">一、核心问题</a>
+</li>
+<li class="toc-h2"><a href="#_2">二、核心思路与方法</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#21-waypoint-prediction">2.1 统一 waypoint prediction</a>
+</li>
+<li class="toc-h3"><a href="#22-task-adaptive-observation-encoding">2.2 Task-adaptive observation encoding</a>
+</li>
+<li class="toc-h3"><a href="#23-agentic-navigation-system">2.3 Agentic navigation system</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_3">三、数据与训练</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#31-156m">3.1 15.6M 多任务训练样本</a>
+</li>
+<li class="toc-h3"><a href="#32-pointnavobjectnav-t2v">3.2 PointNav、ObjectNav 和 T2V 自动生成数据</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_4">四、实验与结果</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#41-vln">4.1 VLN 与导航基准</a>
+</li>
+<li class="toc-h3"><a href="#42-eqa">4.2 自动驾驶和 EQA</a>
+</li>
+<li class="toc-h3"><a href="#43-scaling">4.3 Scaling 与观察配置消融</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_5">五、关键图表解读</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#51-benchmark">5.1 Benchmark 总览：强项与短板并存</a>
+</li>
+<li class="toc-h3"><a href="#52">5.2 真实部署与延迟</a>
+</li>
+<li class="toc-h3"><a href="#53-agentic">5.3 真实 agentic 长程任务</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_6">六、系统实现 / 工程接口 / 部署</a>
+</li>
+<li class="toc-h2"><a href="#_7">七、局限性</a>
+</li>
+<li class="toc-h2"><a href="#_8">八、关键概念速查</a>
+</ul></li>
+</li></ul>
+</nav>
+
+<main class="main-wrapper">
+  <div class="content-inner" id="main-content">
+<h1 id="qwen-robotnav-technical-report-a-scalable-navigation-model-designed-for-an-agentic-navigation-system">Qwen-RobotNav Technical Report: A Scalable Navigation Model Designed for an Agentic Navigation System</h1>
+<div class="article-stats">3,179 字 · English 740 词 · 约 13 分钟阅读</div>
+
+<blockquote>
+<p><strong>论文信息</strong>
+- 作者：Qwen Team
+- 发布：Qwen Technical Report 2026
+- arXiv ID：2606.18112
+- 代码：论文未提供相邻官方代码仓库；本文主要基于 TeX 源码、图表和技术报告中的系统描述整理。</p>
+<p>本文基于以下本地材料整理：</p>
+<ul>
+<li>论文 TeX 源码：<code>arXiv-2606.18112v1/</code>（主文件：<code>colm2024_conference.tex</code>，章节目录：<code>Section/*.tex</code>，表格目录：<code>Tables/*.tex</code>）</li>
+<li>论文插图：<code>arXiv-2606.18112v1/figures/*.pdf</code>、<code>*.jpg</code></li>
+<li>官方代码：未在本地笔记目录中提供</li>
+<li>本文图片导出目录：<code>assets/qwen-robotnav/</code></li>
+</ul>
+</blockquote>
+<hr />
+<h2 id="_1">一、核心问题</h2>
+<p>Qwen-RobotNav 讨论的问题是：<strong>怎样把 VLN、PointNav、ObjNav、Tracking、自动驾驶等导航任务统一成一个可被外层 agent 调用的导航模型，而不是为每个任务设计独立 policy？</strong></p>
+<p>论文的答案不是增加复杂模块，而是把导航任务重写成一个统一接口：</p>
+<div class="codehilite"><pre><span></span><code>observation context + task instruction + task mode
+        -&gt; K=8 future waypoints, each (x, y, theta)
+</code></pre></div>
+
+<p>更关键的是，Qwen-RobotNav 不是孤立 policy，而是为 agentic navigation system 设计的 executor。外层 LLM planner 可以根据长程目标选择任务模式、调整视觉 token budget、改变时间衰减、选择相机权重，并把每次 rollout 压缩成 evidence memory。</p>
+<p><img alt="图1：Qwen-RobotNav 总览" src="assets/qwen-robotnav/teaser_new_2.jpg" /></p>
+<p><em>图 1：Qwen-RobotNav 的系统总览。图中左侧是 15.6M 多任务训练数据，中间是统一 waypoint prediction 模型，右侧是 agentic navigation context protocol：LLM planner 调用 Qwen-RobotNav、辅助视觉工具和 memory notebook。</em></p>
+<ul>
+<li><strong>数据层</strong>：左侧把 instruction following、PointNav、ObjectNav、Tracking、autonomous driving、general VL 和 navigation reasoning 放在同一训练池中，总规模 15.6M samples。</li>
+<li><strong>模型层</strong>：中间强调所有任务最终都输出 waypoint trajectory，而不是在 VLN 输出动作 token、在 PointNav 输出坐标、在 driving 输出轨迹时各做一套 head。</li>
+<li><strong>系统层</strong>：右侧展示 planner、navigation calls、trajectory evidence、memory updates 的闭环。Qwen-RobotNav 是 reactive executor，外层 agent 负责长程目标分解和证据管理。</li>
+<li><strong>为什么重要</strong>：这张图解释了标题里的 “designed for an agentic navigation system”。模型的可扩展性不只来自训练数据规模，也来自观察上下文可参数化，能被上层 planner 动态重配置。</li>
+</ul>
+<hr />
+<h2 id="_2">二、核心思路与方法</h2>
+<h3 id="21-waypoint-prediction">2.1 统一 waypoint prediction</h3>
+<p>Qwen-RobotNav 基于 Qwen3-VL，继承 SigLIP-2 ViT、动态分辨率、2D-RoPE、patch merger、DeepStack 等视觉语言能力。所有导航任务输出 <code>K=8</code> 个未来 waypoints，每个 waypoint 为 <code>(x, y, theta)</code>，总共 24 维。动作头只是一个轻量 4 层 MLP，hidden dim 512，GELU；主要空间推理仍由 VLM/LLM backbone 承担。</p>
+<div class="codehilite"><pre><span></span><code>images + prompt + task mode + context tags
+        │
+        ▼
+Qwen3-VL backbone
+        │
+        ▼
+4-layer MLP action head
+        │
+        ▼
+8 waypoints: (x, y, theta) x 8
+</code></pre></div>
+
+<p>训练目标是 trajectory MSE 加 VL next-token loss，<code>lambda=1.0</code>。waypoint 按各数据集 99th percentile scale 归一化到 <code>[-1, 1]</code>，推理时再反归一化。</p>
+<h3 id="22-task-adaptive-observation-encoding">2.2 Task-adaptive observation encoding</h3>
+<p>Qwen-RobotNav 的核心不是新网络结构，而是把 observation context 变成可控参数：</p>
+<div class="math display">$$\Phi = (B, \gamma, \{w_c\}, m, b_{min}, b_{max})$$</div>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>含义</th>
+<th>论文设置 / 例子</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>B</code></td>
+<td>总视觉 token budget</td>
+<td>训练范围 2048 到 4096</td>
+</tr>
+<tr>
+<td><code>gamma</code></td>
+<td>时间衰减，越大越偏近期帧</td>
+<td>训练范围 1 到 3；<code>gamma=2</code> 时最新帧约为最旧帧 7.4 倍权重</td>
+</tr>
+<tr>
+<td><code>w_c</code></td>
+<td>相机权重</td>
+<td>front/right/back/left 可设为 <code>[2.0, 1.0, 0.5, 1.0]</code></td>
+</tr>
+<tr>
+<td><code>m</code></td>
+<td>帧采样模式</td>
+<td><code>random</code> 覆盖长历史，<code>latest</code> 偏局部反应</td>
+</tr>
+<tr>
+<td><code>b_min</code> / <code>b_max</code></td>
+<td>每图 token 下限/上限</td>
+<td>训练时分别随机采样 1-8 和 128-256</td>
+</tr>
+</tbody>
+</table>
+<p><img alt="图2：模型架构与观察上下文协议" src="assets/qwen-robotnav/Pipeline.jpg" /></p>
+<p><em>图 2：Qwen-RobotNav pipeline。上半部分展示 agentic planner 选择 task-adaptive context parameters；下半部分展示多视角 RGB、embodied prompt、instruction、token allocation、temporal/viewpoint tags、Qwen3-VL backbone 和 MLP action head。</em></p>
+<ul>
+<li><strong>观察编码流程</strong>：系统先按时间衰减和相机权重分配 token，再把每个 <code>(time, camera)</code> cell 编码为带自然语言标签的图像输入，例如 <code>Time step 0 Front View &lt;image&gt;</code>。相机身份、时间顺序和具身差异都通过语言 tag/preamble 表达，而不是新增专用 embedding。</li>
+<li><strong>token allocation</strong>：算法先给每个 cell 最小 token，再按 <code>omega_t * w_c</code> 分配剩余 token；超过 <code>b_max</code> 的 surplus 会迭代重分配。这使模型可以在同一结构下处理短程 tracking、长程 VLN 和多相机 driving。</li>
+<li><strong>planner 接口</strong>：上层 agent 可以按任务切换 <code>Phi</code>。例如 target tracking 更偏 latest frames 和高 front camera weight；长程 VLN 需要保留更长历史，不能把所有 token 都给最近画面。</li>
+<li><strong>论文论点连接</strong>：这张图说明 Qwen-RobotNav 的“多任务统一”不是把所有图片硬塞给 VLM，而是让观察上下文成为可调资源。</li>
+</ul>
+<h3 id="23-agentic-navigation-system">2.3 Agentic navigation system</h3>
+<p><img alt="图3：Agentic navigation 总览" src="assets/qwen-robotnav/fig_agents_overview.jpg" /></p>
+<p><em>图 3：agentic navigation 系统。外层 planner 把长程任务拆成 sub-goals，调用辅助视觉工具或 Qwen-RobotNav；每次导航调用带 instruction、task mode、observation config；harness 回传 key frames、trajectory summaries 和 evidence notebook updates。</em></p>
+<ul>
+<li><strong>两级角色</strong>：Qwen3.6-Plus 或 Qwen3.5-Plus 作为 planner，负责长程任务分解、工具选择和 memory 管理；Qwen-RobotNav 作为 executor，负责根据当前 observation 和指令输出 waypoints。</li>
+<li><strong>调用形式</strong>：一次导航调用可写成 <code>nav_qwennav(L_i, tau_i, Phi_i)</code>，其中 <code>L_i</code> 是局部语言目标，<code>tau_i</code> 是 task mode，<code>Phi_i</code> 是观察配置。</li>
+<li><strong>记忆机制</strong>：系统维护单次 rollout 的 compact trajectory evidence，以及跨 episode 的 evidence notebook。记录内容包括已搜索区域、候选目标位置、被否定假设、landmark cue、关键帧 ID 和 outcome。</li>
+<li><strong>工具边界</strong>：object detection、scene understanding、semantic grounding 等辅助视觉工具只提供证据，不替代 Qwen-RobotNav 做 waypoint prediction。</li>
+</ul>
+<hr />
+<h2 id="_3">三、数据与训练</h2>
+<h3 id="31-156m">3.1 15.6M 多任务训练样本</h3>
+<p>训练数据总规模 15.6M samples，其中约 85% 是导航轨迹数据，15% 是视觉语言和导航推理数据。</p>
+<p><img alt="图4：训练数据分布" src="assets/qwen-robotnav/fig_data_distribution.jpg" /></p>
+<p><em>图 4：数据分布。左侧柱状图列出各数据源 sample counts，右侧环形图汇总 task category，总计 15.6M。</em></p>
+<ul>
+<li><strong>Instruction following</strong>：5.63M，包括 VLN-CE R2R 1,491K 和 RxR 4,140K，是最大数据源之一。</li>
+<li><strong>PointNav / ObjectNav / Tracking</strong>：PointNav 984K，ObjectNav 2,000K，Target tracking 1,486K。它们分别训练坐标目标、开放词表目标搜索和目标跟踪能力。</li>
+<li><strong>Autonomous driving</strong>：约 3.2M supervision instances，包括 nuScenes 78K 和 OpenScene 3,138K。同一轨迹可生成多种 conditioning variant。</li>
+<li><strong>视觉语言和推理数据</strong>：general VL 约 1.0M，navigation-specific reasoning 873K，discrete multi-round navigation 362K。</li>
+<li><strong>为什么这张图重要</strong>：它显示 Qwen-RobotNav 不是只靠 VLN 或 Habitat 数据，而是把导航、跟踪、驾驶和视觉推理混在一个训练分布里，为统一 waypoint head 提供跨任务监督。</li>
+</ul>
+<h3 id="32-pointnavobjectnav-t2v">3.2 PointNav、ObjectNav 和 T2V 自动生成数据</h3>
+<p><img alt="图5：PointNav 三类坐标目标" src="assets/qwen-robotnav/fig_pointnav_vis.jpg" /></p>
+<p><em>图 5：PointNav 数据可视化。图中分为 Direct Approach、Short Range 和 Long Range 三类坐标目标，分别对应 348K、174K 和 400K samples。</em></p>
+<ul>
+<li><strong>Direct Approach</strong>：目标坐标在当前视野或短距离内，主要训练模型把视觉几何直接映射成前进/转向 waypoint。</li>
+<li><strong>Short Range</strong>：目标需要较少步数才能到达，要求模型在局部空间中保持方向和距离估计。</li>
+<li><strong>Long Range</strong>：目标跨越更长路径，需要利用历史观察和更宽 token budget，和 VLN 的长程记忆需求接近。</li>
+<li><strong>设计意义</strong>：PointNav 不只是一个 benchmark，而是作为连续导航几何的基础训练信号，帮助模型在 VLN/ObjNav 中输出可执行轨迹。</li>
+</ul>
+<p><img alt="图6：ObjectNav 数据生成" src="assets/qwen-robotnav/fig_objnav.jpg" /></p>
+<p><em>图 6：ObjectNav 数据生成流程。图中从 occupancy map 二值化、形态学处理、skeletonization 到带 dead-end backtracking 的探索轨迹，最后由 VLM 在终点视角标注开放词表目标。</em></p>
+<ul>
+<li><strong>地图处理</strong>：occupancy map 经过二值化和形态学操作后生成 skeleton，得到可遍历的房间/走廊拓扑。</li>
+<li><strong>探索轨迹</strong>：系统使用带 dead-end backtracking 的探索路径，模拟在未知环境中寻找目标，而不是直接给最短路径。</li>
+<li><strong>开放词表目标</strong>：终点视角由 VLM 标注目标物，因此 ObjectNav 不局限于固定类别表。这使 Qwen-RobotNav 更接近真实语言指令中的对象搜索。</li>
+<li><strong>副作用</strong>：这种 skeleton-based 训练提高找到目标概率，但可能让路径偏长。论文在 OVON/ObjNav 结果中也提到 QwenNav 的 SR 强但 SPL 相对低。</li>
+</ul>
+<p><img alt="图7：T2V 自动生成导航数据" src="assets/qwen-robotnav/video_2_traj.jpg" /></p>
+<p><em>图 7：T2V 自动生成导航数据流程。右侧依次是 LLM 生成 prompt/instruction、T2V 合成视频、VLM 过滤、单目 depth/pose 提取轨迹、kinematic filter；左侧给出 instruction following 和 target tracking 示例。</em></p>
+<ul>
+<li><strong>生成链条</strong>：LLM 先生成导航 prompt 和指令，T2V 模型生成视频，VLM 过滤不合格样本，再用单目 depth/pose 恢复 2D 轨迹，最后用运动学规则过滤不合理轨迹。</li>
+<li><strong>用途</strong>：这部分数据只有 40K，不是最大来源，但补充了真实数据中少见的语言场景和目标运动模式。</li>
+<li><strong>风险</strong>：生成视频可能带有视觉或运动偏差，因此必须经过 VLM 和 kinematic filter。论文没有系统报告这些生成偏差的失败案例，笔记中不应过度夸大其贡献。</li>
+</ul>
+<hr />
+<h2 id="_4">四、实验与结果</h2>
+<h3 id="41-vln">4.1 VLN 与导航基准</h3>
+<table>
+<thead>
+<tr>
+<th>Benchmark</th>
+<th>Qwen-RobotNav 关键结果</th>
+<th>结论</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>VLN-CE R2R panoramic</td>
+<td>8B SR 72.1，SPL 66.6</td>
+<td>比 NavFoM 高 10.4 SR points</td>
+</tr>
+<tr>
+<td>VLN-CE RxR panoramic</td>
+<td>8B SR 76.5，SPL 65.7</td>
+<td>比 NavFoM 高 12.1 SR points</td>
+</tr>
+<tr>
+<td>VLNVerse fine-grained</td>
+<td>8B SR 63.75，SPL 57.93</td>
+<td>fine/coarse 两档均最优</td>
+</tr>
+<tr>
+<td>VLN-PE</td>
+<td>8B SR 65.50，SPL 61.19</td>
+<td>最低 NE、最高 OS/SR/SPL</td>
+</tr>
+<tr>
+<td>HM3D ObjectNav</td>
+<td>4B SR 75.6，SPL 30.6</td>
+<td>使用更难 HM3D v2，SR 强但路径效率一般</td>
+</tr>
+<tr>
+<td>EVT-Bench tracking</td>
+<td>4B TR 90.0，8B SR 78.6</td>
+<td>TR 最高，但 SR 低于 ABot-N0/TrackVLA++</td>
+</tr>
+</tbody>
+</table>
+<p>VLN-CE 结果中，panoramic 8B 在 R2R 上 NE 3.53、OS 78.5、SR 72.1、SPL 66.6；在 RxR 上 NE 3.58、nDTW 72.5、SR 76.5、SPL 65.7。相比 NavFoM，R2R SR 提高 10.4 points，RxR SR 提高 12.1 points。</p>
+<h3 id="42-eqa">4.2 自动驾驶和 EQA</h3>
+<p>NAVSIM navtest 中，如果没有历史 ego-status prior，QwenNav-4B / 8B 的 PDMS 都是 79.5；加入 previous three frames 的历史轨迹 prior 后，4B 达到 PDMS 91.4，8B 为 90.9。4B 的 91.4 比 NavFoM 高 7.1、AutoVLA 高 2.3、ReCogDrive 高 0.6、ReflectDrive 高 0.3。</p>
+<p>EQA 中，Qwen3.6-Plus + QwenNav-8B 在 HM-EQA 上 Acc 76.7、Steps 0.15，在 MT-EQA 上 Acc 54.4、Steps 0.19，在 EXPRESS-Bench 上 LLM Score 79.27、E_path 33.96。相比 FAST-EQA，HM-EQA 高 7.5 points，MT-HM3D 高 3.9 points，EXPRESS-Bench 高 10.57 points。</p>
+<p><img alt="图8：NAVSIM 闭环规划可视化" src="assets/qwen-robotnav/fig_NAVSIM.jpg" /></p>
+<p><em>图 8：NAVSIM 左转闭环规划。每个时间步展示多视角相机、front-view 上的预测轨迹和 BEV scene，覆盖 Step 1 到 Step 30 的连续弯道轨迹。</em></p>
+<ul>
+<li><strong>图像结构</strong>：左侧是多相机输入，右侧是 BEV 或轨迹可视化；粉色轨迹展示模型预测的未来路线，随时间从直行进入左转过程。</li>
+<li><strong>闭环含义</strong>：不是单帧 open-loop 预测，而是连续 step 中不断根据新观察更新轨迹。Step 1 到 Step 30 的轨迹需要保持 lane geometry 和转弯方向一致。</li>
+<li><strong>关键数字关联</strong>：NAVSIM 上历史 prior 对 PDMS 提升超过 11 points，说明驾驶任务中短期 ego history 对速度、曲率和舒适性判断很重要。图中连续弯道正是这种历史上下文发挥作用的场景。</li>
+</ul>
+<h3 id="43-scaling">4.3 Scaling 与观察配置消融</h3>
+<p><img alt="图9：数据规模 scaling" src="assets/qwen-robotnav/fig_scaling.jpg" /></p>
+<p><em>图 9：数据比例消融。四个子图分别覆盖 instruction following、searching、tracking、driving，横轴是训练数据比例，纵轴是对应 benchmark 的成功率或 PDMS。</em></p>
+<ul>
+<li><strong>instruction following</strong>：VLN-CE RxR 随数据比例增长收益最明显，说明长程语言导航依赖更丰富的路线、场景和语言表达覆盖。</li>
+<li><strong>searching / ObjNav</strong>：随着数据比例上升，搜索类任务 SR 提升，但路径效率不一定同步提升，这与 skeleton exploration 数据带来的 reach-first 倾向一致。</li>
+<li><strong>tracking</strong>：EVT-Bench tracking 在中等数据后更早饱和，且有轻微非单调，说明短程反应任务对数据规模的边际收益小于长程 VLN。</li>
+<li><strong>driving</strong>：NAVSIM 指标随数据比例整体上升，尤其在加入更多驾驶场景后 PDMS 改善，但仍依赖历史 ego-status prior。</li>
+</ul>
+<p><img alt="图10：token budget 与 temporal decay 消融" src="assets/qwen-robotnav/fig_combined.jpg" /></p>
+<p><em>图 10：task-adaptive observation encoding 消融。左上是不同 gamma 的时间权重曲线，右上是固定 B=3072 时每时间步 token budget；下方是 B=1024/3072/4096 下的 time-camera token allocation matrix。</em></p>
+<ul>
+<li><strong>gamma 曲线</strong>：gamma 越大，token 分配越偏向最新帧。固定 B=3072 时，<code>gamma=3.0</code> 的 VLN-CE R2R SR 达峰 72.5，<code>gamma=3.5</code> 后略降，说明过强 recency 会牺牲早期历史。</li>
+<li><strong>token budget</strong>：固定 <code>gamma=2.0</code> 时，B 从 2048 到 4608，SR 从 70.8% 到 74.6%；OSR 在 B=3584 达峰 82.7 后略降。更多视觉 token 通常有利，但分配不佳会边际递减。</li>
+<li><strong>time-camera matrix</strong>：下方热力图展示不同 token budget 下，front/right/back/left 和历史时间步如何分配资源。它把“看哪些图、看多少细节”显式变成可调接口。</li>
+<li><strong>论文论点连接</strong>：这张图支撑了 Qwen-RobotNav 的系统设计：agent 可以按任务重配观察上下文，而不是每次都把固定数量、固定视角的图像输入模型。</li>
+</ul>
+<hr />
+<h2 id="_5">五、关键图表解读</h2>
+<h3 id="51-benchmark">5.1 Benchmark 总览：强项与短板并存</h3>
+<p><img alt="图11：benchmark summary" src="assets/qwen-robotnav/teaser.jpg" /></p>
+<p><em>图 11：Qwen-RobotNav benchmark summary。图中跨 instruction following、object search、target tracking、EQA、autonomous driving 展示 4B/8B 与 specialist/foundation baselines 的对比，奖杯标出最优项。</em></p>
+<ul>
+<li><strong>多任务覆盖</strong>：这张图把 VLN、ObjNav、tracking、EQA、NAVSIM 放在同一页，强调 Qwen-RobotNav 是统一导航模型，而不是单 benchmark 专用方法。</li>
+<li><strong>强项</strong>：VLN-CE、VLNVerse、VLN-PE、EVT Tracking Rate、NAVSIM PDMS 和 EQA 组合结果都表现突出。尤其 VLN-CE panoramic 8B 的 R2R/RxR SR 分别达到 72.1/76.5。</li>
+<li><strong>短板</strong>：tracking 的 TR 高但 SR 不是最高；OVON/ObjectNav 中 SR 强但 SPL 相对弱；AlpaSim zero-shot 明显落后专用 Alpamayo-R1。这些都说明统一模型牺牲了部分专用效率。</li>
+</ul>
+<h3 id="52">5.2 真实部署与延迟</h3>
+<p><img alt="图12：Unitree Go2 部署与延迟" src="assets/qwen-robotnav/qwen_deploy.jpg" /></p>
+<p><em>图 12：Unitree Go2 部署架构和延迟对比。左侧是 remote-server 与 edge Jetson Thor FP8/TensorRT pipeline；右侧展示 per-frame latency 和平均 latency breakdown。</em></p>
+<ul>
+<li><strong>两种部署形态</strong>：remote-server 平均端到端 196ms，约 5.1Hz；on-device Jetson Thor FP8/TensorRT 平均 204ms，约 4.9Hz。</li>
+<li><strong>延迟权衡</strong>：remote-server 平均略快，但网络波动更大；edge 端略慢但稳定性更好，适合 tracking 等对 jitter 敏感的任务。</li>
+<li><strong>系统意义</strong>：导航模型输出 waypoint，而不是直接高频关节控制，因此 5Hz 级别对许多移动导航任务可用。但对于高速避障或强动态场景，仍需要底层 controller 或安全模块补充。</li>
+</ul>
+<h3 id="53-agentic">5.3 真实 agentic 长程任务</h3>
+<p><img alt="图13：真实机器人 agentic 长程任务" src="assets/qwen-robotnav/fig_agent_real_world.jpg" /></p>
+<p><em>图 13：真实机器人 agentic 长程任务。用户询问 Cotti Coffee 是否有绿色雨伞，系统分解子目标、沿 landmark 导航、更新 memory，最终基于视觉证据回答。</em></p>
+<ul>
+<li><strong>任务结构</strong>：这不是“走到某个坐标”的短程任务，而是包含信息需求、候选位置搜索、视觉证据收集和最终回答的 embodied QA。</li>
+<li><strong>agent 流程</strong>：planner 根据目标生成子任务，Qwen-RobotNav 执行到 landmark 或候选区域，视觉工具检查证据，memory 记录已搜索区域和被否定假设。</li>
+<li><strong>为什么重要</strong>：它展示 Qwen-RobotNav 的定位不是替代 LLM planner，而是给 planner 一个可调用、可重配置的导航执行器。长程成功依赖 waypoint policy、视觉工具和 memory 共同工作。</li>
+<li><strong>证据边界</strong>：该图是 qualitative showcase，不是大规模真实机器人统计 benchmark，不能用它替代定量结果。</li>
+</ul>
+<hr />
+<h2 id="_6">六、系统实现 / 工程接口 / 部署</h2>
+<p>Qwen-RobotNav 的接口可以抽象为：</p>
+<div class="codehilite"><pre><span></span><code>Planner:
+  choose subgoal L_i
+  choose task mode tau_i
+  choose observation config Phi_i
+
+Executor:
+  Qwen-RobotNav(observation, L_i, tau_i, Phi_i)
+      -&gt; 8 waypoint trajectory
+
+Harness:
+  execute low-level controller
+  summarize trajectory evidence
+  update rollout memory and cross-episode notebook
+</code></pre></div>
+
+<p>这套接口的工程价值在于：长程任务不要求一个单体模型记住所有历史，也不要求导航 policy 自己做所有语义判断。planner 可以把“去厨房找绿色雨伞”分解成可验证的子目标；Qwen-RobotNav 只负责在当前上下文下产生可执行轨迹；memory 负责把探索证据持久化。</p>
+<hr />
+<h2 id="_7">七、局限性</h2>
+<ul>
+<li>Token allocation 是经验启发式，不是 principled token allocation；不同任务的最佳 <code>Phi</code> 仍需调参。</li>
+<li>AlpaSim zero-shot 明显落后专用 Alpamayo-R1，说明自动驾驶长程 closed-loop 迁移仍有限。</li>
+<li>NAVSIM 高分强依赖历史 ego-status prior；无 prior 时 PDMS 从 91.4/90.9 降到 79.5。</li>
+<li>EVT tracking 虽然 TR 最高，但 SR 低于 ABot-N0 和 TrackVLA++。</li>
+<li>OVON/ObjectNav 的 high SR 伴随较低 SPL，路径效率仍需改进。</li>
+<li>HM3D closed-vocabulary 对比存在版本差异：多数 prior 是 HM3D v1，QwenNav 使用更难的 HM3D v2。</li>
+<li>真实机器人实验主要是 qualitative showcase，统计规模有限。</li>
+<li>数据中包含 LLM/VLM/T2V/Qwen-Image-Edit 生成或增强样本，可能引入生成模型偏差。</li>
+<li>通过自然语言 tags/preamble 表达 camera/time/embodiment 简单可扩展，但对 prompt 格式和语言 grounding 依赖较强。</li>
+</ul>
+<hr />
+<h2 id="_8">八、关键概念速查</h2>
+<table>
+<thead>
+<tr>
+<th>概念</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Unified waypoint prediction</td>
+<td>所有导航任务都输出 8 个 <code>(x, y, theta)</code> waypoints</td>
+</tr>
+<tr>
+<td>Task-adaptive observation encoding</td>
+<td>用 <code>B</code>、<code>gamma</code>、相机权重和采样模式控制视觉上下文</td>
+</tr>
+<tr>
+<td><code>Phi</code></td>
+<td>navigation context protocol 的参数集合</td>
+</tr>
+<tr>
+<td>Temporal decay <code>gamma</code></td>
+<td>控制 token 分配偏向近期帧还是长历史</td>
+</tr>
+<tr>
+<td>Evidence notebook</td>
+<td>跨 episode 记忆，记录已搜索区域、候选目标和否定假设</td>
+</tr>
+<tr>
+<td>VLN / PointNav / ObjNav / Tracking</td>
+<td>Qwen-RobotNav 统一覆盖的主要导航任务类型</td>
+</tr>
+<tr>
+<td>NAVSIM PDMS</td>
+<td>自动驾驶闭环规划综合指标</td>
+</tr>
+<tr>
+<td>Agentic navigation</td>
+<td>LLM planner、导航 executor、视觉工具和 memory 组成的长程导航系统</td>
+</tr>
+</tbody>
+</table>
+  </div>
+</main>
+
+
+<script>
+(function() {
+  const sidebar = document.getElementById('sidebar');
+  const links = sidebar.querySelectorAll('a');
+  const headings = document.querySelectorAll('h1[id], h2[id], h3[id], h4[id]');
+  if (headings.length === 0) return;
+
+  const linkMap = new Map();
+  links.forEach(function(a) {
+    const href = a.getAttribute('href');
+    if (href && href.startsWith('#')) linkMap.set(href.slice(1), a);
+  });
+
+  function onScroll() {
+    let currentId = null;
+    const scrollTop = window.scrollY + 80;
+    headings.forEach(function(h) { if (h.offsetTop <= scrollTop) currentId = h.id; });
+    links.forEach(function(a) { a.classList.remove('active'); });
+    if (currentId && linkMap.has(currentId)) {
+      const el = linkMap.get(currentId);
+      el.classList.add('active');
+      if (getComputedStyle(sidebar).position === 'fixed') {
+        const sr = sidebar.getBoundingClientRect();
+        const er = el.getBoundingClientRect();
+        if (er.bottom > sr.bottom || er.top < sr.top) {
+          el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }
+      }
+    }
+  }
+
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+})();
+</script>
+
+
+<script>
+(function() {
+  const content = document.getElementById('main-content');
+  if (!content) return;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'image-lightbox';
+  overlay.setAttribute('role', 'dialog');
+  overlay.setAttribute('aria-modal', 'true');
+
+  overlay.innerHTML = `
+    <button type="button" class="image-lightbox__close" data-action="close" aria-label="关闭">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M5 5l10 10M15 5L5 15"/>
+      </svg>
+    </button>
+    <div class="image-lightbox__stage">
+      <img class="image-lightbox__image" alt="">
+    </div>
+    <div class="image-lightbox__toolbar" aria-label="图片缩放控制">
+      <button type="button" class="image-lightbox__btn" data-action="zoom-out" aria-label="缩小" title="缩小">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d="M3 9h12"/>
+        </svg>
+      </button>
+      <span class="image-lightbox__zoom-val" data-action="zoom-reset" title="点击重置缩放" role="button" tabindex="0">100%</span>
+      <button type="button" class="image-lightbox__btn" data-action="zoom-in" aria-label="放大" title="放大">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d="M3 9h12M9 3v12"/>
+        </svg>
+      </button>
+    </div>
+    <div class="image-lightbox__caption"></div>
+  `;
+  document.body.appendChild(overlay);
+
+  const stage = overlay.querySelector('.image-lightbox__stage');
+  const image = overlay.querySelector('.image-lightbox__image');
+  const zoomLabel = overlay.querySelector('.image-lightbox__zoom-val');
+  const caption = overlay.querySelector('.image-lightbox__caption');
+
+  const minZoom = 0.25;
+  const maxZoom = 5;
+  const step = 0.25;
+  let zoom = 1;
+  let fitWidth = 1;
+
+  function clamp(value) {
+    return Math.min(maxZoom, Math.max(minZoom, value));
+  }
+
+  function centerImage(animate) {
+    requestAnimationFrame(function() {
+      var left = Math.max(0, (stage.scrollWidth - stage.clientWidth) / 2);
+      var top = Math.max(0, (stage.scrollHeight - stage.clientHeight) / 2);
+      stage.scrollTo({ left: left, top: top, behavior: animate ? 'smooth' : 'auto' });
+    });
+  }
+
+  function applyZoom(animate) {
+    image.style.width = Math.max(1, Math.round(fitWidth * zoom)) + 'px';
+    zoomLabel.textContent = Math.round(zoom * 100) + '%';
+    centerImage(animate);
+  }
+
+  function setZoom(value, animate) {
+    zoom = clamp(value);
+    applyZoom(animate);
+  }
+
+  function computeFitSize() {
+    var w = image.naturalWidth || 1;
+    var h = image.naturalHeight || 1;
+    var maxW = Math.max(1, stage.clientWidth - 48);
+    var maxH = Math.max(1, stage.clientHeight - 48);
+    var fitScale = Math.min(1, maxW / w, maxH / h);
+    fitWidth = Math.max(1, w * fitScale);
+    applyZoom(false);
+  }
+
+  function openImage(source) {
+    image.onload = computeFitSize;
+    image.alt = source.alt || '';
+    caption.textContent = source.alt || '';
+    image.src = source.currentSrc || source.src;
+    zoom = 1;
+    overlay.classList.add('is-open');
+    document.body.classList.add('image-lightbox-open');
+    if (image.complete) computeFitSize();
+  }
+
+  function closeImage() {
+    overlay.classList.remove('is-open');
+    document.body.classList.remove('image-lightbox-open');
+    image.onload = null;
+    image.style.removeProperty('width');
+    image.removeAttribute('src');
+  }
+
+  overlay.addEventListener('click', function(event) {
+    var action = event.target.closest('[data-action]');
+    if (action) {
+      var type = action.getAttribute('data-action');
+      if (type === 'zoom-in') setZoom(zoom + step, true);
+      if (type === 'zoom-out') setZoom(zoom - step, true);
+      if (type === 'zoom-reset') setZoom(1, true);
+      if (type === 'close') closeImage();
+      return;
+    }
+    if (event.target === overlay || event.target === stage) closeImage();
+  });
+
+  overlay.addEventListener('wheel', function(event) {
+    if (!overlay.classList.contains('is-open')) return;
+    if (!event.ctrlKey && !event.metaKey) return;
+    event.preventDefault();
+    setZoom(zoom + (event.deltaY < 0 ? step : -step), true);
+  }, { passive: false });
+
+  document.addEventListener('keydown', function(event) {
+    if (!overlay.classList.contains('is-open')) return;
+    if (event.key === 'Escape') closeImage();
+    if (event.key === '+' || event.key === '=') setZoom(zoom + step, true);
+    if (event.key === '-' || event.key === '_') setZoom(zoom - step, true);
+    if (event.key === '0') setZoom(1, true);
+  });
+
+  window.addEventListener('resize', function() {
+    if (overlay.classList.contains('is-open')) computeFitSize();
+  });
+
+  content.querySelectorAll('img').forEach(function(img) {
+    if (img.closest('a')) return;
+    img.setAttribute('tabindex', '0');
+    img.setAttribute('title', img.getAttribute('title') || '点击放大查看');
+    img.addEventListener('click', function() { openImage(img); });
+    img.addEventListener('keydown', function(event) {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        openImage(img);
+      }
+    });
+  });
+})();
+</script>
+
+</body>
+</html>
