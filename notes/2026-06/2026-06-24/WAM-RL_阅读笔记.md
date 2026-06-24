@@ -8,9 +8,11 @@
 
 > **论文信息**
 > - 作者：Zezhong Qian（北京大学）, Xiaowei Chi（北京大学，Project Leader）, Yu Qi（东北大学）, Haozhan Li（清华大学）, Zhi Yang Chen（北京大学）, Shanghang Zhang（北京大学，通讯作者）
-> - 发表：CVPR 2026（投稿中）
+> - 发表：arXiv 2026
 > - arXiv ID：2606.17906
 > - 代码：未提供
+> 
+> 本文基于以下本地材料整理：arXiv TeX 源码（`notes/2026-06/2026-06-24/arXiv-2606.17906v1/`）
 
 ---
 
