@@ -7,9 +7,9 @@
 <!-- arxiv: 2606.17906 -->
 <!-- venue: arXiv 2026 -->
 <!-- tags: WAM, 强化学习, 机器人, 世界模型, 视频生成 -->
-<!-- words-zh: 3665 -->
-<!-- words-en: 370 -->
-<!-- reading-time: 12 -->
+<!-- words-zh: 5760 -->
+<!-- words-en: 395 -->
+<!-- reading-time: 18 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" media="print" onload="this.media='all'">
@@ -304,7 +304,15 @@ document.addEventListener('DOMContentLoaded', function() {
 <li class="toc-h2"><a href="#_2">二、核心思路与方法</a>
 <ul>
 </li>
-<li class="toc-h3"><a href="#21-flow-matching-flow-sde">2.1 背景：Flow Matching 与 Flow-SDE</a>
+<li class="toc-h3"><a href="#21-flow-matching-flow-sde">2.1 背景：Flow Matching 与 Flow-SDE（逐公式解读）</a>
+<ul>
+</li>
+<li class="toc-h4"><a href="#211-flow-matching">2.1.1 什么是 Flow Matching？一个直观类比</a>
+</li>
+<li class="toc-h4"><a href="#212-flow-sde-ode">2.1.2 Flow-SDE：为什么要在 ODE 里加噪声？</a>
+</li>
+<li class="toc-h4"><a href="#213-sde-reinforce">2.1.3 从 SDE 到 REINFORCE 策略梯度：完整推导链</a>
+</ul></li>
 </li>
 <li class="toc-h3"><a href="#22">2.2 整体框架：联合优化两大组件</a>
 </li>
@@ -313,23 +321,23 @@ document.addEventListener('DOMContentLoaded', function() {
 </li>
 <li class="toc-h4"><a href="#kl">为什么需要 KL 正则化？</a>
 </li>
-<li class="toc-h4"><a href="#kl_1">KL 正则化的具体做法</a>
+<li class="toc-h4"><a href="#kl_1">KL 正则化的具体做法（逐公式解读）</a>
 </ul></li>
 </li>
-<li class="toc-h3"><a href="#24-actor-rl">2.4 基于重建奖励的 Actor RL：让执行忠实于想象</a>
+<li class="toc-h3"><a href="#24-actor-rl">2.4 基于重建奖励的 Actor RL（逐公式解读）</a>
 <ul>
 </li>
-<li class="toc-h4"><a href="#_3">核心思路</a>
+<li class="toc-h4"><a href="#vs">核心直觉：为什么用"想象 vs 现实"作为奖励？</a>
 </li>
-<li class="toc-h4"><a href="#_4">重建奖励</a>
+<li class="toc-h4"><a href="#_3">第一步：重建奖励的定义</a>
 </li>
-<li class="toc-h4"><a href="#_5">相似度函数的选择</a>
+<li class="toc-h4"><a href="#_4">第二步：四种相似度函数的原理与取舍</a>
 </li>
-<li class="toc-h4"><a href="#reinforce-ppogrpo">策略梯度优化（REINFORCE，非 PPO/GRPO）</a>
+<li class="toc-h4"><a href="#reinforce">第三步：策略梯度优化（REINFORCE）</a>
 </ul></li>
 </ul></li>
 </li>
-<li class="toc-h2"><a href="#_6">三、实验与结果</a>
+<li class="toc-h2"><a href="#_5">三、实验与结果</a>
 <ul>
 </li>
 <li class="toc-h3"><a href="#31">3.1 设置</a>
@@ -341,11 +349,11 @@ document.addEventListener('DOMContentLoaded', function() {
 </li>
 <li class="toc-h2"><a href="#sft">四、视频 SFT 定性分析</a>
 </li>
-<li class="toc-h2"><a href="#_7">五、核心洞察与技术亮点</a>
+<li class="toc-h2"><a href="#_6">五、核心洞察与技术亮点</a>
 </li>
-<li class="toc-h2"><a href="#_8">六、局限性</a>
+<li class="toc-h2"><a href="#_7">六、局限性</a>
 </li>
-<li class="toc-h2"><a href="#_9">七、关键概念速查</a>
+<li class="toc-h2"><a href="#_8">七、关键概念速查</a>
 </ul></li>
 </li></ul>
 </nav>
@@ -353,7 +361,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <main class="main-wrapper">
   <div class="content-inner" id="main-content">
 <h1 id="wam-rl-world-action-model-reinforcement-learning-with-reconstruction-rewards-and-online-video-sft">WAM-RL: World-Action Model Reinforcement Learning with Reconstruction Rewards and Online Video SFT</h1>
-<div class="article-stats">3,665 字 · English 370 词 · 约 12 分钟阅读</div>
+<div class="article-stats">5,760 字 · English 395 词 · 约 18 分钟阅读</div>
 
 <blockquote>
 <p><strong>论文信息</strong>
@@ -383,24 +391,90 @@ document.addEventListener('DOMContentLoaded', function() {
 <p>论文的核心观察是：<strong>WA 模型的主要能力来自世界模型，而动作模型只是将潜预测转换为动作的翻译器</strong>。因此，naive 地只优化 actor（如 VLA 的常见做法）是不够的——世界模型的预测精度从根本上约束了 actor 的表现上限。</p>
 <hr />
 <h2 id="_2">二、核心思路与方法</h2>
-<h3 id="21-flow-matching-flow-sde">2.1 背景：Flow Matching 与 Flow-SDE</h3>
-<p>在讲 WAM-RL 的方法之前，先理解其技术基础——流匹配（Flow Matching）及其 RL 扩展 Flow-SDE。</p>
-<p><strong>Flow Matching 用于视频生成</strong>：</p>
-<p>Flow Matching 通过学习一个向量场 <span class="math inline">$v_\theta(x_t, t)$</span> 将简单分布（高斯噪声）传输到数据分布（视频序列），其连续时间公式为：</p>
+<h3 id="21-flow-matching-flow-sde">2.1 背景：Flow Matching 与 Flow-SDE（逐公式解读）</h3>
+<p>在讲 WAM-RL 的方法之前，先理解其技术基础。本节把每个公式的原理和直觉讲透。</p>
+<h4 id="211-flow-matching">2.1.1 什么是 Flow Matching？一个直观类比</h4>
+<p>想象你有一大盆完全浑浊的水（高斯噪声），你想让它变成一杯分层漂亮的鸡尾酒（真实视频数据）。<strong>Flow Matching 就是学习"把每一滴水分子从浑浊位置推到鸡尾酒位置"的速度场</strong>。</p>
+<p>形式化：你有两个分布——</p>
+<ul>
+<li><span class="math inline">$x_0 \sim p_0$</span>：初始状态，纯噪声（浑浊水），<span class="math inline">$t=0$</span></li>
+<li><span class="math inline">$x_1 \sim p_{\text{data}}$</span>：目标状态，真实视频帧（鸡尾酒），<span class="math inline">$t=1$</span></li>
+</ul>
+<p>模型要学习一个<strong>时变向量场</strong> <span class="math inline">$v_\theta(x_t, t)$</span>，告诉你：在时刻 <span class="math inline">$t$</span>、当前位置 <span class="math inline">$x_t$</span>，应该往哪个方向、以多大速度移动。</p>
 <div class="math display">$$\frac{d x_t}{d t} = v_\theta(x_t, t)$$</div>
-<p>训练目标为匹配真实的传输方向：
-<div class="math display">$$\mathcal{L}_{\text{FM}} = \mathbb{E}_{x_0, x_1, t} \left[ \left\| v_\theta(x_t, t) - v^*(x_t, t) \right\|^2 \right]$$</div></p>
-<p>其中 <span class="math inline">$x_0 \sim p_0$</span>（噪声），<span class="math inline">$x_1 \sim p_{\text{data}}$</span>（视频），<span class="math inline">$x_t$</span> 是两者间的插值。</p>
-<p><strong>从 Flow Matching 到 Flow-SDE：引入随机性以支持 RL</strong>：</p>
-<p>Flow Matching 本质是确定性过程（ODE），无法直接用于 RL——RL 需要<strong>随机性</strong>（探索）和<strong>可计算的动作似然</strong>（策略梯度）。Flow-SDE 通过注入布朗运动将确定性 ODE 转为随机微分方程（SDE）：</p>
+<p><strong>逐符号解读</strong>：</p>
+<ul>
+<li><span class="math inline">$x_t$</span>：时刻 <span class="math inline">$t$</span> 的"中间态"。<span class="math inline">$t=0$</span> 时是纯噪声，<span class="math inline">$t=1$</span> 时是干净视频，<span class="math inline">$t=0.5$</span> 时是半噪声半视频</li>
+<li><span class="math inline">$v_\theta(x_t, t)$</span>：模型输出的<strong>速度向量</strong>——在当前时刻 <span class="math inline">$t$</span>、当前位置 <span class="math inline">$x_t$</span>，你该往哪个方向走。<span class="math inline">$\theta$</span> 是模型参数（神经网络权重）</li>
+<li><span class="math inline">$\frac{dx_t}{dt}$</span>：<span class="math inline">$x$</span> 随时间的变化率。这个等式说的是：<span class="math inline">$x$</span> 的变化完全由 <span class="math inline">$v_\theta$</span> 驱动，就像水流带着树叶漂——树叶的位置变化 = 水流速度</li>
+</ul>
+<p><strong>怎么训练？</strong> 需要告诉模型"正确答案"是什么：</p>
+<div class="math display">$$\mathcal{L}_{\text{FM}} = \mathbb{E}_{x_0, x_1, t} \left[ \left\| v_\theta(x_t, t) - v^*(x_t, t) \right\|^2 \right]$$</div>
+<p><strong>逐符号解读</strong>：</p>
+<ul>
+<li><span class="math inline">$\mathbb{E}_{x_0, x_1, t}[\cdot]$</span>：对随机抽样的 <span class="math inline">$x_0$</span>（噪声）、<span class="math inline">$x_1$</span>（真实数据）、<span class="math inline">$t$</span>（时间）<strong>求平均</strong></li>
+<li><span class="math inline">$v_\theta(x_t, t)$</span>：模型的<strong>预测速度</strong>——"我猜该往这边走"</li>
+<li><span class="math inline">$v^*(x_t, t)$</span>：<strong>真实速度</strong>——直接从 <span class="math inline">$x_t$</span> 到 <span class="math inline">$x_1$</span> 的直线方向。如果插值路径是 <span class="math inline">$x_t = (1-t)x_0 + tx_1$</span>，那么 <span class="math inline">$v^* = x_1 - x_0$</span>（从噪声指向数据的恒定速度）</li>
+<li><span class="math inline">$\|\cdot\|^2$</span>：<strong>平方误差</strong>。预测速度和真实速度差得越多，损失越大</li>
+<li>整体含义：训练模型让它在任何时刻 <span class="math inline">$t$</span> 的预测速度，都尽可能接近"从当前点直接走向目标"的正确方向</li>
+</ul>
+<p><strong>为什么叫 Flow Matching？</strong> 因为模型在"匹配"（matching）真实的"流"（flow）——学习一条从噪声通向数据的运输线。</p>
+<h4 id="212-flow-sde-ode">2.1.2 Flow-SDE：为什么要在 ODE 里加噪声？</h4>
+<p>上面的 Flow Matching 是<strong>确定性的 ODE</strong>（常微分方程）——给定起点 <span class="math inline">$x_0$</span>，终点 <span class="math inline">$x_1$</span> 唯一确定，没有任何随机性。但 RL 需要两样东西：</p>
+<ol>
+<li><strong>探索（Exploration）</strong>：不能每次都走同样的路——需要偶尔随机偏离，发现更好的策略</li>
+<li><strong>可计算的动作概率（Action Likelihood）</strong>：RL 的策略梯度公式需要 <span class="math inline">$\log \pi_\theta(a|s)$</span>——"在当前状态 <span class="math inline">$s$</span> 下选择动作 <span class="math inline">$a$</span> 的概率有多大"。确定性过程没有概率可言</li>
+</ol>
+<p><strong>Flow-SDE 的解决方案</strong>：在原本的确定性 ODE 中注入布朗运动（白噪声）：</p>
 <div class="math display">$$d x_t = v_\theta(x_t, t)\, dt + \sigma\, dW_t$$</div>
-<p>这使得去噪过程成为一系列条件高斯转移：
-<div class="math display">$$p(x_{t-1} \mid x_t) = \mathcal{N}\big(x_{t-1}; \mu_\theta(x_t, t), \sigma^2 I \big)$$</div></p>
-<p>由此，flow-based 策略可被解释为潜空间中的<strong>马尔可夫决策过程（MDP）</strong>：状态对应 <span class="math inline">$x_t$</span>，动作对应去噪转移。动作序列的似然可分解为：</p>
-<div class="math display">$$\log \pi_\theta(a \mid s) = \sum_t \log p(x_{t-1} \mid x_t)$$</div>
-<p>这使得标准策略梯度方法可以被直接应用：
-<div class="math display">$$\nabla_\theta J = \mathbb{E} \left[ \nabla_\theta \log \pi_\theta(a \mid s)\, A(s,a) \right]$$</div></p>
-<p>这就是最基础的 <strong>REINFORCE 策略梯度</strong>。论文不使用 PPO 或 GRPO 的原因：PPO 的 clip 机制需要重要性采样和多次 rollout，GRPO 需要同一 prompt 的多条采样做组内对比——都与单步视频生成的高昂推理成本冲突。Flow-SDE 提供了可计算的 <span class="math inline">$\log \pi_\phi$</span>，重建奖励提供了确定性稠密信号 <span class="math inline">$A_t$</span>，不需要价值网络（critic），REINFORCE 直接就能工作。</p>
+<p><strong>逐符号解读</strong>：</p>
+<ul>
+<li><span class="math inline">$v_\theta(x_t, t)\,dt$</span>：原来的确定性漂移——"正常情况下该往哪走"（和 ODE 一样）</li>
+<li><span class="math inline">$\sigma$</span>：噪声强度（标量），控制随机程度。<span class="math inline">$\sigma=0$</span> 时退化回确定性 ODE</li>
+<li><span class="math inline">$dW_t$</span>：<strong>布朗运动增量</strong>（维纳过程）。通俗理解：每个无穷小的时间步里，加上一个均值为 0、方差为 <span class="math inline">$dt$</span> 的高斯随机扰动。就像确定性水流里扔了一粒随机抖动的小石子</li>
+<li><span class="math inline">$+$</span>：确定性漂移 + 随机扰动 = 有噪声的轨迹</li>
+</ul>
+<p><strong>关键效果——动作变得可计算概率了</strong>：</p>
+<p>加入噪声后，每一步的去噪转移从一个"确定的跳跃"变成了一个<strong>高斯分布</strong>：</p>
+<div class="math display">$$p(x_{t-1} \mid x_t) = \mathcal{N}\big(x_{t-1}; \mu_\theta(x_t, t), \sigma^2 I \big)$$</div>
+<p><strong>逐符号解读</strong>：</p>
+<ul>
+<li><span class="math inline">$p(x_{t-1} \mid x_t)$</span>：已知当前状态 <span class="math inline">$x_t$</span>，下一步 <span class="math inline">$x_{t-1}$</span> 的<strong>条件概率分布</strong>（注意 flow 方向是从 <span class="math inline">$t=0$</span> 噪声→<span class="math inline">$t=1$</span> 数据，但 SDE 采样反向走，所以下标是 <span class="math inline">$t \to t-1$</span>）</li>
+<li><span class="math inline">$\mathcal{N}(\cdot; \mu, \sigma^2 I)$</span>：以 <span class="math inline">$\mu$</span> 为中心、<span class="math inline">$\sigma^2 I$</span> 为协方差的<strong>多元高斯分布</strong>（钟形曲线的高维版本）</li>
+<li><span class="math inline">$\mu_\theta(x_t, t)$</span>：分布的<strong>均值</strong>——"最可能的下一步位置"，由模型预测</li>
+<li><span class="math inline">$\sigma^2 I$</span>：<strong>球形协方差</strong>——各个维度独立、等方差。<span class="math inline">$\sigma$</span> 越大，下一步越不确定</li>
+</ul>
+<p><strong>通俗理解</strong>：确定性的 ODE 说"从 A 点你一定会走到 B 点"；SDE 说"从 A 点你可能走到 B 点附近的一个范围，越靠近 B 越可能，但也可能偏一点"。</p>
+<h4 id="213-sde-reinforce">2.1.3 从 SDE 到 REINFORCE 策略梯度：完整推导链</h4>
+<p>这一步是整个 WAM-RL 数学链路的核心：<strong>如何把一个视频生成模型变成一个可以用 RL 优化的策略？</strong></p>
+<p><strong>第一步：把去噪轨迹解释为 MDP</strong></p>
+<ul>
+<li><strong>状态 <span class="math inline">$s$</span></strong>：当前的视频帧（或 latent）<span class="math inline">$x_t$</span></li>
+<li><strong>动作 <span class="math inline">$a$</span></strong>：从 <span class="math inline">$x_t$</span> 去噪一步到 <span class="math inline">$x_{t-1}$</span> 的转移</li>
+<li><strong>转移概率</strong>：<span class="math inline">$p(x_{t-1} \mid x_t) = \mathcal{N}(x_{t-1}; \mu_\theta(x_t, t), \sigma^2 I)$</span>（上面 SDE 给的高斯分布）</li>
+</ul>
+<p><strong>第二步：计算整个动作序列的概率</strong></p>
+<p>一个去噪过程走 <span class="math inline">$T$</span> 步（比如从纯噪声 <span class="math inline">$x_0$</span> 到干净视频 <span class="math inline">$x_1$</span>），整个轨迹的<strong>对数概率</strong>是各步对数概率之和：</p>
+<div class="math display">$$\log \pi_\theta(a \mid s) = \sum_{t=1}^{T} \log p(x_{t-1} \mid x_t)$$</div>
+<p><strong>逐符号解读</strong>：</p>
+<ul>
+<li><span class="math inline">$\pi_\theta(a|s)$</span>：<strong>策略</strong>——给定当前状态 <span class="math inline">$s$</span>（初始噪声 <span class="math inline">$x_0$</span>），输出整个动作序列 <span class="math inline">$a = (x_0 \to x_1 \to ... \to x_T)$</span> 的概率</li>
+<li><span class="math inline">$\log$</span>：对数概率。乘法变加法，数值更稳定，梯度更好算</li>
+<li><span class="math inline">$\sum_t$</span>：把每一步的对数概率加起来。因为高斯分布的 <span class="math inline">$\log p$</span> 有封闭形式（就是负的平方误差），可以直接算</li>
+<li><strong>关键意义</strong>：有了 <span class="math inline">$\log \pi_\theta$</span>，RL 的数学基础就齐了</li>
+</ul>
+<p><strong>第三步：REINFORCE 策略梯度</strong></p>
+<div class="math display">$$\nabla_\theta J = \mathbb{E} \left[ \nabla_\theta \log \pi_\theta(a \mid s)\, A(s,a) \right]$$</div>
+<p><strong>逐符号解读——每个部分在做什么</strong>：</p>
+<ul>
+<li><span class="math inline">$J$</span>：<strong>目标函数</strong>——我们想最大化的量（累计奖励的期望）</li>
+<li><span class="math inline">$\nabla_\theta$</span>：对模型参数 <span class="math inline">$\theta$</span> 求梯度——"参数该往哪个方向调"</li>
+<li><span class="math inline">$\nabla_\theta \log \pi_\theta(a|s)$</span>：<strong>策略对参数的变化敏感度</strong>。它告诉你：如果微调参数让动作 <span class="math inline">$a$</span> 的概率变大，<span class="math inline">$\log\pi$</span> 会怎么变。方向是"让好动作更可能"</li>
+<li><span class="math inline">$A(s,a)$</span>：<strong>优势函数（Advantage）</strong>——"动作 <span class="math inline">$a$</span> 比平均水平好多少"。<span class="math inline">$A>0$</span> 说明这个动作不错，该鼓励；<span class="math inline">$A&lt;0$</span> 说明该抑制</li>
+<li><span class="math inline">$\mathbb{E}[\cdot]$</span>：对所有采样的轨迹求期望（平均）</li>
+<li><strong>整体直觉</strong>：如果 <span class="math inline">$A$</span> 是正的（好动作），梯度会把参数往"增加这个动作概率"的方向推；如果 <span class="math inline">$A$</span> 是负的（坏动作），梯度会把参数往"减少这个动作概率"的方向推。权重的绝对值 <span class="math inline">$|A|$</span> 越大，推力越强</li>
+</ul>
+<p><strong>为什么不用 PPO/GRPO？</strong> PPO 需要 clip + 重要性采样（多次 rollout），GRPO 需要同一 prompt 的多条采样做组内对比——都与单步视频生成的高昂推理成本冲突。Flow-SDE 已提供 <span class="math inline">$\log \pi_\phi$</span>，重建奖励直接给 <span class="math inline">$A_t$</span>（无需 critic bootstrap），REINFORCE 足够。</p>
 <h3 id="22">2.2 整体框架：联合优化两大组件</h3>
 <p>WAM-RL 的核心设计理念是：<strong>让世界模型和 actor 协同进化</strong>。这通过两个协调机制实现：</p>
 <table>
@@ -430,80 +504,115 @@ document.addEventListener('DOMContentLoaded', function() {
 <blockquote>
 <p>Actor 深度依赖世界模型的潜特征分布。在线更新会显著偏移这一分布，导致 actor 学到的策略与演化的潜空间之间出现不匹配——actor 迅速失效。</p>
 </blockquote>
-<h4 id="kl_1">KL 正则化的具体做法</h4>
-<p>论文为 DiT-based 世界模型的确定性中间特征构造高斯近似，使 KL 散度良定义：</p>
-<ol>
-<li>
-<p><strong>定义近似潜分布</strong>：
-   <div class="math display">$$p_\theta(z_t \mid x_{&lt;t}) = \mathcal{N}\big(z_t, \Sigma_\theta\big), \quad p_{\text{old}}(z_t \mid x_{&lt;t}) = \mathcal{N}\big(z_t^{\text{old}}, \Sigma_{\text{old}}\big)$$</div></p>
+<h4 id="kl_1">KL 正则化的具体做法（逐公式解读）</h4>
+<p><strong>第一步：把确定性特征变成概率分布</strong></p>
+<p>DiT 架构的世界模型输出的中间特征 <span class="math inline">$z_t = f_\theta(x_{&lt;t})$</span> 是<strong>确定性的</strong>——同样的输入永远得到同样的 <span class="math inline">$z_t$</span>。但 KL 散度只能衡量两个<strong>概率分布</strong>之间的差异。所以论文做了一个巧妙的高斯近似：</p>
+<div class="math display">$$p_\theta(z_t \mid x_{&lt;t}) = \mathcal{N}\big(z_t, \Sigma_\theta\big), \quad p_{\text{old}}(z_t \mid x_{&lt;t}) = \mathcal{N}\big(z_t^{\text{old}}, \Sigma_{\text{old}}\big)$$</div>
+<p><strong>逐符号解读</strong>：</p>
 <ul>
-<li><span class="math inline">$z_t = f_\theta(x_{&lt;t})$</span>：当前世界模型的确定性潜特征（作均值）</li>
-<li><span class="math inline">$z_t^{\text{old}} = f_{\text{old}}(x_{&lt;t})$</span>：冻结的预训练世界模型的潜特征</li>
-<li><span class="math inline">$\Sigma_\theta$</span>：通过 EMA 在训练中估计的特征方差（对角协方差）</li>
-<li><span class="math inline">$\Sigma_{\text{old}}$</span>：从冻结模型预计算，固定不变</li>
+<li><span class="math inline">$z_t = f_\theta(x_{&lt;t})$</span>：当前世界模型对输入 <span class="math inline">$x_{&lt;t}$</span>（历史帧）输出的潜特征向量。确定性值，用作高斯分布的<strong>均值</strong></li>
+<li><span class="math inline">$\Sigma_\theta$</span>：对角协方差矩阵。每个对角线元素是该特征维度的方差，通过 EMA（指数移动平均）在训练过程中动态估计。直观上：<span class="math inline">$\Sigma_\theta$</span> 刻画了"这个特征维度天然有多大的波动范围"</li>
+<li><span class="math inline">$\mathcal{N}(z_t, \Sigma_\theta)$</span>：以 <span class="math inline">$z_t$</span> 为中心、<span class="math inline">$\Sigma_\theta$</span> 为协方差的高斯分布。<strong>实际特征落在 <span class="math inline">$z_t$</span> 周围的某个范围，越靠近中心越可能</strong></li>
+<li><span class="math inline">$z_t^{\text{old}} = f_{\text{old}}(x_{&lt;t})$</span>：冻结的预训练世界模型的输出——"旧模型在同样的输入下给出的特征是什么"</li>
+<li><span class="math inline">$\Sigma_{\text{old}}$</span>：从旧模型预计算好的固定协方差，训练中不变——"旧模型的特征分布形态"</li>
+<li><strong>为什么构造高斯？</strong> 因为两个高斯分布之间的 KL 散度有封闭公式（解析解），可以直接算，不需要采样估计</li>
 </ul>
-</li>
-<li>
-<p><strong>KL 正则化项</strong>：
-   <div class="math display">$$\mathcal{L}_{\text{KL}} = \mathbb{E}_{t} \left[ D_{\text{KL}}\Big( \mathcal{N}(z_t, \Sigma_\theta) \;\|\; \mathcal{N}(z_t^{\text{old}}, \Sigma_{\text{old}}) \Big) \right]$$</div></p>
-</li>
-<li>
-<p><strong>世界模型的最终目标</strong>：
-   <div class="math display">$$\mathcal{L}_{\text{WM}} = \mathcal{L}_{\text{video}} + \lambda_{\text{KL}} \mathcal{L}_{\text{KL}}$$</div></p>
-</li>
-</ol>
+<p><strong>第二步：KL 散度——衡量分布漂移的尺子</strong></p>
+<div class="math display">$$\mathcal{L}_{\text{KL}} = \mathbb{E}_{t} \left[ D_{\text{KL}}\Big( \mathcal{N}(z_t, \Sigma_\theta) \;\|\; \mathcal{N}(z_t^{\text{old}}, \Sigma_{\text{old}}) \Big) \right]$$</div>
+<p><strong>逐符号解读</strong>：</p>
+<ul>
+<li><span class="math inline">$D_{\text{KL}}(P \| Q)$</span>：<strong>KL 散度（Kullback–Leibler Divergence）</strong>——衡量分布 <span class="math inline">$P$</span>（新模型）和分布 <span class="math inline">$Q$</span>（旧模型）之间有多"不像"。两个分布完全相同时 KL = 0，差异越大 KL 越大</li>
+<li><span class="math inline">$\|\;$</span>：KL 散度是<strong>非对称</strong>的——<span class="math inline">$D_{\text{KL}}(P\|Q) \neq D_{\text{KL}}(Q\|P)$</span>。这里新模型在前、旧模型在后，意味着：<strong>用旧分布 <span class="math inline">$Q$</span> 去"解释"新分布 <span class="math inline">$P$</span> 需要多少额外信息量</strong>。可以理解为"新分布偏离旧分布的程度"</li>
+<li><span class="math inline">$\mathbb{E}_t[\cdot]$</span>：对<strong>所有时间步</strong>取平均——不是只约束某一帧，而是整个序列的特征都别跑太远</li>
+<li><strong>KL 项的实际效果</strong>：如果新世界模型的特征均值 <span class="math inline">$z_t$</span> 漂移太远，或者方差 <span class="math inline">$\Sigma_\theta$</span> 膨胀/收缩太大，KL 值会急剧上升 → 损失变大 → 梯度把参数拉回来</li>
+</ul>
+<p><strong>第三步：最终损失——在学习和稳定之间折中</strong></p>
+<div class="math display">$$\mathcal{L}_{\text{WM}} = \mathcal{L}_{\text{video}} + \lambda_{\text{KL}} \mathcal{L}_{\text{KL}}$$</div>
+<ul>
+<li><span class="math inline">$\mathcal{L}_{\text{video}}$</span>：<strong>视频预测损失</strong>（Flow Matching loss）——"学新东西"。驱动世界模型更好地预测视频帧</li>
+<li><span class="math inline">$\mathcal{L}_{\text{KL}}$</span>：<strong>KL 约束</strong>——"别忘了你是谁"。防止潜空间剧烈漂移导致 actor 失效</li>
+<li><span class="math inline">$\lambda_{\text{KL}}$</span>：<strong>平衡系数</strong>（超参数）。<span class="math inline">$\lambda_{\text{KL}}$</span> 大 = 偏保守（像旧模型），<span class="math inline">$\lambda_{\text{KL}}$</span> 小 = 偏激进（自由学新东西）</li>
+<li><strong>直觉类比</strong>：就像悬崖边上的安全绳。<span class="math inline">$\mathcal{L}_{\text{video}}$</span> 让你往悬崖下探索更好的风景，<span class="math inline">$\mathcal{L}_{\text{KL}}$</span> 是一根拴在安全桩上的绳子，确保你不会掉下去（潜空间不会崩溃到 actor 完全无法工作）</li>
+</ul>
 <p><strong>直观理解</strong>：KL 项约束更新后的世界模型保持预训练模型的潜特征几何结构，防止 abrupt distribution shift，同时允许渐进式适应。论文观察到这种方法稳定了联合训练，但改进是温和的——反映了稳定性和适应性之间的权衡。</p>
-<h3 id="24-actor-rl">2.4 基于重建奖励的 Actor RL：让执行忠实于想象</h3>
-<h4 id="_3">核心思路</h4>
-<p>Actor 的职责是将世界模型的"想象"翻译为真实动作。因此，一个自然的优化目标是：<strong>让真实环境中执行的轨迹忠实地实现世界模型的预测</strong>。</p>
-<h4 id="_4">重建奖励</h4>
-<p>定义重建奖励为世界模型预测的未来观测 <span class="math inline">$\hat{x}_{t+1:t+H}$</span> 与执行 actor 后真实观测 <span class="math inline">$x_{t+1:t+H}$</span> 之间的一致性：</p>
+<h3 id="24-actor-rl">2.4 基于重建奖励的 Actor RL（逐公式解读）</h3>
+<h4 id="vs">核心直觉：为什么用"想象 vs 现实"作为奖励？</h4>
+<p>Actor 的职责是将世界模型的"想象"翻译为真实动作。传统 RL 奖励是任务级的（"抓到了 +1，没抓到 0"）——稀疏、延迟、难以优化。WAM-RL 换了一个思路：<strong>既然世界模型擅长预测未来，那就让 actor 的目标是"让真实执行结果尽可能接近世界模型的预测"</strong>。</p>
+<p>这就像一个导演（世界模型）画了分镜（未来视频预测），演员（actor）照着演。演员演得好不好，不看票房（任务奖励），而看表演和分镜有多像（重建一致性）。</p>
+<h4 id="_3">第一步：重建奖励的定义</h4>
 <div class="math display">$$r_t = \mathrm{sim}(\hat{x}_{t+1:t+H}, x_{t+1:t+H})$$</div>
-<p>这个奖励直接对齐 actor 与世界模型：<strong>不是优化任务特定目标，而是鼓励 actor 实现编码在世界模型预测中的潜计划</strong>。Actor 学会了"执行与世界模型预测结构一致的动作"。</p>
-<h4 id="_5">相似度函数的选择</h4>
-<p>论文考察了四种相似度函数：</p>
+<p><strong>逐符号解读</strong>：</p>
+<ul>
+<li><span class="math inline">$r_t$</span>：时刻 <span class="math inline">$t$</span> 的<strong>即时奖励</strong>。它是一个标量，越大越好</li>
+<li><span class="math inline">$\hat{x}_{t+1:t+H}$</span>：世界模型<strong>想象</strong>的未来 <span class="math inline">$H$</span> 帧——"如果一切按计划进行，接下来 <span class="math inline">$H$</span> 帧应该长这样"。<span class="math inline">$\hat{}$</span> 表示预测值</li>
+<li><span class="math inline">$x_{t+1:t+H}$</span>：在真实环境中<strong>实际执行</strong> actor 的动作后，观测到的未来 <span class="math inline">$H$</span> 帧——"机器人真的动了之后，相机拍到了什么"</li>
+<li><span class="math inline">$\mathrm{sim}(\cdot, \cdot)$</span>：<strong>相似度函数</strong>——衡量两组视频帧有多像。返回值越高说明 actor 执行得越接近世界模型的规划</li>
+<li><span class="math inline">$H$</span>：预测时域（horizon）。论文没有给出具体值，但概念上是"往后看几步"——既不是只看下一帧（太短视），也不是看到永远（太困难）</li>
+</ul>
+<p><strong>与常规 RL 奖励的区别</strong>：</p>
+<ul>
+<li>常规奖励：<span class="math inline">$r_t =$</span> 任务成败（稀疏，0 或 1）</li>
+<li>重建奖励：<span class="math inline">$r_t =$</span> 执行与想象的吻合度（稠密，连续值）</li>
+<li><strong>关键优势</strong>：重建奖励是<strong>稠密的</strong>——每一步都有信号，不是等到任务结束才知道好坏。这对单步视频模型（推理昂贵，采样有限）至关重要</li>
+</ul>
+<h4 id="_4">第二步：四种相似度函数的原理与取舍</h4>
 <table>
 <thead>
 <tr>
-<th>相似度函数</th>
-<th>测量维度</th>
-<th>特点</th>
+<th>函数</th>
+<th>计算方式</th>
+<th>测量什么</th>
+<th>直觉</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>Pixel MSE</td>
-<td>像素级外观匹配</td>
-<td>与世界模型训练目标对齐最好</td>
+<td><span class="math inline">$\|\hat{x} - x\|^2$</span> 逐像素平均</td>
+<td>低级外观匹配</td>
+<td>"两张图叠在一起看，每个像素差多少"</td>
 </tr>
 <tr>
 <td>Optical Flow MSE</td>
-<td>运动一致性</td>
-<td>成功/失败区分度最强</td>
+<td>先提取光流场，再算 MSE</td>
+<td>运动模式一致性</td>
+<td>"物体移动的方向和速度是否一样"</td>
 </tr>
 <tr>
 <td>DINOv2 MSE</td>
+<td>用 DINOv2 提取语义特征，再算 MSE</td>
 <td>高层语义对齐</td>
-<td>语义敏感</td>
+<td>"物体类别、结构、关系是否一致"</td>
 </tr>
 <tr>
 <td>V-JEPA2 MSE</td>
-<td>视频级语义对齐</td>
-<td>视频特征空间对齐</td>
+<td>用 V-JEPA2 提取视频特征，再算 MSE</td>
+<td>视频级时空语义</td>
+<td>"整个动作序列的语义是否合理"</td>
 </tr>
 </tbody>
 </table>
-<p>一个反直觉的实验发现（详见第四节消融）：<strong>Optical Flow 在奖励空间中成功与失败的区分度最大，但下游成功率反而不如 Pixel MSE</strong>。论文假设这是因为 pixel-level 重建与世界模型的训练目标（也是预测视觉观测）更加一致，且对 OOD 动作施加更强的惩罚——当 actor 产出偏离世界模型预测的动作时，像素差异变大，产生强负信号，起到了正则化策略、防止不稳定行为的作用。</p>
-<h4 id="reinforce-ppogrpo">策略梯度优化（REINFORCE，非 PPO/GRPO）</h4>
-<p>给定重建奖励后，actor 通过最基础的 <strong>REINFORCE 风格策略梯度</strong>优化：</p>
-<div class="math display">$$\nabla_\phi J = \mathbb{E} \left[ \nabla_\phi \log \pi_\phi(a_t \mid s_t) A_t \right]$$</div>
-<p>其中优势函数 <span class="math inline">$A_t$</span> 从重建奖励计算。<strong>论文没有使用 PPO、GRPO 或 TRPO 等现代 RL 算法</strong>：</p>
+<p><strong>关键实验发现（反直觉）</strong>：</p>
+<p>Optical Flow 在<strong>奖励空间中区分成功/失败的 gap 最大</strong>（见第四节图），但<strong>下游任务成功率反而最低</strong>。Pixel MSE 区分度弱但效果最好。</p>
+<p><strong>原理解释</strong>：</p>
 <ul>
-<li><strong>为什么用最简单的 REINFORCE？</strong> WAM-RL 的 RL 难点不在算法选择，而在"让 flow-based 动作模型变得 RL 可优化"。Flow-SDE（在确定性 ODE 中注入布朗运动，使去噪轨迹变成条件高斯转移链）提供了 <span class="math inline">$\log \pi_\phi(a|s)$</span> 的可计算形式，有了似然，REINFORCE 就能直接工作。PPO 的 clip 机制或 GRPO 的组内对比需要额外的重要性采样和多次 rollout，与单步视频生成的高昂推理成本不兼容。</li>
-<li><strong><span class="math inline">$A_t$</span> 的来源</strong>：<span class="math inline">$A_t$</span> 也不是 PPO 的 GAE 估计或 GRPO 的组内相对 reward，而是直接从想象预测 <span class="math inline">$\hat{x}$</span> 与执行观测 <span class="math inline">$x$</span> 的重建一致性（Pixel MSE 等）计算得到。这本质上是稠密、确定性的自监督信号，不需要价值网络（critic）来 bootstrap。</li>
+<li><strong>对齐假说</strong>：Pixel MSE 与世界模型自己的训练目标（Flow Matching，也预测像素）<strong>天然对齐</strong>。世界模型的潜表征就是为像素预测优化的，用像素差做奖励意味着 actor 被引导去利用同样的表征——信号与内部几何一致</li>
+<li><strong>OOD 惩罚效应</strong>：当 actor 产出偏离世界模型预测的激进动作时，像素差异急剧爆炸（因为世界模型没有"见过"这种动作的后果），产生极强负信号 → 天然正则化，防止策略走向不稳定区域</li>
+<li>Optical Flow 虽然区分度好，但它测量的运动模式与世界模型内部的像素预测目标<strong>不在同一个空间</strong>——奖励方向与模型表征的"自然梯度"不一致，优化效率反而差</li>
 </ul>
+<h4 id="reinforce">第三步：策略梯度优化（REINFORCE）</h4>
+<div class="math display">$$\nabla_\phi J = \mathbb{E} \left[ \nabla_\phi \log \pi_\phi(a_t \mid s_t) A_t \right]$$</div>
+<p><strong>逐符号解读</strong>（与 2.1.3 节的链路对接）：</p>
+<ul>
+<li><span class="math inline">$\phi$</span>：actor 的参数（注意和世界模型的 <span class="math inline">$\theta$</span> 区分——两个组件各有各的参数）</li>
+<li><span class="math inline">$\pi_\phi(a_t|s_t)$</span>：给定状态 <span class="math inline">$s_t$</span>（当前观测），actor 输出动作 <span class="math inline">$a_t$</span> 的<strong>概率</strong>。由 Flow-SDE 的高斯转移公式计算</li>
+<li><span class="math inline">$A_t$</span>：<strong>优势函数</strong>——从重建奖励 <span class="math inline">$r_t$</span> 计算得出。非负的 <span class="math inline">$A_t$</span> 表示"这个动作让执行结果更接近想象"，应该被鼓励；负的 <span class="math inline">$A_t$</span> 表示"偏了"，应该被抑制</li>
+<li><span class="math inline">$\nabla_\phi \log \pi_\phi \cdot A_t$</span>：梯度 = (策略对参数的敏感度) × (这个动作的好坏)。如果 <span class="math inline">$A_t$</span> 大且为正，梯度大 → 参数大步往"多做这个动作"的方向调</li>
+<li><span class="math inline">$\mathbb{E}[\cdot]$</span>：对所有在线交互收集的轨迹取期望</li>
+</ul>
+<p><strong>注意</strong>：<span class="math inline">$A_t$</span> 这里不是 PPO 的 GAE（需要 critic 网络做 bootstrap），而是直接从重建奖励计算。论文没有详细说明 <span class="math inline">$A_t$</span> 的具体计算方式（可能是简单的 reward-to-go 或带 baseline 的 REINFORCE），但核心不依赖价值网络。</p>
 <hr />
-<h2 id="_6">三、实验与结果</h2>
+<h2 id="_5">三、实验与结果</h2>
 <h3 id="31">3.1 设置</h3>
 <ul>
 <li><strong>架构基础</strong>：Genie Envisioner-ACT，世界模型为 DiT-based 视频生成器，actor 消费中间潜特征输出动作</li>
@@ -624,7 +733,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </ul>
 <p>这一定性对比直接说明了：<strong>视频 SFT 让世界模型不再假设理想执行，而是学会推理可能的偏差及纠正方式。</strong></p>
 <hr />
-<h2 id="_7">五、核心洞察与技术亮点</h2>
+<h2 id="_6">五、核心洞察与技术亮点</h2>
 <ol>
 <li>
 <p><strong>首次将 RL 引入 WA 范式</strong>：WAM-RL 是第一个在 World-Action 框架下实现强化学习的工作，提出联合优化世界模型和动作模型的训练策略。</p>
@@ -646,7 +755,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </li>
 </ol>
 <hr />
-<h2 id="_8">六、局限性</h2>
+<h2 id="_7">六、局限性</h2>
 <ol>
 <li>
 <p><strong>KL 正则化的天花板</strong>：KL 约束在稳定训练的同时限制了世界模型的适应幅度——模型难以大幅超越预训练分布的能力边界，尤其在更大规模下这可能成为瓶颈。</p>
@@ -668,7 +777,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </li>
 </ol>
 <hr />
-<h2 id="_9">七、关键概念速查</h2>
+<h2 id="_8">七、关键概念速查</h2>
 <table>
 <thead>
 <tr>
