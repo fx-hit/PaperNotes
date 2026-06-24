@@ -7,9 +7,9 @@
 <!-- arxiv: 2606.17906 -->
 <!-- venue: arXiv 2026 -->
 <!-- tags: WAM, 强化学习, 机器人, 世界模型, 视频生成 -->
-<!-- words-zh: 3357 -->
-<!-- words-en: 319 -->
-<!-- reading-time: 11 -->
+<!-- words-zh: 3665 -->
+<!-- words-en: 370 -->
+<!-- reading-time: 12 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" media="print" onload="this.media='all'">
@@ -325,11 +325,11 @@ document.addEventListener('DOMContentLoaded', function() {
 </li>
 <li class="toc-h4"><a href="#_5">相似度函数的选择</a>
 </li>
-<li class="toc-h4"><a href="#_6">策略梯度优化</a>
+<li class="toc-h4"><a href="#reinforce-ppogrpo">策略梯度优化（REINFORCE，非 PPO/GRPO）</a>
 </ul></li>
 </ul></li>
 </li>
-<li class="toc-h2"><a href="#_7">三、实验与结果</a>
+<li class="toc-h2"><a href="#_6">三、实验与结果</a>
 <ul>
 </li>
 <li class="toc-h3"><a href="#31">3.1 设置</a>
@@ -341,11 +341,11 @@ document.addEventListener('DOMContentLoaded', function() {
 </li>
 <li class="toc-h2"><a href="#sft">四、视频 SFT 定性分析</a>
 </li>
-<li class="toc-h2"><a href="#_8">五、核心洞察与技术亮点</a>
+<li class="toc-h2"><a href="#_7">五、核心洞察与技术亮点</a>
 </li>
-<li class="toc-h2"><a href="#_9">六、局限性</a>
+<li class="toc-h2"><a href="#_8">六、局限性</a>
 </li>
-<li class="toc-h2"><a href="#_10">七、关键概念速查</a>
+<li class="toc-h2"><a href="#_9">七、关键概念速查</a>
 </ul></li>
 </li></ul>
 </nav>
@@ -353,7 +353,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <main class="main-wrapper">
   <div class="content-inner" id="main-content">
 <h1 id="wam-rl-world-action-model-reinforcement-learning-with-reconstruction-rewards-and-online-video-sft">WAM-RL: World-Action Model Reinforcement Learning with Reconstruction Rewards and Online Video SFT</h1>
-<div class="article-stats">3,357 字 · English 319 词 · 约 11 分钟阅读</div>
+<div class="article-stats">3,665 字 · English 370 词 · 约 12 分钟阅读</div>
 
 <blockquote>
 <p><strong>论文信息</strong>
@@ -400,6 +400,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <div class="math display">$$\log \pi_\theta(a \mid s) = \sum_t \log p(x_{t-1} \mid x_t)$$</div>
 <p>这使得标准策略梯度方法可以被直接应用：
 <div class="math display">$$\nabla_\theta J = \mathbb{E} \left[ \nabla_\theta \log \pi_\theta(a \mid s)\, A(s,a) \right]$$</div></p>
+<p>这就是最基础的 <strong>REINFORCE 策略梯度</strong>。论文不使用 PPO 或 GRPO 的原因：PPO 的 clip 机制需要重要性采样和多次 rollout，GRPO 需要同一 prompt 的多条采样做组内对比——都与单步视频生成的高昂推理成本冲突。Flow-SDE 提供了可计算的 <span class="math inline">$\log \pi_\phi$</span>，重建奖励提供了确定性稠密信号 <span class="math inline">$A_t$</span>，不需要价值网络（critic），REINFORCE 直接就能工作。</p>
 <h3 id="22">2.2 整体框架：联合优化两大组件</h3>
 <p>WAM-RL 的核心设计理念是：<strong>让世界模型和 actor 协同进化</strong>。这通过两个协调机制实现：</p>
 <table>
@@ -493,12 +494,16 @@ document.addEventListener('DOMContentLoaded', function() {
 </tbody>
 </table>
 <p>一个反直觉的实验发现（详见第四节消融）：<strong>Optical Flow 在奖励空间中成功与失败的区分度最大，但下游成功率反而不如 Pixel MSE</strong>。论文假设这是因为 pixel-level 重建与世界模型的训练目标（也是预测视觉观测）更加一致，且对 OOD 动作施加更强的惩罚——当 actor 产出偏离世界模型预测的动作时，像素差异变大，产生强负信号，起到了正则化策略、防止不稳定行为的作用。</p>
-<h4 id="_6">策略梯度优化</h4>
-<p>给定重建奖励后，actor 通过标准策略梯度优化：
-<div class="math display">$$\nabla_\phi J = \mathbb{E} \left[ \nabla_\phi \log \pi_\phi(a_t \mid s_t) A_t \right]$$</div></p>
-<p>其中优势函数 <span class="math inline">$A_t$</span> 从重建奖励计算。</p>
+<h4 id="reinforce-ppogrpo">策略梯度优化（REINFORCE，非 PPO/GRPO）</h4>
+<p>给定重建奖励后，actor 通过最基础的 <strong>REINFORCE 风格策略梯度</strong>优化：</p>
+<div class="math display">$$\nabla_\phi J = \mathbb{E} \left[ \nabla_\phi \log \pi_\phi(a_t \mid s_t) A_t \right]$$</div>
+<p>其中优势函数 <span class="math inline">$A_t$</span> 从重建奖励计算。<strong>论文没有使用 PPO、GRPO 或 TRPO 等现代 RL 算法</strong>：</p>
+<ul>
+<li><strong>为什么用最简单的 REINFORCE？</strong> WAM-RL 的 RL 难点不在算法选择，而在"让 flow-based 动作模型变得 RL 可优化"。Flow-SDE（在确定性 ODE 中注入布朗运动，使去噪轨迹变成条件高斯转移链）提供了 <span class="math inline">$\log \pi_\phi(a|s)$</span> 的可计算形式，有了似然，REINFORCE 就能直接工作。PPO 的 clip 机制或 GRPO 的组内对比需要额外的重要性采样和多次 rollout，与单步视频生成的高昂推理成本不兼容。</li>
+<li><strong><span class="math inline">$A_t$</span> 的来源</strong>：<span class="math inline">$A_t$</span> 也不是 PPO 的 GAE 估计或 GRPO 的组内相对 reward，而是直接从想象预测 <span class="math inline">$\hat{x}$</span> 与执行观测 <span class="math inline">$x$</span> 的重建一致性（Pixel MSE 等）计算得到。这本质上是稠密、确定性的自监督信号，不需要价值网络（critic）来 bootstrap。</li>
+</ul>
 <hr />
-<h2 id="_7">三、实验与结果</h2>
+<h2 id="_6">三、实验与结果</h2>
 <h3 id="31">3.1 设置</h3>
 <ul>
 <li><strong>架构基础</strong>：Genie Envisioner-ACT，世界模型为 DiT-based 视频生成器，actor 消费中间潜特征输出动作</li>
@@ -619,7 +624,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </ul>
 <p>这一定性对比直接说明了：<strong>视频 SFT 让世界模型不再假设理想执行，而是学会推理可能的偏差及纠正方式。</strong></p>
 <hr />
-<h2 id="_8">五、核心洞察与技术亮点</h2>
+<h2 id="_7">五、核心洞察与技术亮点</h2>
 <ol>
 <li>
 <p><strong>首次将 RL 引入 WA 范式</strong>：WAM-RL 是第一个在 World-Action 框架下实现强化学习的工作，提出联合优化世界模型和动作模型的训练策略。</p>
@@ -641,7 +646,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </li>
 </ol>
 <hr />
-<h2 id="_9">六、局限性</h2>
+<h2 id="_8">六、局限性</h2>
 <ol>
 <li>
 <p><strong>KL 正则化的天花板</strong>：KL 约束在稳定训练的同时限制了世界模型的适应幅度——模型难以大幅超越预训练分布的能力边界，尤其在更大规模下这可能成为瓶颈。</p>
@@ -663,7 +668,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </li>
 </ol>
 <hr />
-<h2 id="_10">七、关键概念速查</h2>
+<h2 id="_9">七、关键概念速查</h2>
 <table>
 <thead>
 <tr>
@@ -717,6 +722,11 @@ document.addEventListener('DOMContentLoaded', function() {
 <td><span class="math inline">$\mathcal{L}_{\text{WM}}$</span></td>
 <td>World Model Loss</td>
 <td><span class="math inline">$\mathcal{L}_{\text{video}} + \lambda_{\text{KL}}\mathcal{L}_{\text{KL}}$</span>，世界模型的联合训练目标</td>
+</tr>
+<tr>
+<td>RL 算法</td>
+<td>RL Algorithm</td>
+<td>REINFORCE 风格策略梯度，非 PPO/GRPO；Flow-SDE 提供 <span class="math inline">$\log \pi_\phi$</span>，重建奖励提供 <span class="math inline">$A_t$</span></td>
 </tr>
 <tr>
 <td>Actor-only RL</td>

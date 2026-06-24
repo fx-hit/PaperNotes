@@ -74,6 +74,8 @@ $$\log \pi_\theta(a \mid s) = \sum_t \log p(x_{t-1} \mid x_t)$$
 这使得标准策略梯度方法可以被直接应用：
 $$\nabla_\theta J = \mathbb{E} \left[ \nabla_\theta \log \pi_\theta(a \mid s)\, A(s,a) \right]$$
 
+这就是最基础的 **REINFORCE 策略梯度**。论文不使用 PPO 或 GRPO 的原因：PPO 的 clip 机制需要重要性采样和多次 rollout，GRPO 需要同一 prompt 的多条采样做组内对比——都与单步视频生成的高昂推理成本冲突。Flow-SDE 提供了可计算的 $\log \pi_\phi$，重建奖励提供了确定性稠密信号 $A_t$，不需要价值网络（critic），REINFORCE 直接就能工作。
+
 ### 2.2 整体框架：联合优化两大组件
 
 WAM-RL 的核心设计理念是：**让世界模型和 actor 协同进化**。这通过两个协调机制实现：
@@ -137,12 +139,16 @@ $$r_t = \mathrm{sim}(\hat{x}_{t+1:t+H}, x_{t+1:t+H})$$
 
 一个反直觉的实验发现（详见第四节消融）：**Optical Flow 在奖励空间中成功与失败的区分度最大，但下游成功率反而不如 Pixel MSE**。论文假设这是因为 pixel-level 重建与世界模型的训练目标（也是预测视觉观测）更加一致，且对 OOD 动作施加更强的惩罚——当 actor 产出偏离世界模型预测的动作时，像素差异变大，产生强负信号，起到了正则化策略、防止不稳定行为的作用。
 
-#### 策略梯度优化
+#### 策略梯度优化（REINFORCE，非 PPO/GRPO）
 
-给定重建奖励后，actor 通过标准策略梯度优化：
+给定重建奖励后，actor 通过最基础的 **REINFORCE 风格策略梯度**优化：
+
 $$\nabla_\phi J = \mathbb{E} \left[ \nabla_\phi \log \pi_\phi(a_t \mid s_t) A_t \right]$$
 
-其中优势函数 $A_t$ 从重建奖励计算。
+其中优势函数 $A_t$ 从重建奖励计算。**论文没有使用 PPO、GRPO 或 TRPO 等现代 RL 算法**：
+
+- **为什么用最简单的 REINFORCE？** WAM-RL 的 RL 难点不在算法选择，而在"让 flow-based 动作模型变得 RL 可优化"。Flow-SDE（在确定性 ODE 中注入布朗运动，使去噪轨迹变成条件高斯转移链）提供了 $\log \pi_\phi(a|s)$ 的可计算形式，有了似然，REINFORCE 就能直接工作。PPO 的 clip 机制或 GRPO 的组内对比需要额外的重要性采样和多次 rollout，与单步视频生成的高昂推理成本不兼容。
+- **$A_t$ 的来源**：$A_t$ 也不是 PPO 的 GAE 估计或 GRPO 的组内相对 reward，而是直接从想象预测 $\hat{x}$ 与执行观测 $x$ 的重建一致性（Pixel MSE 等）计算得到。这本质上是稠密、确定性的自监督信号，不需要价值网络（critic）来 bootstrap。
 
 ---
 
@@ -267,4 +273,5 @@ $$\nabla_\phi J = \mathbb{E} \left[ \nabla_\phi \log \pi_\phi(a_t \mid s_t) A_t 
 | 在线视频 SFT | Online Video SFT | 用 RL 交互中收集的成功轨迹在线微调世界模型的视频预测能力 |
 | 恢复行为 | Recovery Behavior | 世界模型在预测失败后自动生成纠错动作（如重新抓取）的能力 |
 | $\mathcal{L}_{\text{WM}}$ | World Model Loss | $\mathcal{L}_{\text{video}} + \lambda_{\text{KL}}\mathcal{L}_{\text{KL}}$，世界模型的联合训练目标 |
+| RL 算法 | RL Algorithm | REINFORCE 风格策略梯度，非 PPO/GRPO；Flow-SDE 提供 $\log \pi_\phi$，重建奖励提供 $A_t$ |
 | Actor-only RL | — | 仅优化动作模型而固定世界模型的 RL 方法，长时域下失效 |
