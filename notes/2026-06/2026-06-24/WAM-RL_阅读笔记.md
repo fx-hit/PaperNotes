@@ -1,5 +1,5 @@
 <!-- arxiv: 2606.17906 -->
-<!-- venue: CVPR 2026（投稿中） -->
+<!-- venue: arXiv 2026 -->
 <!-- tags: WAM, 强化学习, 机器人, 世界模型, 视频生成 -->
 
 # WAM-RL: World-Action Model Reinforcement Learning with Reconstruction Rewards and Online Video SFT
