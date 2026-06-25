@@ -1,0 +1,1747 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ImageWAM: Do World Action Models Really Need Video Generation, or Just Image Editing?</title>
+<!-- arxiv: 2606.19531 -->
+<!-- venue: 投稿（under review） -->
+<!-- tags: WAM, VLA, 扩散模型 -->
+<!-- words-zh: 4559 -->
+<!-- words-en: 896 -->
+<!-- reading-time: 18 -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap"></noscript>
+<style>
+  :root {
+    --bg: #ffffff;
+    --text: #1a1a2e;
+    --text-secondary: #555;
+    --border: #e1e4e8;
+    --link: #0969da;
+    --table-stripe: #f6f8fa;
+    --heading: #0d1117;
+    --blockquote-border: #0969da;
+    --blockquote-bg: #f0f6ff;
+    --inline-code: #d73a49;
+    --inline-code-bg: #f6f8fa;
+    --sidebar-width: 260px;
+    --toc-active: #0969da;
+    --content-max-width: 1350px;
+    --media-max-width: 1000px;
+    --content-padding: 48px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "Inter", "Noto Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 16px;
+    line-height: 1.75;
+    color: var(--text);
+    background: var(--bg);
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    width: var(--sidebar-width);
+    overflow-y: auto;
+    padding: 28px 20px 40px;
+    background: #fafbfc;
+    border-right: 1px solid var(--border);
+    z-index: 10;
+    scrollbar-width: thin;
+  }
+  .sidebar-title {
+    font-size: 13px; font-weight: 700; color: var(--text-secondary);
+    margin-bottom: 16px; letter-spacing: 0.06em; text-transform: uppercase;
+  }
+  .toc-list { list-style: none; padding: 0; margin: 0; }
+  .toc-list ul { list-style: none; padding-left: 14px; }
+  .toc-list li { margin: 1px 0; }
+  .toc-list a {
+    display: block; padding: 4px 12px; font-size: 13.5px; line-height: 1.45;
+    color: var(--text-secondary); text-decoration: none; border-radius: 4px;
+    border-left: 2px solid transparent; transition: all 0.15s;
+  }
+  .toc-list a:hover { color: var(--link); background: #e8f0fe; }
+  .toc-list a.active {
+    color: var(--toc-active); font-weight: 600;
+    border-left-color: var(--toc-active); background: #e8f0fe;
+  }
+  .toc-h1 a { font-weight: 600; color: var(--heading); font-size: 14px; }
+  .toc-h3 a { padding-left: 24px; font-size: 13px; }
+  .toc-h4 a { padding-left: 36px; font-size: 12.5px; }
+  .toc-empty { color: var(--text-secondary); font-size: 13px; font-style: italic; }
+
+  .main-wrapper {
+    margin-left: var(--sidebar-width);
+    min-height: 100vh;
+    display: flex; justify-content: center;
+  }
+  .content-inner {
+    width: 100%;
+    max-width: var(--content-max-width);
+    padding: 40px var(--content-padding) 80px;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    color: var(--heading); font-weight: 700; line-height: 1.3;
+    margin-top: 2em; margin-bottom: 0.6em; scroll-margin-top: 24px;
+  }
+  h1 { font-size: 2em; border-bottom: 2px solid var(--border); padding-bottom: 0.3em; margin-top: 0; }
+  h2 { font-size: 1.5em; border-bottom: 1px solid var(--border); padding-bottom: 0.25em; }
+  h3 { font-size: 1.25em; }
+  h4 { font-size: 1.1em; }
+  p { margin-bottom: 1em; }
+  a { color: var(--link); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  strong { font-weight: 600; }
+
+  blockquote {
+    border-left: 4px solid var(--blockquote-border);
+    background: var(--blockquote-bg);
+    padding: 12px 20px; margin: 1em 0;
+    border-radius: 0 6px 6px 0; color: var(--text-secondary);
+  }
+  blockquote p:last-child { margin-bottom: 0; }
+
+  code {
+    font-family: "JetBrains Mono", "SF Mono", "Fira Code", monospace;
+    font-size: 0.875em; background: var(--inline-code-bg);
+    padding: 2px 6px; border-radius: 4px; color: var(--inline-code);
+  }
+  pre {
+    background: #f6f8fa; color: #24292f;
+    border: 1px solid var(--border);
+    border-radius: 8px; padding: 16px 20px; overflow-x: auto;
+    margin: 1em 0; font-size: 14px; line-height: 1.55;
+  }
+  pre code { background: none; padding: 0; border-radius: 0; color: inherit; font-size: inherit; }
+
+  .codehilite { background: #f6f8fa; border: 1px solid var(--border); border-radius: 8px; padding: 16px 20px; overflow-x: auto; margin: 1em 0; }
+  .codehilite pre { background: none; padding: 0; margin: 0; border-radius: 0; }
+  .codehilite .hll { background-color: #fff8c5; }
+  .codehilite .c  { color: #6e7781; font-style: italic; }
+  .codehilite .k  { color: #cf222e; }
+  .codehilite .o  { color: #0550ae; }
+  .codehilite .s  { color: #0a3069; }
+  .codehilite .n  { color: #24292f; }
+  .codehilite .p  { color: #24292f; }
+  .codehilite .mi { color: #0550ae; }
+  .codehilite .nf { color: #8250df; }
+  .codehilite .nb { color: #953800; }
+  .codehilite .nc { color: #953800; }
+  .codehilite .bp { color: #953800; }
+
+  table { width: 100%; border-collapse: collapse; margin: 1em 0; font-size: 0.925em; }
+  th, td { border: 1px solid var(--border); padding: 10px 14px; text-align: left; }
+  th { background: var(--table-stripe); font-weight: 600; color: var(--heading); }
+  tr:nth-child(even) td { background: var(--table-stripe); }
+
+  .math.display { display: block; overflow-x: auto; padding: 12px 0; margin: 1em 0; }
+  ul, ol { padding-left: 1.5em; margin-bottom: 1em; }
+  li { margin-bottom: 0.3em; }
+  hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+  img { max-width: min(100%, var(--media-max-width)); height: auto; border-radius: 6px; margin: 0 auto; display: block; }
+  #main-content img { cursor: zoom-in; }
+  p:has(img) { text-align: center; max-width: var(--media-max-width); margin: 0.6em auto 0; }
+  table:has(img) { width: min(100%, var(--media-max-width)) !important; margin-left: auto; margin-right: auto; }
+  p:has(img) + p { text-align: center; font-size: 0.9em; color: var(--text-secondary); margin-top: 0.15em; margin-bottom: 0.6em; }
+  .mermaid { text-align: center; margin: 1.5em 0; background: #fafbfc; border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+  .article-stats {
+    font-size: 0.85rem; color: var(--text-secondary);
+    padding: 10px 18px; margin-bottom: 28px;
+    background: #f8f9fa; border: 1px solid var(--border); border-radius: 8px;
+  }
+  body.image-lightbox-open { overflow: hidden; }
+  .image-lightbox {
+    position: fixed; inset: 0; z-index: 1000;
+    display: none;
+    background: rgba(9, 12, 20, 0.88);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+  }
+  .image-lightbox.is-open { display: block; }
+
+  /* Stage uses flexbox to center the image; safe alignment prevents
+     clipping when zoomed-in content overflows — it falls back to
+     start so scrollbars reach every pixel. */
+  .image-lightbox__stage {
+    width: 100%; height: 100%;
+    overflow: auto;
+    display: flex;
+    align-items: safe center;
+    justify-content: safe center;
+    padding: 24px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.18) transparent;
+  }
+
+  .image-lightbox__image {
+    max-width: none; max-height: none;
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 20px 70px rgba(0, 0, 0, 0.5);
+    cursor: zoom-in;
+    flex-shrink: 0;
+    transition: box-shadow 0.3s;
+  }
+
+  /* Close button — top-right glass circle */
+  .image-lightbox__close {
+    position: absolute; top: 20px; right: 20px; z-index: 1010;
+    width: 40px; height: 40px;
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.25);
+    color: rgba(255,255,255,0.85);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    transition: background 0.2s, border-color 0.2s, transform 0.2s, color 0.2s;
+  }
+  .image-lightbox__close:hover {
+    background: rgba(255,255,255,0.15);
+    border-color: rgba(255,255,255,0.3);
+    color: #fff;
+    transform: scale(1.08);
+  }
+
+  /* Zoom toolbar — bottom-center glass pill */
+  .image-lightbox__toolbar {
+    position: absolute; bottom: 28px; left: 50%; transform: translateX(-50%); z-index: 1010;
+    display: flex; align-items: center; gap: 4px;
+    padding: 6px;
+    background: rgba(30, 30, 45, 0.75);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 32px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.35);
+  }
+
+  .image-lightbox__btn {
+    width: 36px; height: 36px;
+    border: none; border-radius: 50%;
+    background: transparent;
+    color: rgba(255,255,255,0.82);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.2s, color 0.2s;
+  }
+  .image-lightbox__btn:hover {
+    background: rgba(255,255,255,0.13);
+    color: #fff;
+  }
+
+  .image-lightbox__zoom-val {
+    min-width: 52px; text-align: center;
+    color: rgba(255,255,255,0.82);
+    font: 600 12.5px/32px "Inter", -apple-system, sans-serif;
+    cursor: pointer; user-select: none;
+    border-radius: 20px; padding: 0 6px;
+    transition: background 0.2s, color 0.2s;
+    letter-spacing: -0.01em;
+  }
+  .image-lightbox__zoom-val:hover {
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+  }
+
+  .image-lightbox__caption {
+    position: absolute; left: 28px; right: 28px; bottom: 96px; z-index: 1005;
+    color: rgba(255,255,255,0.72); text-align: center;
+    font-size: 13px; line-height: 1.45;
+    pointer-events: none;
+  }
+
+  @media (max-width: 1024px) {
+    .sidebar { position: static; width: 100%; height: auto; max-height: 35vh; border-right: none; border-bottom: 1px solid var(--border); }
+    .main-wrapper { margin-left: 0; display: block; }
+    .content-inner { max-width: none; padding: 24px 20px 60px; }
+    .image-lightbox__stage { padding: 12px; }
+    .image-lightbox__close { top: 12px; right: 12px; width: 36px; height: 36px; }
+    .image-lightbox__toolbar { bottom: 18px; padding: 5px; gap: 2px; }
+    .image-lightbox__btn { width: 32px; height: 32px; }
+    .image-lightbox__caption { bottom: 78px; left: 18px; right: 18px; }
+  }
+</style>
+
+<script>
+MathJax = {
+  tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']], processEscapes: true, tags: 'none' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] }
+};
+</script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js" defer></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  mermaid.initialize({ startOnLoad: true, theme: 'neutral', securityLevel: 'loose' });
+});
+</script>
+
+</head>
+<body>
+
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-title">目录</div>
+  <ul class="toc-list">
+<li class="toc-h1"><a href="#imagewam-do-world-action-models-really-need-video-generation-or-just-image-editing">ImageWAM: Do World Action Models Really Need Video Generation, or Just Image Editing?</a>
+<ul>
+</li>
+<li class="toc-h2"><a href="#_1">一、核心问题</a>
+</li>
+<li class="toc-h2"><a href="#_2">二、核心思路 / 方法</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#21">2.1 核心洞察：图像编辑 &gt; 视频生成</a>
+</li>
+<li class="toc-h3"><a href="#22-imagewam">2.2 ImageWAM 架构</a>
+</li>
+<li class="toc-h3"><a href="#23-kv-caches">2.3 编辑 KV Caches 提取</a>
+</li>
+<li class="toc-h3"><a href="#24-action-expertflow-matching-action-dit">2.4 Action Expert（Flow-Matching Action DiT）</a>
+</li>
+<li class="toc-h3"><a href="#25-motmixture-of-transformers-token">2.5 MoT（Mixture of Transformers）—— 四种 token 的联合注意力</a>
+</li>
+<li class="toc-h3"><a href="#26-three-backbone-variants">2.6 Three Backbone Variants</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_3">三、训练目标</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#31-image-flow-matching-loss">3.1 图像编辑目标（Image Flow Matching Loss）</a>
+</li>
+<li class="toc-h3"><a href="#32-action-flow-matching-loss">3.2 Action Flow Matching Loss</a>
+</li>
+<li class="toc-h3"><a href="#33">3.3 联合优化</a>
+</li>
+<li class="toc-h3"><a href="#34-prefix-only-inference">3.4 高效推理设计（Prefix-Only Inference）</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_4">四、实验与结果</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#41-robotwin-20">4.1 RoboTwin 2.0 结果</a>
+</li>
+<li class="toc-h3"><a href="#42-libero">4.2 LIBERO 结果</a>
+</li>
+<li class="toc-h3"><a href="#43-libero-plus-flux2-4b">4.3 LIBERO-Plus 结果（FLUX.2 4B）</a>
+</li>
+<li class="toc-h3"><a href="#44-libero-plus-backbone">4.4 LIBERO-Plus 更大 backbone 对比</a>
+</li>
+<li class="toc-h3"><a href="#45">4.5 真实机器人实验结果</a>
+</li>
+<li class="toc-h3"><a href="#46">4.6 推理效率对比</a>
+</li>
+<li class="toc-h3"><a href="#47">4.7 推理延迟优化（附录）</a>
+</li>
+<li class="toc-h3"><a href="#48-">4.8 与统一理解-生成模型的对比</a>
+</li>
+<li class="toc-h3"><a href="#49">4.9 训练超参数与成本</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_5">五、关键洞察与技术亮点</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#51-wam">5.1 为什么图像编辑 &lt; 视频生成做 WAM</a>
+</li>
+<li class="toc-h3"><a href="#52-no-future-frame-decoding-at-inference">5.2 "No Future Frame Decoding at Inference" 设计</a>
+</li>
+<li class="toc-h3"><a href="#53-frozen-vlm-trainable-diffusion">5.3 Frozen VLM + Trainable Diffusion 的解耦</a>
+</li>
+<li class="toc-h3"><a href="#54-attention">5.4 Attention 可视化分析</a>
+</li>
+<li class="toc-h3"><a href="#55">5.5 视频伪影对比</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_6">六、代码实现解读</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#61">6.1 整体架构</a>
+</li>
+<li class="toc-h3"><a href="#62-key-class-imagewam">6.2 Key Class: ImageWAM（顶层模型）</a>
+</li>
+<li class="toc-h3"><a href="#63-key-class-motmixture-of-transformers">6.3 Key Class: MoT（Mixture of Transformers）</a>
+</li>
+<li class="toc-h3"><a href="#64-key-class-actiondit">6.4 Key Class: ActionDiT</a>
+</li>
+<li class="toc-h3"><a href="#65">6.5 训练流程</a>
+</li>
+<li class="toc-h3"><a href="#66">6.6 公式 → 代码映射</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_7">七、局限性</a>
+</li>
+<li class="toc-h2"><a href="#_8">八、关键概念速查</a>
+</ul></li>
+</li></ul>
+</nav>
+
+<main class="main-wrapper">
+  <div class="content-inner" id="main-content">
+<h1 id="imagewam-do-world-action-models-really-need-video-generation-or-just-image-editing">ImageWAM: Do World Action Models Really Need Video Generation, or Just Image Editing?</h1>
+<div class="article-stats">4,559 字 · English 896 词 · 约 18 分钟阅读</div>
+
+<blockquote>
+<p><strong>论文信息</strong>
+- 作者：Yuyang Zhang<em>, Wenyao Zhang</em>, Zekun Qi, He Zhang, Haitao Lin, Jingbo Zhang, Yao Mu, Xiaokang Yang, Wenjun Zeng, Xin Jin
+- 通讯作者：Xin Jin
+- 机构：上海交通大学（SJTU），东部理工学院（Eastern Institute of Technology），腾讯 Robotics X，清华大学，中关村实验室
+- 投稿方向：投稿（under review）
+- arXiv ID：2606.19531
+- 项目主页：https://zhangwenyao1.github.io/ImageWAM/
+- 代码：https://github.com/yuyangalin/ImageWAM
+- 日期：2026-06-25</p>
+<p>本文基于以下本地材料整理：</p>
+<ul>
+<li>论文 TeX 源码：<code>arXiv-2606.19531v1/</code>（主文件：<code>main.tex</code>，附录：<code>sup.tex</code>）</li>
+<li>论文插图：<code>arXiv-2606.19531v1/figs/*.pdf</code>（teaser0529.pdf、framework.pdf、exp.pdf、attention.pdf、imagevsvideo.pdf）</li>
+<li>官方代码：<code>ImageWAM/</code>（基于 FastWAM 框架，支持 FLUX.2 / OmniGen2 / Ovis-U1 三种图像编辑 backbone）</li>
+<li>本文图片导出目录：<code>assets/imagewam/</code></li>
+</ul>
+</blockquote>
+<hr />
+<p><img alt="图1：ImageWAM Teaser — 图像编辑 vs 视频生成做 WAM" src="assets/imagewam/teaser0529.jpg" /></p>
+<p><em>图1：ImageWAM 的核心主张对比图。上图 (a) 展示传统视频生成 WAM 的"先想象再行动"范式：模型需要预测从当前观测 o_t 到未来多帧 o_{t+1:t+H+1} 的完整视频轨迹，然后再从视频中提取信息来预测动作序列 a_{t:t+H}。这种范式有三个问题：① 需要生成稠密的多帧时空 token，推理成本高；② 大量模型容量浪费在行动无关的外观细节、背景变化和相机运动上；③ 生成的未来视频可能包含物理不一致的伪影，误导下游动作预测。下图 (b) 展示 ImageWAM 的方案：使用图像编辑 backbone 替代视频生成，模型只需预测从当前观测到目标状态的单帧变换 o_t → \hat{o}_{edit}，中间编辑去噪过程的 KV caches 作为紧凑的"世界动作上下文"直接输入 Action Expert（flow-matching Action DiT），推理时完全不解码未来帧。核心优势：1/4 延迟、1/6 FLOPs，同时保持竞争力。</em></p>
+<hr />
+<h2 id="_1">一、核心问题</h2>
+<p>当前 World Action Models（WAMs）普遍依赖视频生成模型作为世界动作推理的 backbone。典型的视频 WAM 遵循"先想象再行动"范式：</p>
+<div class="codehilite"><pre><span></span><code>视频 WAM: (当前观测 o_t, 语言指令 l) → 预测未来视频帧 ō_{t+1:t+H+1} → 预测动作 a_{t:t+H}
+</code></pre></div>
+
+<p>这个范式存在三个耦合的局限性：</p>
+<ol>
+<li>
+<p><strong>推理代价高昂</strong>：视频生成需要预测稠密的多帧未来 token（每帧包含大量空间 token），导致 inference latency 和 FLOPs 很高，难以满足实时控制需求。</p>
+</li>
+<li>
+<p><strong>容量浪费在行动无关细节上</strong>：视频生成模型必须建模完整场景演化——包括外观细节、背景变化、相机运动、时间平滑性等——这些与机器人下一步动作只有弱相关性。大量的模型容量被用于无关视觉细节。</p>
+</li>
+<li>
+<p><strong>长程未来想象引入错误</strong>：生成物理一致的未来视频本身就是困难的代理任务。对于精细操作任务中的微小接触事件、物体位移或构型变化，视频预测极易出错。如果未来视频是错的，基于其预测的动作也会被误导。</p>
+</li>
+</ol>
+<blockquote>
+<p><strong>ImageWAM 的核心论点</strong>：世界动作模型不需要完整的视频生成——来自图像编辑（image editing）模型的中间表征（KV caches）就可以提供足够的"世界动作上下文"，而且更高效、更聚焦于行动相关的视觉变化。</p>
+</blockquote>
+<hr />
+<h2 id="_2">二、核心思路 / 方法</h2>
+<h3 id="21">2.1 核心洞察：图像编辑 &gt; 视频生成</h3>
+<p>论文指出，图像编辑模型具有三个适用于机器人策略学习的天然优势：</p>
+<p><strong>优势一：指令到变化的对齐（Instruction-to-Change Alignment）。</strong> 图像编辑的预训练目标直接将语言指令与视觉变化耦合——模型需要理解"什么应该变化、在哪里变化、如何变化"。这与机器人策略的决策逻辑高度一致。</p>
+<p><strong>优势二：更简单且更行动相关的代理任务。</strong> 图像编辑只需要建模"当前状态 → 指令一致的目标状态"之间的视觉差异，而不是完整的时空轨迹。这避免了在无关时间细节上浪费容量。</p>
+<p><strong>优势三：更紧凑的推理路径。</strong> 策略可以使用图像编辑内部的编辑感知表征（KV caches）作为条件，而不需要在推理时解码完整的编辑图像。即：<strong>只提取中间特征，不解码最终图像</strong>。</p>
+<h3 id="22-imagewam">2.2 ImageWAM 架构</h3>
+<p><img alt="ImageWAM 框架" src="assets/imagewam/framework.jpg" /></p>
+<p><em>图 2：ImageWAM Pipeline 架构。给定语言指令 l 和当前观测 o_t，图像编辑 backbone（如 FLUX.2 / OmniGen2 / Ovis-U1）生成未来帧 o_{t+H+1}（仅训练时需要）。中间的编辑 KV caches 通过 MoT（Mixture of Transformers）joint attention 传递给 Action Expert（flow-matching Action DiT），Action Expert 同时以机器人状态（proprioception）和动作噪声为条件，预测未来动作序列 a_{t:t+H}。关键设计：推理时不解码编辑图像，只提取编辑 KV caches。</em></p>
+<p>ImageWAM 的总体流水线可以形式化为两步：</p>
+<div class="codehilite"><pre><span></span><code>训练时:  (o_t, l) → 编辑 backbone 去噪 → 编辑 KV caches → Action DiT → a_{t:t+H}
+推理时:  (o_t, l) → 编辑 backbone 单步前向 → 编辑 KV caches → Action DiT (3步去噪) → a_{t:t+H}
+</code></pre></div>
+
+<p>训练时的目标未来帧是 <span class="math inline">$\hat{o}_{\mathrm{edit}} \equiv \hat{o}_{t+H+1}$</span>，即当前观测在指令 <span class="math inline">$l$</span> 下执行动作循环 <span class="math inline">$H$</span> 步后的单帧目标状态。</p>
+<p>对比视频 WAM 的"多帧稠密预测"，ImageWAM 只预测一个目标端点帧，作为紧凑的世界动作中间件。</p>
+<h3 id="23-kv-caches">2.3 编辑 KV Caches 提取</h3>
+<p>训练时，随机采样一个编辑去噪步 <span class="math inline">$\tau$</span>，运行编辑 backbone 在该步的前向传播，收集每层 transformer 的 KV cache：</p>
+<div class="math display">$$\mathcal{C}_{\mathrm{edit}}^{\tau}
+=
+\left\{
+(K_{\ell}^{\tau}, V_{\ell}^{\tau})
+\right\}_{\ell=1}^{L}
+=
+f_{\mathrm{edit}}^{\tau}(o_t, l),$$</div>
+<p>其中 <span class="math inline">$L$</span> 是 transformer 层数。<span class="math inline">$\mathcal{C}_{\mathrm{edit}}^{\tau}$</span> 包含了 visual latent 经过语言指令交互后的信息——它编码了任务条件下的视觉变换信息，而不需要解码出最终的编辑图像。</p>
+<p>推理时，选择一个固定的编辑去噪步 <span class="math inline">$\tau^\star$</span>，执行一次编辑 backbone 前向传播得到 KV caches：</p>
+<div class="math display">$$\mathcal{C}_{\mathrm{edit}}^{\tau^\star}
+=
+f_{\mathrm{edit}}^{\tau^\star}(o_t, l).$$</div>
+<h3 id="24-action-expertflow-matching-action-dit">2.4 Action Expert（Flow-Matching Action DiT）</h3>
+<p>Action Expert 以编辑 KV caches 为条件，使用 flow matching 目标生成动作 chunk。动作 chunk 由 <span class="math inline">$H$</span> 个连续动作组成（LIBERO 和 RoboTwin 中 H=16）。</p>
+<p>推理时，Action DiT 在编辑 KV caches 条件下执行动作去噪（论文默认 3 步去噪），生成动作：</p>
+<div class="math display">$$\hat{\mathbf{a}}_{t:t+H}
+\sim
+p_\theta(
+\mathbf{a}_{t:t+H}
+\mid
+o_t, l, \mathcal{C}_{\mathrm{edit}}^{\tau^\star}
+).$$</div>
+<h3 id="25-motmixture-of-transformers-token">2.5 MoT（Mixture of Transformers）—— 四种 token 的联合注意力</h3>
+<p>MoT 是连接编辑 backbone 和 Action Expert 的核心架构。它将原有的自注意力机制扩展为四种 token 类型的联合自注意力：</p>
+<ol>
+<li><strong>语言上下文 token（Language Context）</strong>：VLM（Qwen2.5-VL-3B / Qwen3-4B/8B）编码的指令和视觉理解嵌入</li>
+<li><strong>视觉条件 token（Visual Condition）</strong>：当前观测 <span class="math inline">$o_t$</span> 经 VAE 编码后的 latent，作为编辑 backbone 的 reference image</li>
+<li><strong>视觉预测 token（Visual Prediction）</strong>：目标未来帧的噪声 latent（训练时逐渐去噪）</li>
+<li><strong>动作 token（Action）</strong>：Action DiT 中 flow matching 去噪的动作嵌入</li>
+</ol>
+<p>注意力 mask 的设计：</p>
+<ul>
+<li><strong>动作 token</strong>（Action）可以单向关注其他三种 token——它能"看到"语言、视觉条件和视觉预测的信息</li>
+<li><strong>噪声视觉 token</strong>（Visual Prediction）只关注上下文 token，不干扰干净的上下文特征</li>
+</ul>
+<blockquote>
+<p><strong>关键设计</strong>：Action token 是唯一能"看到"全部四种 token 的角色。这确保了动作预测能够同时利用语言理解、当前视觉状态和未来视觉变换信息，而不会让视觉预测信息的噪声干扰去噪过程。</p>
+</blockquote>
+<h3 id="26-three-backbone-variants">2.6 Three Backbone Variants</h3>
+<p>ImageWAM 支持三种图像编辑 backbone，均使用类似架构设计：</p>
+<table>
+<thead>
+<tr>
+<th>Variant</th>
+<th>LLM Backbone</th>
+<th>Image DiT</th>
+<th>Action DiT 参数量</th>
+<th>特点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>FLUX.2</strong> 4B</td>
+<td>Qwen3-4B</td>
+<td>FLUX.2 klein-base-4B</td>
+<td>642M</td>
+<td>推荐，性能最强</td>
+</tr>
+<tr>
+<td><strong>FLUX.2</strong> 9B</td>
+<td>Qwen3-8B</td>
+<td>FLUX.2 klein-base-9B</td>
+<td>952M</td>
+<td>更大 backbone，鲁棒性提升</td>
+</tr>
+<tr>
+<td><strong>OmniGen2</strong></td>
+<td>Qwen2.5-VL-3B</td>
+<td>OmniGen2 DiT</td>
+<td>760M</td>
+<td>基于 Qwen2.5-VL</td>
+</tr>
+<tr>
+<td><strong>Ovis-U1</strong></td>
+<td>Qwen3-1.7B</td>
+<td>Ovis-U1 DiT (1.1B)</td>
+<td>1.1B</td>
+<td>最小变体，适合资源受限场景</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="_3">三、训练目标</h2>
+<h3 id="31-image-flow-matching-loss">3.1 图像编辑目标（Image Flow Matching Loss）</h3>
+<p>编辑分支训练来预测任务相关的未来端点帧。设 <span class="math inline">$o_{t+H+1}$</span> 为目标未来观测，<span class="math inline">$z^{*}_{t+H+1}=E_{\mathrm{vae}}(o_{t+H+1})$</span> 为 VAE 编码的 latent。采样图像噪声 <span class="math inline">$\epsilon_z \sim \mathcal{N}(0,I)$</span> 和图像 flow time <span class="math inline">$r \in (0,1)$</span>，构造插值 latent：</p>
+<div class="math display">$$z_r
+=
+(1-r) z^{*}_{t+H+1}
++
+r \epsilon_z .$$</div>
+<p>图像 diffusion 分支预测速度场：</p>
+<div class="math display">$$\mathcal{L}_{\mathrm{img}}
+=
+\mathbb{E}_{z^{*}, \epsilon_z, r}
+\left[
+\left\|
+u_\phi(
+z_r,
+r
+\mid
+o_t, l
+)
+-
+(\epsilon_z - z^{*}_{t+K})
+\right\|_2^2
+\right],$$</div>
+<p>其中 <span class="math inline">$u_\phi$</span> 是图像分支的速度预测器。</p>
+<h3 id="32-action-flow-matching-loss">3.2 Action Flow Matching Loss</h3>
+<p>设 <span class="math inline">$\mathbf{a}^{*}_{t:t+H}$</span> 为 expert action chunk，<span class="math inline">$\epsilon_a \sim \mathcal{N}(0,I)$</span> 为高斯噪声。采样 action flow time <span class="math inline">$s \in (0,1)$</span>，构造插值动作样本：</p>
+<div class="math display">$$\mathbf{a}_s
+=
+(1-s)\mathbf{a}^{*}_{t:t+H}
++
+s\epsilon_a .$$</div>
+<p>以当前观测、语言指令和编辑 KV caches <span class="math inline">$\mathcal{C}_{\mathrm{edit}}^{\tau}$</span> 为条件，Action Expert 预测速度场：</p>
+<div class="math display">$$\mathcal{L}_{\mathrm{act}}
+=
+\mathbb{E}_{\mathbf{a}^{*}, \epsilon_a, s, \tau}
+\left[
+\left\|
+v_\theta(
+\mathbf{a}_s,
+s
+\mid
+o_t, l, \mathcal{C}_{\mathrm{edit}}^{\tau}
+)
+-
+(\epsilon_a - \mathbf{a}^{*}_{t:t+H})
+\right\|_2^2
+\right].$$</div>
+<h3 id="33">3.3 联合优化</h3>
+<p>联合优化图像分支和 Action Expert：</p>
+<div class="math display">$$\mathcal{L} = \mathcal{L}_{\mathrm{act}} + \mathcal{L}_{\mathrm{img}}.$$</div>
+<p>关键设计：</p>
+<ul>
+<li>随机采样 <span class="math inline">$\tau$</span>（编辑去噪步数）在训练时让 Action Expert 接触到不同去噪阶段的编辑 cache，增强鲁棒性</li>
+<li>冻结 VLM 和 multimodal understanding 组件，仅训练 diffusion 图像分支和 Action Expert</li>
+<li>Action DiT 采用 weight-copy 初始化：从编辑 backbone 复制权重并插值到 Action DiT 的尺寸</li>
+</ul>
+<h3 id="34-prefix-only-inference">3.4 高效推理设计（Prefix-Only Inference）</h3>
+<p>与 FastWAM 类似的 prefix-only attention 策略：</p>
+<ol>
+<li><strong>训练时</strong>：编辑 backbone 正常执行去噪，提取中间层 KV caches</li>
+<li><strong>推理时</strong>：<ul>
+<li>不运行完整去噪轨迹，只选固定 <span class="math inline">$\tau^\star$</span></li>
+<li>一次编辑 backbone 前向传播 → 提取 KV caches</li>
+<li>Action Expert 在这些 cache 上执行 3 步 flow matching 去噪生成动作</li>
+<li><strong>不编辑未来帧、不解码编辑图像</strong></li>
+</ul>
+</li>
+</ol>
+<p>这种设计将推理 latency 从视频 WAM 的 1081ms 降到 263ms（1/4），FLOPs 从 63.65 降到 9.72（1/6）。</p>
+<hr />
+<h2 id="_4">四、实验与结果</h2>
+<h3 id="41-robotwin-20">4.1 RoboTwin 2.0 结果</h3>
+<p><img alt="实验设置概览" src="assets/imagewam/exp.jpg" /></p>
+<p><em>图 3：实验设置概览。左半部分展示 RoboTwin 2.0（双臂操作，50+ 任务，Clean / Randomized 两种评估设置）、LIBERO（Spatial / Object / Goal / Long 四个 suite）和 LIBERO-Plus（7 种扰动维度，373 个实验变体）的仿真环境。右半部分展示真实机器人实验的四项任务（堆叠三个碗、折叠毛巾、打开抽屉并存放标记笔、将杯子挂到架子上），使用 Dobot XTrainer 双臂机器人平台。</em></p>
+<p><strong>RoboTwin 2.0 主表</strong>（Clean 和 Randomized 两种评估设置）：</p>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th style="text-align: center;">P.T.</th>
+<th style="text-align: center;">Clean</th>
+<th style="text-align: center;">Rand.</th>
+<th style="text-align: center;">Avg.</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><span class="math inline">$\pi_0$</span></td>
+<td style="text-align: center;">Yes</td>
+<td style="text-align: center;">65.92</td>
+<td style="text-align: center;">58.40</td>
+<td style="text-align: center;">62.16</td>
+</tr>
+<tr>
+<td><span class="math inline">$\pi_{0.5}$</span></td>
+<td style="text-align: center;">Yes</td>
+<td style="text-align: center;">82.74</td>
+<td style="text-align: center;">76.76</td>
+<td style="text-align: center;">79.75</td>
+</tr>
+<tr>
+<td>ABot-M0</td>
+<td style="text-align: center;">No</td>
+<td style="text-align: center;">81.20</td>
+<td style="text-align: center;">80.40</td>
+<td style="text-align: center;">80.80</td>
+</tr>
+<tr>
+<td>Motus</td>
+<td style="text-align: center;">Yes</td>
+<td style="text-align: center;">88.66</td>
+<td style="text-align: center;">87.02</td>
+<td style="text-align: center;">87.80</td>
+</tr>
+<tr>
+<td>LingBot-VA</td>
+<td style="text-align: center;">Yes</td>
+<td style="text-align: center;">92.90</td>
+<td style="text-align: center;">91.50</td>
+<td style="text-align: center;">92.20</td>
+</tr>
+<tr>
+<td>FastWAM</td>
+<td style="text-align: center;">No</td>
+<td style="text-align: center;">91.88</td>
+<td style="text-align: center;">91.78</td>
+<td style="text-align: center;">91.83</td>
+</tr>
+<tr>
+<td><strong>ImageWAM (Ours)</strong></td>
+<td style="text-align: center;"><strong>No</strong></td>
+<td style="text-align: center;"><strong>93.20</strong></td>
+<td style="text-align: center;"><strong>93.56</strong></td>
+<td style="text-align: center;"><strong>93.38</strong></td>
+</tr>
+</tbody>
+</table>
+<p>P.T. = Policy Pretraining（额外的策略预训练，通常包含海量机器人数据微调）。ImageWAM 没有使用任何额外策略预训练，仅在下游 benchmark 数据上训练，就超越了所有 VLA 和 WAM 基线。</p>
+<blockquote>
+<p><strong>关键发现</strong>：ImageWAM 在 Randomized 设置下（93.56%）甚至高于 Clean 设置（93.20%），说明编辑 backbone 提供的 source-conditioned 变换特征对场景随机化具有天然的鲁棒性。</p>
+</blockquote>
+<h3 id="42-libero">4.2 LIBERO 结果</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th style="text-align: center;">P.T.</th>
+<th style="text-align: center;">Spatial</th>
+<th style="text-align: center;">Object</th>
+<th style="text-align: center;">Goal</th>
+<th style="text-align: center;">Long</th>
+<th style="text-align: center;">Avg.</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>OpenVLA</td>
+<td style="text-align: center;">Yes</td>
+<td style="text-align: center;">84.7</td>
+<td style="text-align: center;">88.4</td>
+<td style="text-align: center;">79.2</td>
+<td style="text-align: center;">53.7</td>
+<td style="text-align: center;">76.5</td>
+</tr>
+<tr>
+<td>GR00T N1</td>
+<td style="text-align: center;">Yes</td>
+<td style="text-align: center;">84.7</td>
+<td style="text-align: center;">88.4</td>
+<td style="text-align: center;">79.2</td>
+<td style="text-align: center;">53.7</td>
+<td style="text-align: center;">76.5</td>
+</tr>
+<tr>
+<td><span class="math inline">$\pi_0$</span></td>
+<td style="text-align: center;">Yes</td>
+<td style="text-align: center;">96.8</td>
+<td style="text-align: center;">98.8</td>
+<td style="text-align: center;">95.8</td>
+<td style="text-align: center;">85.2</td>
+<td style="text-align: center;">94.1</td>
+</tr>
+<tr>
+<td><span class="math inline">$\pi_{0.5}$</span></td>
+<td style="text-align: center;">Yes</td>
+<td style="text-align: center;">98.8</td>
+<td style="text-align: center;">98.2</td>
+<td style="text-align: center;">98.0</td>
+<td style="text-align: center;">92.4</td>
+<td style="text-align: center;">96.9</td>
+</tr>
+<tr>
+<td>LingBot-VA</td>
+<td style="text-align: center;">Yes</td>
+<td style="text-align: center;">98.5</td>
+<td style="text-align: center;">99.6</td>
+<td style="text-align: center;">97.2</td>
+<td style="text-align: center;">98.5</td>
+<td style="text-align: center;">98.5</td>
+</tr>
+<tr>
+<td>Motus</td>
+<td style="text-align: center;">Yes</td>
+<td style="text-align: center;">96.8</td>
+<td style="text-align: center;">99.8</td>
+<td style="text-align: center;">96.6</td>
+<td style="text-align: center;">97.6</td>
+<td style="text-align: center;">97.7</td>
+</tr>
+<tr>
+<td>FastWAM</td>
+<td style="text-align: center;">No</td>
+<td style="text-align: center;">98.2</td>
+<td style="text-align: center;">100.0</td>
+<td style="text-align: center;">97.0</td>
+<td style="text-align: center;">95.2</td>
+<td style="text-align: center;">97.6</td>
+</tr>
+<tr>
+<td><strong>ImageWAM (Ours)</strong></td>
+<td style="text-align: center;"><strong>No</strong></td>
+<td style="text-align: center;"><strong>97.2</strong></td>
+<td style="text-align: center;"><strong>99.2</strong></td>
+<td style="text-align: center;"><strong>98.8</strong></td>
+<td style="text-align: center;"><strong>98.4</strong></td>
+<td style="text-align: center;"><strong>98.4</strong></td>
+</tr>
+</tbody>
+</table>
+<p>LIBERO-Long 长程任务 98.4%，接近 SOTA 的 LingBot-VA（98.5%），但 ImageWAM 没有使用任何额外策略预训练。</p>
+<h3 id="43-libero-plus-flux2-4b">4.3 LIBERO-Plus 结果（FLUX.2 4B）</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th style="text-align: center;">P.T.</th>
+<th style="text-align: center;">Camera</th>
+<th style="text-align: center;">Robot</th>
+<th style="text-align: center;">Language</th>
+<th style="text-align: center;">Light</th>
+<th style="text-align: center;">Background</th>
+<th style="text-align: center;">Noise</th>
+<th style="text-align: center;">Layout</th>
+<th style="text-align: center;">Avg</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>UniVLA</td>
+<td style="text-align: center;">Yes</td>
+<td style="text-align: center;">1.8</td>
+<td style="text-align: center;">46.2</td>
+<td style="text-align: center;">69.6</td>
+<td style="text-align: center;">69.0</td>
+<td style="text-align: center;">81.0</td>
+<td style="text-align: center;">21.2</td>
+<td style="text-align: center;">31.9</td>
+<td style="text-align: center;">42.9</td>
+</tr>
+<tr>
+<td>OpenVLA-OFT</td>
+<td style="text-align: center;">Yes</td>
+<td style="text-align: center;">56.4</td>
+<td style="text-align: center;">31.9</td>
+<td style="text-align: center;">79.5</td>
+<td style="text-align: center;">88.7</td>
+<td style="text-align: center;">93.3</td>
+<td style="text-align: center;">75.8</td>
+<td style="text-align: center;">74.2</td>
+<td style="text-align: center;">69.6</td>
+</tr>
+<tr>
+<td><span class="math inline">$\pi_0$</span></td>
+<td style="text-align: center;">Yes</td>
+<td style="text-align: center;">13.8</td>
+<td style="text-align: center;">6.0</td>
+<td style="text-align: center;">58.8</td>
+<td style="text-align: center;">85.0</td>
+<td style="text-align: center;">81.4</td>
+<td style="text-align: center;">79.0</td>
+<td style="text-align: center;">68.9</td>
+<td style="text-align: center;">53.6</td>
+</tr>
+<tr>
+<td><span class="math inline">$\pi_0$</span>-Fast</td>
+<td style="text-align: center;">Yes</td>
+<td style="text-align: center;">65.1</td>
+<td style="text-align: center;">21.6</td>
+<td style="text-align: center;">61.0</td>
+<td style="text-align: center;">73.2</td>
+<td style="text-align: center;">73.2</td>
+<td style="text-align: center;">74.4</td>
+<td style="text-align: center;">68.8</td>
+<td style="text-align: center;">61.6</td>
+</tr>
+<tr>
+<td>WorldVLA</td>
+<td style="text-align: center;">Yes</td>
+<td style="text-align: center;">0.1</td>
+<td style="text-align: center;">27.9</td>
+<td style="text-align: center;">41.6</td>
+<td style="text-align: center;">43.7</td>
+<td style="text-align: center;">17.1</td>
+<td style="text-align: center;">10.9</td>
+<td style="text-align: center;">38.0</td>
+<td style="text-align: center;">25.0</td>
+</tr>
+<tr>
+<td>FastWAM</td>
+<td style="text-align: center;">No</td>
+<td style="text-align: center;">16.4</td>
+<td style="text-align: center;">44.5</td>
+<td style="text-align: center;">68.9</td>
+<td style="text-align: center;">78.2</td>
+<td style="text-align: center;">53.7</td>
+<td style="text-align: center;">37.7</td>
+<td style="text-align: center;">60.7</td>
+<td style="text-align: center;">51.5</td>
+</tr>
+<tr>
+<td><strong>ImageWAM (OmniGen2)</strong></td>
+<td style="text-align: center;"><strong>No</strong></td>
+<td style="text-align: center;">80.0</td>
+<td style="text-align: center;">49.2</td>
+<td style="text-align: center;">70.9</td>
+<td style="text-align: center;">82.6</td>
+<td style="text-align: center;">69.4</td>
+<td style="text-align: center;">77.1</td>
+<td style="text-align: center;">71.8</td>
+<td style="text-align: center;">71.8</td>
+</tr>
+<tr>
+<td><strong>ImageWAM (Ovis-U1)</strong></td>
+<td style="text-align: center;"><strong>No</strong></td>
+<td style="text-align: center;">63.3</td>
+<td style="text-align: center;">58.4</td>
+<td style="text-align: center;">75.4</td>
+<td style="text-align: center;">86.3</td>
+<td style="text-align: center;">66.7</td>
+<td style="text-align: center;">75.2</td>
+<td style="text-align: center;">74.6</td>
+<td style="text-align: center;">71.2</td>
+</tr>
+<tr>
+<td><strong>ImageWAM (FLUX.2 4B)</strong></td>
+<td style="text-align: center;"><strong>No</strong></td>
+<td style="text-align: center;"><strong>80.8</strong></td>
+<td style="text-align: center;"><strong>50.3</strong></td>
+<td style="text-align: center;"><strong>91.4</strong></td>
+<td style="text-align: center;"><strong>98.1</strong></td>
+<td style="text-align: center;"><strong>85.5</strong></td>
+<td style="text-align: center;"><strong>93.8</strong></td>
+<td style="text-align: center;"><strong>80.5</strong></td>
+<td style="text-align: center;"><strong>83.1</strong></td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>关键发现</strong>：FLUX.2 4B 变体在不使用任何额外策略预训练的情况下，以 83.1% 的平均成功率大幅超越所有基线。在 Language（91.4%）、Light（98.1%）、Noise（93.8%）和 Layout（80.5%）等多个扰动维度上均为最优。</p>
+</blockquote>
+<h3 id="44-libero-plus-backbone">4.4 LIBERO-Plus 更大 backbone 对比</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th style="text-align: center;">P.T.</th>
+<th style="text-align: center;">Camera</th>
+<th style="text-align: center;">Robot</th>
+<th style="text-align: center;">Language</th>
+<th style="text-align: center;">Light</th>
+<th style="text-align: center;">Background</th>
+<th style="text-align: center;">Noise</th>
+<th style="text-align: center;">Layout</th>
+<th style="text-align: center;">Avg</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ImageWAM (FLUX.2 4B)</td>
+<td style="text-align: center;">No</td>
+<td style="text-align: center;">80.8</td>
+<td style="text-align: center;">50.3</td>
+<td style="text-align: center;">91.4</td>
+<td style="text-align: center;">98.1</td>
+<td style="text-align: center;">85.5</td>
+<td style="text-align: center;">93.8</td>
+<td style="text-align: center;">80.5</td>
+<td style="text-align: center;"><strong>83.1</strong></td>
+</tr>
+<tr>
+<td>ImageWAM (FLUX.2 9B)</td>
+<td style="text-align: center;">No</td>
+<td style="text-align: center;">79.8</td>
+<td style="text-align: center;">58.7</td>
+<td style="text-align: center;">95.2</td>
+<td style="text-align: center;">96.1</td>
+<td style="text-align: center;">91.2</td>
+<td style="text-align: center;">93.3</td>
+<td style="text-align: center;">83.1</td>
+<td style="text-align: center;"><strong>85.2</strong></td>
+</tr>
+</tbody>
+</table>
+<p>FLUX.2 9B 将平均成功率从 83.1% 提升到 85.2%，主要贡献来自 Robot、Language、Background 和 Layout 扰动维度。但 Camera、Light 和 Noise 维度没有单调提升——说明 backbone scaling 的收益与具体扰动类型在编辑 cache 中的对齐程度有关。</p>
+<h3 id="45">4.5 真实机器人实验结果</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th style="text-align: center;">T1 (Stack Three Bowls)</th>
+<th style="text-align: center;">T2 (Fold Towel)</th>
+<th style="text-align: center;">T3 (Open Drawer &amp; Store Marker)</th>
+<th style="text-align: center;">T4 (Hang Cup On Rack)</th>
+<th style="text-align: center;">Avg</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><span class="math inline">$\pi_0$</span></td>
+<td style="text-align: center;">57</td>
+<td style="text-align: center;">58</td>
+<td style="text-align: center;">54</td>
+<td style="text-align: center;">54</td>
+<td style="text-align: center;">55.8</td>
+</tr>
+<tr>
+<td><span class="math inline">$\pi_{0.5}$</span></td>
+<td style="text-align: center;">83</td>
+<td style="text-align: center;">77</td>
+<td style="text-align: center;">74</td>
+<td style="text-align: center;">55</td>
+<td style="text-align: center;">72.3</td>
+</tr>
+<tr>
+<td>FastWAM</td>
+<td style="text-align: center;">88</td>
+<td style="text-align: center;">75</td>
+<td style="text-align: center;">77</td>
+<td style="text-align: center;">76</td>
+<td style="text-align: center;">79.0</td>
+</tr>
+<tr>
+<td><strong>ImageWAM (Ours)</strong></td>
+<td style="text-align: center;"><strong>94</strong></td>
+<td style="text-align: center;"><strong>84</strong></td>
+<td style="text-align: center;"><strong>78</strong></td>
+<td style="text-align: center;"><strong>82</strong></td>
+<td style="text-align: center;"><strong>84.5</strong></td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>关键发现</strong>：ImageWAM 在所有四项真实任务上均为最优。最大提升在 T2（折叠毛巾）：比 FastWAM 高 9 个百分点（84% vs 75%），说明编辑上下文对可变形物体的视觉变换推理尤其有效。T3（打开抽屉 + 存放标记笔）上，WAM 类方法（FastWAM 77%, ImageWAM 78%）远超 <span class="math inline">$\pi_0$</span>（54%），说明世界动作推理有助于缓解视觉遮挡的影响。</p>
+</blockquote>
+<h3 id="46">4.6 推理效率对比</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th style="text-align: center;">Latency (ms)</th>
+<th style="text-align: center;">TFLOPs</th>
+<th style="text-align: center;">Intermediate Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>FastWAM-IDM</td>
+<td style="text-align: center;">1081</td>
+<td style="text-align: center;">63.65</td>
+<td style="text-align: center;">Video</td>
+</tr>
+<tr>
+<td>FastWAM (1 Step)</td>
+<td style="text-align: center;">302</td>
+<td style="text-align: center;">13.21</td>
+<td style="text-align: center;">Cache</td>
+</tr>
+<tr>
+<td><strong>ImageWAM (Ours)</strong></td>
+<td style="text-align: center;"><strong>263</strong></td>
+<td style="text-align: center;"><strong>9.72</strong></td>
+<td style="text-align: center;"><strong>Cache</strong></td>
+</tr>
+</tbody>
+</table>
+<p>ImageWAM 将 latency 降到 263ms（视频 WAM 的 1/4），FLOPs 降到 9.72（视频 WAM 的 1/6）。</p>
+<h3 id="47">4.7 推理延迟优化（附录）</h3>
+<table>
+<thead>
+<tr>
+<th>Variant</th>
+<th style="text-align: center;">Latency (ms)</th>
+<th style="text-align: center;">Speedup</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>FastWAM (1x Video Denoise)</td>
+<td style="text-align: center;">302</td>
+<td style="text-align: center;">1.00x</td>
+</tr>
+<tr>
+<td>ImageWAM (1x Video Denoise)</td>
+<td style="text-align: center;">263</td>
+<td style="text-align: center;">1.15x</td>
+</tr>
+<tr>
+<td>FastWAM (Prefix Only)</td>
+<td style="text-align: center;">194</td>
+<td style="text-align: center;">1.56x</td>
+</tr>
+<tr>
+<td>+ Compiled</td>
+<td style="text-align: center;">80</td>
+<td style="text-align: center;">3.78x</td>
+</tr>
+<tr>
+<td>ImageWAM (Prefix Only)</td>
+<td style="text-align: center;">198</td>
+<td style="text-align: center;">1.53x</td>
+</tr>
+<tr>
+<td>+ Action Loop Compile</td>
+<td style="text-align: center;">85</td>
+<td style="text-align: center;">3.55x</td>
+</tr>
+<tr>
+<td>+ Image Prefill Compile</td>
+<td style="text-align: center;">77</td>
+<td style="text-align: center;">3.92x</td>
+</tr>
+<tr>
+<td>+ Action Static Graph</td>
+<td style="text-align: center;">69</td>
+<td style="text-align: center;">4.38x</td>
+</tr>
+</tbody>
+</table>
+<p>使用 torch.compile + static CUDA graphs 后，ImageWAM 推理延迟可降至 69ms，相比 FastWAM 基线实现 4.38x 加速。</p>
+<h3 id="48-">4.8 与统一理解-生成模型的对比</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th style="text-align: center;">P.T.</th>
+<th style="text-align: center;">LIBERO</th>
+<th style="text-align: center;">RoboTwin2.0 Clean Only</th>
+<th style="text-align: center;">RoboTwin2.0 Clean2Hard</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>UniVLA</td>
+<td style="text-align: center;">Yes</td>
+<td style="text-align: center;">95.5</td>
+<td style="text-align: center;">--</td>
+<td style="text-align: center;">--</td>
+</tr>
+<tr>
+<td>BagelVLA (w/ K.F.)</td>
+<td style="text-align: center;">Yes</td>
+<td style="text-align: center;">--</td>
+<td style="text-align: center;">75.3</td>
+<td style="text-align: center;">20.9</td>
+</tr>
+<tr>
+<td>BagelVLA (w/o K.F.)</td>
+<td style="text-align: center;">Yes</td>
+<td style="text-align: center;">--</td>
+<td style="text-align: center;">56.7</td>
+<td style="text-align: center;">15.9</td>
+</tr>
+<tr>
+<td><strong>ImageWAM (Ours)</strong></td>
+<td style="text-align: center;"><strong>No</strong></td>
+<td style="text-align: center;"><strong>98.4</strong></td>
+<td style="text-align: center;"><strong>84.4</strong></td>
+<td style="text-align: center;"><strong>18.3</strong></td>
+</tr>
+</tbody>
+</table>
+<p>在相似的 non-keyframe 未来预测设置下，不使用额外策略预训练的 ImageWAM 大幅超过统一模型（UniVLA 和 BagelVLA）。</p>
+<h3 id="49">4.9 训练超参数与成本</h3>
+<p><strong>通用训练超参数</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th style="text-align: center;">值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GPUs</td>
+<td style="text-align: center;">8 NVIDIA H20</td>
+</tr>
+<tr>
+<td>分布式策略</td>
+<td style="text-align: center;">DeepSpeed ZeRO-1（FLUX.2 9B 使用 ZeRO-2）</td>
+</tr>
+<tr>
+<td>精度</td>
+<td style="text-align: center;">bf16</td>
+</tr>
+<tr>
+<td>优化器</td>
+<td style="text-align: center;">AdamW</td>
+</tr>
+<tr>
+<td>学习率</td>
+<td style="text-align: center;"><span class="math inline">$1 \times 10^{-4}$</span></td>
+</tr>
+<tr>
+<td>Weight decay</td>
+<td style="text-align: center;"><span class="math inline">$1 \times 10^{-2}$</span></td>
+</tr>
+<tr>
+<td>LR scheduler</td>
+<td style="text-align: center;">Warmup cosine</td>
+</tr>
+<tr>
+<td>Warmup steps</td>
+<td style="text-align: center;"><span class="math inline">$0.05 T_{\mathrm{total}}$</span></td>
+</tr>
+<tr>
+<td>最小 LR</td>
+<td style="text-align: center;"><span class="math inline">$0.01 \times \mathrm{lr}$</span></td>
+</tr>
+<tr>
+<td>Gradient clipping</td>
+<td style="text-align: center;">1.0</td>
+</tr>
+</tbody>
+</table>
+<p><strong>数据集特定配置</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th style="text-align: center;">LIBERO</th>
+<th style="text-align: center;">RoboTwin</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>输入视图数</td>
+<td style="text-align: center;">2</td>
+<td style="text-align: center;">3</td>
+</tr>
+<tr>
+<td>视图布局</td>
+<td style="text-align: center;">水平拼接</td>
+<td style="text-align: center;">腕部水平 + 垂直拼接</td>
+</tr>
+<tr>
+<td>输入分辨率</td>
+<td style="text-align: center;"><span class="math inline">$224 \times 448$</span></td>
+<td style="text-align: center;"><span class="math inline">$288 \times 256$</span></td>
+</tr>
+<tr>
+<td>未来帧预测步</td>
+<td style="text-align: center;">16</td>
+<td style="text-align: center;">16</td>
+</tr>
+<tr>
+<td>Action chunk 长度</td>
+<td style="text-align: center;">16</td>
+<td style="text-align: center;">16</td>
+</tr>
+<tr>
+<td>训练 epoch</td>
+<td style="text-align: center;">10</td>
+<td style="text-align: center;">5</td>
+</tr>
+</tbody>
+</table>
+<p><strong>训练成本</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>Benchmark</th>
+<th style="text-align: center;">Model</th>
+<th style="text-align: center;">Time</th>
+<th style="text-align: center;">Batch/GPU</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>LIBERO</td>
+<td style="text-align: center;">OmniGen2</td>
+<td style="text-align: center;">18 hours</td>
+<td style="text-align: center;">12</td>
+</tr>
+<tr>
+<td>LIBERO</td>
+<td style="text-align: center;">Ovis-U1</td>
+<td style="text-align: center;">18 hours</td>
+<td style="text-align: center;">16</td>
+</tr>
+<tr>
+<td>LIBERO</td>
+<td style="text-align: center;">FLUX.2 4B</td>
+<td style="text-align: center;">18 hours</td>
+<td style="text-align: center;">10</td>
+</tr>
+<tr>
+<td>LIBERO</td>
+<td style="text-align: center;">FLUX.2 9B</td>
+<td style="text-align: center;">1.6 days</td>
+<td style="text-align: center;">12</td>
+</tr>
+<tr>
+<td>RoboTwin</td>
+<td style="text-align: center;">OmniGen2</td>
+<td style="text-align: center;">5 days</td>
+<td style="text-align: center;">48</td>
+</tr>
+<tr>
+<td>RoboTwin</td>
+<td style="text-align: center;">FLUX.2 4B</td>
+<td style="text-align: center;">5 days</td>
+<td style="text-align: center;">48</td>
+</tr>
+<tr>
+<td>Real-World</td>
+<td style="text-align: center;">OmniGen2</td>
+<td style="text-align: center;">18 hours</td>
+<td style="text-align: center;">16</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="_5">五、关键洞察与技术亮点</h2>
+<h3 id="51-wam">5.1 为什么图像编辑 &lt; 视频生成做 WAM</h3>
+<p>论文的核心论点可以从三个维度理解：</p>
+<p><strong>1. 表征密度（Representation Density）。</strong> 视频 WAM 需要为多个未来帧的每个空间位置生成 token——一个 <span class="math inline">$T \times H \times W$</span> 的时空网格。ImageWAM 只需要一组层级的 KV caches（<span class="math inline">$L$</span> 层 × 每层的 key/value 序列）。后者的维度远小于前者，同时保留了足够的视觉变换信息用于动作预测。</p>
+<p><strong>2. 信息聚焦（Information Focus）。</strong> 视频生成必须建模所有视觉细节（背景、光照、纹理等），而图像编辑天然专注于"发生了什么变化"。对于操作任务，成功的决策通常只需要理解"物体被移动到哪里""夹爪与物体的接触点"等变化信息。编辑模型的预训练目标恰好强化了这种 change-centric 的表示能力。</p>
+<p><strong>3. 推理效率（Inference Efficiency）。</strong> 图像编辑 backbone 可以在推理时不解码最终图像——只提取中间 KV caches → 动作预测。而视频 WAM 必须执行完整的多步去噪才能得到表征。这导致 ImageWAM 的延迟只有视频 WAM 的 1/4，FLOPs 只有 1/6。</p>
+<h3 id="52-no-future-frame-decoding-at-inference">5.2 "No Future Frame Decoding at Inference" 设计</h3>
+<p>这是 ImageWAM 最重要的工程设计决策：</p>
+<div class="codehilite"><pre><span></span><code>训练时: 编辑 backbone 执行完整去噪 → 提取过程中所有层的 KV caches → Action Expert 以 KV caches 为条件
+推理时: 编辑 backbone 仅执行一次前向传播 → 提取单步 KV caches → Action Expert 以 KV caches 为条件生成动作
+        不执行编辑图像解码、不产生最终编辑图像
+</code></pre></div>
+
+<p>这个设计意味着 ImageWAM 在推理时<strong>完全不需要运行 diffusion 去噪链</strong>，只需要一次 transformer 前向即可。对比视频 WAM（需要多次去噪步来生成多帧未来），这是 100 倍以上的计算节省。</p>
+<h3 id="53-frozen-vlm-trainable-diffusion">5.3 Frozen VLM + Trainable Diffusion 的解耦</h3>
+<p>ImageWAM 保持 VLM 组件的冻结，只训练 diffusion 图像分支和 Action Expert：</p>
+<ul>
+<li><strong>冻结 VLM</strong>（Qwen2.5-VL / Qwen3）：提供稳定的语言-视觉 conditioning。VLM 的多模态理解能力来自大规模预训练，不需要在下游任务中更新</li>
+<li><strong>可训练 Diffusion 分支</strong>：学习预测任务相关的未来端点帧，产生对动作预测有用的编辑 caches</li>
+<li><strong>Action Expert</strong>：直接接受 RL 风格的策略学习信号</li>
+</ul>
+<p>这种解耦设计避免了下游任务训练破坏 VLM 的通用理解能力，同时也利用了 VLM 的大规模预训练。与统一理解-生成模型（如 UniVLA 和 BagelVLA）相比，这种解耦避免了理解和生成两种目标之间的干扰。</p>
+<h3 id="54-attention">5.4 Attention 可视化分析</h3>
+<p><img alt="Attention 可视化对比" src="assets/imagewam/attention.jpg" /></p>
+<p><em>图 4：Attention 可视化对比——ImageWAM vs FastWAM。左半边展示 ImageWAM（FLUX.2 4B）的 action token attention 热力图，右半边展示 FastWAM 的 attention 热力图。每条水平线对应一个动作 token（action chunk 长度为 16 时共 16 行），横轴为条件序列的 token 位置。ImageWAM 的 attention 集中在任务相关的变化区域（操作物体、目标位置、接触区域），而 FastWAM 的 attention 更分散，覆盖了更大的背景区域。这说明编辑 caches 编码了 source-grounded 且 change-centric 的视觉信息，为 Action Expert 提供了更精准的上下文。</em></p>
+<h3 id="55">5.5 视频伪影对比</h3>
+<p><img alt="视频生成伪影对比" src="assets/imagewam/imagevsvideo.jpg" /></p>
+<p><em>图 5：未来视频伪影可能误导动作预测。图中展示了一个视频 WAM 基线的失败案例：生成的未来帧在任务相关物体周围出现明显的伪影（几何形变、空间布局不一致），这些伪影作为动作条件会导致策略失败。ImageWAM 避免了稠密未来视频的想象，直接将紧凑的图像编辑 caches 作为动作条件上下文。上方（Video-WAM）展示了两个时间步的未来帧：在时间步 N 帧后，生成的物体表面出现扭曲和模糊；在时间步 N+K 帧后，物体的几何形状进一步失真、空间关系不再符合物理规律。下方（ImageWAM，Ours）标注为"没有未来帧生成"——因为 ImageWAM 不解码任何未来帧，所以不会出现这种伪影累积问题。</em></p>
+<hr />
+<h2 id="_6">六、代码实现解读</h2>
+<p>ImageWAM 的官方代码基于 FastWAM 框架，使用 Python + PyTorch 实现。核心模型在 <code>src/imagewam/models/backbones/</code> 目录下。以下按模块分析关键实现。</p>
+<h3 id="61">6.1 整体架构</h3>
+<div class="codehilite"><pre><span></span><code>ImageWAM (顶层模型，src/imagewam/models/backbones/imagewam.py)
+│
+├── video_expert (扩散图像编辑 backbone)
+│   ├── FLUX.2 变体: Flux2VideoExpert (flux2_video_expert.py)
+│   ├── OmniGen2 变体: OmniGen2VideoExpert (omnigen2_video_expert.py)
+│   └── Ovis-U1 变体: OvisU1VideoExpert (ovis_u1_video_expert.py)
+│
+├── action_expert (Action DiT, 不同变体)
+│   ├── 基础 ActionDiT: action_dit.py (Wan22 协议)
+│   ├── FLUX.2 变体: ActionDiTFlux2 (action_dit_flux2.py)
+│   ├── OmniGen2 变体: ActionDiTOmnigen2 (action_dit_omnigen2.py)
+│   └── Ovis-U1 变体: ActionDiTYak (action_dit_yak.py)
+│
+├── mot: MoT (Mixture of Transformers, mot.py)
+│   ├── video_expert.blocks → 视觉和语言 token 的处理
+│   ├── action_expert.blocks → 动作 token 的处理
+│   └── _mixed_attention() → 四种 token 类型的联合注意力
+│
+├── vae (图像编码器/解码器)
+│   ├── Wan22 VAE (来自 Wan-AI)
+│   ├── OmniGen2 VAE (AutoencoderKL)
+│   ├── Ovis-U1 VAE (来自 Ovis-U1 visual_generator)
+│   └── FLUX.2 AE (AutoEncoder from flux2)
+│
+└── text_encoder (VLM)
+    ├── Qwen2.5-VL-3B (OmniGen2 变体)
+    ├── Qwen3-4B/8B (FLUX.2 变体)
+    └── Qwen3-1.7B (Ovis-U1 变体)
+</code></pre></div>
+
+<h3 id="62-key-class-imagewam">6.2 Key Class: ImageWAM（顶层模型）</h3>
+<p><code>ImageWAM</code> 类（<code>imagewam.py</code>）是所有变体共有的顶层容器，负责：</p>
+<ul>
+<li><strong>模型初始化</strong>：通过五个 <code>from_*_pretrained()</code> 工厂方法加载不同 backbone 的预训练权重</li>
+<li><strong>数据预处理</strong>：<code>build_inputs()</code> 系列方法将原始样本编码为 model-ready 的 tensor</li>
+<li><strong>VAE 编解码</strong>：<code>_encode_video_latents()</code> / <code>_decode_latents()</code> 等方法</li>
+<li><strong>文本编码</strong>：处理 VLM 的文本和视觉输入</li>
+<li><strong>训练/推理调度</strong>：使用 <code>WanContinuousFlowMatchScheduler</code> 控制去噪步</li>
+</ul>
+<p><code>ImageWAM</code> 的构造函数接受以下关键参数：</p>
+<div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">ImageWAM</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">video_expert</span><span class="p">,</span>      <span class="c1"># 扩散图像编辑 backbone</span>
+        <span class="n">action_expert</span><span class="p">,</span>     <span class="c1"># Action DiT</span>
+        <span class="n">mot</span><span class="p">,</span>               <span class="c1"># MoT (Mixture of Transformers)</span>
+        <span class="n">vae</span><span class="p">,</span>               <span class="c1"># 图像编码/解码器</span>
+        <span class="n">text_encoder</span><span class="p">,</span>      <span class="c1"># VLM (Qwen 等)</span>
+        <span class="n">tokenizer</span><span class="p">,</span>         <span class="c1"># 文本分词器</span>
+        <span class="n">text_dim</span><span class="p">,</span>          <span class="c1"># 文本嵌入维度</span>
+        <span class="n">proprio_dim</span><span class="p">,</span>       <span class="c1"># 本体感知维度 (可选)</span>
+        <span class="n">loss_lambda_video</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>  <span class="c1"># 图像 loss 权重</span>
+        <span class="n">loss_lambda_action</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="c1"># 动作 loss 权重</span>
+        <span class="o">...</span>
+    <span class="p">)</span>
+</code></pre></div>
+
+<h3 id="63-key-class-motmixture-of-transformers">6.3 Key Class: MoT（Mixture of Transformers）</h3>
+<p><code>MoT</code> 类（<code>mot.py</code>）是连接编辑 backbone 和 Action Expert 的核心架构。关键设计：</p>
+<p><strong>初始化</strong>: 接收 <code>mixtures</code> 字典（至少包含 <code>"video"</code> 和 <code>"action"</code> 两个 expert），检查两者的 <code>num_layers</code>、<code>num_heads</code>、<code>num_kv_heads</code>、<code>attn_head_dim</code>、<code>block_protocol</code> 是否一致。这确保了两种 expert 在每层的 attention head 配置兼容，是实现 joint attention 的前提。</p>
+<p><strong>四种 token 类型的 joint attention</strong>: MoT 的 <code>forward()</code> 方法遍历每一层，调用 <code>_build_expert_attention_io()</code> 为每个 expert 提取 Q/K/V，然后将所有 expert 的 Q/K/V 拼接成全序列，执行一次 <code>_mixed_attention()</code>：</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># MoT.forward() 中的核心逻辑（简化）</span>
+<span class="k">for</span> <span class="n">layer_idx</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_layers</span><span class="p">):</span>
+    <span class="n">q_chunks</span><span class="p">,</span> <span class="n">k_chunks</span><span class="p">,</span> <span class="n">v_chunks</span> <span class="o">=</span> <span class="p">[],</span> <span class="p">[],</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">expert_order</span><span class="p">:</span>  <span class="c1"># [&quot;video&quot;, &quot;action&quot;]</span>
+        <span class="n">expert</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mixtures</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
+        <span class="n">block</span> <span class="o">=</span> <span class="n">expert</span><span class="o">.</span><span class="n">blocks</span><span class="p">[</span><span class="n">layer_idx</span><span class="p">]</span>
+        <span class="n">built</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_build_expert_attention_io</span><span class="p">(</span><span class="n">expert</span><span class="p">,</span> <span class="n">block</span><span class="p">,</span> <span class="n">tokens_all</span><span class="p">[</span><span class="n">name</span><span class="p">],</span> <span class="o">...</span><span class="p">)</span>
+        <span class="n">q_chunks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">built</span><span class="p">[</span><span class="s2">&quot;q&quot;</span><span class="p">])</span>
+        <span class="n">k_chunks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">built</span><span class="p">[</span><span class="s2">&quot;k&quot;</span><span class="p">])</span>
+        <span class="n">v_chunks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">built</span><span class="p">[</span><span class="s2">&quot;v&quot;</span><span class="p">])</span>
+
+    <span class="c1"># 一次联合注意力（4种 token 一起）</span>
+    <span class="n">mixed</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mixed_attention</span><span class="p">(</span>
+        <span class="n">q_cat</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">(</span><span class="n">q_chunks</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
+        <span class="n">k_cat</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">(</span><span class="n">k_chunks</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
+        <span class="n">v_cat</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">(</span><span class="n">v_chunks</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
+        <span class="n">attention_mask</span><span class="o">=</span><span class="n">attention_mask</span><span class="p">,</span>  <span class="c1"># 控制 token 之间的可见性</span>
+    <span class="p">)</span>
+
+    <span class="c1"># 按 expert 分离注意力输出，分别应用 post-block</span>
+    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">seq_len</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">expert_order</span><span class="p">,</span> <span class="n">seq_lens</span><span class="p">):</span>
+        <span class="n">tokens_all</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_apply_post_with_optional_checkpoint</span><span class="p">(</span>
+            <span class="n">block</span><span class="o">=...</span><span class="p">,</span> <span class="n">mixed_slice</span><span class="o">=</span><span class="n">mixed</span><span class="p">[:,</span> <span class="n">start</span><span class="p">:</span><span class="n">end</span><span class="p">,</span> <span class="p">:],</span> <span class="o">...</span>
+        <span class="p">)</span>
+</code></pre></div>
+
+<p><strong>Attention mask 的 one-way 设计</strong>: 论文使用 attention mask 实现动作 token 的单向关注：</p>
+<ul>
+<li>Action token 可以关注所有其他 token（语言、视觉条件、视觉预测）</li>
+<li>噪声视觉 token 只关注上下文 token（不关注动作和其他噪声 token）</li>
+<li>这确保动作预测能获得充分的上下文信息，同时视觉去噪不受动作预测的干扰</li>
+</ul>
+<p><strong>Prefix-only inference 支持</strong>: <code>prefill_video_cache()</code> 和 <code>forward_action_with_video_cache()</code> 实现了编辑 backbone KV caches 的预填充和动作 token 的条件生成。这对应论文中推理时"一次前向 → KV caches → Action DiT 去噪"的高效流程。</p>
+<h3 id="64-key-class-actiondit">6.4 Key Class: ActionDiT</h3>
+<p><code>ActionDiT</code> 类（<code>action_dit.py</code>）是 flow matching 动作头，与编辑 backbone 使用相同的 transformer block 架构。核心结构：</p>
+<div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">ActionDiT</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">hidden_dim</span><span class="p">,</span> <span class="n">action_dim</span><span class="p">,</span> <span class="n">ffn_dim</span><span class="p">,</span> <span class="n">text_dim</span><span class="p">,</span> <span class="n">freq_dim</span><span class="p">,</span>
+                 <span class="n">eps</span><span class="p">,</span> <span class="n">num_heads</span><span class="p">,</span> <span class="n">attn_head_dim</span><span class="p">,</span> <span class="n">num_layers</span><span class="p">,</span> <span class="o">...</span><span class="p">):</span>
+        <span class="c1"># 动作输入编码器: 将连续动作映射到隐藏维度</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">action_encoder</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">action_dim</span><span class="p">,</span> <span class="n">hidden_dim</span><span class="p">)</span>
+        <span class="c1"># 文本条件嵌入: 将 VLM 输出映射到隐藏维度</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">text_embedding</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Sequential</span><span class="p">(</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">text_dim</span><span class="p">,</span> <span class="n">hidden_dim</span><span class="p">),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">GELU</span><span class="p">(</span><span class="n">approximate</span><span class="o">=</span><span class="s2">&quot;tanh&quot;</span><span class="p">),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">hidden_dim</span><span class="p">,</span> <span class="n">hidden_dim</span><span class="p">),</span>
+        <span class="p">)</span>
+        <span class="c1"># 时间条件嵌入: flow matching 的时间步嵌入</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">time_embedding</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Sequential</span><span class="p">(</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">freq_dim</span><span class="p">,</span> <span class="n">hidden_dim</span><span class="p">),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">SiLU</span><span class="p">(),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">hidden_dim</span><span class="p">,</span> <span class="n">hidden_dim</span><span class="p">),</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">blocks</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">ModuleList</span><span class="p">([</span><span class="n">DiTBlock</span><span class="p">(</span><span class="o">...</span><span class="p">)</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_layers</span><span class="p">)])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">head</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">hidden_dim</span><span class="p">,</span> <span class="n">action_dim</span><span class="p">)</span>  <span class="c1"># 动作输出投影</span>
+</code></pre></div>
+
+<p>Action DiT 与编辑 backbone 共享相同的 block 架构，但 <code>hidden_dim</code> 可以更小（FLUX.2 变体中使用 1024 以控制参数量），从而显著降低推理计算量。</p>
+<p><strong>Weight-copy 初始化</strong>: Action DiT 的权重从编辑 backbone 复制并插值。具体做法：</p>
+<ul>
+<li>对于 OmniGen2 变体：直接从 OmniGen2 DiT 复制 weights</li>
+<li>对于 FLUX.2 变体：lower layers 从 double-stream 的图像 stream 复制，higher layers 从 single-stream blocks 复制</li>
+</ul>
+<h3 id="65">6.5 训练流程</h3>
+<p><code>Wan22Trainer</code> 类（<code>trainer.py</code>）基于 HuggingFace Accelerate + DeepSpeed：</p>
+<div class="codehilite"><pre><span></span><code>Wan22Trainer.fit()
+│
+├── accelerator.prepare(model, optimizer, loader, scheduler)
+│   ← 自动集成 DeepSpeed ZeRO / FSDP
+│
+├── 每步训练循环:
+│   ├── sample = next(train_loader)
+│   ├── inputs = model.build_inputs(sample)
+│   │   ← VAE encode + text encoding
+│   ├── 采样 image noise ε_z, action noise ε_a
+│   ├── 采 sample image flow time r, action flow time s
+│   ├── 采样 editing denoising timestep τ
+│   ├── 前向:
+│   │   ├── video_expert 预测速度 → L_img
+│   │   ├── 提取编辑 KV caches C_edit^τ
+│   │   └── Action Expert 以 C_edit^τ 为条件预测速度 → L_act
+│   ├── loss = L_img + L_act
+│   └── accelerator.backward(loss)
+│       ← DeepSpeed ZeRO gradients sync
+</code></pre></div>
+
+<h3 id="66">6.6 公式 → 代码映射</h3>
+<table>
+<thead>
+<tr>
+<th>论文公式</th>
+<th>代码位置</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>编辑 cache 提取 <span class="math inline">$\mathcal{C}_{\mathrm{edit}}^{\tau} = f_{\mathrm{edit}}^{\tau}(o_t, l)$</span></td>
+<td><code>MoT.prefill_video_cache()</code> / <code>MoT.prefill_flux2_video_cache()</code></td>
+<td>在每个 transformer block 中捕获 KV 对</td>
+</tr>
+<tr>
+<td>动作条件预测 <span class="math inline">$v_\theta(\mathbf{a}_s, s \mid o_t, l, \mathcal{C}_{\mathrm{edit}}^{\tau})$</span></td>
+<td><code>MoT.forward_action_with_video_cache()</code> / <code>MoT.forward_flux2_action_with_video_cache()</code></td>
+<td>以预填充的 video cache 为 key/value 背景，action token 交叉关注</td>
+</tr>
+<tr>
+<td>图像 flow matching loss <span class="math inline">$\mathcal{L}_{\mathrm{img}}$</span></td>
+<td><code>imagewam.py</code> 中的训练循环（不单独封装，训练时直接用 video_expert 预测）</td>
+<td>连续流匹配：插值 latent, 预测速度</td>
+</tr>
+<tr>
+<td>动作 flow matching loss <span class="math inline">$\mathcal{L}_{\mathrm{act}}$</span></td>
+<td>同上的训练循环（action_expert 预测部分）</td>
+<td>连续流匹配：插值动作, 预测速度</td>
+</tr>
+<tr>
+<td>联合 loss <span class="math inline">$\mathcal{L} = \mathcal{L}_{\mathrm{act}} + \mathcal{L}_{\mathrm{img}}$</span></td>
+<td><code>imagewam.py</code> 构造函数中 <code>loss_lambda_video</code> 和 <code>loss_lambda_action</code></td>
+<td>默认 1:1 加权</td>
+</tr>
+<tr>
+<td>Weight-copy 初始化</td>
+<td><code>action_dit.py</code> + 各变体的 <code>from_pretrained()</code></td>
+<td>复制编辑 backbone weights + 插值</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="_7">七、局限性</h2>
+<ol>
+<li>
+<p><strong>长程任务限制</strong>。论文没有明确探索纯编辑 caches 在超长程任务（&gt;100 步）上的表现。对于需要长期物理状态记忆的任务（如装配序列、多阶段操作），单帧目标端点可能不足以编码完整的任务结构。编辑 KV caches 作为"有损摘要"可能丢失长程依赖的关键信息。</p>
+</li>
+<li>
+<p><strong>真实实验范围有限</strong>。真实机器人实验仅在 4 个任务上评估，涉及场景和物体类型有限。论文没有在更加多样化的真机环境（如杂乱桌面、不可见物体类别、多机器人协作）中验证 ImageWAM 的泛化能力。</p>
+</li>
+<li>
+<p><strong>对编辑 backbone 架构的依赖</strong>。ImageWAM 的 KV cache 提取机制依赖于具体的图像编辑 backbone 架构（FLUX.2、OmniGen2、Ovis-U1），不是完全 plug-and-play 的。更换 backbone 需要为新的 transformer 结构适配 KV cache 提取逻辑。在三种变体中，KVCache 的提取策略都高度定制化了各自的 attention 机制（double-stream + single-stream 等）。</p>
+</li>
+<li>
+<p><strong>未与最强预训练 VLA 完全对比</strong>。在 LIBERO 上，一些基线（如 LingBot-VA、Motus）使用额外的策略预训练数据。ImageWAM 在不使用额外预训练的情况下表现极具竞争力（98.4% vs LingBot-VA 98.5%），但如果 ImageWAM 也进行大规模策略预训练，其上限尚未探索。</p>
+</li>
+<li>
+<p><strong>Action DiT 的计算效率</strong>。在典型 action chunk 长度下，动作 token 数量相对较少（远少于视觉 token），导致 Action DiT 的并行效率有时不够理想。论文在附录中提到，torch.compile 主要受益于 action head 的加速——这暗示 action head 在原生 PyTorch 中的计算效率仍有优化空间。</p>
+</li>
+</ol>
+<hr />
+<h2 id="_8">八、关键概念速查</h2>
+<table>
+<thead>
+<tr>
+<th>概念</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>WAM</strong></td>
+<td>World Action Model，世界动作模型。在预测动作前引入视觉推理步骤的机器人策略范式</td>
+</tr>
+<tr>
+<td><strong>Image Editing</strong></td>
+<td>图像编辑。以源图像和语言指令为条件生成变换后的图像，ImageWAM 用其替代视频生成</td>
+</tr>
+<tr>
+<td><strong>KV Cache</strong></td>
+<td>Key-Value Cache。Transformer 注意力中的键值对，ImageWAM 提取编辑去噪过程中的中间 KV caches 作为动作条件</td>
+</tr>
+<tr>
+<td><strong>MoT</strong></td>
+<td>Mixture of Transformers。联合四种 token 类型（语言上下文、视觉条件、视觉预测、动作）的联合注意力机制</td>
+</tr>
+<tr>
+<td><strong>Flow Matching</strong></td>
+<td>流匹配。连续时间扩散框架，将数据分布插值到高斯噪声，训练模型预测速度场</td>
+</tr>
+<tr>
+<td><strong>Action Chunk</strong></td>
+<td>动作块。一次决策预测的连续动作序列（LIBERO 和 RoboTwin 中 chunk length = 16）</td>
+</tr>
+<tr>
+<td><strong>Action DiT</strong></td>
+<td>Action Diffusion Transformer。flow-matching 动作头，与编辑 backbone 相同架构但参数量更小（642M-1.1B）</td>
+</tr>
+<tr>
+<td><strong>Prefix-Only Inference</strong></td>
+<td>前缀推理。推理时不解码未来帧，只使用编辑 backbone 的一次前向得到的 KV caches 作为动作条件</td>
+</tr>
+<tr>
+<td><strong>Weight-Copy Initialization</strong></td>
+<td>权重复制初始化。Action DiT 从编辑 backbone 复制权重并插值，加速早期训练</td>
+</tr>
+<tr>
+<td><strong>LIBERO-Plus</strong></td>
+<td>LIBERO 的增强版评估基准，包含 7 种扰动维度（Camera, Robot, Language, Light, Background, Noise, Layout），共 373 个实验变体</td>
+</tr>
+</tbody>
+</table>
+  </div>
+</main>
+
+
+<script>
+(function() {
+  const sidebar = document.getElementById('sidebar');
+  const links = sidebar.querySelectorAll('a');
+  const headings = document.querySelectorAll('h1[id], h2[id], h3[id], h4[id]');
+  if (headings.length === 0) return;
+
+  const linkMap = new Map();
+  links.forEach(function(a) {
+    const href = a.getAttribute('href');
+    if (href && href.startsWith('#')) linkMap.set(href.slice(1), a);
+  });
+
+  function onScroll() {
+    let currentId = null;
+    const scrollTop = window.scrollY + 80;
+    headings.forEach(function(h) { if (h.offsetTop <= scrollTop) currentId = h.id; });
+    links.forEach(function(a) { a.classList.remove('active'); });
+    if (currentId && linkMap.has(currentId)) {
+      const el = linkMap.get(currentId);
+      el.classList.add('active');
+      if (getComputedStyle(sidebar).position === 'fixed') {
+        const sr = sidebar.getBoundingClientRect();
+        const er = el.getBoundingClientRect();
+        if (er.bottom > sr.bottom || er.top < sr.top) {
+          el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }
+      }
+    }
+  }
+
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+})();
+</script>
+
+
+<script>
+(function() {
+  const content = document.getElementById('main-content');
+  if (!content) return;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'image-lightbox';
+  overlay.setAttribute('role', 'dialog');
+  overlay.setAttribute('aria-modal', 'true');
+
+  overlay.innerHTML = `
+    <button type="button" class="image-lightbox__close" data-action="close" aria-label="关闭">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M5 5l10 10M15 5L5 15"/>
+      </svg>
+    </button>
+    <div class="image-lightbox__stage">
+      <img class="image-lightbox__image" alt="">
+    </div>
+    <div class="image-lightbox__toolbar" aria-label="图片缩放控制">
+      <button type="button" class="image-lightbox__btn" data-action="zoom-out" aria-label="缩小" title="缩小">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d="M3 9h12"/>
+        </svg>
+      </button>
+      <span class="image-lightbox__zoom-val" data-action="zoom-reset" title="点击重置缩放" role="button" tabindex="0">100%</span>
+      <button type="button" class="image-lightbox__btn" data-action="zoom-in" aria-label="放大" title="放大">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d="M3 9h12M9 3v12"/>
+        </svg>
+      </button>
+    </div>
+    <div class="image-lightbox__caption"></div>
+  `;
+  document.body.appendChild(overlay);
+
+  const stage = overlay.querySelector('.image-lightbox__stage');
+  const image = overlay.querySelector('.image-lightbox__image');
+  const zoomLabel = overlay.querySelector('.image-lightbox__zoom-val');
+  const caption = overlay.querySelector('.image-lightbox__caption');
+
+  const minZoom = 0.25;
+  const maxZoom = 5;
+  const step = 0.25;
+  let zoom = 1;
+  let fitWidth = 1;
+
+  function clamp(value) {
+    return Math.min(maxZoom, Math.max(minZoom, value));
+  }
+
+  function centerImage(animate) {
+    requestAnimationFrame(function() {
+      var left = Math.max(0, (stage.scrollWidth - stage.clientWidth) / 2);
+      var top = Math.max(0, (stage.scrollHeight - stage.clientHeight) / 2);
+      stage.scrollTo({ left: left, top: top, behavior: animate ? 'smooth' : 'auto' });
+    });
+  }
+
+  function applyZoom(animate) {
+    image.style.width = Math.max(1, Math.round(fitWidth * zoom)) + 'px';
+    zoomLabel.textContent = Math.round(zoom * 100) + '%';
+    centerImage(animate);
+  }
+
+  function setZoom(value, animate) {
+    zoom = clamp(value);
+    applyZoom(animate);
+  }
+
+  function computeFitSize() {
+    var w = image.naturalWidth || 1;
+    var h = image.naturalHeight || 1;
+    var maxW = Math.max(1, stage.clientWidth - 48);
+    var maxH = Math.max(1, stage.clientHeight - 48);
+    var fitScale = Math.min(1, maxW / w, maxH / h);
+    fitWidth = Math.max(1, w * fitScale);
+    applyZoom(false);
+  }
+
+  function openImage(source) {
+    image.onload = computeFitSize;
+    image.alt = source.alt || '';
+    caption.textContent = source.alt || '';
+    image.src = source.currentSrc || source.src;
+    zoom = 1;
+    overlay.classList.add('is-open');
+    document.body.classList.add('image-lightbox-open');
+    if (image.complete) computeFitSize();
+  }
+
+  function closeImage() {
+    overlay.classList.remove('is-open');
+    document.body.classList.remove('image-lightbox-open');
+    image.onload = null;
+    image.style.removeProperty('width');
+    image.removeAttribute('src');
+  }
+
+  overlay.addEventListener('click', function(event) {
+    var action = event.target.closest('[data-action]');
+    if (action) {
+      var type = action.getAttribute('data-action');
+      if (type === 'zoom-in') setZoom(zoom + step, true);
+      if (type === 'zoom-out') setZoom(zoom - step, true);
+      if (type === 'zoom-reset') setZoom(1, true);
+      if (type === 'close') closeImage();
+      return;
+    }
+    if (event.target === overlay || event.target === stage) closeImage();
+  });
+
+  overlay.addEventListener('wheel', function(event) {
+    if (!overlay.classList.contains('is-open')) return;
+    if (!event.ctrlKey && !event.metaKey) return;
+    event.preventDefault();
+    setZoom(zoom + (event.deltaY < 0 ? step : -step), true);
+  }, { passive: false });
+
+  document.addEventListener('keydown', function(event) {
+    if (!overlay.classList.contains('is-open')) return;
+    if (event.key === 'Escape') closeImage();
+    if (event.key === '+' || event.key === '=') setZoom(zoom + step, true);
+    if (event.key === '-' || event.key === '_') setZoom(zoom - step, true);
+    if (event.key === '0') setZoom(1, true);
+  });
+
+  window.addEventListener('resize', function() {
+    if (overlay.classList.contains('is-open')) computeFitSize();
+  });
+
+  content.querySelectorAll('img').forEach(function(img) {
+    if (img.closest('a')) return;
+    img.setAttribute('tabindex', '0');
+    img.setAttribute('title', img.getAttribute('title') || '点击放大查看');
+    img.addEventListener('click', function() { openImage(img); });
+    img.addEventListener('keydown', function(event) {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        openImage(img);
+      }
+    });
+  });
+})();
+</script>
+
+</body>
+</html>
