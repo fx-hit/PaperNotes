@@ -12,6 +12,12 @@
 > - 项目主页：https://world-action-models.github.io/
 > - 日期：2026-06
 
+> 本文基于以下本地材料整理：
+>
+> - 论文 tex 源码：`arXiv-2606.20781v1/main.tex`、`arXiv-2606.20781v1/sections/*.tex`
+> - 论文图片：`arXiv-2606.20781v1/figures/*.pdf`
+> - 本文图片导出目录：`assets/wam-survey/`
+
 ---
 
 ## 一、一句话讲清楚
