@@ -72,17 +72,13 @@ $$p_\Theta(o', a \mid o, l)$$
 
 ![WAM 定义](assets/wam-survey/fig-wam-definition.jpg)
 
-*图 1：WAM 的定义。论文 caption："A direct VLA predicts action from the present context, and a world model predicts a future observation. A WAM requires that future to stay in the action path, either through predict-then-act cascades, action-scoring rollouts, or joint future-action prediction."*
+*图 1：WAM 的定义——从 VLA 到 World Model 再到 WAM 的概念链。该图将三个概念用统一的符号体系（观测 $o$、语言指令 $l$、动作 $a$、未来观测 $o'$）串在一起，展示了"不预测 → 预测但不行动 → 预测为行动服务"的定义递进。*
 
-该图将三个概念的关系可视化，论文正文（§2.3）对此做了精确阐述：
+- **直接 VLA：**学习 $p(a \mid o, l)$，从当前观测和指令直接映射到动作，不含对未来观测的预测。RT-2、OpenVLA 等是典型代表。它是 WAM 的"近邻"——绑定了视觉、语言和动作，但缺少对未来状态的建模。
+- **World Model：**学习 $p(o' \mid o, a, l)$，预测未来观测 $o'$，但不负责选择动作。$o'$ 在后续章节被细化为不同预测基板（像素/特征/几何/affordance）。
+- **WAM：**预测的未来必须进入动作路径——帮助"产生、选择或校验"动作。图中展示三种实现方式：Cascade（先预测 $o'$ 再用独立模块 $q_\psi$ 解码动作，如 UniPi 的 video→inverse dynamics）、Rollout-Scoring（先提议动作再用预测后果评分，如 PointWorld）、Joint（未来和动作由共享 backbone 同时产出，如 GR-1/GR-2）。
 
-**直接 VLA：**学习 $p(a \mid o, l)$——从当前观测和语言指令直接映射到动作，不包含对未来观测的显式预测。RT-2、OpenVLA 等属于此列。这是 WAM 的"近邻"——因为它已经绑定了视觉、语言和动作，但缺少预测组件。
-
-**World Model：**学习 $p(o' \mid o, a, l)$——预测未来观测 $o'$，但不负责选择动作。$o'$ 的含义在 §4 中被细化为不同的预测基板（像素、特征、几何、affordance）。这是 WAM 的预测侧前身。
-
-**WAM：**预测的未来观测必须进入动作路径——帮助"产生、选择或校验"动作。图中展示三种合法形式：(i) Cascade（$p_\theta(o' \mid o, l) \, q_\psi(a \mid o, o', l)$，如 UniPi 的视频→inverse dynamics）；(ii) Rollout-Scoring（$q_\psi(a \mid o, l) \, p_\theta(o' \mid o, a, l)$，如 PointWorld 的 MPPI + 点流评分）；(iii) Joint（$p_\theta(o', a \mid o, l)$，如 GR-1/GR-2 的共享帧-动作预测）。
-
-**关键判决标准（论文明确给出）：**一个直接 VLA 加上辅助预测 loss、仅用作 RL 环境的 simulator、或推理时丢弃的未来 head，都**不算 WAM**。WAM 要求预测的未来在推理时仍然在动作路径上。这一定义是整个综述所有后续分类的共同地基。
+论文给出了明确的判决标准：直接 VLA 加辅助预测 loss、仅用作 RL 环境的 simulator、或推理时丢弃的未来 head，都**不算 WAM**。这个定义是整个综述的地基。
 
 ---
 
@@ -92,29 +88,25 @@ $$p_\Theta(o', a \mid o, l)$$
 
 ![三大设计哲学](assets/wam-survey/fig-three-philosophies.jpg)
 
-*图 2：三大设计哲学。论文 caption："The columns separate the last future representation required before action is decoded: a rendered pixel future, an intermediate video-derived latent or feature, or a non-video-generation representation. The categorization is exhaustive over the WAM census and separable from the action-coupling and backbone choices treated in Section 4." 论文正文补充：该图 "sketches the inference data flow under each philosophy"（§3 开头）。*
+*图 2：三大设计哲学——用三条推理数据流展示"动作在推理路径的哪个位置被解码"。分类标准是推理时（或动作监督时）最后需要的未来表征形式，三栏互斥且穷尽了当前 WAM 的全部形态。*
 
-该分类回答的问题是：**动作在推理路径上的哪个位置被解码？**——这是训练 pipeline 无法揭示的设计分裂线。三个哲学互斥且穷尽了当前 WAM 的全部形态。
+- **Render-and-Decode（左）：**视频生成 backbone 跑到像素输出，然后动作从渲染的未来中解码。动作模块可与生成器联合训练（GR-1/GR-2）、单独训练（UniPi）或由 tracking/optimization 提供（AVDC）。这是最直观的路径——"先完整想象未来，再决定怎么做"。代价是像素合成成为延迟的一部分，而大多数动作决策不需要消费全部渲染细节。
+- **Latent-Only（中）：**保留视频 backbone 的训练先验，但推理时在像素解码前截停——动作从中间 latent、去噪特征、光流场、语义 mask 或 value map 中直接解码。关键设计是：视频 pretraining 提供动力学先验，但 inference 不付像素生成的钱。代表包括 VPP（SVD 中间特征→inverse dynamics）、Fast-WAM（训练时联合视频-动作，推理时关闭视频分支）、UWM（独立去噪步数折叠视觉分支）。
+- **Video-Generation-Free（右）：**完全不用视频生成 backbone。预测组件在 LLM/VLM/JEPA/DINO 特征回归器的嵌入或 token 空间中产生未来表征。代表包括 FLARE（策略 token 对齐 frozen teacher embedding）、LDA-1B（DINO latent 空间联合学习）、PointWorld（Point Transformer + MPPI）。
 
-**左栏 — Render-and-Decode：**视频生成 backbone 跑到像素输出，然后动作从渲染的未来中解码。动作模块可以与生成器联合训练（如 GR-1/GR-2 的自回归帧-动作流）、单独训练（如 UniPi 的 text→video→inverse dynamics）、或由 tracking/optimization 提供（如 AVDC 的密集对应解码）。核心特征：像素合成是推理延迟的一部分。渲染的未来可被检查和评估（保留了完整视觉先验），但 actor 很少消费全部渲染输出。
-
-**中栏 — Latent-Only：**保留视频 backbone 的训练先验，但推理路径在像素解码前截停。在许多实现中，这意味着视频生成 trunk 的 VAE decoder 被绕过；在另一些实现中，意味着一个视频训练的 latent predictor 的动作面向未来根本没有像素解码阶段。动作信号来自中间 latent、部分去噪特征、光流场、语义 mask 或 value map。代表：VPP（SVD 中间特征→inverse dynamics）、Fast-WAM（训练时联合视频-动作，推理时 mask 掉未来视频 token）、UWM（独立去噪步数折叠视觉分支）。
-
-**右栏 — Video-Generation-Free：**预测路径中完全移除视频生成 backbone。预测组件在 LLM/VLM/JEPA/DINO 特征回归器/非视频扩散 backbone 的嵌入或 token 空间中产生未来表征。代表：FLARE（策略 token 对齐 frozen teacher 的未来 embedding）、LDA-1B（DINO latent 空间中的动力学-策略-预测联合学习）、PointWorld（Point Transformer 预测 3D 点流 + MPPI 规划）。注意这个分类与 cascade/joint 区分是正交的——Latent-Only 可以是 cascade 也可以是 joint，Render-and-Decode 同理。
+这个分类与 cascade/joint 区分是正交的——Latent-Only 可以是 cascade 也可以是 joint，Render-and-Decode 同理。训练 pipeline 无法区分哲学归属，只有推理数据流能暴露这个设计选择。
 
 ![WAM 时间线](assets/wam-survey/fig-wam-timeline.jpg)
 
-*图 3：WAM 时间线。论文 caption："Chronological stream of representative WAMs grouped by design philosophy. The timeline uses coarse bins for 2023, 2024, and 2025 H1, then finer bins for the denser late-2025 and early-2026 period through May. Each date marker attaches a compact vertical stack to the curve, alternating above and below the stream. Dense periods retain early or central verified WAMs so labels remain legible. Stacks above the curve place the widest block nearest the stream, while stacks below the curve begin with the narrowest block."*
+*图 3：WAM 时间线——按三大设计哲学分组的代表性工作年代学流。横轴从 2023 延伸到 2026 年 5 月，时间 bin 前期较粗（2023、2024、2025 上半年）后期加密（2025 下半年至 2026 年 5 月）。每个时间标记将工作名以紧凑的垂直栈附着在曲线上，交替排列于曲线上下方以避免标签重叠。密集期保留早期或中心的代表性 WAM，确保标签可读。*
 
-该图补充了静态分类缺失的年代学维度。横轴从 2023 延伸到 2026 年 5 月。三条流按设计哲学分组，论文正文（§3 开头）总结了各阶段特征：
+该图补充了静态分类缺失的年代学维度。三条流按哲学分组，论文正文总结了各阶段的核心特征：
 
-**2023–2024 上半年（粗粒度时间 bin）：**主要为 Render-and-Decode——WAM 几乎等同于"生成视觉未来，然后从中解码动作"。UniPi 建立"视频即计划"模板，GR-1 开启联合自回归帧-动作预测。
+- **2023–2024 上半年：**仅 Render-and-Decode 出现。WAM 几乎等同于"生成视觉未来 → 解码动作"。UniPi 建立"视频即计划"模板，GR-1 开启联合自回归帧-动作预测。
+- **2024 下半年–2025 上半年：**Latent-Only 兴起。VPP、UWM、Genie Envisioner 等开始把动作解码移到像素渲染之前——关键发现是动作需要的未来信息可以在更早的层提取。Render-and-Decode 同期继续扩张（PAD、WorldVLA、DreamZero）。
+- **2025 下半年–2026 年 5 月：**Video-Generation-Free 出现（FLARE、DUST、LDA-1B 等）。三线交汇、密度急剧增加。应用领域从桌面操作扩展到灵巧手、触觉交互、自动驾驶和空中操作——不同延迟要求和观测体制实例化了同样的三种哲学。
 
-**2024 下半年–2025 上半年（粗粒度）：**Latent-Only 兴起——VPP、UWM、Genie Envisioner 等开始把动作解码移到像素渲染之前。这意味着领域发现：动作需要的未来信息可以在更早的层被提取。同期 Render-and-Decode 继续扩张（PAD、WorldVLA、DreamZero）。
-
-**2025 下半年–2026 年 5 月（细粒度 bin）：**Video-Generation-Free 出现——FLARE、DUST、LDA-1B 等证明预测性监督可以脱离视频 backbone。三条流在此交汇且密度急剧增加，Latent-Only 和 Video-Generation-Free 加速扩张。同期，应用领域也从桌面操作扩展到灵巧手、接触丰富触觉交互、自动驾驶和空中操作——这些领域在截然不同的延迟要求和观测体制下实例化了同样的三种哲学。
-
-**核心趋势：**曲线从单一 Render-and-Decode 向三线并行演进，直接反映了"从渲染未来到保留未来结构"的历史转向，即论文副标题所概括的——"Dream Less, Act More"。
+曲线从单线到三线并行的演变直接反映了领域从"渲染未来"到"保留未来结构"的历史转向——"Dream Less, Act More"。
 
 ### 3.1 Render-and-Decode（渲染-解码型）
 
@@ -183,19 +175,14 @@ $$p_\Theta\left(s_{t+1:t+H}, a_{t:t+H-1} \mid o_{\le t}, a_{<t}, l\right)$$
 
 ![WAM 解剖](assets/wam-survey/fig-wam-anatomy.jpg)
 
-*图 4：WAM 的四轴解剖。论文 caption："Any existing WAM can be specified by four separable but interacting choices: what it predicts (Section 4.2), how action is coupled to that prediction (Section 4.3), the function family that produces the prediction (Section 4.4), and the deployment regime it is intended for (Section 4.5). Two methods with the same labels but different choices on any one axis behave very differently in practice."*
+*图 4：WAM 的四轴解剖——该综述最核心的组织框架。论文将所有 WAM 统一为同一个数学对象 $p_\Theta(s_{t+1:t+H}, a_{t:t+H-1} \mid o_{\le t}, a_{<t}, l)$，四个轴对这个对象的不同实现选择进行分解。Census 表（Table 1 和 Table 2）将每篇 WAM 记录为这四轴上的 4-tuple。*
 
-这是该综述最核心的组织框架。论文用统一的联合分布 $p_\Theta(s_{t+1:t+H}, a_{t:t+H-1} \mid o_{\le t}, a_{<t}, l)$ 将所有 WAM 抽象为同一个数学对象，四个轴对应这个对象的不同实现选择。论文的 Census 表（Table 1 和 Table 2）将每篇 WAM 记录为这四轴上的 4-tuple。
+- **预测基板（Predictive Substrate, §4.2）— 预测什么：**未来用什么形式呈现给动作？四类从具体到抽象：Pixel-grounded（可解码为观测的像素/VAE/VQ latent）→ Feature（学习的 hidden state/teacher embedding/VLM token block，无固定视觉 decoder）→ Geometric（光流/点轨迹/深度/pose/运动矢量，维数为物理坐标）→ Affordance（value map/contact mask/heatmap，维数为任务标签）。基板越具体，可视化越好但生成成本越高；越抽象，预测越便宜但可检查性越差。
+- **动作耦合（Action Coupling, §4.3）— 动作如何介入：**动作如何进入和离开模型？三种顶层分解：Action-Conditioned Rollout（$q_\psi$ 先提议动作 → $p_\theta$ 预测后果，支持反事实评分）→ Joint Generation（$p_\theta$ 一次前向同时产出基板和动作，$\mathcal{L}_\text{joint} = \mathcal{L}_\text{gen} + \lambda\mathcal{L}_\text{act}$）→ Post-Prediction Head（$p_\theta$ 先生成基板 → $q_\psi$ 后解码动作，$q_\psi$ 可单独训练/跨 embodiment 替换）。
+- **架构 Backbone（Architectural Backbone, §4.4）— 怎么预测：**用什么函数族实现预测？五大 backbone：Iterative Denoising（扩散/流匹配多步去噪）→ Autoregressive（因果逐元素+KV-cache）→ JEPA（EMA teacher 特征空间 MSE，单次前向）→ Hybrid（共享 trunk 多头输出）→ LLM/VLM-backbone（语言模型做预测载体）。
+- **部署模式（Deployment Regime, §4.5）— 多快调一次：**WAM 以什么频率和窗口被调用？开环 Rollout（$H \approx T$，调用一次）→ 分块闭环（$H = K$，摊销 backbone 成本）→ 单步闭环（$H = 1$，最高反应性）→ 交互式模拟（KV-cache 跨调用携带状态）。
 
-**轴一 — 预测基板（Predictive Substrate, §4.2）：**未来用什么形式呈现给动作？四个类别涵盖从具体到抽象的完整谱系——Pixel-grounded（可解码为观测的像素或 VAE/VQ latent）、Feature（学习的 hidden state / teacher embedding / VLM token block，无固定视觉 decoder）、Geometric（光流/点轨迹/深度/pose/运动矢量/polyline，维数为物理坐标）、Affordance（value map/contact map/semantic mask/heatmap，维数为任务相关标签）。
-
-**轴二 — 动作耦合（Action Coupling, §4.3）：**动作如何进入和离开模型？三种顶层分解——Action-Conditioned Rollout（$q_\psi$ 提议动作 → $p_\theta$ 预测后果，支持反事实评分）、Joint Generation（$p_\theta$ 一次前向同时产出基板和动作，$\mathcal{L}_\text{joint} = \mathcal{L}_\text{gen} + \lambda \mathcal{L}_\text{act}$）、Post-Prediction Head（$p_\theta$ 先生成基板 → $q_\psi$ 后解码动作，$q_\psi$ 可单独训练/跨 embodiment 替换）。
-
-**轴三 — 架构 Backbone（Architectural Backbone, §4.4）：**用什么函数族实现预测？五大 backbone 家族——Iterative Denoising（扩散/流匹配多步去噪）、Autoregressive（因果逐元素生成+KV-cache）、JEPA（EMA teacher 特征空间 MSE，Dirac 确定性预测）、Hybrid（共享 trunk $g_\theta$ 多头输出 $h_\theta^s, h_\theta^a$）、LLM/VLM-backbone（语言模型做预测载体，未来在 token 空间中）。
-
-**轴四 — 部署模式（Deployment Regime, §4.5）：**WAM 以什么频率和窗口被调用？从开环 Rollout（$H \approx T$，调用一次，无法反应偏差）到分块闭环（$H = K$，每 $K$ 步重规划，摊销 backbone 成本）到单步闭环（$H = 1$，最高反应性但每步成本最高）到交互式模拟（无限 horizon，KV-cache/persistent latent 跨调用携带状态）。
-
-**轴间交互原则：**基板和 backbone 通常是训练时固定的，而部署和部分耦合选择可在推理时调整——但改变耦合家族本身通常需要额外的 action head、planner 或微调阶段。论文强调这四个轴分离了关于 WAM 的不同类型的问题（"预测什么 vs 怎么预测 vs 动作如何介入 vs 多快调一次"），实践中它们强关联——越抽象的基板 → 越可能单步闭环；越像素级基板 → 越需要分块闭环。
+四个轴在实践中强关联：越抽象基板越倾向单步闭环，越像素级越需要分块闭环。基板和 backbone 训练时固定，部署和部分耦合可在推理时调整。
 
 ### 4.1 轴一：预测基板（Predictive Substrate）
 
@@ -203,19 +190,14 @@ $$p_\Theta\left(s_{t+1:t+H}, a_{t:t+H-1} \mid o_{\le t}, a_{<t}, l\right)$$
 
 ![基板阶梯](assets/wam-survey/fig-substrate-ladder.jpg)
 
-*图 5：预测基板阶梯（Predictive Substrate Ladder）。论文 caption："The four predictive-substrate categories of Section 4.2, classified by the representational space in which the WAM forms its future. Pixel-grounded substrates include decoded observations and pixel-decodable latents, with Audio-WM treated as a rare acoustic observation-latent edge case. Feature substrates include encoder-only, feature-tap, teacher-target, and VLM-token futures with no fixed observation decoder. Geometric substrates expose flow, point clouds, depth, polylines, or motion vectors. Affordance substrates expose value maps, masks, affordances, or heatmaps. Joint cells use the ∧ separator when one forward pass predicts futures in two categories."*
+*图 5：预测基板阶梯——四类基板从"像素级具体"到"任务级抽象"阶梯排列，每层列出代表性 WAM。分类判据是"WAM 在哪个表征空间中形成其未来假设"，联合案例用 ∧ 分隔（一次前向预测两类基板）。*
 
-该图将四类基板按"像素级具体 → 任务级抽象"排列，每层列出代表性 WAM。论文正文（§4.2.5）强调基板分类的核心判据是"WAM 在哪个表征空间中形成其未来假设"——而非 backbone 类型或最后被 action head 消费的 tensor，并明确区分了基板和耦合这两个独立轴。
+- **Pixel-Grounded（像素基板，最上层）：**未来以可解码为观测的形式存在。包括 decoded observations（完全渲染的 RGB/RGB-D/多视角视频，如 UniPi）和 pixel-decodable latents（VAE/VQ latent 有固定 decoder，如 PAD、WorldVLA、τ₀-WM）。Audio-WM（预测未来 Mel latent）作为声音观测 latent 边缘案例标注。优点是视觉可检查、保留完整外观先验；代价是每步都要付去噪/自回归成本。
+- **Feature（特征基板）：**未来以学习的特征状态存在，无固定视觉 decoder。包括 encoder-only/feature-tap（从视频 trunk 中间状态解码动作，推理时 skip 渲染，如 Fast-WAM/GigaWorld-Policy/VPP）、teacher-target（对齐 frozen vision encoder 的未来 embedding，如 FLARE/FRAPPE/LDA-1B）、VLM-token（未来在 VLM vocab 中表示为 token 块，如 CoT-VLA/DUST/ALAM）。优点紧凑、语义不变性强；缺点无直接视觉质量指标。
+- **Geometric（几何基板）：**未来以物理坐标的维度存在。包括 flow & point motion（光流/3D 物体流/点轨迹，如 Im2Flow2Act/NovaFlow/3PoinTr）、structured physical futures（4D 点云/MPEG-4 运动矢量/gripper polyline，如 TesserAct/HiF-VLA/ICLR-VR）、joint pixel-geometric（∧ 联合案例，如 DriveDreamer-Policy 的 depth+video+action 和 JOPAT 的 pixel+point track+visibility）。优点是更接近控制接口、成本远低于像素；缺点是丢失外观语义。
+- **Affordance（affordance 基板，最底层）：**未来以任务相关的标签或分数图存在。包括 value maps（AIM，意图因果注意力强制动作通过 value 表征）、semantic masks（MWM，预测语义 mask 动力学而非 RGB）、affordance maps（PALM，同时预测 object masks/contact likelihood/placement candidates/motion regions）、heatmaps（ActionImages/MV-VDP 的端部执行器热力图）。优点是最紧凑、直接任务相关；缺点是需要任务特定标注。
 
-**第一层 — Pixel-Grounded（像素基板）：**未来以可解码为观测的形式存在。包括 decoded observations（完全渲染的视觉未来，如 UniPi 的 text→video）和 pixel-decodable latents（VAE/VQ latent，有固定 decoder 可回溯为视频，如 PAD 的 video latent 联合去噪）。Audio-WM 被标注为罕见的声音观测 latent 边缘案例——预测未来 Mel latent，遵循同样的 decoder-bound 判据。
-
-**第二层 — Feature（特征基板）：**未来以学习的特征状态存在，无固定观测 decoder。包括 encoder-only/feature-tap（从视频训练 trunk 的中间状态解码动作，推理时 skip 渲染，如 Fast-WAM/GigaWorld-Policy/VPP）；teacher-target（对齐 frozen vision encoder/MFM 的未来 embedding，如 FLARE/FRAPPE/LDA-1B）；VLM-token（未来在 VLM vocab 中表示为 token 块，如 CoT-VLA 的 visual CoT tokens, DUST 的 dual-stream 观测 token + action token）。优点紧凑、语义不变性强；缺点无直接视觉质量指标。
-
-**第三层 — Geometric（几何基板）：**未来以物理坐标的维度存在。包括 flow & point motion（光流/3D 物体流/点轨迹/4D 运动场，如 Im2Flow2Act/3DFlowAction/NovaFlow）；structured physical futures（4D 点云/MPEG-4 运动矢量/gripper polyline，如 TesserAct/HiF-VLA/ICLR-VR）；joint pixel-geometric（∧ 联合案例，一次前向预测两类基板，如 DriveDreamer-Policy 的 depth+video+action）。优点更接近控制接口、成本远低于像素；缺点丢失外观语义。
-
-**第四层 — Affordance（affordance 基板）：**未来以任务相关的标签或分数图存在。包括 value maps（AIM 的空间 value map 通过意图因果注意力插入未来动态和动作之间）、semantic masks（MWM 预测语义 mask 动力学而非 RGB）、affordance maps（PALM 同时预测 object masks + contact likelihood + placement candidates + motion regions）、heatmaps（ActionImages/MV-VDP 的 Gaussian end-effector heatmap）。优点最紧凑、直接任务相关；缺点需任务特定标注。
-
-**深层含义：**从上层到下层，每向下一步就丢掉控制器不需要的外观信息，迫使模型容量流向对控制真正重要的几何、接触和动力学。Fast-WAM（特征基板+encoder-only）和 τ₀-WM（像素基板+joint-denoising）可能在同一 backbone 上运行，但基板选择的不同彻底改变了推理成本和可解释性——这正是基板和耦合/backbone 作为独立轴的原因。
+从上到下，每向下一步就丢掉控制器不需要的外观信息，迫使容量流向对控制最重要的几何、接触和动力学。Fast-WAM（特征+encoder-only）和 τ₀-WM（像素+joint-denoising）可能在相同 backbone 上运行，但基板选择彻底改变了推理成本和可解释性——这正是基板、耦合、backbone 被定义为独立轴的原因。
 
 | 基板类别 | 形式 | 代表工作 | 优点 | 缺点 |
 |---------|------|---------|------|------|
@@ -232,15 +214,11 @@ $$p_\Theta\left(s_{t+1:t+H}, a_{t:t+H-1} \mid o_{\le t}, a_{<t}, l\right)$$
 
 ![耦合模式](assets/wam-survey/fig-coupling-regimes.jpg)
 
-*图 6：三种动作耦合模式。论文 caption："Three common action-coupling families in existing WAMs. The arrangements differ in where the action representation is bound to the substrate prediction, and that binding is what determines latency, controllability, and per-step inference cost." 论文正文（§4.3 开头）补充："Figure 19 sketches the three top-level arrangements and shows representative candidate forms inside the first."*
+*图 6：三种动作耦合模式——动作如何进入和离开预测过程。耦合是将预测世界模型转变为 WAM 的结构性决策，三种排列在延迟、可控性和每步推理成本上有本质区别。论文正文说明该图在第一种排列内展示了 $q_\psi$ 的代表性候选形式。*
 
-动作耦合是将预测世界模型转变为 WAM 的结构性决策。三种排列在延迟、可控性和每步推理成本上有本质区别。
-
-**(a) Action-Conditioned Rollout：**动作先被提议，世界模型预测后果。数学上 $q_\psi(a \mid c) \, p_\theta(s \mid c, a)$，分为 chunk-level（一次固定整个 action chunk 做条件）和 step-wise（每步交替动作选择和后果预测）两个 submode。该图在第一种排列内展示了 $q_\psi$ 的代表性候选形式——论文正文（§4.3.1）列出了四类：确定性规划器/MPC（如 PointWorld 的 MPPI 采样 + 点流评分）、随机策略采样（如 DreamAvoid 的 flow-policy 采样）、树搜索（如 3D-ALP 的 MCTS）、反馈引导去噪（如 Feedback-WM 的 latent transition model 纠正扩散策略）。核心能力是反事实推理——多个候选动作可并行评分选最优。局限取决于 submode：chunk-level 可并行但不能中途反应，step-wise 可中途反应但失去并行性。
-
-**(b) Joint Generation：**基板和动作由同一个生成过程同时产出——$p_\theta(s_{t+1:t+H}, a_{t:t+H-1} \mid c)$。训练目标 $\mathcal{L}_\text{joint} = \mathcal{L}_\text{gen}(s) + \lambda \mathcal{L}_\text{act}(a)$，通常共享 backbone 上加两个输出头。代表：UWM（视频-动作共享 denoising）、PAD（图像-动作 DiT）、GR-1/GR-2（自回归帧-动作 token）、Motus/DreamZero（异步去噪或共享步）。优势是单次采样产生基板和动作，互约束一致。挑战是 $\mathcal{L}_\text{gen}$ 和 $\mathcal{L}_\text{act}$ 可能对共享 trunk 施加相反压力，因此通常会先预训练基板头（video-only），再引入动作头并配合仔细的 $\lambda$ 调度。
-
-**(c) Post-Prediction Head：**基板先生成，动作专家后解码——$p_\theta(s \mid c) \, q_\psi(a \mid s, c)$。$p_\theta$ 通常冻结，$q_\psi$ 较小、可针对不同 embodiment 单独训练。代表：UniPi（video→inverse dynamics）、CoT-VLA（visual CoT tokens→action）、FLARE（predicted future embedding→action expert）。优势是模块化——预训练预测器可跨 embodiment 复用。风险是 $q_\psi$ 的可靠性完全取决于基板是否保留了动作相关信息。这从设计层面解释了为什么 Latent-Only 和 Video-Generation-Free 在实践中越来越受欢迎：它们选择更接近动作结构的基板。
+- **(a) Action-Conditioned Rollout：**动作先被提议，世界模型预测后果。数学上 $q_\psi(a \mid c) \, p_\theta(s \mid c, a)$。分为 chunk-level（一次固定整个 chunk 做条件）和 step-wise（每步交替动作选择和预测）两种 submode。图中展示了 $q_\psi$ 的四类实现：确定性规划器/MPC（如 PointWorld 的 MPPI + 点流评分）、随机策略采样（DreamAvoid 的 flow-policy 采样）、树搜索（3D-ALP 的 MCTS）、反馈引导去噪（Feedback-WM 的 latent transition model 纠正扩散策略）。核心能力是反事实推理——多个候选动作并行评分选最优。chunk-level 可并行但不能中途反应，step-wise 反之。
+- **(b) Joint Generation：**基板和动作由同一个生成过程同时产出——$p_\theta(s, a \mid c)$。训练目标 $\mathcal{L}_\text{joint} = \mathcal{L}_\text{gen}(s) + \lambda\mathcal{L}_\text{act}(a)$，通常共享 backbone 加两个输出头。代表包括 UWM（视频-动作共享 denoising）、PAD（图像-动作 DiT）、GR-1/GR-2（自回归帧-动作 token）、DreamZero/Motus。优势是单次采样产出一致性强的基板+动作对。挑战是生成 loss 和动作 loss 可能冲突，因此通常先预训练基板头（video-only），再引入动作头并配合 λ 调度。
+- **(c) Post-Prediction Head：**基板先生成，动作专家后解码——$p_\theta(s \mid c) \, q_\psi(a \mid s, c)$。$p_\theta$ 通常冻结，$q_\psi$ 较小、可跨 embodiment 替换。代表包括 UniPi（video→inverse dynamics）、CoT-VLA（visual CoT tokens→action）、FLARE（predicted future embedding→action expert）。优势是模块化——预训练预测器可冻结复用。风险是 $q_\psi$ 的可靠性完全取决于基板是否保留了动作相关信息——这从设计层面解释了 Latent-Only 和 Video-Generation-Free 为什么在实践中越来越受欢迎。
 
 **模式 1：动作条件的 Rollout（Action-Conditioned Rollout）**
 $$q_\psi(a \mid c) \cdot p_\theta(s \mid c, a)$$
