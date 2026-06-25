@@ -1,0 +1,1246 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>World Action Models: A Survey — 阅读笔记</title>
+<!-- arxiv: 2606.20781 -->
+<!-- venue: arXiv 2026 -->
+<!-- tags: WAM, 世界模型, 综述, VLA, 视频生成 -->
+<!-- words-zh: 4253 -->
+<!-- words-en: 683 -->
+<!-- reading-time: 16 -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap"></noscript>
+<style>
+  :root {
+    --bg: #ffffff;
+    --text: #1a1a2e;
+    --text-secondary: #555;
+    --border: #e1e4e8;
+    --link: #0969da;
+    --table-stripe: #f6f8fa;
+    --heading: #0d1117;
+    --blockquote-border: #0969da;
+    --blockquote-bg: #f0f6ff;
+    --inline-code: #d73a49;
+    --inline-code-bg: #f6f8fa;
+    --sidebar-width: 260px;
+    --toc-active: #0969da;
+    --content-max-width: 1350px;
+    --media-max-width: 1000px;
+    --content-padding: 48px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "Inter", "Noto Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 16px;
+    line-height: 1.75;
+    color: var(--text);
+    background: var(--bg);
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    width: var(--sidebar-width);
+    overflow-y: auto;
+    padding: 28px 20px 40px;
+    background: #fafbfc;
+    border-right: 1px solid var(--border);
+    z-index: 10;
+    scrollbar-width: thin;
+  }
+  .sidebar-title {
+    font-size: 13px; font-weight: 700; color: var(--text-secondary);
+    margin-bottom: 16px; letter-spacing: 0.06em; text-transform: uppercase;
+  }
+  .toc-list { list-style: none; padding: 0; margin: 0; }
+  .toc-list ul { list-style: none; padding-left: 14px; }
+  .toc-list li { margin: 1px 0; }
+  .toc-list a {
+    display: block; padding: 4px 12px; font-size: 13.5px; line-height: 1.45;
+    color: var(--text-secondary); text-decoration: none; border-radius: 4px;
+    border-left: 2px solid transparent; transition: all 0.15s;
+  }
+  .toc-list a:hover { color: var(--link); background: #e8f0fe; }
+  .toc-list a.active {
+    color: var(--toc-active); font-weight: 600;
+    border-left-color: var(--toc-active); background: #e8f0fe;
+  }
+  .toc-h1 a { font-weight: 600; color: var(--heading); font-size: 14px; }
+  .toc-h3 a { padding-left: 24px; font-size: 13px; }
+  .toc-h4 a { padding-left: 36px; font-size: 12.5px; }
+  .toc-empty { color: var(--text-secondary); font-size: 13px; font-style: italic; }
+
+  .main-wrapper {
+    margin-left: var(--sidebar-width);
+    min-height: 100vh;
+    display: flex; justify-content: center;
+  }
+  .content-inner {
+    width: 100%;
+    max-width: var(--content-max-width);
+    padding: 40px var(--content-padding) 80px;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    color: var(--heading); font-weight: 700; line-height: 1.3;
+    margin-top: 2em; margin-bottom: 0.6em; scroll-margin-top: 24px;
+  }
+  h1 { font-size: 2em; border-bottom: 2px solid var(--border); padding-bottom: 0.3em; margin-top: 0; }
+  h2 { font-size: 1.5em; border-bottom: 1px solid var(--border); padding-bottom: 0.25em; }
+  h3 { font-size: 1.25em; }
+  h4 { font-size: 1.1em; }
+  p { margin-bottom: 1em; }
+  a { color: var(--link); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  strong { font-weight: 600; }
+
+  blockquote {
+    border-left: 4px solid var(--blockquote-border);
+    background: var(--blockquote-bg);
+    padding: 12px 20px; margin: 1em 0;
+    border-radius: 0 6px 6px 0; color: var(--text-secondary);
+  }
+  blockquote p:last-child { margin-bottom: 0; }
+
+  code {
+    font-family: "JetBrains Mono", "SF Mono", "Fira Code", monospace;
+    font-size: 0.875em; background: var(--inline-code-bg);
+    padding: 2px 6px; border-radius: 4px; color: var(--inline-code);
+  }
+  pre {
+    background: #f6f8fa; color: #24292f;
+    border: 1px solid var(--border);
+    border-radius: 8px; padding: 16px 20px; overflow-x: auto;
+    margin: 1em 0; font-size: 14px; line-height: 1.55;
+  }
+  pre code { background: none; padding: 0; border-radius: 0; color: inherit; font-size: inherit; }
+
+  .codehilite { background: #f6f8fa; border: 1px solid var(--border); border-radius: 8px; padding: 16px 20px; overflow-x: auto; margin: 1em 0; }
+  .codehilite pre { background: none; padding: 0; margin: 0; border-radius: 0; }
+  .codehilite .hll { background-color: #fff8c5; }
+  .codehilite .c  { color: #6e7781; font-style: italic; }
+  .codehilite .k  { color: #cf222e; }
+  .codehilite .o  { color: #0550ae; }
+  .codehilite .s  { color: #0a3069; }
+  .codehilite .n  { color: #24292f; }
+  .codehilite .p  { color: #24292f; }
+  .codehilite .mi { color: #0550ae; }
+  .codehilite .nf { color: #8250df; }
+  .codehilite .nb { color: #953800; }
+  .codehilite .nc { color: #953800; }
+  .codehilite .bp { color: #953800; }
+
+  table { width: 100%; border-collapse: collapse; margin: 1em 0; font-size: 0.925em; }
+  th, td { border: 1px solid var(--border); padding: 10px 14px; text-align: left; }
+  th { background: var(--table-stripe); font-weight: 600; color: var(--heading); }
+  tr:nth-child(even) td { background: var(--table-stripe); }
+
+  .math.display { display: block; overflow-x: auto; padding: 12px 0; margin: 1em 0; }
+  ul, ol { padding-left: 1.5em; margin-bottom: 1em; }
+  li { margin-bottom: 0.3em; }
+  hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+  img { max-width: min(100%, var(--media-max-width)); height: auto; border-radius: 6px; margin: 0 auto; display: block; }
+  #main-content img { cursor: zoom-in; }
+  p:has(img) { text-align: center; max-width: var(--media-max-width); margin: 0.6em auto 0; }
+  table:has(img) { width: min(100%, var(--media-max-width)) !important; margin-left: auto; margin-right: auto; }
+  p:has(img) + p { text-align: center; font-size: 0.9em; color: var(--text-secondary); margin-top: 0.15em; margin-bottom: 0.6em; }
+  .mermaid { text-align: center; margin: 1.5em 0; background: #fafbfc; border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+  .article-stats {
+    font-size: 0.85rem; color: var(--text-secondary);
+    padding: 10px 18px; margin-bottom: 28px;
+    background: #f8f9fa; border: 1px solid var(--border); border-radius: 8px;
+  }
+  body.image-lightbox-open { overflow: hidden; }
+  .image-lightbox {
+    position: fixed; inset: 0; z-index: 1000;
+    display: none;
+    background: rgba(9, 12, 20, 0.88);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+  }
+  .image-lightbox.is-open { display: block; }
+
+  /* Stage uses flexbox to center the image; safe alignment prevents
+     clipping when zoomed-in content overflows — it falls back to
+     start so scrollbars reach every pixel. */
+  .image-lightbox__stage {
+    width: 100%; height: 100%;
+    overflow: auto;
+    display: flex;
+    align-items: safe center;
+    justify-content: safe center;
+    padding: 24px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.18) transparent;
+  }
+
+  .image-lightbox__image {
+    max-width: none; max-height: none;
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 20px 70px rgba(0, 0, 0, 0.5);
+    cursor: zoom-in;
+    flex-shrink: 0;
+    transition: box-shadow 0.3s;
+  }
+
+  /* Close button — top-right glass circle */
+  .image-lightbox__close {
+    position: absolute; top: 20px; right: 20px; z-index: 1010;
+    width: 40px; height: 40px;
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.25);
+    color: rgba(255,255,255,0.85);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    transition: background 0.2s, border-color 0.2s, transform 0.2s, color 0.2s;
+  }
+  .image-lightbox__close:hover {
+    background: rgba(255,255,255,0.15);
+    border-color: rgba(255,255,255,0.3);
+    color: #fff;
+    transform: scale(1.08);
+  }
+
+  /* Zoom toolbar — bottom-center glass pill */
+  .image-lightbox__toolbar {
+    position: absolute; bottom: 28px; left: 50%; transform: translateX(-50%); z-index: 1010;
+    display: flex; align-items: center; gap: 4px;
+    padding: 6px;
+    background: rgba(30, 30, 45, 0.75);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 32px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.35);
+  }
+
+  .image-lightbox__btn {
+    width: 36px; height: 36px;
+    border: none; border-radius: 50%;
+    background: transparent;
+    color: rgba(255,255,255,0.82);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.2s, color 0.2s;
+  }
+  .image-lightbox__btn:hover {
+    background: rgba(255,255,255,0.13);
+    color: #fff;
+  }
+
+  .image-lightbox__zoom-val {
+    min-width: 52px; text-align: center;
+    color: rgba(255,255,255,0.82);
+    font: 600 12.5px/32px "Inter", -apple-system, sans-serif;
+    cursor: pointer; user-select: none;
+    border-radius: 20px; padding: 0 6px;
+    transition: background 0.2s, color 0.2s;
+    letter-spacing: -0.01em;
+  }
+  .image-lightbox__zoom-val:hover {
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+  }
+
+  .image-lightbox__caption {
+    position: absolute; left: 28px; right: 28px; bottom: 96px; z-index: 1005;
+    color: rgba(255,255,255,0.72); text-align: center;
+    font-size: 13px; line-height: 1.45;
+    pointer-events: none;
+  }
+
+  @media (max-width: 1024px) {
+    .sidebar { position: static; width: 100%; height: auto; max-height: 35vh; border-right: none; border-bottom: 1px solid var(--border); }
+    .main-wrapper { margin-left: 0; display: block; }
+    .content-inner { max-width: none; padding: 24px 20px 60px; }
+    .image-lightbox__stage { padding: 12px; }
+    .image-lightbox__close { top: 12px; right: 12px; width: 36px; height: 36px; }
+    .image-lightbox__toolbar { bottom: 18px; padding: 5px; gap: 2px; }
+    .image-lightbox__btn { width: 32px; height: 32px; }
+    .image-lightbox__caption { bottom: 78px; left: 18px; right: 18px; }
+  }
+</style>
+
+<script>
+MathJax = {
+  tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']], processEscapes: true, tags: 'none' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] }
+};
+</script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js" defer></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  mermaid.initialize({ startOnLoad: true, theme: 'neutral', securityLevel: 'loose' });
+});
+</script>
+
+</head>
+<body>
+
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-title">目录</div>
+  <ul class="toc-list">
+<li class="toc-h1"><a href="#world-action-models-a-survey">World Action Models: A Survey — 阅读笔记</a>
+<ul>
+</li>
+<li class="toc-h2"><a href="#_1">一、一句话讲清楚</a>
+</li>
+<li class="toc-h2"><a href="#wam">二、核心问题：WAM 的边界在哪里？</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#21">2.1 五类模型的精确定义</a>
+</li>
+<li class="toc-h3"><a href="#22-wam">2.2 WAM 的三种实现形式</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_2">三、三大设计哲学</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#31-render-and-decode-">3.1 Render-and-Decode（渲染-解码型）</a>
+</li>
+<li class="toc-h3"><a href="#32-latent-only">3.2 Latent-Only（纯隐式型）</a>
+</li>
+<li class="toc-h3"><a href="#33-video-generation-free">3.3 Video-Generation-Free（无视频生成型）</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#wam_1">四、WAM 的四轴解剖</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#41-predictive-substrate">4.1 轴一：预测基板（Predictive Substrate）</a>
+</li>
+<li class="toc-h3"><a href="#42-action-coupling">4.2 轴二：动作耦合（Action Coupling）</a>
+</li>
+<li class="toc-h3"><a href="#43-backbonearchitectural-backbone">4.3 轴三：架构 backbone（Architectural Backbone）</a>
+</li>
+<li class="toc-h3"><a href="#44-deployment-regime">4.4 轴四：部署模式（Deployment Regime）</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_3">五、五大核心属性</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#51-interactability">5.1 可交互性（Interactability）</a>
+</li>
+<li class="toc-h3"><a href="#52-causality">5.2 因果性（Causality）</a>
+</li>
+<li class="toc-h3"><a href="#53-persistence">5.3 持续性（Persistence）</a>
+</li>
+<li class="toc-h3"><a href="#54-physical-plausibility">5.4 物理合理性（Physical Plausibility）</a>
+</li>
+<li class="toc-h3"><a href="#55-generalization">5.5 泛化性（Generalization）</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_4">六、数据与评估</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#61">6.1 数据来源</a>
+</li>
+<li class="toc-h3"><a href="#62">6.2 评估</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_5">七、开放挑战</a>
+<ul>
+</li>
+<li class="toc-h3"><a href="#71-dream-more-or-act-more">7.1 多想还是多做？（Dream More or Act More?）</a>
+</li>
+<li class="toc-h3"><a href="#72">7.2 每个阶段该学什么数据？</a>
+</li>
+<li class="toc-h3"><a href="#73">7.3 记忆能跟上吗？</a>
+</li>
+<li class="toc-h3"><a href="#74-wam">7.4 WAM 如何泛化？</a>
+</li>
+<li class="toc-h3"><a href="#75">7.5 什么让抽象动作接地？</a>
+</li>
+<li class="toc-h3"><a href="#76">7.6 什么样的未来是物理的？</a>
+</li>
+<li class="toc-h3"><a href="#77">7.7 评估应该报告什么？</a>
+</ul></li>
+</li>
+<li class="toc-h2"><a href="#_6">八、核心贡献总结</a>
+</li>
+<li class="toc-h2"><a href="#_7">九、关键概念速查</a>
+</li>
+<li class="toc-h2"><a href="#takeaway">十、Takeaway</a>
+</ul></li>
+</li></ul>
+</nav>
+
+<main class="main-wrapper">
+  <div class="content-inner" id="main-content">
+<h1 id="world-action-models-a-survey">World Action Models: A Survey — 阅读笔记</h1>
+<div class="article-stats">4,253 字 · English 683 词 · 约 16 分钟阅读</div>
+
+<blockquote>
+<p><strong>论文信息</strong>
+- 作者：Qiuhong Shen, Shihua Zhang, Yue Liao, Qi Li, Zhenxiong Tan, Shizun Wang, Shuicheng Yan, Xinchao Wang†
+- 通讯作者：Xinchao Wang
+- 机构：National University of Singapore
+- arXiv ID：2606.20781
+- 项目主页：https://world-action-models.github.io/
+- 日期：2026-06</p>
+</blockquote>
+<hr />
+<h2 id="_1">一、一句话讲清楚</h2>
+<p>这篇综述给 World Action Models（WAMs）下了统一的定义：<strong>WAM 是一种 embodied predictive-action model，它预测未来（predictive），并且把预测的未来用于产生、选择或校验动作（action-facing）</strong>。论文的核心贡献不是提出新方法，而是用一套统一的框架（4-tuple 解剖 + 三大设计哲学 + 五大核心属性）把当前几百篇相关工作组织成一张可导航的地图。</p>
+<div class="codehilite"><pre><span></span><code>传统 VLA：observation → action（不预测未来）
+WAM：     observation → predicted future → action（预测为动作服务）
+关键区分：不是所有预测未来的模型都是 WAM，预测结果必须进入动作路径
+</code></pre></div>
+
+<hr />
+<h2 id="wam">二、核心问题：WAM 的边界在哪里？</h2>
+<h3 id="21">2.1 五类模型的精确定义</h3>
+<p>论文第 2 节用损失函数形式化地划清了五个常被混淆的概念的边界：</p>
+<table>
+<thead>
+<tr>
+<th>模型类型</th>
+<th>数学定义</th>
+<th>关键特点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>VLA</strong></td>
+<td><span class="math inline">$\mathcal{L}_{\text{VLA}} = -\log p_\theta(a \mid o, l)$</span></td>
+<td>直接从观测映射到动作，不建模未来</td>
+</tr>
+<tr>
+<td><strong>World Model</strong></td>
+<td><span class="math inline">$\mathcal{L}_{\text{WM}} = -\log p_\theta(o' \mid o, a, l)$</span></td>
+<td>预测未来观测，但不负责选动作</td>
+</tr>
+<tr>
+<td><strong>Video Generation Model</strong></td>
+<td><span class="math inline">$\mathcal{L}_{\text{VGM}} = -\log p_\theta(o' \mid r)$</span></td>
+<td>从 prompt 生成视频，与动作无关</td>
+</tr>
+<tr>
+<td><strong>Video World Model</strong></td>
+<td><span class="math inline">$\mathcal{L}_{\text{VWM}} = -\log p_\theta(o' \mid o, a, l)$</span></td>
+<td>动作条件的视频预测器（World Model 的视觉特化）</td>
+</tr>
+<tr>
+<td><strong>WAM</strong></td>
+<td><span class="math inline">$\mathcal{L}_{\text{WAM}} = -\log p_\theta(o', a \mid o, l)$</span></td>
+<td>预测的未来必须进入动作路径</td>
+</tr>
+</tbody>
+</table>
+<h3 id="22-wam">2.2 WAM 的三种实现形式</h3>
+<p>WAM 可以通过三种方式实现"预测为动作服务"：</p>
+<p><strong>形式一：先预测后动作（Cascade）</strong>
+<div class="math display">$$p_\Theta(o', a \mid o, l) = p_\theta(o' \mid o, l) \, q_\psi(a \mid o, o', l)$$</div></p>
+<ul>
+<li>早期代表：UniPi（text→video→inverse dynamics→action）</li>
+<li>动作模块 <span class="math inline">$q_\psi$</span> 可以是 inverse dynamics、pose tracker、trajectory optimizer 等</li>
+</ul>
+<p><strong>形式二：先提议动作再看后果（Rollout-Scoring）</strong>
+<div class="math display">$$p_\Theta(o', a \mid o, l) = q_\psi(a \mid o, l) \, p_\theta(o' \mid o, a, l)$$</div></p>
+<ul>
+<li>候选动作先被提出，然后通过预测其后果来打分</li>
+<li>代表：PointWorld（MPPI + point-flow dynamics）、DreamAvoid（critical-phase scoring）</li>
+</ul>
+<p><strong>形式三：联合预测（Joint）</strong>
+<div class="math display">$$p_\Theta(o', a \mid o, l)$$</div></p>
+<ul>
+<li>未来和动作由一个共享 backbone 同时产出</li>
+<li>代表：GR-1/GR-2、PAD、UWM、DreamZero、Fast-WAM</li>
+</ul>
+<blockquote>
+<p><strong>关键判决标准</strong>：一个直接 VLA 加一个辅助的未来预测 loss、仅用作 RL 环境的 simulator、或在推理时丢弃的未来 head，都<strong>不算 WAM</strong>。WAM 要求预测的未来在推理时仍然在动作路径上。</p>
+</blockquote>
+<p><img alt="WAM 定义" src="assets/wam-survey/fig-wam-definition.jpg" /></p>
+<p><em>图 1：WAM 的定义。直接 VLA 从当前上下文预测动作；World Model 预测未来观测；WAM 要求预测的未来进入动作路径——通过 cascade、rollout-scoring、或 joint prediction。</em></p>
+<hr />
+<h2 id="_2">三、三大设计哲学</h2>
+<p>论文第 3 节从"动作在推理路径上的哪个位置被解码"这个视角，将所有 WAM 分为三个互斥的哲学阵营。分类标准是<strong>推理时</strong>（或动作监督时）最后需要的未来表征形式。</p>
+<p><img alt="三大设计哲学" src="assets/wam-survey/fig-three-philosophies.jpg" /></p>
+<p><em>图 2：三大设计哲学。Render-and-Decode 跑到像素输出才解码动作；Latent-Only 在像素解码前截停；Video-Generation-Free 完全不用视频生成 backbone。</em></p>
+<p><img alt="WAM 时间线" src="assets/wam-survey/fig-wam-timeline.jpg" /></p>
+<p><em>图 3：WAM 时间线。Render-and-Decode 出现最早，Latent-Only 随后兴起（开始把像素解码从控制路径中移除），Video-Generation-Free 作为更近期的替代方案出现。</em></p>
+<h3 id="31-render-and-decode-">3.1 Render-and-Decode（渲染-解码型）</h3>
+<p><strong>定义</strong>：把视频生成 backbone 跑到像素输出，然后从渲染的未来中解码动作。</p>
+<p><strong>核心前提</strong>：渲染的未来值得在推理时产生，因为它保留了视频 backbone 学到的完整视觉先验（外观、运动、接触、场景动力学）。</p>
+<p><strong>代价</strong>：视觉合成成为策略延迟预算的一部分。</p>
+<p><strong>代表作演进路线</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>阶段</th>
+<th>代表工作</th>
+<th>核心思路</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>奠基</td>
+<td>UniPi</td>
+<td>text→video→inverse dynamics，建立"视频即计划"模板</td>
+</tr>
+<tr>
+<td>扩展</td>
+<td>AVDC, Dreamitate, Gen2Act</td>
+<td>用密集对应、生成的人手视频替代动作标签</td>
+</tr>
+<tr>
+<td>模块化分离</td>
+<td>DreamGen, RIGVid, VERA</td>
+<td>世界模型与动作恢复分开训练，可跨 embodiment 复用</td>
+</tr>
+<tr>
+<td>几何中间层</td>
+<td>NovaFlow, Dream2Flow, 3D-ALP</td>
+<td>从生成视频中提取 3D flow/pose，再做控制</td>
+</tr>
+<tr>
+<td>联合生成</td>
+<td>GR-1, GR-2, PAD, WorldVLA</td>
+<td>动作预测进入视频 backbone 内部，不再外挂 decoder</td>
+</tr>
+<tr>
+<td>稀疏未来</td>
+<td>RoboEnvision, CoT-VLA, π₀.₇, SWEET</td>
+<td>只渲染关键帧/子目标，不全量生成视频</td>
+</tr>
+<tr>
+<td>Foundation 级</td>
+<td>DreamZero, Say-Dream-Act, Vidar, Veo-Act</td>
+<td>大视频 backbone 进入闭环控制</td>
+</tr>
+</tbody>
+</table>
+<p><strong>核心局限</strong>：每个预测步都要付完整去噪/自回归的代价，而 actor 很少消费全部渲染输出。视频质量指标与下游任务成功率弱相关。</p>
+<h3 id="32-latent-only">3.2 Latent-Only（纯隐式型）</h3>
+<p><strong>定义</strong>：保留视频世界模型的训练先验，但推理时在像素解码之前截停——动作从中间 latent、去噪特征、光流场、语义 mask 或 value map 中解码。</p>
+<p><strong>动机</strong>：保留视频学到的时序和物理结构，同时降低推理成本。</p>
+<p><strong>关键设计选择</strong>：在哪里截断预测路径？</p>
+<table>
+<thead>
+<tr>
+<th>截断点</th>
+<th>代表工作</th>
+<th>核心思路</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>视频 latent 中间状态</td>
+<td>ARDuP, VPP, VILP</td>
+<td>从 video diffusion 中间层解码动作</td>
+</tr>
+<tr>
+<td>去噪轨迹早期检查点</td>
+<td>mimic-video, DiT4DiT, S-VAM</td>
+<td>从去噪中间步（而非最终步）解码动作</td>
+</tr>
+<tr>
+<td>结构化运动预测</td>
+<td>Im2Flow2Act, 3DFlowAction, TraceGen</td>
+<td>先预测 flow/trace，再解码动作</td>
+</tr>
+<tr>
+<td>联合训练+推理时跳过</td>
+<td>UWM, Fast-WAM, GigaWorld-Policy</td>
+<td>训练时联合视频-动作，推理时关闭视频分支</td>
+</tr>
+<tr>
+<td>跨模态 latent</td>
+<td>OmniVTA, VTAM, CLWM</td>
+<td>触觉 latent、特征 latent 同样适用</td>
+</tr>
+</tbody>
+</table>
+<p><strong>核心权衡</strong>：保留了视频预训练的动力学先验，但失去了直接的视觉可解释性。</p>
+<h3 id="33-video-generation-free">3.3 Video-Generation-Free（无视频生成型）</h3>
+<p><strong>定义</strong>：完全不用视频生成 backbone。预测组件在 LLM/VLM/JEPA/DINO 特征回归器/非视频扩散 backbone 的嵌入或 token 空间中产生未来表征。</p>
+<p><strong>动机</strong>：避免视频生成的训练和推理成本，同时在更紧凑的表征空间中保留预测监督。</p>
+<p><strong>四类实现路径</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>路径</th>
+<th>代表工作</th>
+<th>核心思路</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>特征预测</td>
+<td>FLARE, FRAPPE, LDA-1B</td>
+<td>用 frozen teacher/VFM embedding 作为未来预测 target</td>
+</tr>
+<tr>
+<td>学习 token/隐式转移</td>
+<td>DUST, ALAM</td>
+<td>在 VLM 的 token 空间中预测未来</td>
+</tr>
+<tr>
+<td>结构化非像素未来</td>
+<td>PointWorld, PALM, HiF-VLA</td>
+<td>预测 3D 点流、affordance map、运动矢量等几何/任务结构</td>
+</tr>
+<tr>
+<td>跨模态</td>
+<td>Audio-WM</td>
+<td>预测未来声音的 Mel latent，用于接触声学丰富的任务</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="wam_1">四、WAM 的四轴解剖</h2>
+<p>论文第 4 节将每个 WAM 视为同一个数学对象的不同实现：</p>
+<div class="math display">$$p_\Theta\left(s_{t+1:t+H}, a_{t:t+H-1} \mid o_{\le t}, a_{&lt;t}, l\right)$$</div>
+<p>四个设计轴分别是：</p>
+<p><img alt="WAM 解剖" src="assets/wam-survey/fig-wam-anatomy.jpg" /></p>
+<p><em>图 4：WAM 的四轴解剖。任何 WAM 都可以通过四个可分离但相互影响的选择来指定。</em></p>
+<h3 id="41-predictive-substrate">4.1 轴一：预测基板（Predictive Substrate）</h3>
+<p><strong><span class="math inline">$s_{t+1:t+H}$</span> 生活在哪里？</strong> 这是"未来用什么形式呈现给动作"的问题。</p>
+<p><img alt="基板阶梯" src="assets/wam-survey/fig-substrate-ladder.jpg" /></p>
+<p><em>图 5：四种预测基板类别。</em></p>
+<table>
+<thead>
+<tr>
+<th>基板类别</th>
+<th>形式</th>
+<th>代表工作</th>
+<th>优点</th>
+<th>缺点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>像素基板</strong></td>
+<td>RGB/RGB-D/多视角视频 或 VAE/VQ latent（有固定 decoder）</td>
+<td>UniPi, GR-1, PAD, WorldVLA</td>
+<td>可检查、保留外观先验</td>
+<td>生成成本高、大量细节动作不需要</td>
+</tr>
+<tr>
+<td><strong>特征基板</strong></td>
+<td>学习的 hidden state / teacher embedding / VLM token block（无固定视觉 decoder）</td>
+<td>Fast-WAM, FLARE, LDA-1B, VPP</td>
+<td>紧凑、语义不变性强</td>
+<td>无直接视觉质量指标</td>
+</tr>
+<tr>
+<td><strong>几何基板</strong></td>
+<td>光流/点轨迹/深度/pose/运动矢量/polyline</td>
+<td>Im2Flow2Act, PointWorld, TesserAct, HiF-VLA</td>
+<td>更接近控制接口、成本低</td>
+<td>丢失外观语义</td>
+</tr>
+<tr>
+<td><strong>Affordance 基板</strong></td>
+<td>value map/contact map/semantic mask/heatmap</td>
+<td>AIM, PALM, MWM</td>
+<td>直接任务相关、紧凑</td>
+<td>需任务特定标注</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>关键区分</strong>：基板和耦合是独立的轴。Fast-WAM 是特征基板 + encoder-only；τ₀-WM 是像素基板 + joint-denoising。两者可以自由组合。</p>
+</blockquote>
+<h3 id="42-action-coupling">4.2 轴二：动作耦合（Action Coupling）</h3>
+<p><strong>动作如何进入和离开模型？</strong> 三种顶层分解：</p>
+<p><img alt="耦合模式" src="assets/wam-survey/fig-coupling-regimes.jpg" /></p>
+<p><em>图 6：三种动作耦合模式。</em></p>
+<p><strong>模式 1：动作条件的 Rollout（Action-Conditioned Rollout）</strong>
+<div class="math display">$$q_\psi(a \mid c) \cdot p_\theta(s \mid c, a)$$</div></p>
+<ul>
+<li>动作先被提出（planner/policy/sampler），世界模型预测后果</li>
+<li>支持反事实推理：多个候选动作并行评分</li>
+<li>代表：PointWorld（MPPI + point-flow）、DreamAvoid（critical-phase 评分）、3D-ALP（MCTS + 3D 渲染 oracle）</li>
+</ul>
+<p><strong>模式 2：联合生成（Joint Generation）</strong>
+<div class="math display">$$p_\theta(s, a \mid c)$$</div></p>
+<ul>
+<li>基板和动作由同一个生成过程产生</li>
+<li>训练目标：<span class="math inline">$\mathcal{L}_\text{joint} = \mathcal{L}_\text{gen}(s) + \lambda \cdot \mathcal{L}_\text{act}(a)$</span></li>
+<li>代表：UWM, PAD, VideoVLA, GR-1, Motus, DreamZero</li>
+<li>优点：单次采样产生基板+动作，两者一致性强</li>
+<li>缺点：生成 loss 和动作 loss 可能冲突，需要仔细的 λ 调度</li>
+</ul>
+<p><strong>模式 3：预测后动作头（Post-Prediction Head）</strong>
+<div class="math display">$$p_\theta(s \mid c) \cdot q_\psi(a \mid s, c)$$</div></p>
+<ul>
+<li>基板先生成，动作专家后解码</li>
+<li><span class="math inline">$q_\psi$</span> 通常较小，可单独训练，可跨 embodiment 替换</li>
+<li>代表：UniPi（video→inverse dynamics→action）、CoT-VLA、FLARE、mimic-video</li>
+<li>优势：预训练预测器可冻结复用</li>
+<li>风险：如果基板不保留动作相关信息，<span class="math inline">$q_\psi$</span> 不可靠</li>
+</ul>
+<p><strong>动作表示</strong>：连续控制（<span class="math inline">$\mathbb{R}^{d_a}$</span>）、离散 token（codebook binning）、学习 latent action（<span class="math inline">$\mathbb{R}^{d_z}, d_z \ll d_a$</span>）。</p>
+<p><strong>Chunk size</strong>：单步动作（低延迟但高调用频率）vs 长 chunk（摊销 backbone 成本但无法中途反应）。</p>
+<h3 id="43-backbonearchitectural-backbone">4.3 轴三：架构 backbone（Architectural Backbone）</h3>
+<p><strong>用什么函数族实现预测？</strong> 五大 backbone 家族：</p>
+<table>
+<thead>
+<tr>
+<th>Backbone 家族</th>
+<th>核心参数化</th>
+<th>典型训练目标</th>
+<th>代表 WAM</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>迭代去噪（Video Diffusion）</strong></td>
+<td><span class="math inline">$p_\theta(s \mid c) = \int p(s^{(N)})\prod p_\theta(s^{(n-1)} \mid s^{(n)}, c)$</span></td>
+<td>Score-matching / Flow-matching</td>
+<td>UniPi, PAD, VideoVLA, CosmosPolicy</td>
+</tr>
+<tr>
+<td><strong>自回归（Autoregressive）</strong></td>
+<td><span class="math inline">$p_\theta(y_{1:M} \mid c) = \prod_j p_\theta(y_j \mid y_{&lt;j}, c)$</span></td>
+<td>下一元素 CE / regression</td>
+<td>GR-1, GR-2, WorldVLA, PhysGen</td>
+</tr>
+<tr>
+<td><strong>联合嵌入预测（JEPA）</strong></td>
+<td><span class="math inline">$s = f_\theta^\text{pred}(\mathbf{E}^\text{ctx}(x_\text{ctx}))$</span>，target 来自 EMA encoder</td>
+<td>特征空间 MSE</td>
+<td>FLARE, DAWN, V-JEPA~2</td>
+</tr>
+<tr>
+<td><strong>混合型（Hybrid）</strong></td>
+<td><span class="math inline">$g_\theta(c) \to \{h_\theta^s, h_\theta^a\}$</span>，共享 trunk 多头输出</td>
+<td><span class="math inline">$\mathcal{L}_\text{gen} + \lambda \mathcal{L}_\text{act}$</span></td>
+<td>UVA, Motus, F1, X-WAM, DriveWAM</td>
+</tr>
+<tr>
+<td><strong>LLM/VLM-backbone</strong></td>
+<td>VLM forward → future token block → <span class="math inline">$q_\psi$</span> 解码动作</td>
+<td>VLM 的 next-token + 动作 loss</td>
+<td>π₀.₇, CoT-VLA, LDA-1B, PALM</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>重要澄清</strong>：自回归是 backbone 参数化，不等于 joint action prediction。很多自回归 WAM 的流只预测基板，动作由外部 <span class="math inline">$q_\psi$</span> 解码。</p>
+</blockquote>
+<h3 id="44-deployment-regime">4.4 轴四：部署模式（Deployment Regime）</h3>
+<p><strong>WAM 以什么频率、什么窗口被调用？</strong></p>
+<table>
+<thead>
+<tr>
+<th>模式</th>
+<th>公式</th>
+<th>特点</th>
+<th>代表</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>开环 rollout</strong></td>
+<td><span class="math inline">$H \approx T$</span>，调用一次</td>
+<td>成本一次性支付，无法反应偏差</td>
+<td>UniPi, AVDC, RoboEnvision</td>
+</tr>
+<tr>
+<td><strong>分块闭环</strong></td>
+<td><span class="math inline">$H = K$</span>，每 <span class="math inline">$K$</span> 步重规划一次</td>
+<td>摊销大 backbone 成本，实时可行</td>
+<td>π₀.₇, CoT-VLA, Motus, DreamZero</td>
+</tr>
+<tr>
+<td><strong>单步闭环</strong></td>
+<td><span class="math inline">$H = 1$</span>，每控制步调用</td>
+<td>最高反应性，每步成本最高</td>
+<td>WorldVLA, GR-1, PAD</td>
+</tr>
+<tr>
+<td><strong>交互式模拟</strong></td>
+<td>无限 horizon，跨调用携带状态（KV-cache/persistent latent）</td>
+<td>最灵活，但需要因果一致性</td>
+<td>DreamZero（KV-cache 重接地）</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="_3">五、五大核心属性</h2>
+<p>论文第 5 节讨论 WAM 一旦进入控制回路后必须满足的五个属性。它们不是检查清单，而是一组相互竞争的约束。</p>
+<h3 id="51-interactability">5.1 可交互性（Interactability）</h3>
+<p><strong>WAM 必须在生成过程中接受控制信号，而不是只在生成完后才解码动作。</strong></p>
+<p>动作绑定时机是一个从"生成后解码"到"生成中控制"的谱系：</p>
+<div class="codehilite"><pre><span></span><code>Post-prediction decoding           In-generation control
+（生成完后解码）        ─────────────────────→        （生成中控制）
+UniPi, AVDC               CoVAR, UWM, AdaWorld
+最便宜、最模块化                             预测的未来真正被动作塑造
+</code></pre></div>
+
+<p><strong>瓶颈化动作通路</strong>是极端形式——AIM 把未来暴露为 spatial value map、GigaWorld-Policy 让动作成为主要预测目标。通道越窄，推理越便宜，但动作能利用的未来信息也越少。</p>
+<h3 id="52-causality">5.2 因果性（Causality）</h3>
+<p><strong>未来的信息不能泄漏到当前执行的动作中。</strong></p>
+<p>三种实现手段：</p>
+<ol>
+<li><strong>因果 token 流</strong>（GR-1/GR-2/PhysGen/WorldVLA）：因果 masking + KV-cache，预测下一个元素时只看过去</li>
+<li><strong>无泄漏去噪</strong>（WorldVLA/CoT-VLA/UD-VLA）：chunk 内 action token 不能 attend 到 future-pixel token</li>
+<li><strong>动作优先推理</strong>（mimic-video/S-VAM/Fast-WAM）：控制器通常更需要下一个动作而非完整精修的未来视频——中间 ODE 检查点、单次前向传播就够了</li>
+</ol>
+<p><strong>关键操作</strong>：用因果结构同时解决两个问题——阻止未来信息泄漏 + 把计算花在能改变下一个决策的预测部分。</p>
+<h3 id="53-persistence">5.3 持续性（Persistence）</h3>
+<p><strong>在反复动作-观测-重规划下保持状态一致。</strong></p>
+<p>三种失败模式及应对：</p>
+<table>
+<thead>
+<tr>
+<th>失败模式</th>
+<th>原因</th>
+<th>应对机制</th>
+<th>代表</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>漂移</strong></td>
+<td>预测误差逐步累积</td>
+<td>观测替换：用实测替换预测，更新 cache</td>
+<td>DreamZero（KV-cache 重接地）</td>
+</tr>
+<tr>
+<td><strong>成本增长</strong></td>
+<td>注意完整历史的复杂度上升</td>
+<td>有界记忆：固定预算内的上下文管理</td>
+<td>DexWM（bounded test-time memory）</td>
+</tr>
+<tr>
+<td><strong>遗忘</strong></td>
+<td>有限上下文丢弃场景身份</td>
+<td>多尺度时序哈希</td>
+<td>Act2Goal（近稠密远稀疏）</td>
+</tr>
+</tbody>
+</table>
+<h3 id="54-physical-plausibility">5.4 物理合理性（Physical Plausibility）</h3>
+<p><strong>预测的未来必须能被 embodiment 实际执行，而不只是看起来逼真。</strong></p>
+<p>三层物理约束阶梯：</p>
+<div class="codehilite"><pre><span></span><code>最上层：全 RGB → 下一阶梯：RGB-D/Normal/4D 点云 → 再往下：光流/3D 物体流
+→ 更底层：语义 mask → 最底层：完全不渲染（特征空间/affordance）
+</code></pre></div>
+
+<p>每往下一层，就丢掉控制器不需要的外观信息，迫使容量流向几何、接触和动力学。</p>
+<p><strong>其他物理通道</strong>：</p>
+<ul>
+<li><strong>触觉预测</strong>：OmniVTA 预测触觉接触状态，快慢双通道控制</li>
+<li><strong>力预测</strong>：AdaWorldPolicy 加力预测分支，用力-力矩失配做在线适应</li>
+<li><strong>运动学一致性</strong>：PAD/GR-1/CosmosPolicy 用本体感知条件化预测；DexWM 加手部一致性 loss</li>
+</ul>
+<h3 id="55-generalization">5.5 泛化性（Generalization）</h3>
+<p><strong>WAM 的泛化比 VLA 更严格——因为预测基板和动作通路都必须经受住分布偏移。</strong></p>
+<p>三种泛化路径：</p>
+<table>
+<thead>
+<tr>
+<th>路径</th>
+<th>转移什么</th>
+<th>代表</th>
+<th>局限</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>视频先验迁移</strong></td>
+<td>大规模视频预训练 → 动作微调</td>
+<td>GR-2, VideoVLA, DreamZero</td>
+<td>需要 inverse model/subgoal generator 连接</td>
+</tr>
+<tr>
+<td><strong>基板迁移</strong></td>
+<td>把未来换成不携带外观信息的表征（flow/mask/feature）</td>
+<td>Im2Flow2Act, MWM, FRAPPE</td>
+<td>难以用视频指标评估</td>
+</tr>
+<tr>
+<td><strong>动作抽象迁移</strong></td>
+<td>分离基板（承载任务动态）和动作解码器（承载 embodiment 特定运动学）</td>
+<td>LDA-1B, DUST, ALAM</td>
+<td>抽象动作仍需 decoder/calibration</td>
+</tr>
+</tbody>
+</table>
+<p><strong>核心原则</strong>：在仍然能约束控制的最高不变性层面预测。没有一种设计对所有偏移都最优。</p>
+<hr />
+<h2 id="_4">六、数据与评估</h2>
+<h3 id="61">6.1 数据来源</h3>
+<p>五种数据来源，每种在规模-标签质量-物理真实性之间提供不同的折中：</p>
+<table>
+<thead>
+<tr>
+<th>数据源</th>
+<th>特点</th>
+<th>代表</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>机器人遥操作</strong></td>
+<td>最精确的动作标签，消耗机器人/操作员时间</td>
+<td>OXE, RoboMIND, RoboSet</td>
+</tr>
+<tr>
+<td><strong>便携人类演示</strong></td>
+<td>高通量，有 embodiment gap</td>
+<td>EgoMimic, EgoDex, EgoVerse</td>
+</tr>
+<tr>
+<td><strong>互联网自我中心视频</strong></td>
+<td>最大规模，缺少动作通道</td>
+<td>Ego4D, EPIC-KITCHENS, EgoScale</td>
+</tr>
+<tr>
+<td><strong>仿真</strong></td>
+<td>精确标签+可控课程，有 sim-to-real gap</td>
+<td>LIBERO, RoboTwin, ManiSkill</td>
+</tr>
+<tr>
+<td><strong>WAM 自身生成</strong></td>
+<td>神经轨迹填补物理采集空白，继承生成器失败模式</td>
+<td>DreamGen, IRASim</td>
+</tr>
+</tbody>
+</table>
+<h3 id="62">6.2 评估</h3>
+<p>三个层次且尚未完全统一：</p>
+<ol>
+<li><strong>视觉保真度指标</strong>（FVD, FID, LPIPS, PSNR, SSIM）：便宜但与下游任务成功率弱相关</li>
+<li><strong>闭环基准</strong>（LIBERO, RoboTwin, ManiSkill, 真机测试）：更可信但每轮消耗 robot/simulator</li>
+<li><strong>物理合理性和长程一致性</strong>：尚无标准指标——触觉误差、运动学一致性检查仍在早期</li>
+</ol>
+<p><strong>核心矛盾</strong>：WAM 越适合真实使用，越难评估——分块/交互式闭环控制需要更长 horizon、更严延迟约束和真实环境变化。</p>
+<hr />
+<h2 id="_5">七、开放挑战</h2>
+<p>论文第 7 节提出了七个开放问题：</p>
+<h3 id="71-dream-more-or-act-more">7.1 多想还是多做？（Dream More or Act More?）</h3>
+<p><strong>核心张力</strong>：更丰富的未来（更大的 backbone、更深的去噪）改善动作基板，但增加观测到控制的延迟。</p>
+<p>当前方法的两种选择：</p>
+<ul>
+<li><strong>少想多做</strong>：S-VAM（蒸馏去噪特征）、Fast-WAM（推理时关闭视频分支）、GigaWorld-Policy（mask 掉未来视频 token）</li>
+<li><strong>多想少做</strong>：DreamZero（优化栈把大视频 backbone 带入闭环）、CosmosPolicy（重复 model+value 查询规划）</li>
+</ul>
+<p><strong>开放问题</strong>：暴露一个可控的 fidelity-latency 曲线，让 WAM 根据状态选择用多少未来信息。更进一步，使这成为运行时的自适应决策——接触敏感状态多花未来预算，常规运动中少花。</p>
+<h3 id="72">7.2 每个阶段该学什么数据？</h3>
+<p>WAM 需要视觉动态、embodiment 对齐、可执行动作、后训练调度器——这些不应从同一数据源学习。</p>
+<ul>
+<li>pretraining 阶段：什么样的视频能教后面动作路径需要的动态？（VidMan：机器人域视频有帮助，不匹配的自我中心视频可能有害）</li>
+<li>对齐阶段：自我中心人类数据、配对人-机器人演示、可穿戴设备——哪种偏差最小？</li>
+<li>动作阶段：action-free 方法（LAPA, DUST, ALAM）减少对标注的依赖，但不能完全消除</li>
+</ul>
+<p><strong>缺失的关键结果</strong>：数据源 × 阶段 × 质量 × 模型大小 × 动作接地的联合 scaling law。</p>
+<h3 id="73">7.3 记忆能跟上吗？</h3>
+<ul>
+<li>自回归预测有漂移问题（IRASim, PhysGen）</li>
+<li>有界测试时记忆有遗忘风险（CLWM）</li>
+<li>紧凑 latent state 在长操作 episode 中丢失物体级空间细节（Dreamer 4）</li>
+</ul>
+<p><strong>开放问题</strong>：将 bounded memory、spatial indexing 和 observation replacement 组合成一个在长任务中保持反应性的方法。</p>
+<h3 id="74-wam">7.4 WAM 如何泛化？</h3>
+<ul>
+<li>Domain randomization 仍是硬测试：Act2Goal 在强随机条件下骤降，FRAPPE 也远低于实用率</li>
+<li>Video prior 帮助泛化，但不解决形态学偏移（DreamZero 仍需适应）</li>
+<li>正信号：EgoScale 展示了灵巧预训练量的清晰 scaling law</li>
+</ul>
+<p><strong>开放问题</strong>：在训练前为声明的偏移做设计，然后测试基板和动作解码器是否跨该偏移泛化。</p>
+<h3 id="75">7.5 什么让抽象动作接地？</h3>
+<ul>
+<li>2D 物体流无法表示深度平移/面外旋转/接触力</li>
+<li>Point-track 和 flow 适配器继承 tracker/depth estimator 的误差</li>
+<li>学习 latent action 在精细抓取时困难（LAPA）</li>
+<li>代数一致性是有用的规律，但不是力/力矩/接触的解释（ALAM）</li>
+</ul>
+<p><strong>开放问题</strong>：保留抽象动作的数据优势，同时加入物理接地信号和用于失败分析的可检查 handle。</p>
+<h3 id="76">7.6 什么样的未来是物理的？</h3>
+<ul>
+<li>单帧条件的 flow 世界模型无法编码物体速度（FlowDreamer）</li>
+<li>触觉力代理未校准（VTAM）</li>
+<li>执行性 reward 如果只评分平滑度和关节限制会遗漏接触（EVA）</li>
+</ul>
+<p>部分方法指向更好标准：RoboScape 加几何一致性约束、OmniVTA/DexWM 加入触觉/灵巧状态、AdaWorldPolicy 在训练目标中包含动作条件的未来结构。</p>
+<h3 id="77">7.7 评估应该报告什么？</h3>
+<ul>
+<li>世界模型质量与下游策略效用仅弱相关（MotuBrain）</li>
+<li>平均成功率隐藏相反模式（HarmoWAM：转运有用的调度在精确交互时失败）</li>
+<li>延迟通常与准确率分开报告</li>
+</ul>
+<p><strong>理想协议</strong>："accuracy-at-budget"——把成功率、延迟、持续 horizon、峰值内存和接触敏感失败标签放在同一轴上。</p>
+<hr />
+<h2 id="_6">八、核心贡献总结</h2>
+<ol>
+<li>
+<p><strong>统一定义</strong>：给出了 WAM 的精确定义——预测的未来必须进入动作路径（cascade / rollout-scoring / joint prediction），排除了不满足该标准的直接 VLA 和纯世界模型。</p>
+</li>
+<li>
+<p><strong>双重分类体系</strong>：</p>
+<ul>
+<li><strong>哲学层面</strong>：Render-and-Decode / Latent-Only / Video-Generation-Free（按"动作在哪里被解码"分类）</li>
+<li><strong>组件层面</strong>：Substrate × Backbone × Coupling × Deployment（4-tuple 统一表示）</li>
+</ul>
+</li>
+<li>
+<p><strong>五大核心属性</strong>：Interactability / Causality / Persistence / Physical Plausibility / Generalization——不是检查清单，而是一组相互竞争的约束。</p>
+</li>
+<li>
+<p><strong>统一观察</strong>：整个领域的演进方向不是"生成更多未来"，而是<strong>"生成更少但更精准的未来"</strong>——只保留控制需要的那部分。</p>
+</li>
+</ol>
+<hr />
+<h2 id="_7">九、关键概念速查</h2>
+<table>
+<thead>
+<tr>
+<th>概念</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>WAM</strong></td>
+<td>World Action Model — 预测未来并把预测用于动作的 embodied model</td>
+</tr>
+<tr>
+<td><strong>Render-and-Decode</strong></td>
+<td>视频 backbone 跑到像素输出，再解码动作</td>
+</tr>
+<tr>
+<td><strong>Latent-Only</strong></td>
+<td>保留视频 backbone 训练先验，推理时在像素解码前截停</td>
+</tr>
+<tr>
+<td><strong>Video-Generation-Free</strong></td>
+<td>完全不用视频生成 backbone，未来在 token/feature/geometry 空间中</td>
+</tr>
+<tr>
+<td><strong>Predictive Substrate</strong></td>
+<td>未来用什么形式呈现给动作（像素/特征/几何/affordance）</td>
+</tr>
+<tr>
+<td><strong>Action Coupling</strong></td>
+<td>动作如何进入和离开模型（rollout/joint/head）</td>
+</tr>
+<tr>
+<td><strong>Deployment Regime</strong></td>
+<td>WAM 被调用的频率和窗口（开环/分块闭环/单步闭环）</td>
+</tr>
+<tr>
+<td><strong>Interactability</strong></td>
+<td>控制信号能在生成过程中塑造未来，而非只在生成后解码</td>
+</tr>
+<tr>
+<td><strong>Causality</strong></td>
+<td>未来信息不能泄漏到当前执行的动作中</td>
+</tr>
+<tr>
+<td><strong>Persistence</strong></td>
+<td>反复动作-观测-重规划下保持长程状态一致</td>
+</tr>
+<tr>
+<td><strong>Physical Plausibility</strong></td>
+<td>预测的未来能被 embodiment 实际执行，不只看视觉逼真</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="takeaway">十、Takeaway</h2>
+<p>这篇综述的核心信息是：<strong>WAM 不是"视频生成器 + 动作头"，而是一类设计选择在"表征丰富性 vs 计算/内存/延迟"之间做权衡的预测-动作方法。领域正在朝着"生成更少的未来，但保留控制所需的那部分"的方向演进。</strong></p>
+<p>理解 WAM 的正确方式不是记住每篇论文的名字，而是通过 4-tuple（基板 × backbone × 耦合 × 部署）来定位任何新方法，通过五大属性来衡量它的实际表现，通过数据-评估的 trade-off 来判断它的实用价值。</p>
+  </div>
+</main>
+
+
+<script>
+(function() {
+  const sidebar = document.getElementById('sidebar');
+  const links = sidebar.querySelectorAll('a');
+  const headings = document.querySelectorAll('h1[id], h2[id], h3[id], h4[id]');
+  if (headings.length === 0) return;
+
+  const linkMap = new Map();
+  links.forEach(function(a) {
+    const href = a.getAttribute('href');
+    if (href && href.startsWith('#')) linkMap.set(href.slice(1), a);
+  });
+
+  function onScroll() {
+    let currentId = null;
+    const scrollTop = window.scrollY + 80;
+    headings.forEach(function(h) { if (h.offsetTop <= scrollTop) currentId = h.id; });
+    links.forEach(function(a) { a.classList.remove('active'); });
+    if (currentId && linkMap.has(currentId)) {
+      const el = linkMap.get(currentId);
+      el.classList.add('active');
+      if (getComputedStyle(sidebar).position === 'fixed') {
+        const sr = sidebar.getBoundingClientRect();
+        const er = el.getBoundingClientRect();
+        if (er.bottom > sr.bottom || er.top < sr.top) {
+          el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }
+      }
+    }
+  }
+
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+})();
+</script>
+
+
+<script>
+(function() {
+  const content = document.getElementById('main-content');
+  if (!content) return;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'image-lightbox';
+  overlay.setAttribute('role', 'dialog');
+  overlay.setAttribute('aria-modal', 'true');
+
+  overlay.innerHTML = `
+    <button type="button" class="image-lightbox__close" data-action="close" aria-label="关闭">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M5 5l10 10M15 5L5 15"/>
+      </svg>
+    </button>
+    <div class="image-lightbox__stage">
+      <img class="image-lightbox__image" alt="">
+    </div>
+    <div class="image-lightbox__toolbar" aria-label="图片缩放控制">
+      <button type="button" class="image-lightbox__btn" data-action="zoom-out" aria-label="缩小" title="缩小">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d="M3 9h12"/>
+        </svg>
+      </button>
+      <span class="image-lightbox__zoom-val" data-action="zoom-reset" title="点击重置缩放" role="button" tabindex="0">100%</span>
+      <button type="button" class="image-lightbox__btn" data-action="zoom-in" aria-label="放大" title="放大">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d="M3 9h12M9 3v12"/>
+        </svg>
+      </button>
+    </div>
+    <div class="image-lightbox__caption"></div>
+  `;
+  document.body.appendChild(overlay);
+
+  const stage = overlay.querySelector('.image-lightbox__stage');
+  const image = overlay.querySelector('.image-lightbox__image');
+  const zoomLabel = overlay.querySelector('.image-lightbox__zoom-val');
+  const caption = overlay.querySelector('.image-lightbox__caption');
+
+  const minZoom = 0.25;
+  const maxZoom = 5;
+  const step = 0.25;
+  let zoom = 1;
+  let fitWidth = 1;
+
+  function clamp(value) {
+    return Math.min(maxZoom, Math.max(minZoom, value));
+  }
+
+  function centerImage(animate) {
+    requestAnimationFrame(function() {
+      var left = Math.max(0, (stage.scrollWidth - stage.clientWidth) / 2);
+      var top = Math.max(0, (stage.scrollHeight - stage.clientHeight) / 2);
+      stage.scrollTo({ left: left, top: top, behavior: animate ? 'smooth' : 'auto' });
+    });
+  }
+
+  function applyZoom(animate) {
+    image.style.width = Math.max(1, Math.round(fitWidth * zoom)) + 'px';
+    zoomLabel.textContent = Math.round(zoom * 100) + '%';
+    centerImage(animate);
+  }
+
+  function setZoom(value, animate) {
+    zoom = clamp(value);
+    applyZoom(animate);
+  }
+
+  function computeFitSize() {
+    var w = image.naturalWidth || 1;
+    var h = image.naturalHeight || 1;
+    var maxW = Math.max(1, stage.clientWidth - 48);
+    var maxH = Math.max(1, stage.clientHeight - 48);
+    var fitScale = Math.min(1, maxW / w, maxH / h);
+    fitWidth = Math.max(1, w * fitScale);
+    applyZoom(false);
+  }
+
+  function openImage(source) {
+    image.onload = computeFitSize;
+    image.alt = source.alt || '';
+    caption.textContent = source.alt || '';
+    image.src = source.currentSrc || source.src;
+    zoom = 1;
+    overlay.classList.add('is-open');
+    document.body.classList.add('image-lightbox-open');
+    if (image.complete) computeFitSize();
+  }
+
+  function closeImage() {
+    overlay.classList.remove('is-open');
+    document.body.classList.remove('image-lightbox-open');
+    image.onload = null;
+    image.style.removeProperty('width');
+    image.removeAttribute('src');
+  }
+
+  overlay.addEventListener('click', function(event) {
+    var action = event.target.closest('[data-action]');
+    if (action) {
+      var type = action.getAttribute('data-action');
+      if (type === 'zoom-in') setZoom(zoom + step, true);
+      if (type === 'zoom-out') setZoom(zoom - step, true);
+      if (type === 'zoom-reset') setZoom(1, true);
+      if (type === 'close') closeImage();
+      return;
+    }
+    if (event.target === overlay || event.target === stage) closeImage();
+  });
+
+  overlay.addEventListener('wheel', function(event) {
+    if (!overlay.classList.contains('is-open')) return;
+    if (!event.ctrlKey && !event.metaKey) return;
+    event.preventDefault();
+    setZoom(zoom + (event.deltaY < 0 ? step : -step), true);
+  }, { passive: false });
+
+  document.addEventListener('keydown', function(event) {
+    if (!overlay.classList.contains('is-open')) return;
+    if (event.key === 'Escape') closeImage();
+    if (event.key === '+' || event.key === '=') setZoom(zoom + step, true);
+    if (event.key === '-' || event.key === '_') setZoom(zoom - step, true);
+    if (event.key === '0') setZoom(1, true);
+  });
+
+  window.addEventListener('resize', function() {
+    if (overlay.classList.contains('is-open')) computeFitSize();
+  });
+
+  content.querySelectorAll('img').forEach(function(img) {
+    if (img.closest('a')) return;
+    img.setAttribute('tabindex', '0');
+    img.setAttribute('title', img.getAttribute('title') || '点击放大查看');
+    img.addEventListener('click', function() { openImage(img); });
+    img.addEventListener('keydown', function(event) {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        openImage(img);
+      }
+    });
+  });
+})();
+</script>
+
+</body>
+</html>
